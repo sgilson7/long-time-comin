@@ -8,7 +8,7 @@ Long Time Comin' is a Builder project built in one session on 2026-10-10 from `B
 
 ## Live (2026-10-10)
 
-- Game: https://sgilson7.github.io/long-time-comin/ (Actions run 38060673004: check and deploy passed). `BUILDER_ORIGIN=https://sgilson7.github.io/long-time-comin tests/browser/check.py` passed in Chromium, Firefox and WebKit against the live site.
+- Game: https://sgilson7.github.io/long-time-comin/ (Actions runs 38061649808 and 38061792472, a re-run of the same commit, both passed check and deploy, after the G9 fix; an earlier docs-only run, 38061274573, failed on the flake G9 fixes). `BUILDER_ORIGIN=https://sgilson7.github.io/long-time-comin tests/browser/check.py` passed in Chromium, Firefox and WebKit against the live site.
 - Scholar site: https://sgilson7.github.io/projects/long-time-comin/, commit "Add Long Time Comin' to the games" in `~/Documents/website` (pushed to `scholar-site`); `make check` (57 pages, no findings), `make packet` (44 routes clean), `make gate` passed, then `make deploy`. `make gate-live` failed once straight after the publish and passed on the next run; the first run was probably served cached pages (not confirmed).
 
 ## What exists
@@ -21,7 +21,7 @@ Long Time Comin' is a Builder project built in one session on 2026-10-10 from `B
 
 ## What passed
 
-`./scripts/check.sh` on 2026-10-10 at commit "Draw each facade's windows in the shader": fmt, clippy with warnings as errors, 88 core tests and 11 boundary tests, the release wasm build, the wasm import audit, and the browser check in Chromium, Firefox and WebKit (`BUILDER CHECK PASSED`). Ten behaviours were broken on purpose and each test failed (SECOND-ORDER B1).
+`./scripts/check.sh` on 2026-10-10 at commit "Take the pointer-lock fallback under automation": fmt, clippy with warnings as errors, 88 core tests and 11 boundary tests, the release wasm build, the wasm import audit, and the browser check in Chromium, Firefox and WebKit (`BUILDER CHECK PASSED`). Ten behaviours were broken on purpose and each test failed (SECOND-ORDER B1).
 
 ## What remains
 
