@@ -99,6 +99,8 @@ pub struct Level {
 pub struct Hit {
     pub t: i32,
     pub point: V3,
+    /// the solid it met, by index
+    pub solid: usize,
 }
 
 impl Level {
@@ -142,6 +144,11 @@ impl Level {
 
     /// Calls `f` once for each solid whose cells touch the box `min..max`.
     pub fn each_near(&self, min: V3, max: V3, mut f: impl FnMut(&Solid)) {
+        self.each_near_indexed(min, max, |_, s| f(s));
+    }
+
+    /// As `each_near`, with each solid's index.
+    pub fn each_near_indexed(&self, min: V3, max: V3, mut f: impl FnMut(usize, &Solid)) {
         let (x0, z0) = Level::cell_of(self.origin, self.dims, min.x, min.z);
         let (x1, z1) = Level::cell_of(self.origin, self.dims, max.x, max.z);
         for cz in z0..=z1 {
@@ -150,7 +157,7 @@ impl Level {
                     // the first cell this query shares with the solid
                     let (fx0, fz0) = self.first[i as usize];
                     if (fx0.max(x0), fz0.max(z0)) == (cx, cz) {
-                        f(&self.solids[i as usize]);
+                        f(i as usize, &self.solids[i as usize]);
                     }
                 }
             }
@@ -182,7 +189,7 @@ impl Level {
     /// The first solid a unit ray meets within `max_t`. The ray is walked in
     /// grid-sized steps so a long ray asks only the cells it passes.
     pub fn ray(&self, o: V3, d: V3, max_t: i32) -> Option<Hit> {
-        let mut best: Option<i32> = None;
+        let mut best: Option<(i32, usize)> = None;
         let mut start = 0;
         while start < max_t {
             let end = (start + CELL).min(max_t);
@@ -190,23 +197,24 @@ impl Level {
             let b = o.add(d.scale(end));
             let min = v3(a.x.min(b.x), a.y.min(b.y), a.z.min(b.z));
             let max = v3(a.x.max(b.x), a.y.max(b.y), a.z.max(b.z));
-            self.each_near(min, max, |s| {
+            self.each_near_indexed(min, max, |i, s| {
                 if let Some(t) = s.ray(o, d, max_t) {
-                    if best.is_none_or(|b| t < b) {
-                        best = Some(t);
+                    if best.is_none_or(|(b, _)| t < b) {
+                        best = Some((t, i));
                     }
                 }
             });
-            if let Some(t) = best {
+            if let Some((t, _)) = best {
                 if t <= end {
                     break;
                 }
             }
             start = end;
         }
-        best.map(|t| Hit {
+        best.map(|(t, solid)| Hit {
             t,
             point: o.add(d.scale(t)),
+            solid,
         })
     }
 

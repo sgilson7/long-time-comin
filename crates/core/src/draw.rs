@@ -42,7 +42,15 @@ fn part(b: &mut Batch, f: &Affine, mesh: Mesh, at: V3, size: V3, rgb: Rgb) {
     b.inked(mesh, &f.then(&boxed(at, size)), rgb, 0);
 }
 
-pub fn world(b: &mut Batch, c: &Content, w: &World, alpha: i32, clock: i32, body: bool) {
+pub fn world(
+    b: &mut Batch,
+    c: &Content,
+    w: &World,
+    alpha: i32,
+    clock: i32,
+    body: bool,
+    cam: &crate::render::Camera,
+) {
     if body {
         player(b, c, &w.player, w.held.gun, alpha);
     }
@@ -53,7 +61,7 @@ pub fn world(b: &mut Batch, c: &Content, w: &World, alpha: i32, clock: i32, body
         enemy(b, c, e, alpha);
     }
     b.bold = false;
-    orbs(b, c, w, alpha);
+    orbs(b, c, w, alpha, cam);
     for s in &w.shots {
         let at = s.prev.lerp(s.pos, alpha);
         let tail = at.sub(s.vel.scale(ONE * 6 / 10));
@@ -351,6 +359,9 @@ pub fn pickup_colour(c: &Content, k: PickupKind) -> Rgb {
         PickupKind::Speed(_) => "pickup_speed",
         PickupKind::Jump => "pickup_jump",
         PickupKind::Gun(_, _) => "pickup_weapon",
+        PickupKind::Pierce => "pickup_pierce",
+        PickupKind::Pulse => "pickup_pulse",
+        PickupKind::Mend => "pickup_mend",
     })
 }
 
@@ -402,6 +413,49 @@ pub fn pickup_icon(b: &mut Batch, c: &Content, k: PickupKind, at: V3, spin: i32,
                 b.inked(Mesh::Wedge, &a, col, ONE / 2);
             }
         }
+        PickupKind::Pierce => {
+            // an arrowhead through a plate
+            let tip = f
+                .then(&Affine::rot_x(fx::QUARTER))
+                .then(&boxed(V3::ZERO, v3(dm(3), dm(6), dm(3))));
+            b.inked(Mesh::Cone, &tip, col, ONE / 2);
+            b.inked(
+                Mesh::Cube,
+                &f.then(&boxed(v3(0, 0, dm(1)), v3(dm(5), dm(5), cm(4)))),
+                shade(col, 70),
+                ONE / 3,
+            );
+        }
+        PickupKind::Pulse => {
+            // a ring round a core
+            let ring = f
+                .then(&Affine::rot_x(fx::QUARTER))
+                .then(&Affine::scale(v3(dm(6), cm(8), dm(6))));
+            b.push(Mesh::Ring, &ring, col, ONE, crate::render::PASS_SOLID);
+            b.inked(
+                Mesh::Sphere,
+                &f.then(&boxed(V3::ZERO, v3(dm(2), dm(2), dm(2)))),
+                col,
+                ONE / 2,
+            );
+        }
+        PickupKind::Mend => {
+            // a gold orb with a heart's two lobes
+            b.inked(
+                Mesh::Sphere,
+                &f.then(&boxed(V3::ZERO, v3(dm(3), dm(3), dm(3)))),
+                c.pal.c("gold"),
+                ONE / 2,
+            );
+            for sx in [-1, 1] {
+                b.inked(
+                    Mesh::Sphere,
+                    &f.then(&boxed(v3(sx * cm(8), dm(3), 0), v3(cm(15), cm(15), cm(12)))),
+                    col,
+                    ONE / 2,
+                );
+            }
+        }
         PickupKind::Gun(g, level) => {
             gun_model(b, c, g, at, spin, 0, scale * 2);
             for k in 0..level {
@@ -451,21 +505,29 @@ fn gate(b: &mut Batch, c: &Content, g: &crate::world::Gate, cleared: bool, clock
     }
     // the reward floats over the gate only once the gate is open
     if let Some(r) = g.reward.filter(|_| cleared) {
-        let k = match r {
-            crate::route::Reward::Gun(gun, l) => PickupKind::Gun(gun, l),
-            crate::route::Reward::Jump => PickupKind::Jump,
-            crate::route::Reward::Health => PickupKind::MaxHealth(0),
-            crate::route::Reward::Speed => PickupKind::Speed(0),
-        };
+        let k = crate::world::reward_pickup(r);
         pickup_icon(b, c, k, at.add(v3(0, int(5), 0)), clock * 2, ONE * 2);
     }
 }
 
-fn orbs(b: &mut Batch, c: &Content, w: &World, alpha: i32) {
+fn orbs(b: &mut Batch, c: &Content, w: &World, alpha: i32, cam: &crate::render::Camera) {
     let gold_ring = c.pal.c("gold");
+    let chest = w
+        .player
+        .prev_pos
+        .lerp(w.player.pos, alpha)
+        .add(v3(0, PLAYER_CHEST, 0));
     for o in &w.orbs {
         let at = o.prev.lerp(o.pos, alpha);
         let r = o.radius * 2;
+        // between the camera and the body, or right by the lens: a faint
+        // glow you can see through, so it does not blind the view
+        let by_lens = at.dist(cam.eye) < ORB_FADE_NEAR;
+        let behind = at.sub(chest).dot(cam.fwd) < 0 && at.dist(cam.eye) < ORB_FADE_BEHIND;
+        if by_lens || behind {
+            b.glow(Mesh::Sphere, &boxed(at, v3(r, r, r)), o.rgb, ONE / 4);
+            continue;
+        }
         b.inked(Mesh::Sphere, &boxed(at, v3(r, r, r)), o.rgb, ONE);
         b.glow(Mesh::Sphere, &boxed(at, v3(r * 2, r * 2, r * 2)), o.rgb, ONE / 2);
         if o.gold {

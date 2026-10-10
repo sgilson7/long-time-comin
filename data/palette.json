@@ -57,9 +57,30 @@
     "pickup_weapon": "#FFB000",
     "pickup_heal": "#FF8FA3",
     "spark": "#FFF1C2",
-    "shadow": "#7A4E4A"
+    "shadow": "#7A4E4A",
+    "pickup_pierce": "#F26B38",
+    "pickup_pulse": "#7DF2E6",
+    "pickup_mend": "#FF8FA3"
   },
-  "walls": ["#E88A73", "#EE9F7E", "#E47A7E", "#F0B07E", "#D9765F", "#E99A8A"],
-  "greens": ["#8DBB7E", "#6FA77A", "#A9C97F", "#5E9C6A"],
-  "signs": ["#FF4F7B", "#FFD166", "#2EC4B6", "#F26B38", "#9B5DE5"]
+  "walls": [
+    "#E88A73",
+    "#EE9F7E",
+    "#E47A7E",
+    "#F0B07E",
+    "#D9765F",
+    "#E99A8A"
+  ],
+  "greens": [
+    "#8DBB7E",
+    "#6FA77A",
+    "#A9C97F",
+    "#5E9C6A"
+  ],
+  "signs": [
+    "#FF4F7B",
+    "#FFD166",
+    "#2EC4B6",
+    "#F26B38",
+    "#9B5DE5"
+  ]
 }

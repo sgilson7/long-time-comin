@@ -27,7 +27,7 @@
     "ADDENDUM. A juror asked how many times a person may be sent back before they become someone else. The question was struck from the record. The years were not."
   ],
   "death_title": "THE BAILIFF COLLECTS YOU",
-  "time_served": "The court adds {years} years. Your sentence now runs to {total}.",
+  "time_served": "The court adds {years}. Your sentence now runs to {total}.",
   "victory_title": "THE BAILIFF KNEELS",
   "victory": [
     "The Bailiff of Hours goes down on one knee in its own court, and the stopped clock above the bench says nothing, which is what it has always said.",
@@ -36,9 +36,21 @@
     "Zones two to four are sealed in this build. The Clemency from this run has been added to your record."
   ],
   "bosses": {
-    "bailiff": { "name": "THE BAILIFF OF HOURS", "title": "It has carried the condemned down the years since before the years were counted. It is not cruel. It is punctual." },
-    "witness": { "name": "THE WITNESS", "title": "Sealed in this build." },
-    "jury": { "name": "THE JURY OF GLASS", "title": "Sealed in this build." },
-    "defendant": { "name": "THE DEFENDANT", "title": "Sealed in this build." }
+    "bailiff": {
+      "name": "THE BAILIFF OF HOURS",
+      "title": "It has carried the condemned down the years since before the years were counted. It is not cruel. It is punctual."
+    },
+    "witness": {
+      "name": "THE WITNESS",
+      "title": "Sealed in this build."
+    },
+    "jury": {
+      "name": "THE JURY OF GLASS",
+      "title": "Sealed in this build."
+    },
+    "defendant": {
+      "name": "THE DEFENDANT",
+      "title": "Sealed in this build."
+    }
   }
 }

@@ -509,6 +509,23 @@ def icon(kind):
         for k in range(3):
             s += f"\\draw[cyan, line width=2.5pt, opacity={f(0.4 + 0.3 * k)}] {P(0.6 + k * 0.4, 2.0 + (k - 1) * 0.6)} -- {P(1.6 + k * 0.4, 2.0 + (k - 1) * 0.6)};\n"
         s += circle(2.9, 2.0, 0.55, "coat")
+    elif kind == "pierce":
+        # a shot through two plates
+        s += rect(1.3, 0.9, 1.6, 3.1, "metal")
+        s += rect(2.3, 0.9, 2.6, 3.1, "metal")
+        s += "\\draw[trim, line width=3pt] (0.6,2.0) -- (3.0,2.0);\n"
+        s += poly([(3.0, 1.7), (3.5, 2.0), (3.0, 2.3)], "trim")
+    elif kind == "pulse":
+        s += "\\draw[cyan, line width=2.6pt] (2,2) circle (1.25);\n"
+        s += "\\draw[ink, line width=0.8pt] (2,2) circle (1.42);\n"
+        s += circle(2.0, 2.0, 0.5, "coat")
+        for a in (30, 150, 270):
+            import math as _m
+            x, y = 2 + 1.25 * _m.cos(_m.radians(a)), 2 + 1.25 * _m.sin(_m.radians(a))
+            s += circle(x, y, 0.22, "violet")
+    elif kind == "mend":
+        s += orb(2.0, 1.7, 0.6, "gold", gold=True, glow=False)
+        s += "\\filldraw[inked,fill=heart] (2,2.55) .. controls (1.2,3.2) and (1.5,3.8) .. (2,3.4) .. controls (2.5,3.8) and (2.8,3.2) .. (2,2.55) -- cycle;\n"
     elif kind == "gavel":
         s += poly([(0.9, 0.9), (2.4, 2.4), (2.1, 2.7), (0.6, 1.2)], "wood")
         s += f"\\filldraw[inked,fill=goldtrim,rotate around={{45:(2.6,2.6)}}] (1.9,2.25) rectangle (3.3,2.95);\n"
@@ -523,7 +540,7 @@ PICTURES = {
 }
 for g in ("carbine", "scattergun", "launcher"):
     PICTURES[f"guns/{g}"] = (lambda g=g: gun_art(g))
-for k in ("heart", "jump", "speed", "gun", "parry", "hook", "dash", "gavel"):
+for k in ("heart", "jump", "speed", "gun", "parry", "hook", "dash", "gavel", "pierce", "pulse", "mend"):
     PICTURES[f"icons/{k}"] = (lambda k=k: icon(k))
 
 # dpi for each kind: big pictures fill a screen, icons are small

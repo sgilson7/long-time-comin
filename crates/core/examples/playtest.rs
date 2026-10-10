@@ -317,10 +317,9 @@ impl Harness {
         let w = self.g.world_mut().ok_or("no run")?;
         let list = Self::enemies(w);
         let i = *list.get(n.unwrap_or(0)).ok_or("no such enemy")?;
-        let to = w.enemies[i].pos.sub(w.player.chest());
-        let (yaw, pitch) = yaw_pitch_of(to);
+        let (yaw, pitch) = cam_aim(w, w.enemies[i].pos);
         w.player.yaw = yaw;
-        w.player.pitch = pitch.clamp(PITCH_MIN, PITCH_MAX);
+        w.player.pitch = pitch;
         Ok(())
     }
 
@@ -330,6 +329,8 @@ impl Harness {
         let ticks = (secs * 60.0) as i32;
         let mut was = self.g.world().unwrap().player.pos;
         let mut stuck = 0;
+        let mut path: Vec<V3> = Vec::new();
+        let mut step_i = 0;
         for k in 0..ticks {
             let w = self.g.world().unwrap();
             if w.cleared {
@@ -345,7 +346,37 @@ impl Harness {
                 was = w.player.pos;
             }
             stuck -= 1;
-            let (c, yaw, pitch) = bot(w, self.t, stuck > 0);
+            let (mut c, yaw, pitch) = bot(w, self.t, stuck > 0);
+            // no line of sight to the target: walk the grid round toward it
+            if let Some(e) = w
+                .enemies
+                .iter()
+                .filter(|e| e.hurtable())
+                .min_by_key(|e| e.pos.sub(w.player.chest()).len())
+            {
+                let chest = w.player.chest();
+                let to = e.pos.sub(chest);
+                let seen = w.arena.level.ray(chest, to.norm(), to.len()).is_none();
+                if !seen {
+                    if k % 60 == 0 || path.is_empty() {
+                        let ground = w.arena.level.floor_below(e.pos.x, e.pos.y, e.pos.z).unwrap_or(0);
+                        path = nav(w, w.player.pos, v3(e.pos.x, ground, e.pos.z)).unwrap_or_default();
+                        step_i = 0;
+                    }
+                    while step_i + 1 < path.len() && path[step_i].sub(w.player.pos).len_xz() < ONE * 6 / 10 {
+                        step_i += 1;
+                    }
+                    if let Some(wp) = path.get(step_i) {
+                        let dir = v3(wp.x - w.player.pos.x, 0, wp.z - w.player.pos.z).norm();
+                        let f = ltc_core::geom::facing(yaw, 0);
+                        let r = ltc_core::geom::right_of(yaw);
+                        c.move_z = dir.dot(f).signum() * ONE * (dir.dot(f).abs() > ONE / 3) as i32;
+                        c.move_x = dir.dot(r).signum() * ONE * (dir.dot(r).abs() > ONE / 3) as i32;
+                    }
+                } else {
+                    path.clear();
+                }
+            }
             let wm = self.g.world_mut().unwrap();
             wm.player.yaw = yaw;
             wm.player.pitch = pitch;
@@ -656,6 +687,14 @@ impl Harness {
                 PickupKind::Speed(n) => format!("speed +{n}%"),
                 PickupKind::Jump => "extra jump".to_string(),
                 PickupKind::Gun(gi, l) => format!("gun: {} level {l} (press E: 'take')", c.guns[gi].name),
+                PickupKind::Pierce => "Piercing Rounds".to_string(),
+                PickupKind::Pulse => "Dash Pulse".to_string(),
+                PickupKind::Mend => "Mending Parry".to_string(),
+            };
+            let what = if k.group != 0 {
+                format!("{what} [a choice: 'take' it with E; the other is lost]")
+            } else {
+                what
             };
             lines.push(format!(
                 "  pickup: {what}, {} m away",
@@ -666,7 +705,10 @@ impl Harness {
             for gt in w.gates.iter().filter(|gt| gt.to.is_some()) {
                 let to = gt.to.unwrap();
                 let n = &route.nodes[to];
-                let reward = n.reward.map(|r| format!(" — reward: {r:?}")).unwrap_or_default();
+                let reward = n
+                    .reward
+                    .map(|r| format!(" — reward: {}", g.reward_label(r)))
+                    .unwrap_or_default();
                 lines.push(format!(
                     "  gate ({}): to {}{} ('go {}')",
                     if gt.main { "main" } else { "side" },
@@ -729,12 +771,31 @@ impl Harness {
                 n.kind,
                 n.tier,
                 if n.detour { " side path" } else { "" },
-                n.reward.map(|r| format!(" reward {r:?}")).unwrap_or_default(),
+                n.reward
+                    .map(|r| format!(" reward: {}", self.g.reward_label(r)))
+                    .unwrap_or_default(),
                 next.join(", ")
             ));
         }
         self.out.extend(lines);
     }
+}
+
+/// The yaw and pitch that put the crosshair on `target`: shots follow the
+/// camera's ray, which sits above and right of the chest, so aim from the
+/// eye, a few times over as the eye moves with the aim.
+fn cam_aim(w: &World, target: V3) -> (i32, i32) {
+    let mut wc = w.clone();
+    let (mut y, mut pt) = yaw_pitch_of(target.sub(w.player.chest()));
+    for _ in 0..4 {
+        wc.player.yaw = y;
+        wc.player.pitch = pt.clamp(PITCH_MIN, PITCH_MAX);
+        let eye = ltc_core::game::play_camera(&wc, ONE).eye;
+        let r = yaw_pitch_of(target.sub(eye));
+        y = r.0;
+        pt = r.1;
+    }
+    (y, pt.clamp(PITCH_MIN, PITCH_MAX))
 }
 
 fn closest_on_segment(a: V3, b: V3, p: V3) -> i32 {
@@ -759,9 +820,9 @@ fn bot(w: &World, t: i32, stuck: bool) -> (Controls, i32, i32) {
         .filter(|e| e.hurtable())
         .min_by_key(|e| e.pos.sub(chest).len());
     if let Some(e) = target {
-        let (y, pt) = yaw_pitch_of(e.pos.sub(chest.add(v3(0, ONE / 5, 0))));
+        let (y, pt) = cam_aim(w, e.pos);
         yaw = y;
-        pitch = pt.clamp(PITCH_MIN, PITCH_MAX);
+        pitch = pt;
         ctl.fire = true;
         let to = e.pos.sub(chest);
         let d = to.len_xz();

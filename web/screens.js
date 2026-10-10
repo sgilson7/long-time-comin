@@ -132,13 +132,8 @@ export function makeScreens(game, copy, changed) {
       el("m-years-label").textContent = `${copy.sentence} (${copy.years})`;
       el("m-counts").textContent = `${s.counts_read} / ${s.counts_total}`;
       const b = s.build;
-      const body = [
-        copy.build_health.replace("{n}", b.health),
-        copy.build_jumps.replace("{n}", b.jumps),
-        copy.build_dashes.replace("{n}", b.dashes),
-        copy.build_speed.replace("{n}", b.speed),
-        b.gun,
-      ];
+      const body = s.build_lines.slice();
+      el("m-bonus").textContent = s.sentence_bonus;
       if (b.grapple) body.push(copy.build_grapple);
       if (b.parry) body.push(copy.build_parry);
       if (b.recess) body.push(copy.build_recess);
@@ -207,6 +202,7 @@ export function makeScreens(game, copy, changed) {
             dot.append(img);
           }
           node.append(dot, make("span", "name", n.name));
+          if (n.tier) node.append(make("span", "tier", n.tier));
           if (n.reward) node.append(make("span", "reward", n.reward));
           if (n.here) node.append(make("span", "here-tag", copy.here));
           return node;
@@ -223,6 +219,7 @@ export function makeScreens(game, copy, changed) {
       el("d-counts").replaceChildren(...earlier.map((t) => make("li", "", t)));
       el("d-newest").textContent = r.newest;
       el("d-served").textContent = r.time_served;
+      el("d-grant").textContent = [r.grant, r.bonus].filter((t) => t).join(" ");
       el("d-earned").textContent = `${copy.earned.replace("{n}", r.clemency)} · ${copy.cleared.replace("{n}", r.cleared)}`;
     },
 
@@ -231,6 +228,8 @@ export function makeScreens(game, copy, changed) {
       if (!v) return;
       el("w-title").textContent = v.title;
       lines(el("w-lines"), v.lines, "line");
+      el("w-newest").textContent = v.newest;
+      el("w-newest").hidden = !v.newest;
       Array.from(el("w-lines").children).forEach((p, k) => p.style.setProperty("--k", k));
       el("w-earned").textContent = `${copy.earned.replace("{n}", v.clemency)} · ${copy.cleared.replace("{n}", v.cleared)}`;
     },

@@ -77,10 +77,14 @@ pub const GRAPPLE_ARRIVE: i32 = int(2);
 pub const GRAPPLE_COOLDOWN: i32 = secs(1, 1);
 /// a hook held longer than this lets go on its own
 pub const GRAPPLE_MAX_TICKS: i32 = secs(3, 1);
+/// a hook that lands this far or less below a ledge's top lifts you over it
+pub const MANTLE_REACH: i32 = ONE * 15 / 10;
+/// a hook that has not moved you for this long lets go, and says so
+pub const GRAPPLE_STALL_TICKS: i32 = 12;
 
 // ---- the parry (Objection) ---------------------------------------------
 
-pub const PARRY_WINDOW: i32 = secs(1, 4);
+pub const PARRY_WINDOW: i32 = secs(3, 10);
 pub const PARRY_COOLDOWN: i32 = secs(9, 10);
 /// a gold orb this close to the chest while the window is open is turned
 pub const PARRY_REACH: i32 = ONE * 25 / 10;
@@ -108,9 +112,46 @@ pub const GATE_REACH: i32 = ONE * 22 / 10;
 /// after an arena is cleared, the next wave of reward dust settles this long
 pub const CLEAR_PAUSE: i32 = secs(1, 1);
 /// a new wave comes when this few enemies of the last one are left
-pub const WAVE_REMAINDER: usize = 1;
+pub const WAVE_REMAINDER: i32 = 0;
+/// and comes this long after the last one is down, so waves never pile up
+pub const WAVE_GAP: i32 = secs(3, 2);
+/// an enemy that has not seen you for this long comes back where it can
+pub const LOST_TICKS: i32 = secs(15, 1);
 /// the court's Recess: a killing blow leaves you on this many percent
 pub const RECESS_HEALTH_PCT: i32 = 35;
+
+// ---- the in-run rewards that change play ----------------------------------
+
+/// Piercing Rounds: shots pass through this many more enemies
+pub const PIERCE_BONUS: i32 = 1;
+/// Dash Pulse: a dash clears enemy orbs this close to you, at most this often
+pub const PULSE_RADIUS: i32 = ONE * 25 / 10;
+pub const PULSE_COOLDOWN: i32 = secs(3, 1);
+/// Mending Parry: each orb you turn back heals this much
+pub const MEND_HEAL: i32 = 8;
+/// the Antechamber's fountain restores this share of maximum health
+pub const REST_HEAL_PCT: i32 = 50;
+/// a run that ends mid-fight is credited this share of the arena's
+/// Clemency for each enemy of it killed, and a first death this grant
+pub const FIRST_DEATH_GRANT: i32 = 8;
+/// every ten years of sentence add this many percent to Clemency earned
+pub const SENTENCE_BONUS_PCT: i32 = 5;
+/// the tier of the zone's hardest main fights: the first run to reach one
+/// hears a count of the indictment
+pub const FAR_TIER: i32 = 3;
+
+// ---- the HUD ---------------------------------------------------------------
+
+/// a hint stays on screen this long
+pub const HINT_TICKS: i32 = secs(6, 1);
+/// the arc toward a hit's source fades over this long
+pub const HIT_ARC_TICKS: i32 = secs(3, 4);
+/// the jump cue shows this long before a ground wave reaches you
+pub const JUMP_CUE_TICKS: i32 = secs(1, 2);
+/// an orb this close to the camera, or behind the body and within the
+/// second distance of the camera, is drawn as a faint glow
+pub const ORB_FADE_NEAR: i32 = ONE * 3;
+pub const ORB_FADE_BEHIND: i32 = ONE * 9;
 
 // ---- the camera ----------------------------------------------------------
 

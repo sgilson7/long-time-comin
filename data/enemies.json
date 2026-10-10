@@ -1,22 +1,243 @@
 {
   "_about": "Enemies. kind: turret (stands still), floater (hovers and circles at a range), walker (walks after you), moth (flies straight at you and bursts), boss. hp in health points, radius_cm the body, hover_cm the height it floats at, speed_cms, range_cm the distance it keeps, contact the damage of touching it. attacks are tried in order: pattern (patterns.json), windup_ms the glow before it fires, rest_ms after. A boss has phases instead, each starting when its health falls to from_pct.",
   "enemies": [
-    { "id": "sentinel", "name": "Sentinel", "kind": "turret", "hp": 140, "radius_cm": 80, "hover_cm": 150, "speed_cms": 0, "range_cm": 0, "contact": 10, "clemency": 1,
-      "attacks": [ { "pattern": "spiral_quad", "windup_ms": 500, "rest_ms": 900 }, { "pattern": "ring_16", "windup_ms": 450, "rest_ms": 1100 } ] },
-    { "id": "drifter", "name": "Drifter", "kind": "floater", "hp": 90, "radius_cm": 65, "hover_cm": 380, "speed_cms": 520, "range_cm": 1400, "contact": 10, "clemency": 1,
-      "attacks": [ { "pattern": "fan_5", "windup_ms": 420, "rest_ms": 1300 }, { "pattern": "snipe", "windup_ms": 350, "rest_ms": 1200 } ] },
-    { "id": "warden", "name": "Warden", "kind": "walker", "hp": 260, "radius_cm": 110, "hover_cm": 0, "speed_cms": 330, "range_cm": 700, "contact": 18, "clemency": 2,
-      "attacks": [ { "pattern": "ground_wave", "windup_ms": 650, "rest_ms": 900 }, { "pattern": "fan_7", "windup_ms": 450, "rest_ms": 1200 }, { "pattern": "double_wave", "windup_ms": 700, "rest_ms": 1500 } ] },
-    { "id": "lantern", "name": "Lantern", "kind": "floater", "hp": 160, "radius_cm": 75, "hover_cm": 750, "speed_cms": 300, "range_cm": 1800, "contact": 10, "clemency": 2,
-      "attacks": [ { "pattern": "lantern_flower", "windup_ms": 600, "rest_ms": 1400 }, { "pattern": "gold_fan", "windup_ms": 450, "rest_ms": 1200 }, { "pattern": "curl_storm", "windup_ms": 600, "rest_ms": 1700 } ] },
-    { "id": "moth", "name": "Moth", "kind": "moth", "hp": 25, "radius_cm": 40, "hover_cm": 200, "speed_cms": 900, "range_cm": 0, "contact": 14, "clemency": 0,
-      "attacks": [] },
-    { "id": "bailiff", "name": "The Bailiff of Hours", "kind": "boss", "hp": 4200, "radius_cm": 260, "hover_cm": 650, "speed_cms": 420, "range_cm": 1600, "contact": 25, "clemency": 25,
+    {
+      "id": "sentinel",
+      "name": "Sentinel",
+      "kind": "turret",
+      "hp": 140,
+      "radius_cm": 80,
+      "hover_cm": 150,
+      "speed_cms": 0,
+      "range_cm": 0,
+      "contact": 10,
+      "clemency": 1,
+      "attacks": [
+        {
+          "pattern": "spiral_quad",
+          "windup_ms": 500,
+          "rest_ms": 900
+        },
+        {
+          "pattern": "ring_16",
+          "windup_ms": 450,
+          "rest_ms": 1100
+        },
+        {
+          "pattern": "spiral_twin",
+          "windup_ms": 550,
+          "rest_ms": 1100
+        }
+      ]
+    },
+    {
+      "id": "bloom",
+      "name": "Bloom Sentinel",
+      "kind": "turret",
+      "hp": 170,
+      "radius_cm": 85,
+      "hover_cm": 150,
+      "speed_cms": 0,
+      "range_cm": 0,
+      "contact": 10,
+      "clemency": 2,
+      "attacks": [
+        {
+          "pattern": "flower",
+          "windup_ms": 550,
+          "rest_ms": 1000
+        },
+        {
+          "pattern": "sphere_burst",
+          "windup_ms": 600,
+          "rest_ms": 1200
+        },
+        {
+          "pattern": "bloom",
+          "windup_ms": 450,
+          "rest_ms": 1100
+        }
+      ]
+    },
+    {
+      "id": "drifter",
+      "name": "Drifter",
+      "kind": "floater",
+      "hp": 90,
+      "radius_cm": 65,
+      "hover_cm": 380,
+      "speed_cms": 520,
+      "range_cm": 1400,
+      "contact": 10,
+      "clemency": 1,
+      "attacks": [
+        {
+          "pattern": "fan_5",
+          "windup_ms": 420,
+          "rest_ms": 1300
+        },
+        {
+          "pattern": "snipe",
+          "windup_ms": 350,
+          "rest_ms": 1200
+        }
+      ]
+    },
+    {
+      "id": "warden",
+      "name": "Warden",
+      "kind": "walker",
+      "hp": 260,
+      "radius_cm": 110,
+      "hover_cm": 0,
+      "speed_cms": 330,
+      "range_cm": 700,
+      "contact": 18,
+      "clemency": 2,
+      "attacks": [
+        {
+          "pattern": "ground_wave",
+          "windup_ms": 650,
+          "rest_ms": 900
+        },
+        {
+          "pattern": "fan_7",
+          "windup_ms": 450,
+          "rest_ms": 1200
+        },
+        {
+          "pattern": "double_wave",
+          "windup_ms": 700,
+          "rest_ms": 1500
+        }
+      ]
+    },
+    {
+      "id": "lantern",
+      "name": "Lantern",
+      "kind": "floater",
+      "hp": 160,
+      "radius_cm": 75,
+      "hover_cm": 750,
+      "speed_cms": 300,
+      "range_cm": 1800,
+      "contact": 10,
+      "clemency": 2,
+      "attacks": [
+        {
+          "pattern": "lantern_flower",
+          "windup_ms": 600,
+          "rest_ms": 1400
+        },
+        {
+          "pattern": "gold_fan",
+          "windup_ms": 450,
+          "rest_ms": 1200
+        },
+        {
+          "pattern": "curl_storm",
+          "windup_ms": 600,
+          "rest_ms": 1700
+        }
+      ]
+    },
+    {
+      "id": "moth",
+      "name": "Moth",
+      "kind": "moth",
+      "hp": 25,
+      "radius_cm": 40,
+      "hover_cm": 200,
+      "speed_cms": 900,
+      "range_cm": 0,
+      "contact": 14,
+      "clemency": 0,
+      "attacks": []
+    },
+    {
+      "id": "bailiff",
+      "name": "The Bailiff of Hours",
+      "kind": "boss",
+      "hp": 4000,
+      "radius_cm": 260,
+      "hover_cm": 650,
+      "speed_cms": 420,
+      "range_cm": 1600,
+      "contact": 25,
+      "clemency": 25,
       "attacks": [],
       "phases": [
-        { "from_pct": 100, "summons": [], "attacks": [ { "pattern": "clockwork", "windup_ms": 700, "rest_ms": 900 }, { "pattern": "gavel", "windup_ms": 900, "rest_ms": 1100 }, { "pattern": "gold_ring", "windup_ms": 500, "rest_ms": 800 } ] },
-        { "from_pct": 66, "summons": ["moth", "moth", "moth", "moth"], "attacks": [ { "pattern": "docket", "windup_ms": 600, "rest_ms": 800 }, { "pattern": "sentence", "windup_ms": 700, "rest_ms": 900 }, { "pattern": "bloom", "windup_ms": 450, "rest_ms": 700 } ] },
-        { "from_pct": 33, "summons": ["drifter", "drifter"], "attacks": [ { "pattern": "verdict", "windup_ms": 800, "rest_ms": 700 }, { "pattern": "clockwork", "windup_ms": 500, "rest_ms": 500 }, { "pattern": "accel_ring", "windup_ms": 400, "rest_ms": 600 } ] }
-      ] }
+        {
+          "from_pct": 100,
+          "summons": [],
+          "attacks": [
+            {
+              "pattern": "clockwork",
+              "windup_ms": 700,
+              "rest_ms": 900
+            },
+            {
+              "pattern": "gavel",
+              "windup_ms": 900,
+              "rest_ms": 1100
+            },
+            {
+              "pattern": "gold_ring",
+              "windup_ms": 500,
+              "rest_ms": 800
+            }
+          ]
+        },
+        {
+          "from_pct": 66,
+          "summons": [
+            "moth",
+            "moth",
+            "lantern"
+          ],
+          "attacks": [
+            {
+              "pattern": "docket",
+              "windup_ms": 600,
+              "rest_ms": 800
+            },
+            {
+              "pattern": "sentence",
+              "windup_ms": 700,
+              "rest_ms": 900
+            },
+            {
+              "pattern": "bloom",
+              "windup_ms": 450,
+              "rest_ms": 700
+            }
+          ]
+        },
+        {
+          "from_pct": 33,
+          "summons": [
+            "warden",
+            "drifter"
+          ],
+          "attacks": [
+            {
+              "pattern": "verdict",
+              "windup_ms": 800,
+              "rest_ms": 700
+            },
+            {
+              "pattern": "clockwork",
+              "windup_ms": 500,
+              "rest_ms": 500
+            },
+            {
+              "pattern": "accel_ring",
+              "windup_ms": 400,
+              "rest_ms": 600
+            }
+          ]
+        }
+      ]
+    }
   ]
 }

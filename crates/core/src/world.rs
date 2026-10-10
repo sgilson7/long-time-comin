@@ -21,6 +21,22 @@ pub enum PickupKind {
     Speed(i32),
     Jump,
     Gun(usize, i32),
+    Pierce,
+    Pulse,
+    Mend,
+}
+
+/// The pickup a reward becomes.
+pub fn reward_pickup(r: Reward) -> PickupKind {
+    match r {
+        Reward::Gun(g, l) => PickupKind::Gun(g, l),
+        Reward::Jump => PickupKind::Jump,
+        Reward::Health => PickupKind::MaxHealth(HEALTH_PICKUP),
+        Reward::Speed => PickupKind::Speed(SPEED_PICKUP_PCT),
+        Reward::Pierce => PickupKind::Pierce,
+        Reward::Pulse => PickupKind::Pulse,
+        Reward::Mend => PickupKind::Mend,
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -29,6 +45,9 @@ pub struct Pickup {
     pub kind: PickupKind,
     pub taken: bool,
     pub age: i32,
+    /// pickups sharing a group are a choice: taking one takes the rest
+    /// away, and each waits for the interact key
+    pub group: u8,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -121,7 +140,12 @@ pub struct World {
     pub aim_enemy: Option<usize>,
     /// where the hook would land, for the reticle, if it would
     pub hook_target: Option<V3>,
-    pub healed_at_fountain: bool,
+    /// where the last hit came from, and how long ago, for the HUD's arc
+    pub hit_from: V3,
+    pub hit_age: i32,
+    pub pulse_cooldown: i32,
+    /// the tick the arena was cleared on
+    pub cleared_at: i32,
     /// the pickup within reach that waits for the interact key, if any
     pub offer: Option<usize>,
 }
@@ -187,12 +211,33 @@ impl World {
             aim_point: V3::ZERO,
             aim_enemy: None,
             hook_target: None,
-            healed_at_fountain: false,
+            hit_from: V3::ZERO,
+            hit_age: 1000,
+            pulse_cooldown: 0,
+            cleared_at: 0,
             offer: None,
         };
         if node.kind == NodeKind::Boss {
             let boss = c.enemy(&c.zones[0].boss).unwrap_or(0);
             w.waves_left = vec![vec![boss]];
+        }
+        if node.kind == NodeKind::Rest {
+            // the Antechamber's choice: half your health back from the
+            // fountain, or its reward; taking one loses the other
+            let heal = w.player.build.max_health * REST_HEAL_PCT / 100;
+            let mut offer = vec![(v3(-int(4), 0, int(5)), PickupKind::Heal(heal))];
+            if let Some(r) = node.reward {
+                offer.push((v3(int(4), 0, int(5)), reward_pickup(r)));
+            }
+            for (pos, kind) in offer {
+                w.pickups.push(Pickup {
+                    pos,
+                    kind,
+                    taken: false,
+                    age: 0,
+                    group: 1,
+                });
+            }
         }
         w
     }
@@ -330,8 +375,15 @@ impl World {
             && self.player.grapple_cooldown == 0
         {
             match self.hook_target {
-                Some(p) => self.player.start_grapple(p, self.aim_enemy),
-                None => self.note("hook_miss", String::new()),
+                Some(p) => {
+                    let anchor = if self.aim_enemy.is_some() {
+                        p
+                    } else {
+                        self.mantle(eye, fwd, p)
+                    };
+                    self.player.start_grapple(anchor, self.aim_enemy)
+                }
+                None => self.note("hook_miss", c.say("callout_hook_miss")),
             }
         }
         if let Some(g) = self.player.grapple.as_mut() {
@@ -358,23 +410,31 @@ impl World {
                 Event::GrappleOn => "hook",
                 Event::GrappleOff => "hook_off",
                 Event::Parry => "parry",
+                Event::HookSnag => "hook_miss",
             };
             let text = match ev {
                 Event::Recess => c.say("callout_recess"),
                 Event::Fell => c.say("callout_fell"),
+                Event::HookSnag => c.say("callout_hook_snag"),
                 _ => String::new(),
             };
             self.note(sound, text);
-        }
-        if let Some(f) = self.arena.fountain {
-            if !self.healed_at_fountain && self.player.pos.dist(f) < int(4) {
-                self.healed_at_fountain = true;
-                let max = self.player.build.max_health;
-                self.player.heal(max);
-                self.sparks(f.add(v3(0, int(2), 0)), c.pal.c("pickup_heal"), 30, ONE / 6);
-                self.note("pickup", c.say("callout_fountain"));
+            if ev == Event::Dash && self.player.build.pulse && self.pulse_cooldown == 0 {
+                // Dash Pulse: the orbs round you are gone
+                self.pulse_cooldown = PULSE_COOLDOWN;
+                let at = self.player.chest();
+                let (gone, kept): (Vec<Orb>, Vec<Orb>) = std::mem::take(&mut self.orbs)
+                    .into_iter()
+                    .partition(|o| orbs::within(o.pos, at, PULSE_RADIUS));
+                self.orbs = kept;
+                for o in gone {
+                    self.effect(FxKind::Burst, o.pos, V3::ZERO, 10, o.rgb, o.radius * 2);
+                }
+                self.effect(FxKind::Burst, at, V3::ZERO, 16, c.pal.c("cyan"), PULSE_RADIUS * 2);
             }
         }
+        self.pulse_cooldown = (self.pulse_cooldown - 1).max(0);
+        self.hit_age = (self.hit_age + 1).min(1000);
 
         // the gun
         let chest = self.player.chest();
@@ -392,6 +452,7 @@ impl World {
             muzzle,
             self.aim_point,
             &mut self.rng,
+            self.player.build.pierce,
         );
         if !shots.is_empty() {
             let sound = match self.held.gun {
@@ -406,6 +467,15 @@ impl World {
 
         // the waves of enemies
         self.waves_step(c);
+
+        // an enemy that has not seen you for a long while comes back where
+        // it can: no fight can stall behind a wall (SECOND-ORDER P7)
+        for i in 0..self.enemies.len() {
+            let e = &self.enemies[i];
+            if e.alive() && e.hurtable() && e.unseen > LOST_TICKS && Some(i) != self.boss {
+                self.relocate(c, i, chest);
+            }
+        }
 
         // the enemies and what they fire
         for i in 0..self.enemies.len() {
@@ -444,7 +514,8 @@ impl World {
                     self.sparks(at, c.pal.c("enemy_eye"), 14, ONE / 5);
                     self.note("boom", String::new());
                 }
-                self.player.hurt(dmg);
+                let from = self.enemies[i].pos;
+                self.hurt_from(dmg, from);
             }
         }
 
@@ -490,7 +561,7 @@ impl World {
         }
         let alive = self.alive_enemies();
         if !self.waves_left.is_empty() {
-            let ready = alive <= WAVE_REMAINDER || self.enemies.is_empty();
+            let ready = alive as i32 <= WAVE_REMAINDER || self.enemies.is_empty();
             if ready {
                 self.wave_timer -= 1;
                 if self.wave_timer <= 0 {
@@ -498,7 +569,7 @@ impl World {
                     for def in wave {
                         self.spawn(c, def);
                     }
-                    self.wave_timer = secs(3, 4);
+                    self.wave_timer = WAVE_GAP;
                     if self.kind == NodeKind::Boss {
                         let name = c
                             .story
@@ -514,17 +585,13 @@ impl World {
             }
         } else if alive == 0 && self.kind != NodeKind::Boss {
             self.cleared = true;
+            self.cleared_at = self.tick;
             self.orbs.clear();
             self.waves.clear();
             let heal = HEAL_ON_CLEAR;
             self.player.heal(heal);
             if let Some(r) = self.reward {
-                let kind = match r {
-                    Reward::Gun(g, l) => PickupKind::Gun(g, l),
-                    Reward::Jump => PickupKind::Jump,
-                    Reward::Health => PickupKind::MaxHealth(HEALTH_PICKUP),
-                    Reward::Speed => PickupKind::Speed(SPEED_PICKUP_PCT),
-                };
+                let kind = reward_pickup(r);
                 // on the open floor nearest the spot ahead of the body: the
                 // spot itself could be inside a wall
                 let ahead = self.player.pos.add(facing(self.player.yaw, 0).scale(int(4)));
@@ -540,6 +607,7 @@ impl World {
                     kind,
                     taken: false,
                     age: 0,
+                    group: 0,
                 });
             }
             self.note("cleared", c.say("callout_cleared"));
@@ -549,7 +617,7 @@ impl World {
     fn orbs_step(&mut self, c: &Content, chest: V3) {
         let level = &self.arena.level;
         let mut kept = Vec::with_capacity(self.orbs.len());
-        let mut hurt = false;
+        let mut hurt: Option<(i32, V3)> = None;
         let mut parried: Vec<Orb> = Vec::new();
         let mut spent: Vec<Orb> = Vec::new();
         let parrying = self.player.parry_window > 0;
@@ -562,16 +630,16 @@ impl World {
                 parried.push(o);
                 continue;
             }
-            if !hurt && o.touches(self.player.pos) && !self.player.invulnerable() {
-                hurt = true;
+            if hurt.is_none() && o.touches(self.player.pos) && !self.player.invulnerable() {
+                hurt = Some((o.damage, o.pos.sub(o.dir.scale(ONE))));
                 spent.push(o);
                 continue;
             }
             kept.push(o);
         }
         self.orbs = kept;
-        if hurt {
-            self.player.hurt(ORB_DAMAGE);
+        if let Some((damage, from)) = hurt {
+            self.hurt_from(damage, from);
         }
         for o in spent {
             self.effect(FxKind::Burst, o.pos, V3::ZERO, 10, o.rgb, o.radius * 2);
@@ -600,21 +668,25 @@ impl World {
                 erases: false,
             });
             self.sparks(o.pos, reflect, 12, ONE / 5);
+            self.effect(FxKind::Flash, chest, V3::ZERO, 12, reflect, PARRY_REACH * 2);
             self.note("reflect", c.say("callout_objection"));
+            if self.player.build.mend {
+                self.player.heal(MEND_HEAL);
+            }
         }
-        let mut wave_hit = false;
+        let mut wave_hit: Option<(i32, V3)> = None;
         let feet = self.player.pos;
         let inv = self.player.invulnerable();
         self.waves.retain_mut(|w| {
             let alive = w.step();
             if !w.hit && !inv && w.touches(feet) {
                 w.hit = true;
-                wave_hit = true;
+                wave_hit = Some((w.damage, w.centre));
             }
             alive
         });
-        if wave_hit {
-            self.player.hurt(WAVE_DAMAGE);
+        if let Some((damage, from)) = wave_hit {
+            self.hurt_from(damage, from);
         }
     }
 
@@ -728,6 +800,7 @@ impl World {
                     kind: PickupKind::Heal(HEAL_DROP),
                     taken: false,
                     age: 0,
+                    group: 0,
                 });
             }
         }
@@ -746,6 +819,19 @@ impl World {
             if !near {
                 continue;
             }
+            if p.group != 0 {
+                // a choice: it waits for the interact key, and taking it
+                // takes the others in its group away
+                self.offer = Some(k);
+                if !ctl.interact_pressed {
+                    continue;
+                }
+                for q in self.pickups.iter_mut() {
+                    if q.group == p.group {
+                        q.taken = true;
+                    }
+                }
+            }
             match p.kind {
                 PickupKind::Gun(gun, level) => {
                     self.offer = Some(k);
@@ -763,7 +849,24 @@ impl World {
                 }
                 PickupKind::Heal(n) => {
                     self.player.heal(n);
-                    self.note("heal", String::new());
+                    let text = if p.group != 0 {
+                        c.say("callout_fountain")
+                    } else {
+                        String::new()
+                    };
+                    self.note("heal", text);
+                }
+                PickupKind::Pierce => {
+                    self.player.build.pierce += PIERCE_BONUS;
+                    self.note("pickup", c.say("callout_pierce"));
+                }
+                PickupKind::Pulse => {
+                    self.player.build.pulse = true;
+                    self.note("pickup", c.say("callout_pulse"));
+                }
+                PickupKind::Mend => {
+                    self.player.build.mend = true;
+                    self.note("pickup", c.say("callout_mend"));
                 }
                 PickupKind::MaxHealth(n) => {
                     self.player.build.max_health += n;
@@ -793,6 +896,78 @@ impl World {
             self.pickups[k].taken = true;
             self.sparks(p.pos.add(v3(0, ONE, 0)), c.pal.c("spark"), 16, ONE / 6);
         }
+    }
+
+    /// Brings enemy `i` back at a spawn point with a clear line to `chest`.
+    fn relocate(&mut self, c: &Content, i: usize, chest: V3) {
+        let d = &c.enemies[self.enemies[i].def];
+        let air = matches!(d.kind, crate::content::Kind::Floater | crate::content::Kind::Moth);
+        let pool = if air {
+            &self.arena.air_spawns
+        } else {
+            &self.arena.ground_spawns
+        };
+        let lift = if air {
+            0
+        } else if d.kind == crate::content::Kind::Walker {
+            d.radius
+        } else {
+            d.hover
+        };
+        let level = &self.arena.level;
+        let fits: Vec<V3> = pool
+            .iter()
+            .map(|p| p.add(v3(0, lift, 0)))
+            .filter(|p| {
+                let to = chest.sub(*p);
+                let dist = to.len_xz();
+                dist > int(10) && dist < int(32) && level.ray(*p, to.norm(), to.len()).is_none()
+            })
+            .collect();
+        let e = &mut self.enemies[i];
+        e.unseen = 0;
+        if fits.is_empty() {
+            return;
+        }
+        let at = fits[self.rng.range(0, fits.len() as i32 - 1) as usize];
+        e.pos = at;
+        e.prev = at;
+        e.vel = V3::ZERO;
+        e.state = enemy::State::Spawning(enemy::SPAWN_TICKS);
+        self.effect(
+            FxKind::Flash,
+            at,
+            V3::ZERO,
+            enemy::SPAWN_TICKS,
+            c.pal.c("enemy_core"),
+            d.radius * 3,
+        );
+    }
+
+    /// A hit, and where it came from.
+    fn hurt_from(&mut self, damage: i32, from: V3) {
+        if self.player.hurt(damage) {
+            self.hit_from = from;
+            self.hit_age = 0;
+        }
+    }
+
+    /// A hook aimed at a wall just under a ledge catches above the ledge
+    /// instead, so it lifts you onto the roof (SECOND-ORDER P5).
+    fn mantle(&self, eye: V3, fwd: V3, p: V3) -> V3 {
+        let skip = eye.dist(self.player.chest()) + ONE / 2;
+        let start = eye.add(fwd.scale(skip));
+        let Some(hit) = self.arena.level.ray(start, fwd, GRAPPLE_RANGE + skip) else {
+            return p;
+        };
+        let s = &self.arena.level.solids[hit.solid];
+        let below_top = s.max.y - hit.point.y;
+        if below_top > ONE / 20 && below_top <= MANTLE_REACH {
+            let flat = v3(fwd.x, 0, fwd.z).norm();
+            let over = hit.point.add(flat.scale(ONE * 6 / 10));
+            return v3(over.x, s.max.y + ONE * 13 / 10, over.z);
+        }
+        p
     }
 
     fn gates_step(&mut self) {
@@ -856,6 +1031,7 @@ pub fn roman(n: i32) -> &'static str {
 mod tests {
     use super::*;
     use crate::content::tests::content;
+    use crate::level::{Level, Solid};
     use crate::player::Build;
     use crate::route::Route;
 
@@ -1002,6 +1178,7 @@ mod tests {
             gold: true,
             age: 0,
             owner: 0,
+            damage: ORB_DAMAGE,
         });
         let before = w.enemies[0].hp;
         let parry = Controls {
@@ -1038,6 +1215,7 @@ mod tests {
             gold: true,
             age: 0,
             owner: 0,
+            damage: ORB_DAMAGE,
         });
         let parry = Controls {
             parry_pressed: true,
@@ -1053,6 +1231,8 @@ mod tests {
     #[test]
     fn a_jump_pickup_adds_a_jump_up_to_four() {
         let (c, mut w) = world_for(NodeKind::Rest);
+        // without the Antechamber's own choice, which waits for E
+        w.pickups.clear();
         w.player.build.jumps = 3;
         for _ in 0..2 {
             w.pickups.push(Pickup {
@@ -1060,6 +1240,7 @@ mod tests {
                 kind: PickupKind::Jump,
                 taken: false,
                 age: 0,
+                group: 0,
             });
         }
         let (eye, fwd) = eye_of(&w);
@@ -1071,11 +1252,13 @@ mod tests {
     #[test]
     fn a_gun_on_the_floor_waits_for_the_interact_key_and_swaps() {
         let (c, mut w) = world_for(NodeKind::Rest);
+        w.pickups.clear();
         w.pickups.push(Pickup {
             pos: w.player.pos,
             kind: PickupKind::Gun(2, 3),
             taken: false,
             age: 0,
+            group: 0,
         });
         let (eye, fwd) = eye_of(&w);
         w.tick(&c, &Controls::default(), eye, fwd);
@@ -1104,5 +1287,128 @@ mod tests {
         assert_eq!(w.enemies.len(), 1);
         assert_eq!(w.boss, Some(0));
         assert_eq!(c.enemies[w.enemies[0].def].id, "bailiff");
+    }
+
+    fn orb_at(at: V3, gold: bool) -> Orb {
+        Orb {
+            pos: at,
+            prev: at,
+            dir: v3(0, 0, ONE),
+            speed: ONE / 20,
+            accel: 0,
+            min_speed: 0,
+            max_speed: ONE / 20,
+            curl: 0,
+            radius: ONE * 4 / 10,
+            rgb: [0; 3],
+            gold,
+            age: 0,
+            owner: 0,
+            damage: ORB_DAMAGE,
+        }
+    }
+
+    #[test]
+    fn a_dash_pulse_clears_the_orbs_round_you_and_only_those() {
+        let (c, mut w) = world_for(NodeKind::Fight);
+        w.waves_left.clear();
+        w.cleared = true;
+        w.player.build.pulse = true;
+        let chest = w.player.chest();
+        w.orbs.push(orb_at(chest.add(v3(int(2), 0, 0)), false));
+        w.orbs.push(orb_at(chest.add(v3(-int(10), 0, 0)), false));
+        let (eye, fwd) = eye_of(&w);
+        let dash = Controls {
+            dash_pressed: true,
+            ..Controls::default()
+        };
+        w.tick(&c, &dash, eye, fwd);
+        // PULSE_RADIUS is 2.5 m: the orb 2 m off is gone, the one 10 m off stays
+        assert_eq!(w.orbs.len(), 1);
+        assert!(w.orbs[0].pos.x < 0);
+        assert_eq!(w.pulse_cooldown, PULSE_COOLDOWN - 1);
+    }
+
+    #[test]
+    fn a_mending_parry_heals_when_it_turns_an_orb() {
+        let (c, mut w) = world_for(NodeKind::Fight);
+        w.waves_left.clear();
+        w.cleared = true;
+        w.player.build.parry = true;
+        w.player.build.mend = true;
+        w.player.health = 50;
+        let chest = w.player.chest();
+        w.orbs.push(orb_at(chest.add(v3(0, 0, -int(2))), true));
+        let (eye, fwd) = eye_of(&w);
+        let parry = Controls {
+            parry_pressed: true,
+            ..Controls::default()
+        };
+        w.tick(&c, &parry, eye, fwd);
+        assert_eq!(w.player.health, 50 + MEND_HEAL);
+    }
+
+    #[test]
+    fn the_antechamber_offers_health_or_its_reward_and_taking_one_loses_the_other() {
+        let (c, mut w) = world_for(NodeKind::Rest);
+        assert_eq!(w.pickups.len(), 2, "the fountain's health and the reward");
+        assert!(w.pickups.iter().all(|p| p.group == 1));
+        // walk onto the health pedestal: nothing until E
+        w.player.pos = w.pickups[0].pos;
+        w.player.health = 10;
+        let (eye, fwd) = eye_of(&w);
+        w.tick(&c, &Controls::default(), eye, fwd);
+        assert_eq!(w.player.health, 10);
+        let take = Controls {
+            interact_pressed: true,
+            ..Controls::default()
+        };
+        w.tick(&c, &take, eye, fwd);
+        // REST_HEAL_PCT is 50: half of 100
+        assert_eq!(w.player.health, 10 + 50);
+        assert!(w.pickups.iter().all(|p| p.taken), "the other choice is gone");
+    }
+
+    #[test]
+    fn a_hook_aimed_just_under_a_ledge_catches_above_it() {
+        let (_, w) = world_for(NodeKind::Fight);
+        let mut l = vec![Solid::new(v3(-int(50), -ONE, -int(50)), v3(int(50), 0, int(50)))];
+        // a wall 10 m ahead with its top at 4 m
+        l.push(Solid::new(v3(-int(5), 0, -int(12)), v3(int(5), int(4), -int(10))));
+        let mut w = w;
+        w.arena.level = Level::new(l);
+        w.player.pos = v3(0, 0, 0);
+        let eye = v3(0, int(3), int(1));
+        // aimed at the wall's face at about 3 m up: within MANTLE_REACH of the top
+        let fwd = v3(0, 0, -ONE);
+        let anchor = w.mantle(eye, fwd, v3(0, int(3), -int(10)));
+        assert!(anchor.y > int(4), "{anchor:?}");
+        assert!(anchor.z < -int(10), "over the top, not at the face: {anchor:?}");
+        // aimed low on the wall, it catches where it hits
+        let low = w.mantle(v3(0, ONE, int(1)), fwd, v3(0, ONE, -int(10)));
+        assert_eq!(low, v3(0, ONE, -int(10)));
+    }
+
+    #[test]
+    fn an_enemy_lost_behind_cover_comes_back_where_it_can_see_you() {
+        let (c, mut w) = world_for(NodeKind::Fight);
+        w.waves_left.clear();
+        let d = c.enemy("sentinel").unwrap();
+        let mut e = Enemy::new(d, &c.enemies[d], v3(int(80), int(2), int(80)), 1);
+        e.state = enemy::State::Rest(10_000);
+        e.unseen = LOST_TICKS + 1;
+        w.enemies.push(e);
+        let (eye, fwd) = eye_of(&w);
+        w.tick(&c, &Controls::default(), eye, fwd);
+        let e = &w.enemies[0];
+        assert!(e.pos.x.abs() < int(40), "moved back into the arena: {:?}", e.pos);
+        assert!(
+            e.sees(&w.arena.level, w.player.chest()),
+            "with a clear line to you"
+        );
+        assert!(
+            matches!(e.state, enemy::State::Spawning(_)),
+            "and appears as a new enemy does"
+        );
     }
 }

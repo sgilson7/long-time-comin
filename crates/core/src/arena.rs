@@ -11,12 +11,14 @@
 //! one plum ink line round everything (the `ink` flag; the renderer draws it
 //! as an inverted hull).
 
+use crate::balance::{PLAYER_HEIGHT, PLAYER_RADIUS, STEP_UP};
 use crate::content::{Palette, Rgb};
 use crate::fx::{self, deg, int, ONE};
 use crate::geom::{v3, Affine, V3};
 use crate::level::{Level, Solid};
 use crate::mesh::Mesh;
 use crate::rng::Rng;
+use std::collections::BTreeSet;
 
 /// Half the width of an arena's floor.
 pub const HALF: i32 = int(28);
@@ -1555,6 +1557,60 @@ impl<'a> B<'a> {
     }
 }
 
+/// The walk grid's spacing.
+const GRID: i32 = ONE / 2;
+
+/// Can a body stand with its feet at `p`?
+fn fits(l: &Level, p: V3) -> bool {
+    let r = PLAYER_RADIUS;
+    !l.blocked(
+        v3(p.x - r, p.y + ONE / 20, p.z - r),
+        v3(p.x + r, p.y + PLAYER_HEIGHT, p.z + r),
+    )
+}
+
+/// Every place a body can walk to from `from` without jumping, as the
+/// game's body moves: onto the highest top under its footprint it can step
+/// up to (`STEP_UP`), or down onto anything lower. Feet positions on a
+/// half-metre grid.
+pub fn walk(l: &Level, from: V3) -> Vec<V3> {
+    let snap = |v: i32| (v / GRID) * GRID;
+    let start = v3(snap(from.x), from.y, snap(from.z));
+    let mut seen: BTreeSet<(i32, i32, i32)> = BTreeSet::new();
+    let mut todo = vec![start];
+    let mut out = Vec::new();
+    seen.insert((start.x, start.y, start.z));
+    while let Some(p) = todo.pop() {
+        out.push(p);
+        for (dx, dz) in [(GRID, 0), (-GRID, 0), (0, GRID), (0, -GRID)] {
+            let (nx, nz) = (p.x + dx, p.z + dz);
+            if nx.abs() > int(40) || nz.abs() > int(40) {
+                continue;
+            }
+            let r = PLAYER_RADIUS;
+            let (lo, hi) = (v3(nx - r, -int(10), nz - r), v3(nx + r, p.y + STEP_UP, nz + r));
+            let mut top: Option<i32> = None;
+            l.each_near(lo, hi, |s| {
+                let over = s.min.x < hi.x && s.max.x > lo.x && s.min.z < hi.z && s.max.z > lo.z;
+                if over && s.max.y <= p.y + STEP_UP {
+                    top = Some(top.map_or(s.max.y, |t: i32| t.max(s.max.y)));
+                }
+            });
+            let Some(y) = top else {
+                continue;
+            };
+            let n = v3(nx, y, nz);
+            if y < p.y - int(6) || !fits(l, n) {
+                continue;
+            }
+            if seen.insert((n.x, n.y, n.z)) {
+                todo.push(n);
+            }
+        }
+    }
+    out
+}
+
 pub fn boxed(at: V3, size: V3) -> Affine {
     Affine::translate(at).then(&Affine::scale(size))
 }
@@ -1681,6 +1737,23 @@ pub fn build(kind: &str, seed: u64, exits: &[Side], pal: &Palette) -> Arena {
         }
         z += m(6);
     }
+    // a ground enemy stands only where you can walk to it: a turret on a
+    // roof with no way up could only be shot from below (SECOND-ORDER P4)
+    let start_at = if is_court {
+        v3(0, 0, COURT_RADIUS - m(8))
+    } else {
+        v3(0, 0, HALF - m(5))
+    };
+    let reached: BTreeSet<(i32, i32, i32)> = walk(&level, start_at)
+        .into_iter()
+        .map(|p| (p.x, p.y, p.z))
+        .collect();
+    ground_spawns.retain(|p| {
+        let (gx, gz) = ((p.x / GRID) * GRID, (p.z / GRID) * GRID);
+        [(0, 0), (GRID, 0), (-GRID, 0), (0, GRID), (0, -GRID)]
+            .iter()
+            .any(|(dx, dz)| reached.contains(&(gx + dx, p.y, gz + dz)))
+    });
     let (start, gates) = if is_court {
         (v3(0, 0, COURT_RADIUS - m(8)), Vec::new())
     } else {
@@ -1793,64 +1866,7 @@ mod size {
 #[cfg(test)]
 mod reach {
     use super::*;
-    use crate::balance::{PLAYER_HEIGHT, PLAYER_RADIUS, STEP_UP};
     use crate::content::tests::content;
-    use std::collections::BTreeSet;
-
-    const GRID: i32 = ONE / 2;
-
-    /// Can a body stand with its feet at `p`?
-    fn fits(l: &Level, p: V3) -> bool {
-        let r = PLAYER_RADIUS;
-        !l.blocked(
-            v3(p.x - r, p.y + ONE / 20, p.z - r),
-            v3(p.x + r, p.y + PLAYER_HEIGHT, p.z + r),
-        )
-    }
-
-    /// Every place a body can walk to from the start without jumping: a
-    /// step onto anything up to `STEP_UP` higher, a drop onto anything
-    /// lower. Returns the feet positions reached.
-    fn walk(a: &Arena) -> Vec<V3> {
-        let l = &a.level;
-        let snap = |v: i32| (v / GRID) * GRID;
-        let start = v3(snap(a.start.x), a.start.y, snap(a.start.z));
-        let mut seen: BTreeSet<(i32, i32, i32)> = BTreeSet::new();
-        let mut todo = vec![start];
-        let mut out = Vec::new();
-        seen.insert((start.x, start.y, start.z));
-        while let Some(p) = todo.pop() {
-            out.push(p);
-            for (dx, dz) in [(GRID, 0), (-GRID, 0), (0, GRID), (0, -GRID)] {
-                let (nx, nz) = (p.x + dx, p.z + dz);
-                if nx.abs() > int(40) || nz.abs() > int(40) {
-                    continue;
-                }
-                // as the game does: the body stands on the highest top under
-                // its footprint that it can step up to
-                let r = PLAYER_RADIUS;
-                let (lo, hi) = (v3(nx - r, -int(10), nz - r), v3(nx + r, p.y + STEP_UP, nz + r));
-                let mut top: Option<i32> = None;
-                l.each_near(lo, hi, |s| {
-                    let over = s.min.x < hi.x && s.max.x > lo.x && s.min.z < hi.z && s.max.z > lo.z;
-                    if over && s.max.y <= p.y + STEP_UP {
-                        top = Some(top.map_or(s.max.y, |t: i32| t.max(s.max.y)));
-                    }
-                });
-                let Some(y) = top else {
-                    continue;
-                };
-                let n = v3(nx, y, nz);
-                if y < p.y - int(6) || !fits(l, n) {
-                    continue;
-                }
-                if seen.insert((n.x, n.y, n.z)) {
-                    todo.push(n);
-                }
-            }
-        }
-        out
-    }
 
     #[test]
     fn every_gate_can_be_walked_to_and_every_fight_has_heights_and_shelter() {
@@ -1861,7 +1877,7 @@ mod reach {
             // cover walls are placed at random, so many seeds
             for seed in 1..=20 {
                 let a = build(kind, seed, &[Side::North, Side::East], &c.pal);
-                let reached = walk(&a);
+                let reached = walk(&a.level, a.start);
                 for (g, _) in a.gates.iter().skip(1) {
                     let near = reached
                         .iter()

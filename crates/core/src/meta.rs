@@ -2,7 +2,7 @@
 //! the years added to the sentence, and how much of the indictment has been
 //! read. The page keeps it in the browser as JSON.
 
-use crate::balance::{BASE_HEALTH, BASE_JUMPS, DASH_CHARGES};
+use crate::balance::{BASE_HEALTH, BASE_JUMPS, DASH_CHARGES, FIRST_DEATH_GRANT, SENTENCE_BONUS_PCT};
 use crate::content::Content;
 use crate::player::Build;
 use serde::{Deserialize, Serialize};
@@ -22,6 +22,8 @@ pub struct Meta {
     pub seen_intro: bool,
     pub best_nodes: i32,
     pub clemency_earned: i32,
+    /// a count is read the first time a run reaches the zone's hardest fights
+    pub reached_far: bool,
 }
 
 /// What a death adds to the record, for the indictment screen.
@@ -33,6 +35,12 @@ pub struct Reading {
     pub newest: String,
     pub years_added: i32,
     pub total_years: i32,
+    /// the clerk's grant on a first death
+    pub grant: i32,
+    /// the sentence bonus applied, in percent
+    pub bonus_pct: i32,
+    /// all the Clemency this death banked
+    pub banked: i32,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -111,42 +119,73 @@ impl Meta {
 
     /// A run ended in death: bank its Clemency, add the years, read the
     /// next count (or an addendum once every count is read).
+    /// The next line of the indictment: the next count, or an addendum
+    /// once every count is read.
+    pub fn read_next(&mut self, c: &Content, year: &str) -> String {
+        let s = &c.story;
+        if (self.counts_read as usize) < s.counts.len() {
+            self.counts_read += 1;
+            return s.counts[self.counts_read as usize - 1].clone();
+        }
+        let k = (self.deaths as usize) % s.addenda.len().max(1);
+        s.addenda
+            .get(k)
+            .cloned()
+            .unwrap_or_default()
+            .replace("{year}", year)
+    }
+
+    /// Percent added to Clemency earned: `SENTENCE_BONUS_PCT` for each ten
+    /// years of sentence.
+    pub fn sentence_bonus_pct(&self) -> i32 {
+        SENTENCE_BONUS_PCT * (self.years / 10)
+    }
+
+    /// A run ended in death: bank its Clemency (with the sentence bonus,
+    /// and the clerk's grant on a first death), add the years, read the next
+    /// line of the indictment.
     pub fn record_death(&mut self, c: &Content, earned: i32, nodes: i32, year: &str) -> Reading {
         self.runs += 1;
+        let grant = if self.deaths == 0 { FIRST_DEATH_GRANT } else { 0 };
+        let bonus_pct = self.sentence_bonus_pct();
+        let banked = self.bank(earned, nodes) + grant;
+        self.clemency += grant;
+        self.clemency_earned += grant;
         self.deaths += 1;
-        self.bank(earned, nodes);
         let years_added = self.deaths;
         self.years += years_added;
-        let s = &c.story;
-        let newest = if (self.counts_read as usize) < s.counts.len() {
-            self.counts_read += 1;
-            s.counts[self.counts_read as usize - 1].clone()
-        } else {
-            let k = (self.deaths as usize) % s.addenda.len().max(1);
-            s.addenda
-                .get(k)
-                .cloned()
-                .unwrap_or_default()
-                .replace("{year}", year)
-        };
+        let newest = self.read_next(c, year);
         Reading {
-            counts: s.counts[..self.counts_read as usize].to_vec(),
+            counts: c.story.counts[..self.counts_read as usize].to_vec(),
             newest,
             years_added,
             total_years: self.years,
+            grant,
+            bonus_pct,
+            banked,
         }
     }
 
-    pub fn record_win(&mut self, earned: i32, nodes: i32) {
+    /// A won run: bank its Clemency; the first win reads a count.
+    pub fn record_win(&mut self, c: &Content, earned: i32, nodes: i32, year: &str) -> (i32, Option<String>) {
         self.runs += 1;
         self.wins += 1;
-        self.bank(earned, nodes);
+        let banked = self.bank(earned, nodes);
+        let newest = if self.wins == 1 {
+            Some(self.read_next(c, year))
+        } else {
+            None
+        };
+        (banked, newest)
     }
 
-    fn bank(&mut self, earned: i32, nodes: i32) {
-        self.clemency += earned;
-        self.clemency_earned += earned;
+    /// Adds a run's Clemency with the sentence bonus; returns what was added.
+    fn bank(&mut self, earned: i32, nodes: i32) -> i32 {
+        let banked = earned * (100 + self.sentence_bonus_pct()) / 100;
+        self.clemency += banked;
+        self.clemency_earned += banked;
         self.best_nodes = self.best_nodes.max(nodes);
+        banked
     }
 
     /// A different graph every run, the same one for the same record.
@@ -212,7 +251,8 @@ mod tests {
         // Sifu's count: 1, then 2 more, then 3 more
         let d = m.record_death(&c, 0, 1, "2031");
         assert_eq!(d.total_years, 6);
-        assert_eq!(m.clemency, 9);
+        // 5 + 4 earned, and the clerk's 8 for the first death
+        assert_eq!(m.clemency, 9 + FIRST_DEATH_GRANT);
         for _ in 0..20 {
             m.record_death(&c, 0, 0, "2031");
         }
@@ -220,6 +260,21 @@ mod tests {
         let late = m.record_death(&c, 0, 0, "2031");
         assert!(late.newest.starts_with("ADDENDUM"), "{}", late.newest);
         assert!(!late.newest.contains("{year}"));
+    }
+
+    #[test]
+    fn a_long_sentence_earns_more_and_a_first_win_reads_a_count() {
+        let c = content();
+        let mut m = Meta {
+            years: 25,
+            ..Meta::default()
+        };
+        // 25 years: two tens, so +10%
+        let (banked, newest) = m.record_win(&c, 40, 8, "2031");
+        assert_eq!(banked, 44);
+        assert_eq!(newest.as_deref(), Some(c.story.counts[0].as_str()));
+        let (_, again) = m.record_win(&c, 0, 8, "2031");
+        assert!(again.is_none(), "only the first win reads a count");
     }
 
     #[test]

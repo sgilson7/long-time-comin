@@ -89,6 +89,11 @@ pub struct Game {
     run: Option<Run>,
     reading: Option<Reading>,
     last: (i32, i32),
+    /// a line of the indictment read during play, for the HUD's banner
+    story: Option<(u32, String)>,
+    story_seq: u32,
+    /// the count a first win read, for the verdict
+    win_count: Option<String>,
     hub: Arena,
     hub_seed: u64,
     menu_us: i64,
@@ -141,6 +146,9 @@ impl Game {
             run: None,
             reading: None,
             last: (0, 0),
+            story: None,
+            story_seq: 0,
+            win_count: None,
             hub,
             hub_seed,
             menu_us: 0,
@@ -230,8 +238,8 @@ impl Game {
         if !matches!(self.mode, Mode::Holding | Mode::Dead | Mode::Won) {
             return;
         }
-        let route = Route::build(&self.c, self.meta.run_seed());
         let (build, gun_level) = self.meta.build(&self.c);
+        let route = Route::build_for(&self.c, self.meta.run_seed(), gun_level);
         let player = Player::new(V3::ZERO, 0, build);
         let held = Held::new(self.c.gun("carbine"), gun_level);
         let start = route.start();
@@ -422,8 +430,10 @@ impl Game {
                 run.earned += self.c.route.clemency_boss;
                 run.cleared += 1;
                 let (total, cleared) = (run.total(), run.cleared);
-                self.meta.record_win(total, cleared);
-                self.last = (total, cleared);
+                let year = self.c.zones[0].year.clone();
+                let (banked, newest) = self.meta.record_win(&self.c, total, cleared, &year);
+                self.last = (banked, cleared);
+                self.win_count = newest;
                 self.mode = Mode::Won;
             }
         }
@@ -440,6 +450,14 @@ impl Game {
         run.world = self.world_for(&run.route, to, player, held, seq);
         let name = self.node_name(&run.route.nodes[to]);
         run.world.note("enter", name);
+        // the first run to reach the zone's hardest fights hears a count
+        if run.route.nodes[to].tier >= FAR_TIER && !self.meta.reached_far {
+            self.meta.reached_far = true;
+            let year = self.c.zones[0].year.clone();
+            let line = self.meta.read_next(&self.c, &year);
+            self.story_seq += 1;
+            self.story = Some((self.story_seq, line));
+        }
         run.at = to;
         run.visited.push(to);
         run.counted = false;
@@ -451,10 +469,25 @@ impl Game {
         let Some(run) = self.run.as_ref() else {
             return;
         };
-        let (total, cleared) = (run.total(), run.cleared);
+        // a fight left unfinished still counts for the enemies it cost
+        let node = &run.route.nodes[run.at];
+        let partial = match node.encounter {
+            Some(e) if node.kind == NodeKind::Fight && !run.counted => {
+                let total: i32 = self.c.encounters[e].waves.iter().map(|w| w.len() as i32).sum();
+                let per = if node.detour {
+                    self.c.route.clemency_detour
+                } else {
+                    self.c.route.clemency_main
+                };
+                per * run.world.kills.min(total) / total.max(1)
+            }
+            _ => 0,
+        };
+        let (total, cleared) = (run.total() + partial, run.cleared);
         let year = self.c.zones[0].year.clone();
-        self.reading = Some(self.meta.record_death(&self.c, total, cleared, &year));
-        self.last = (total, cleared);
+        let reading = self.meta.record_death(&self.c, total, cleared, &year);
+        self.last = (reading.banked, cleared);
+        self.reading = Some(reading);
         self.mode = Mode::Dead;
     }
 
@@ -496,7 +529,8 @@ impl Game {
                 let p = &run.world.player;
                 let head = p.prev_pos.lerp(p.pos, self.alpha).add(v3(0, CAMERA_UP, 0));
                 let body = self.camera.eye.dist(head) > CAMERA_HIDE_BODY;
-                draw::world(&mut b, &self.c, &run.world, self.alpha, clock, body);
+                let cam = self.camera;
+                draw::world(&mut b, &self.c, &run.world, self.alpha, clock, body, &cam);
                 if self.mode == Mode::Dead || self.mode == Mode::Won {
                     // the camera drifts up and away while the court reads
                     let up = fx::mul(int(1), (clock % 600) * ONE / 120);
@@ -631,6 +665,10 @@ impl Game {
             })
             .collect();
         let prompt = w.offer.and_then(|k| match w.pickups[k].kind {
+            _ if w.pickups[k].group != 0 => Some(
+                c.say("prompt_choose")
+                    .replace("{thing}", &self.pickup_label(w.pickups[k].kind)),
+            ),
             PickupKind::Gun(g, l) => Some(
                 c.say("prompt_take")
                     .replace("{gun}", &format!("{} {}", c.guns[g].name, roman(l)))
@@ -638,11 +676,13 @@ impl Game {
             ),
             _ => None,
         });
+        // hints show for a few seconds, then get out of the way
+        let fresh = |since: i32| w.tick - since < HINT_TICKS;
         let hint = match node.kind {
             NodeKind::Arrival => c.say("hint_arrival"),
             NodeKind::Rest => c.say("hint_rest"),
-            NodeKind::Fight if run.at == 1 && self.meta.runs == 0 => c.say("hint_fight"),
-            NodeKind::Fight if w.cleared => c.say("hint_cleared"),
+            NodeKind::Fight if w.cleared && fresh(w.cleared_at) => c.say("hint_cleared"),
+            NodeKind::Fight if !w.cleared && self.meta.runs < 2 && fresh(0) => c.say("hint_fight"),
             _ => String::new(),
         };
         let reticle = if w.aim_enemy.is_some() {
@@ -664,8 +704,41 @@ impl Game {
             .iter()
             .enumerate()
             .filter(|(i, e)| e.hurtable() && Some(*i) != w.boss)
-            .map(|(_, e)| self.marker(e.pos, c.enemies[e.def].radius, e.health_pct()))
+            .map(|(_, e)| {
+                let threat = matches!(
+                    e.state,
+                    crate::enemy::State::Windup(_) | crate::enemy::State::Casting(_)
+                );
+                let mut m = self.marker(e.pos, c.enemies[e.def].radius, e.health_pct());
+                m["threat"] = json!(threat);
+                m["colour"] = json!(hex(e.next_colour(c).map_or(c.pal.c("magenta"), |n| c.pal.c(n))));
+                m
+            })
             .collect();
+        // the arc toward the last hit's source, fading
+        let hit = (w.hit_age < HIT_ARC_TICKS).then(|| {
+            let m = self.marker(w.hit_from, 0, 100);
+            json!({ "angle": m["angle_any"], "fade": 100 - w.hit_age * 100 / HIT_ARC_TICKS })
+        });
+        // a ground wave about to reach a body standing in its path
+        let jump_cue = w.waves.iter().any(|wv| {
+            let d = p.pos.sub(wv.centre).len_xz();
+            d > wv.radius && d - wv.radius <= wv.speed * JUMP_CUE_TICKS && p.pos.y < wv.centre.y + WAVE_HEIGHT
+        });
+        let mut perks = Vec::new();
+        if p.build.pierce > 0 {
+            perks.push(format!("{} +{}", c.say("reward_pierce"), p.build.pierce));
+        }
+        if p.build.pulse {
+            perks.push(c.say("reward_pulse"));
+        }
+        if p.build.mend {
+            perks.push(c.say("reward_mend"));
+        }
+        let story = self
+            .story
+            .as_ref()
+            .map(|(seq, text)| json!({ "seq": seq, "text": text, "heading": c.say("story_heading") }));
         h = json!({
             "mode": self.mode,
             "health": p.health,
@@ -703,6 +776,12 @@ impl Game {
             "reticle": reticle,
             "notes": notes,
             "foes": foes,
+            "hit": hit,
+            "jump_cue": jump_cue,
+            "jump_text": c.say("jump_cue"),
+            "perks": perks,
+            "pulse_ready": p.build.pulse && w.pulse_cooldown == 0,
+            "story": story,
         });
         h.to_string()
     }
@@ -712,19 +791,21 @@ impl Game {
     /// clockwise from pointing right).
     fn marker(&self, at: V3, radius: i32, pct: i32) -> Value {
         let cam = &self.camera;
+        let right = cam.fwd.cross(V3::UP).norm();
+        let up = right.cross(cam.fwd);
+        let rel = at.sub(cam.eye);
+        // the way to it across the screen, even when it is on screen: from
+        // its side and depth, so something behind points down the screen
+        let (sx, sy) = (rel.dot(right), -rel.dot(up).max(0) + (-rel.dot(cam.fwd)).max(0));
+        let a = fx::atan2(sy, sx);
+        let deg = (a as i64 * 360 / fx::TURN as i64) as i32;
         let over = at.add(v3(0, radius + ONE / 2, 0));
         let screen = cam.screen(self.aspect(), over);
         if let Some((x, y)) = screen {
             if (0..=100 * ONE).contains(&x) && (0..=100 * ONE).contains(&y) {
-                return json!({ "x": x / ONE, "y": y / ONE, "edge": false, "pct": pct, "hurt": pct < 100, "angle": 0 });
+                return json!({ "x": x / ONE, "y": y / ONE, "edge": false, "pct": pct, "hurt": pct < 100, "angle": 0, "angle_any": deg });
             }
         }
-        let right = cam.fwd.cross(V3::UP).norm();
-        let up = right.cross(cam.fwd);
-        let rel = at.sub(cam.eye);
-        let (sx, sy) = (rel.dot(right), -rel.dot(up));
-        let a = fx::atan2(sy, sx);
-        let deg = (a as i64 * 360 / fx::TURN as i64) as i32;
         json!({
             "x": 50 + fx::mul(fx::cos(a), int(44)) / ONE,
             "y": 50 + fx::mul(fx::sin(a), int(40)) / ONE,
@@ -732,6 +813,7 @@ impl Game {
             "pct": pct,
             "hurt": pct < 100,
             "angle": deg,
+            "angle_any": deg,
         })
     }
 
@@ -745,13 +827,36 @@ impl Game {
         self.c.place_name(key)
     }
 
-    fn reward_label(&self, r: Reward) -> String {
+    pub fn reward_label(&self, r: Reward) -> String {
         match r {
             Reward::Gun(g, l) => format!("{} {}", self.c.guns[g].name, roman(l)),
             Reward::Jump => self.c.say("reward_jump"),
             Reward::Health => self.c.say("reward_health"),
             Reward::Speed => self.c.say("reward_speed"),
+            Reward::Pierce => self.c.say("reward_pierce"),
+            Reward::Pulse => self.c.say("reward_pulse"),
+            Reward::Mend => self.c.say("reward_mend"),
         }
+    }
+
+    /// What a pickup is, in words, for the prompt.
+    fn pickup_label(&self, k: PickupKind) -> String {
+        let c = &self.c;
+        match k {
+            PickupKind::Heal(n) => c.say("prompt_heal").replace("{n}", &n.to_string()),
+            PickupKind::MaxHealth(_) => c.say("reward_health"),
+            PickupKind::Speed(_) => c.say("reward_speed"),
+            PickupKind::Jump => c.say("reward_jump"),
+            PickupKind::Gun(g, l) => format!("{} {}", c.guns[g].name, roman(l)),
+            PickupKind::Pierce => c.say("reward_pierce"),
+            PickupKind::Pulse => c.say("reward_pulse"),
+            PickupKind::Mend => c.say("reward_mend"),
+        }
+    }
+
+    /// "1 year", "3 years": a number and its word from copy.json.
+    fn count_of(&self, n: i32, one: &str, many: &str) -> String {
+        format!("{n} {}", self.c.say(if n == 1 { one } else { many }))
     }
 
     fn reward_icon(r: Reward) -> &'static str {
@@ -760,6 +865,9 @@ impl Game {
             Reward::Jump => "jump",
             Reward::Health => "heart",
             Reward::Speed => "speed",
+            Reward::Pierce => "pierce",
+            Reward::Pulse => "pulse",
+            Reward::Mend => "mend",
         }
     }
 
@@ -813,6 +921,14 @@ impl Game {
             "counts_total": c.story.counts.len(),
             "counts": c.story.counts[..m.counts_read as usize],
             "upgrades": upgrades,
+            "build_lines": [
+                c.say("build_health").replace("{n}", &build.max_health.to_string()),
+                self.count_of(build.jumps, "jump", "jumps"),
+                self.count_of(build.dash_charges, "dash", "dashes"),
+                c.say("build_speed").replace("{n}", &build.speed_pct.to_string()),
+                format!("{} {}", c.guns[c.gun("carbine")].name, roman(gun_level)),
+            ],
+            "sentence_bonus": if m.sentence_bonus_pct() > 0 { c.say("sentence_bonus").replace("{n}", &m.sentence_bonus_pct().to_string()) } else { String::new() },
             "build": {
                 "health": build.max_health,
                 "jumps": build.jumps,
@@ -840,7 +956,9 @@ impl Game {
                 .map(|(i, n)| {
                     json!({
                         "x": 4 + 92 * n.step / r.steps.max(1),
-                        "y": if n.lane == 0 { 40 } else { 74 },
+                        // side nodes alternate rows so their names do not collide
+                        "y": if n.lane == 0 { 34 } else if n.step % 2 == 0 { 66 } else { 82 },
+                        "tier": if n.kind == NodeKind::Fight { "●".repeat(n.tier as usize) } else { String::new() },
                         "kind": match n.kind { NodeKind::Arrival => "arrival", NodeKind::Fight => "fight", NodeKind::Rest => "rest", NodeKind::Boss => "boss" },
                         "name": self.node_name(n),
                         "detour": n.detour,
@@ -867,16 +985,19 @@ impl Game {
                 "counts": rd.counts,
                 "newest": rd.newest,
                 "time_served": c.story.time_served
-                    .replace("{years}", &rd.years_added.to_string())
-                    .replace("{total}", &rd.total_years.to_string()),
+                    .replace("{years}", &self.count_of(rd.years_added, "year", "years"))
+                    .replace("{total}", &self.count_of(rd.total_years, "year", "years")),
                 "clemency": self.last.0,
                 "cleared": self.last.1,
+                "grant": if rd.grant > 0 { c.say("first_grant").replace("{n}", &rd.grant.to_string()) } else { String::new() },
+                "bonus": if rd.bonus_pct > 0 { c.say("sentence_bonus_applied").replace("{n}", &rd.bonus_pct.to_string()) } else { String::new() },
             });
         }
         if self.mode == Mode::Won {
             s["verdict"] = json!({
                 "title": c.story.victory_title,
                 "lines": c.story.victory,
+                "newest": self.win_count.clone().unwrap_or_default(),
                 "clemency": self.last.0,
                 "cleared": self.last.1,
             });
@@ -1040,13 +1161,14 @@ pub(crate) mod tests {
         assert_eq!(g.mode, Mode::Dead);
         let s: Value = serde_json::from_str(&g.screen_json()).unwrap();
         assert_eq!(s["reading"]["newest"], g.c.story.counts[0].as_str());
-        assert_eq!(s["clemency"], 7);
+        // 7 earned, and the clerk's grant for a first death
+        assert_eq!(s["clemency"], 7 + FIRST_DEATH_GRANT);
         g.to_holding();
         assert_eq!(g.mode, Mode::Holding);
-        // 7 Clemency: Fleet I costs 10 and Constitution I costs 8
-        assert!(!g.buy("fleet_1"));
+        // 15 Clemency: Fleet I (10) leaves 5, short of Constitution I (8)
+        assert!(g.buy("fleet_1"));
         assert!(!g.buy("constitution_1"));
-        g.grant(1);
+        g.grant(3);
         assert!(g.buy("constitution_1"));
     }
 
@@ -1077,6 +1199,53 @@ pub(crate) mod tests {
         assert_eq!(s["verdict"]["title"], g.c.story.victory_title.as_str());
         g.to_holding();
         assert_eq!(g.mode, Mode::Holding);
+    }
+
+    #[test]
+    fn dying_mid_fight_credits_its_share_for_each_enemy_killed() {
+        let mut g = game_with(r#"{"seen_intro": true, "deaths": 1}"#);
+        g.begin();
+        g.start_run();
+        let first = g.run.as_ref().unwrap().route.nodes[0].next[0];
+        g.go(first);
+        let run = g.run.as_mut().unwrap();
+        let node = run.route.nodes[run.at].clone();
+        let total: i32 = g.c.encounters[node.encounter.unwrap()]
+            .waves
+            .iter()
+            .map(|w| w.len() as i32)
+            .sum();
+        run.world.kills = total / 2;
+        run.world.player.health = 0;
+        frames(&mut g, 2, 0);
+        assert_eq!(g.mode, Mode::Dead);
+        // clemency_main (3) times the share killed, rounded down; no
+        // first-death grant (this record has died before)
+        let expect = g.c.route.clemency_main * (total / 2) / total;
+        assert_eq!(g.meta.clemency, expect, "{} of {total} killed", total / 2);
+    }
+
+    #[test]
+    fn the_hud_points_to_a_threat_and_to_the_last_hit() {
+        let mut g = game_with(r#"{"seen_intro": true}"#);
+        g.begin();
+        g.start_run();
+        let first = g.run.as_ref().unwrap().route.nodes[0].next[0];
+        g.go(first);
+        let w = &mut g.run.as_mut().unwrap().world;
+        let d = g.c.enemy("drifter").unwrap();
+        let mut e = crate::enemy::Enemy::new(d, &g.c.enemies[d], w.player.chest().add(v3(0, 0, int(15))), 1);
+        e.state = crate::enemy::State::Windup(20);
+        w.enemies.push(e);
+        w.hit_from = w.player.chest().add(v3(int(5), 0, 0));
+        w.hit_age = 0;
+        g.draw();
+        let h: Value = serde_json::from_str(&g.hud_json()).unwrap();
+        let foe = &h["foes"][0];
+        // behind the camera: an edge arrow, marked as a threat while it winds up
+        assert_eq!(foe["edge"], true);
+        assert_eq!(foe["threat"], true);
+        assert!(h["hit"]["fade"].as_i64().unwrap() > 90);
     }
 
     #[test]

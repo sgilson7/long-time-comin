@@ -23,6 +23,10 @@ Long Time Comin' is a Builder project built in one session on 2026-10-10 from `B
 
 `./scripts/check.sh` on 2026-10-10 at commit "Take the pointer-lock fallback under automation": fmt, clippy with warnings as errors, 88 core tests and 11 boundary tests, the release wasm build, the wasm import audit, and the browser check in Chromium, Firefox and WebKit (`BUILDER CHECK PASSED`). Ten behaviours were broken on purpose and each test failed (SECOND-ORDER B1).
 
+## Round 3 (2026-10-10): the playtest
+
+A subagent played seven runs through the playtest harness (`cargo run --release -q -p ltc_core --example playtest -- SESSION_DIR help`) and recommended changes; SECOND-ORDER H1 to P9 record what was done and measured. To measure difficulty again, run consecutive autopilot runs through the harness (commands `start`, `go main`, `fight 150`, `holding`).
+
 ## What remains
 
 - Sam's playtest (`TRIAGE.md`). Every feel and balance number is the agent's guess (SECOND-ORDER T1); the probe shows the curve (no wins with no upgrades, about half with 62 Clemency of upgrades), not whether it is fun (T2, P2).

@@ -223,6 +223,8 @@ struct VolleyFile {
     gold: bool,
     #[serde(default)]
     aim: bool,
+    #[serde(default)]
+    damage: i32,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -256,6 +258,8 @@ pub struct Volley {
     pub rings: i32,
     pub gold: bool,
     pub aim: bool,
+    /// health a hit takes
+    pub damage: i32,
 }
 
 impl Volley {
@@ -377,6 +381,8 @@ pub struct RouteRules {
     pub clemency_main: i32,
     pub clemency_detour: i32,
     pub clemency_boss: i32,
+    #[serde(default)]
+    pub rest_rewards: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
@@ -417,6 +423,9 @@ pub struct Upgrade {
     pub amount: i32,
     pub icon: String,
 }
+
+/// The rewards a side path or the Antechamber can hold.
+pub const REWARDS: &[&str] = &["weapon", "jump", "health", "speed", "pierce", "pulse", "mend"];
 
 const EFFECTS: &[&str] = &[
     "max_health",
@@ -515,8 +524,8 @@ impl Content {
                 return Err(format!("zone: no encounter of tier {t}"));
             }
         }
-        for reward in &r.rewards {
-            if !["weapon", "jump", "health", "speed"].contains(&reward.as_str()) {
+        for reward in r.rewards.iter().chain(&r.rest_rewards) {
+            if !REWARDS.contains(&reward.as_str()) {
                 return Err(format!("zone: no such reward {reward}"));
             }
         }
@@ -668,6 +677,13 @@ fn parse_patterns(text: &str, pal: &Palette) -> Result<Vec<Pattern>, String> {
                 rings: v.rings.max(1),
                 gold: v.gold,
                 aim: v.aim,
+                damage: if v.damage > 0 {
+                    v.damage
+                } else if shape == Shape::Wave {
+                    crate::balance::WAVE_DAMAGE
+                } else {
+                    crate::balance::ORB_DAMAGE
+                },
             });
         }
         out.push(Pattern { id: p.id, volleys });

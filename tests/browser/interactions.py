@@ -7,7 +7,7 @@ copied from the game's own output:
 
 - story.json's sentencing has 5 lines; its indictment has 10 counts.
 - the Codex has 5 tabs (copy.json codex_tabs), 11 control rows
-  (copy.json controls), 3 guns (weapons.json) and 6 enemies (enemies.json).
+  (copy.json controls), 3 guns (weapons.json) and 7 enemies (enemies.json).
 - the crater's gate is open, so its label shows; the first fight's gates
   stay dark and unlabelled until its enemies are defeated.
 - upgrades.json lists 11 upgrades; the cheapest (Constitution I) costs 8, so
@@ -69,7 +69,7 @@ def run(page, check, engine):
     check(len(guns) == 3, f"three guns ({len(guns)})")
     click(page, "#codex-tabs .tab:nth-child(3)")
     foes = page.query_selector_all("#codex-body .codex-card")
-    check(len(foes) == 6, f"six enemies ({len(foes)})")
+    check(len(foes) == 7, f"seven enemies ({len(foes)})")
     body = page.inner_text("#codex-body")
     check("{" not in body, "no unfilled placeholder in the Codex")
     click(page, "#codex-close")

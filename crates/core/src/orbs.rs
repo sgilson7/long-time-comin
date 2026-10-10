@@ -32,6 +32,7 @@ pub struct Orb {
     pub age: i32,
     /// the enemy that fired it, so a parried orb knows where to go
     pub owner: usize,
+    pub damage: i32,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -43,6 +44,7 @@ pub struct Wave {
     pub reach: i32,
     pub rgb: Rgb,
     pub hit: bool,
+    pub damage: i32,
 }
 
 /// A ring tilts toward a target above or below it by at most this much.
@@ -85,6 +87,7 @@ pub fn fire(
             gold: v.gold,
             age: 0,
             owner,
+            damage: v.damage,
         })
     };
     let curl_of = |i: i32| {
@@ -145,6 +148,7 @@ pub fn fire(
                 reach: v.size,
                 rgb,
                 hit: false,
+                damage: v.damage,
             });
         }
     }
@@ -350,8 +354,9 @@ mod tests {
             ticks += 1;
             assert!(ticks < 60, "still flying at {:?}", o.pos);
         }
-        // 23 m/s: the wall face 5.5 m away is reached in about 14 ticks
-        assert!((12..=16).contains(&ticks), "{ticks}");
+        // 18 m/s (patterns.json snipe): the wall face 5.5 m away, less the
+        // orb's half radius, is reached in about 18 ticks
+        assert!((16..=20).contains(&ticks), "{ticks}");
     }
 
     #[test]
@@ -370,6 +375,7 @@ mod tests {
             gold: false,
             age: 0,
             owner: 0,
+            damage: ORB_DAMAGE,
         };
         assert!(o.touches(V3::ZERO));
         // a body jumped 1.6 m clear: its feet are over the orb's top

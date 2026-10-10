@@ -58,7 +58,7 @@
     {
       "id": "armory",
       "name": "Standing Armory",
-      "cost": 14,
+      "cost": 20,
       "requires": "",
       "effect": "armory",
       "amount": 2,

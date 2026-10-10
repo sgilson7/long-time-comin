@@ -1,23 +1,78 @@
 {
-  "_about": "Zone one and the route around it. A run's graph is made from route by a seeded roll (crates/core/src/route.rs): the main path is arrival, main_fights fights, the rest and the boss; between main fights, detours of 1 to detour_max nodes rejoin the next main node, and a detour's last node holds a reward drawn from rewards. Encounters are listed by tier; a main fight's tier is in main_tiers, a detour's is one higher. clemency is what the court grants per node cleared.",
+  "_about": "Zone one and the route around it. A run's graph is made from route by a seeded roll (crates/core/src/route.rs): the main path is arrival, main_fights fights, the rest and the boss; between main fights, detours of 1 to detour_max nodes rejoin the next main node, and a detour's last node holds a reward drawn from rewards. Encounters are listed by tier; a main fight's tier is in main_tiers, a detour's is one higher. clemency is what the court grants per node cleared. rest_rewards: the Antechamber offers one of these beside its fountain, and you take one or the other.",
   "zones": [
-    { "id": "waiting_city", "name": "The Waiting City", "year": "2031", "built": true, "boss": "bailiff" },
-    { "id": "flood_years", "name": "The Flood Years", "year": "2048", "built": false, "boss": "witness" },
-    { "id": "glass_decade", "name": "The Glass Decade", "year": "2064", "built": false, "boss": "jury" },
-    { "id": "stilling", "name": "The Night of the Stilling", "year": "2081", "built": false, "boss": "defendant" }
+    {
+      "id": "waiting_city",
+      "name": "The Waiting City",
+      "year": "2031",
+      "built": true,
+      "boss": "bailiff"
+    },
+    {
+      "id": "flood_years",
+      "name": "The Flood Years",
+      "year": "2048",
+      "built": false,
+      "boss": "witness"
+    },
+    {
+      "id": "glass_decade",
+      "name": "The Glass Decade",
+      "year": "2064",
+      "built": false,
+      "boss": "jury"
+    },
+    {
+      "id": "stilling",
+      "name": "The Night of the Stilling",
+      "year": "2081",
+      "built": false,
+      "boss": "defendant"
+    }
   ],
   "route": {
     "main_fights": 5,
-    "main_tiers": [1, 1, 2, 2, 3],
+    "main_tiers": [
+      1,
+      1,
+      2,
+      2,
+      3
+    ],
     "detours_min": 3,
     "detours_max": 4,
     "detour_max": 2,
-    "rewards": ["weapon", "jump", "health", "weapon", "speed", "jump", "health"],
-    "clemency_main": 3,
-    "clemency_detour": 5,
-    "clemency_boss": 25
+    "rewards": [
+      "weapon",
+      "jump",
+      "health",
+      "weapon",
+      "speed",
+      "pierce",
+      "pulse",
+      "mend",
+      "jump",
+      "health"
+    ],
+    "clemency_main": 2,
+    "clemency_detour": 4,
+    "clemency_boss": 25,
+    "rest_rewards": [
+      "pierce",
+      "pulse",
+      "mend",
+      "jump",
+      "health",
+      "speed"
+    ]
   },
-  "archetypes": ["plaza", "market", "rooftops", "canal", "atrium"],
+  "archetypes": [
+    "plaza",
+    "market",
+    "rooftops",
+    "canal",
+    "atrium"
+  ],
   "names": {
     "arrival": "The Crater",
     "rest": "The Antechamber",
@@ -29,15 +84,244 @@
     "atrium": "The Old Exchange"
   },
   "encounters": [
-    { "tier": 1, "waves": [["drifter", "drifter"], ["sentinel", "moth", "moth", "moth"]] },
-    { "tier": 1, "waves": [["sentinel", "sentinel"], ["drifter", "moth", "moth"]] },
-    { "tier": 1, "waves": [["drifter", "sentinel"], ["drifter", "drifter", "moth", "moth"]] },
-    { "tier": 2, "waves": [["warden", "drifter"], ["sentinel", "lantern"], ["moth", "moth", "moth", "moth", "drifter"]] },
-    { "tier": 2, "waves": [["lantern", "drifter", "drifter"], ["warden", "sentinel", "moth", "moth"]] },
-    { "tier": 2, "waves": [["sentinel", "sentinel", "drifter"], ["warden", "lantern"]] },
-    { "tier": 3, "waves": [["warden", "drifter", "drifter"], ["lantern", "lantern", "sentinel"], ["moth", "moth", "moth", "moth", "moth", "warden"]] },
-    { "tier": 3, "waves": [["sentinel", "sentinel", "sentinel"], ["warden", "warden"], ["lantern", "drifter", "drifter", "moth", "moth"]] },
-    { "tier": 4, "waves": [["warden", "warden", "lantern"], ["sentinel", "sentinel", "lantern", "drifter"], ["moth", "moth", "moth", "moth", "moth", "moth", "warden", "lantern"]] },
-    { "tier": 4, "waves": [["lantern", "lantern", "drifter", "drifter"], ["warden", "warden", "sentinel"], ["sentinel", "lantern", "moth", "moth", "moth", "moth"]] }
+    {
+      "tier": 1,
+      "waves": [
+        [
+          "drifter",
+          "drifter"
+        ],
+        [
+          "sentinel",
+          "moth",
+          "moth",
+          "moth"
+        ]
+      ]
+    },
+    {
+      "tier": 1,
+      "waves": [
+        [
+          "sentinel",
+          "sentinel"
+        ],
+        [
+          "drifter",
+          "moth",
+          "moth"
+        ]
+      ]
+    },
+    {
+      "tier": 1,
+      "waves": [
+        [
+          "drifter",
+          "sentinel"
+        ],
+        [
+          "drifter",
+          "drifter",
+          "moth",
+          "moth"
+        ]
+      ]
+    },
+    {
+      "tier": 2,
+      "waves": [
+        [
+          "warden",
+          "drifter"
+        ],
+        [
+          "sentinel",
+          "lantern"
+        ],
+        [
+          "moth",
+          "moth",
+          "moth",
+          "moth",
+          "drifter"
+        ]
+      ]
+    },
+    {
+      "tier": 2,
+      "waves": [
+        [
+          "lantern",
+          "drifter",
+          "drifter"
+        ],
+        [
+          "warden",
+          "sentinel",
+          "moth",
+          "moth"
+        ]
+      ]
+    },
+    {
+      "tier": 2,
+      "waves": [
+        [
+          "drifter",
+          "drifter",
+          "moth",
+          "moth"
+        ],
+        [
+          "warden",
+          "sentinel"
+        ]
+      ]
+    },
+    {
+      "tier": 2,
+      "waves": [
+        [
+          "bloom",
+          "drifter"
+        ],
+        [
+          "sentinel",
+          "moth",
+          "moth",
+          "moth"
+        ]
+      ]
+    },
+    {
+      "tier": 3,
+      "waves": [
+        [
+          "sentinel",
+          "sentinel",
+          "drifter"
+        ],
+        [
+          "warden",
+          "lantern"
+        ]
+      ]
+    },
+    {
+      "tier": 3,
+      "waves": [
+        [
+          "warden",
+          "drifter",
+          "drifter"
+        ],
+        [
+          "lantern",
+          "lantern",
+          "sentinel"
+        ],
+        [
+          "moth",
+          "moth",
+          "moth",
+          "moth",
+          "moth",
+          "warden"
+        ]
+      ]
+    },
+    {
+      "tier": 3,
+      "waves": [
+        [
+          "sentinel",
+          "sentinel",
+          "sentinel"
+        ],
+        [
+          "warden",
+          "warden"
+        ],
+        [
+          "lantern",
+          "drifter",
+          "drifter",
+          "moth",
+          "moth"
+        ]
+      ]
+    },
+    {
+      "tier": 4,
+      "waves": [
+        [
+          "warden",
+          "warden",
+          "lantern"
+        ],
+        [
+          "sentinel",
+          "sentinel",
+          "lantern",
+          "drifter"
+        ],
+        [
+          "moth",
+          "moth",
+          "moth",
+          "moth",
+          "moth",
+          "moth",
+          "warden",
+          "lantern"
+        ]
+      ]
+    },
+    {
+      "tier": 4,
+      "waves": [
+        [
+          "lantern",
+          "lantern",
+          "drifter",
+          "drifter"
+        ],
+        [
+          "warden",
+          "warden",
+          "sentinel"
+        ],
+        [
+          "sentinel",
+          "lantern",
+          "moth",
+          "moth",
+          "moth",
+          "moth"
+        ]
+      ]
+    },
+    {
+      "tier": 3,
+      "waves": [
+        [
+          "bloom",
+          "bloom"
+        ],
+        [
+          "warden",
+          "drifter",
+          "drifter"
+        ],
+        [
+          "lantern",
+          "moth",
+          "moth",
+          "moth",
+          "moth"
+        ]
+      ]
+    }
   ]
 }

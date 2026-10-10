@@ -5,6 +5,8 @@
 //! browser. `tests/boundary.rs` enforces that, along with the dependency
 //! allowlist and the reference ban on floats, hash maps and clocks.
 #![allow(clippy::needless_range_loop, clippy::collapsible_match)]
+// the HUD is one large json! literal
+#![recursion_limit = "256"]
 
 pub mod arena;
 pub mod balance;

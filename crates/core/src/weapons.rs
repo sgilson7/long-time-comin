@@ -54,6 +54,7 @@ pub struct Shot {
 /// Counts the gun's cooldown down, and fires if the trigger is held and the
 /// gun is ready: the shots leave `muzzle` toward `aim_point`, each strayed
 /// inside the level's spread by the seeded generator.
+#[allow(clippy::too_many_arguments)]
 pub fn trigger(
     held: &mut Held,
     gun: &Gun,
@@ -62,6 +63,7 @@ pub fn trigger(
     muzzle: V3,
     aim_point: V3,
     rng: &mut Rng,
+    pierce_bonus: i32,
 ) -> Vec<Shot> {
     held.cooldown = (held.cooldown - 1).max(0);
     if !firing || held.cooldown > 0 {
@@ -93,7 +95,7 @@ pub fn trigger(
                 life: l.life,
                 splash_radius: l.splash_radius,
                 splash: l.splash,
-                pierce: l.pierce,
+                pierce: l.pierce + pierce_bonus,
                 passed: Vec::new(),
                 rgb,
                 kind,
@@ -118,7 +120,7 @@ mod tests {
         let mut rng = Rng::new(1);
         let mut shots = 0;
         for _ in 0..60 {
-            shots += trigger(&mut h, g, [0; 3], true, V3::ZERO, v3(0, 0, -int(10)), &mut rng).len();
+            shots += trigger(&mut h, g, [0; 3], true, V3::ZERO, v3(0, 0, -int(10)), &mut rng, 0).len();
         }
         // every 6 ticks (105 ms rounded) for 60 ticks: 10 shots
         assert_eq!(shots, 10);
@@ -130,7 +132,7 @@ mod tests {
         let g = &c.guns[c.gun("scattergun")];
         let mut h = Held::new(c.gun("scattergun"), 2);
         let mut rng = Rng::new(9);
-        let shots = trigger(&mut h, g, [0; 3], true, V3::ZERO, v3(0, 0, -int(10)), &mut rng);
+        let shots = trigger(&mut h, g, [0; 3], true, V3::ZERO, v3(0, 0, -int(10)), &mut rng, 0);
         assert_eq!(shots.len(), 11);
         let cos_spread = fx::cos(g.level(2).spread * 3 / 2);
         for s in &shots {
@@ -148,7 +150,7 @@ mod tests {
         let mut rng = Rng::new(3);
         for (level, erases) in [(1, false), (2, false), (3, true)] {
             let mut h = Held::new(c.gun("launcher"), level);
-            let s = trigger(&mut h, g, [0; 3], true, V3::ZERO, v3(0, 0, -int(10)), &mut rng);
+            let s = trigger(&mut h, g, [0; 3], true, V3::ZERO, v3(0, 0, -int(10)), &mut rng, 0);
             assert_eq!(s[0].kind, ShotKind::Bomb);
             assert_eq!(s[0].erases, erases, "level {level}");
         }

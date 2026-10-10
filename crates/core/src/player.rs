@@ -35,6 +35,11 @@ pub struct Build {
     pub grapple: bool,
     pub parry: bool,
     pub recess: bool,
+    /// in-run rewards: extra pierce on every shot, a dash that clears
+    /// orbs, a parry that heals
+    pub pierce: i32,
+    pub pulse: bool,
+    pub mend: bool,
 }
 
 impl Default for Build {
@@ -47,6 +52,9 @@ impl Default for Build {
             grapple: false,
             parry: false,
             recess: false,
+            pierce: 0,
+            pulse: false,
+            mend: false,
         }
     }
 }
@@ -101,6 +109,8 @@ pub enum Event {
     GrappleOn,
     GrappleOff,
     Parry,
+    /// the hook stopped moving you (an overhang, a corner) and let go
+    HookSnag,
 }
 
 impl Player {
@@ -317,6 +327,12 @@ impl Player {
             if self.coyote == 0 && self.jumps_used == 0 {
                 // walked off a ledge: the ground jump is spent
                 self.jumps_used = 1;
+            }
+        }
+        if let Some(g) = self.grapple {
+            if g.ticks > GRAPPLE_STALL_TICKS && self.pos.dist(self.prev_pos) < ONE / 200 {
+                self.release_grapple();
+                self.events.push(Event::HookSnag);
             }
         }
         let moved = self.pos.sub(self.prev_pos).len_xz();

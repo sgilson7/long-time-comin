@@ -20,6 +20,9 @@
     <div id="reticle"><span></span></div>
     <div id="gate-labels"></div>
     <div id="foes"></div>
+    <div id="hit-arc" hidden><span></span></div>
+    <div id="jump-cue" hidden></div>
+    <div id="story-banner"><div class="heading"></div><p></p></div>
     <div id="top-left">
       <div class="place"><span id="h-zone"></span> · <span id="h-year"></span></div>
       <div class="node" id="h-node"></div>
@@ -44,6 +47,7 @@
         <span class="ability" id="h-hook" data-copy="hud_hook" hidden></span>
         <span class="ability" id="h-parry" data-copy="hud_parry" hidden></span>
       </div>
+      <div class="pips-row" id="h-perks"></div>
     </div>
     <div id="bottom-right">
       <img id="h-gun-art" alt="">
@@ -90,6 +94,7 @@
         </div>
         <h4 data-copy="your_body"></h4>
         <ul id="m-build"></ul>
+        <p class="lede" id="m-bonus"></p>
         <button id="start-run" class="big" data-copy="start_run"></button>
         <details class="about">
           <summary data-copy="controls_heading"></summary>
@@ -150,6 +155,7 @@
       <ol id="d-counts"></ol>
       <p class="newest" id="d-newest"></p>
       <p class="served" id="d-served"></p>
+      <p class="served" id="d-grant"></p>
       <p class="earned" id="d-earned"></p>
       <button id="dead-next" class="big" data-copy="to_holding"></button>
     </div>
@@ -161,6 +167,7 @@
     <div class="sheet">
       <div class="stamp" id="w-title"></div>
       <div id="w-lines"></div>
+      <p class="newest" id="w-newest"></p>
       <p class="earned" id="w-earned"></p>
       <button id="won-next" class="big" data-copy="verdict_back"></button>
     </div>

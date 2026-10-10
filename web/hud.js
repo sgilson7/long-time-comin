@@ -25,11 +25,16 @@ export function makeHud(copy, play) {
   const labels = el("gate-labels");
   const foes = el("foes");
   const reticle = el("reticle");
+  const arc = el("hit-arc");
+  const cue = el("jump-cue");
+  const banner = el("story-banner");
+  let lastStory = 0;
 
   return {
     // Forget what was heard, so a new arena's first note is not missed and
     // an old one is not replayed.
     reset(h) {
+      if (h.story) lastStory = h.story.seq;
       if (!h.notes) return;
       lastSeq = h.notes.reduce((a, n) => (n.seq > a ? n.seq : a), lastSeq);
     },
@@ -90,12 +95,44 @@ export function makeHud(copy, play) {
       while (foes.children.length > h.foes.length) foes.lastChild.remove();
       h.foes.forEach((f, k) => {
         const node = foes.children[k];
-        node.className = f.edge ? "foe edge" : f.hurt ? "foe hurt" : "foe";
+        const threat = f.threat ? " threat" : "";
+        node.className = f.edge ? `foe edge${threat}` : f.hurt ? `foe hurt${threat}` : `foe${threat}`;
+        node.style.setProperty("--c", f.colour);
         node.style.left = `${f.x}%`;
         node.style.top = `${f.y}%`;
         node.style.setProperty("--a", `${f.angle}deg`);
         node.firstChild.style.width = `${f.pct}%`;
       });
+
+      // the arc toward the last hit, fading
+      arc.hidden = !h.hit;
+      if (h.hit) {
+        arc.style.setProperty("--a", `${h.hit.angle}deg`);
+        arc.style.setProperty("--fade", h.hit.fade);
+      }
+      cue.hidden = !h.jump_cue;
+      if (h.jump_cue) text("jump-cue", h.jump_text);
+      const perks = el("h-perks");
+      if (perks.dataset.list !== h.perks.join("|")) {
+        perks.dataset.list = h.perks.join("|");
+        perks.replaceChildren(
+          ...h.perks.map((p) => {
+            const chip = document.createElement("span");
+            chip.className = "ability ready";
+            chip.textContent = p;
+            return chip;
+          }),
+        );
+      }
+      // a line of the indictment read during play
+      if (h.story && h.story.seq > lastStory) {
+        lastStory = h.story.seq;
+        banner.querySelector(".heading").textContent = h.story.heading;
+        banner.querySelector("p").textContent = h.story.text;
+        banner.classList.remove("show");
+        void banner.offsetWidth;
+        banner.classList.add("show");
+      }
 
       for (const n of h.notes) {
         if (n.seq <= lastSeq) continue;

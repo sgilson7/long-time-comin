@@ -48,6 +48,10 @@ pub struct Enemy {
     pub age: i32,
     /// where a boss circles
     pub home: V3,
+    /// it held its last attack for want of a line of sight
+    pub held_fire: bool,
+    /// ticks since it last had a clear line to its target
+    pub unseen: i32,
 }
 
 /// What an enemy did this tick that the world must act on.
@@ -77,6 +81,8 @@ impl Enemy {
             orbit,
             age: 0,
             home: pos,
+            held_fire: false,
+            unseen: 0,
         }
     }
 
@@ -164,6 +170,11 @@ impl Enemy {
         }
 
         self.locomote(d, level, target, to);
+        self.unseen = if self.sees(level, target) {
+            0
+        } else {
+            self.unseen + 1
+        };
         if d.kind == Kind::Moth {
             return deeds;
         }
@@ -176,7 +187,18 @@ impl Enemy {
             State::Rest(t) if t > 1 => State::Rest(t - 1),
             State::Rest(_) => State::Windup(attack.windup.max(1)),
             State::Windup(t) if t > 1 => State::Windup(t - 1),
-            State::Windup(_) => State::Casting(0),
+            // an enemy that cannot see you holds its fire and tries again
+            // sooner, so walls do not fill with orbs (SECOND-ORDER P4)
+            // (at most every other attack, so cover helps without making
+            // an enemy idle)
+            State::Windup(_) if !self.held_fire && !self.sees(level, target) => {
+                self.held_fire = true;
+                State::Rest((attack.rest / 2).max(secs(1, 4)))
+            }
+            State::Windup(_) => {
+                self.held_fire = false;
+                State::Casting(0)
+            }
             State::Casting(t) => {
                 for v in &pattern.volleys {
                     let since = t - v.delay;
@@ -201,6 +223,19 @@ impl Enemy {
             s => s,
         };
         deeds
+    }
+
+    /// The colour of the orbs its current attack fires, for the HUD.
+    pub fn next_colour<'a>(&self, c: &'a Content) -> Option<&'a str> {
+        let a = self.current_attack(c)?;
+        c.patterns[a.pattern].volleys.first().map(|v| v.colour.as_str())
+    }
+
+    /// A clear line from the body to `target`.
+    pub fn sees(&self, level: &Level, target: V3) -> bool {
+        let to = target.sub(self.pos);
+        let len = to.len();
+        len == 0 || level.ray(self.pos, to.norm(), len).is_none()
     }
 
     /// Where the orbs leave from: the body's centre, or a walker's chest.
@@ -249,12 +284,24 @@ impl Enemy {
                 }
                 wish.y = (want_y - self.pos.y).clamp(-d.speed.max(ONE / 30), d.speed.max(ONE / 30));
                 self.vel = self.vel.lerp(wish, ONE / 12);
-                let next = self.pos.add(self.vel);
-                if level.sphere_hits(next, d.radius) {
-                    self.orbit = -self.orbit;
-                    self.vel = self.vel.neg().scale(ONE / 2);
-                } else {
-                    self.pos = next;
+                // blocked: slide along one axis, or rise over it (it flies);
+                // turn back only when every way is shut (SECOND-ORDER P7)
+                let v = self.vel;
+                let tries = [
+                    v,
+                    v3(v.x, v.y, 0),
+                    v3(0, v.y, v.z),
+                    v3(v.x / 2, d.speed.max(ONE / 30), v.z / 2),
+                ];
+                match tries
+                    .iter()
+                    .find(|t| !level.sphere_hits(self.pos.add(**t), d.radius))
+                {
+                    Some(t) => self.pos = self.pos.add(*t),
+                    None => {
+                        self.orbit = -self.orbit;
+                        self.vel = self.vel.neg().scale(ONE / 2);
+                    }
                 }
             }
             Kind::Walker => {
@@ -393,10 +440,43 @@ mod tests {
         let d = e.step(&c, &l, v3(0, int(1), -int(15)), 0);
         assert!(d.phase_changed);
         assert_eq!(e.phase, 1);
-        assert_eq!(d.summons.len(), 4);
+        // enemies.json: phase 2 calls two moths and a lantern
+        assert_eq!(d.summons.len(), 3);
         assert!(
             !e.hurtable(),
             "it holds still and cannot be hurt while it changes"
         );
+    }
+
+    #[test]
+    fn an_enemy_that_cannot_see_you_holds_its_fire() {
+        let c = content();
+        // a wall between the sentinel and the target
+        let l = Level::new(vec![
+            Solid::new(v3(-int(60), -ONE, -int(60)), v3(int(60), 0, int(60))),
+            Solid::new(v3(-int(10), 0, -int(6)), v3(int(10), int(10), -int(5))),
+        ]);
+        let mut e = make(&c, "sentinel", v3(0, int(2), 0));
+        let behind = v3(0, int(1), -int(12));
+        let mut fired = 0;
+        for _ in 0..600 {
+            fired += e.step(&c, &l, behind, 0).salvo.orbs.len();
+        }
+        // it holds one attack, then fires the next into the wall
+        assert!(fired > 0, "it does not wait forever");
+        let mut held = 0;
+        let mut e2 = make(&c, "sentinel", v3(0, int(2), 0));
+        for _ in 0..200 {
+            let before = e2.held_fire;
+            e2.step(&c, &l, behind, 0);
+            held += (!before && e2.held_fire) as i32;
+        }
+        assert_eq!(held, 1, "the first attack is held");
+        // in the open it fires
+        let open_target = v3(0, int(1), int(12));
+        for _ in 0..600 {
+            fired += e.step(&c, &l, open_target, 0).salvo.orbs.len();
+        }
+        assert!(fired > 0);
     }
 }

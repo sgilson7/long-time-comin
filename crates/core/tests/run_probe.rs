@@ -14,7 +14,7 @@
 use ltc_core::balance::*;
 use ltc_core::content::{Content, Files};
 use ltc_core::fx::{self, int, ONE};
-use ltc_core::geom::{facing, v3, yaw_pitch_of, V3};
+use ltc_core::geom::{yaw_pitch_of, V3};
 use ltc_core::meta::Meta;
 use ltc_core::player::{Controls, Player};
 use ltc_core::route::{NodeKind, Route};
@@ -73,7 +73,17 @@ fn bot(w: &World, c: &Content, t: i32, stuck: bool) -> (Controls, i32, i32) {
         .filter(|e| e.hurtable())
         .min_by_key(|e| e.pos.sub(chest).len());
     if let Some(e) = target {
-        let (y, pt) = yaw_pitch_of(e.pos.sub(chest.add(v3(0, ONE / 5, 0))));
+        // aim from the camera's eye: shots follow its ray
+        let mut wc = w.clone();
+        let (mut y, mut pt) = yaw_pitch_of(e.pos.sub(chest));
+        for _ in 0..4 {
+            wc.player.yaw = y;
+            wc.player.pitch = pt.clamp(PITCH_MIN, PITCH_MAX);
+            let eye = ltc_core::game::play_camera(&wc, ONE).eye;
+            let r = yaw_pitch_of(e.pos.sub(eye));
+            y = r.0;
+            pt = r.1;
+        }
         yaw = y;
         pitch = pt.clamp(PITCH_MIN, PITCH_MAX);
         ctl.fire = true;
@@ -158,9 +168,9 @@ fn probe_whole_runs() {
                 let (ctl, yaw, pitch) = bot(&w, &c, t, stuck > 0);
                 w.player.yaw = yaw;
                 w.player.pitch = pitch;
-                let f = facing(yaw, pitch);
-                let eye = w.player.chest().sub(f.scale(int(4)));
-                w.tick(&c, &ctl, eye, f);
+                // the camera the game would use, so shots go where the bot aims
+                let cam = ltc_core::game::play_camera(&w, ONE);
+                w.tick(&c, &ctl, cam.eye, cam.fwd);
                 ticks += 1;
                 t += 1;
             }

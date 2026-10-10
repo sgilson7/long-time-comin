@@ -22,6 +22,12 @@ pub enum Reward {
     Jump,
     Health,
     Speed,
+    /// shots pass through one more enemy
+    Pierce,
+    /// a dash clears the orbs round you
+    Pulse,
+    /// a parried orb heals you
+    Mend,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -52,6 +58,12 @@ pub const STRIDE: i32 = 4;
 
 impl Route {
     pub fn build(c: &Content, seed: u64) -> Route {
+        Route::build_for(c, seed, 1)
+    }
+
+    /// A run's map for a player whose Carbine starts at `carbine_level`:
+    /// no side path offers a Carbine that is no better (SECOND-ORDER P6).
+    pub fn build_for(c: &Content, seed: u64, carbine_level: i32) -> Route {
         let mut rng = Rng::new(seed);
         let r = &c.route;
         let mut nodes = Vec::new();
@@ -82,7 +94,20 @@ impl Route {
             nodes.push(n);
         }
         let rest_step = STRIDE * (r.main_fights as i32 + 1);
-        nodes.push(node(NodeKind::Rest, "rest", 0, rest_step, &mut rng));
+        let mut rest = node(NodeKind::Rest, "rest", 0, rest_step, &mut rng);
+        // the Antechamber's alternative to its fountain
+        if !r.rest_rewards.is_empty() {
+            let pick = &r.rest_rewards[rng.range(0, r.rest_rewards.len() as i32 - 1) as usize];
+            rest.reward = Some(match pick.as_str() {
+                "pierce" => Reward::Pierce,
+                "pulse" => Reward::Pulse,
+                "mend" => Reward::Mend,
+                "jump" => Reward::Jump,
+                "speed" => Reward::Speed,
+                _ => Reward::Health,
+            });
+        }
+        nodes.push(rest);
         nodes.push(node(NodeKind::Boss, "boss", 0, rest_step + STRIDE, &mut rng));
         let mains = nodes.len();
         for i in 0..mains - 1 {
@@ -125,11 +150,19 @@ impl Route {
                     let deep = from * 2 > r.main_fights;
                     n.reward = Some(match bag.get(d).map(|s| s.as_str()).unwrap_or("health") {
                         "weapon" => {
-                            let gun = rng.range(0, c.guns.len() as i32 - 1) as usize;
-                            Reward::Gun(gun, if deep { 3 } else { 2 })
+                            let level = if deep { 3 } else { 2 };
+                            let carbine = c.gun("carbine");
+                            let fits: Vec<usize> = (0..c.guns.len())
+                                .filter(|&g| g != carbine || level > carbine_level)
+                                .collect();
+                            let gun = fits[rng.range(0, fits.len() as i32 - 1) as usize];
+                            Reward::Gun(gun, level)
                         }
                         "jump" => Reward::Jump,
                         "speed" => Reward::Speed,
+                        "pierce" => Reward::Pierce,
+                        "pulse" => Reward::Pulse,
+                        "mend" => Reward::Mend,
                         _ => Reward::Health,
                     });
                 }
@@ -248,5 +281,31 @@ mod tests {
             let e = n.encounter.expect("a fight has an encounter");
             assert_eq!(c.encounters[e].tier, n.tier);
         }
+    }
+
+    #[test]
+    fn no_side_path_offers_a_carbine_no_better_than_the_one_you_start_with() {
+        let c = content();
+        let carbine = c.gun("carbine");
+        let mut offered_other = false;
+        for seed in 0..60 {
+            let r = Route::build_for(&c, seed, 2);
+            for n in &r.nodes {
+                if let Some(Reward::Gun(g, l)) = n.reward {
+                    assert!(
+                        g != carbine || l > 2,
+                        "seed {seed}: Carbine {l} offered to a Carbine II"
+                    );
+                    offered_other |= g != carbine;
+                }
+            }
+            assert!(
+                r.nodes
+                    .iter()
+                    .any(|n| n.kind == NodeKind::Rest && n.reward.is_some()),
+                "the Antechamber offers a choice"
+            );
+        }
+        assert!(offered_other);
     }
 }

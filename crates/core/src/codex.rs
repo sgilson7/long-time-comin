@@ -206,11 +206,7 @@ pub fn volley(v: &Volley) -> String {
     if v.gold {
         text += "; gold: Objection can turn these back";
     }
-    let damage = if v.shape == Shape::Wave {
-        WAVE_DAMAGE
-    } else {
-        ORB_DAMAGE
-    };
+    let damage = v.damage;
     text + &format!(". {damage} damage a hit.")
 }
 
@@ -319,12 +315,14 @@ pub fn upgrade_effect(u: &Upgrade) -> String {
         "armory" => format!("Every run starts with a level {n} Carbine instead of level 1."),
         "recess" => format!("Once a run, a hit that would kill you leaves you at {RECESS_HEALTH_PCT}% of maximum health instead."),
         "grapple" => format!(
-            "Hold F: a hook flies along your aim up to {} m from you and catches on any surface or enemy. It pulls you at {} m/s², up to {} m/s, and lets go when you release F, come within {} m, or after {} s. You keep your speed. Steering still works while pulled. {} s cooldown. Jumping or dashing lets go.",
+            "Hold F: a hook flies along your aim up to {} m from you and catches on any surface or enemy. It pulls you at {} m/s², up to {} m/s, and lets go when you release F, come within {} m, or after {} s. You keep your speed. Steering still works while pulled. Aimed at a wall up to {} m below a ledge, it lifts you over the ledge. If it stops moving you for {} s it lets go. {} s cooldown. Jumping or dashing lets go.",
             m(GRAPPLE_RANGE),
             mps2(GRAPPLE_PULL),
             mps(GRAPPLE_MAX_SPEED),
             m(GRAPPLE_ARRIVE),
             s(GRAPPLE_MAX_TICKS),
+            m(MANTLE_REACH),
+            s(GRAPPLE_STALL_TICKS),
             s(GRAPPLE_COOLDOWN)
         ),
         "parry" => format!(
@@ -356,11 +354,13 @@ fn rules(c: &Content) -> Vec<String> {
         ),
         "An arena's gates open only when every enemy in it is defeated. Blue gates continue the main path; orange gates start a side path.".to_string(),
         "Side paths are one or two fights a tier harder than the main fight they leave. The last fight holds the reward shown on the map and over the gate, and the path rejoins the next main arena.".to_string(),
-        format!("Rewards: a gun of level 2 or 3, +{HEALTH_PICKUP} maximum health, +{SPEED_PICKUP_PCT}% run speed, or one more jump (up to {MAX_JUMPS})."),
+        format!("Rewards: a gun of level 2 or 3 (never a Carbine no better than the one you start with), +{HEALTH_PICKUP} maximum health, +{SPEED_PICKUP_PCT}% run speed, one more jump (up to {MAX_JUMPS}), or one of three that last the run: Piercing Rounds (every shot passes through {PIERCE_BONUS} more enemy), Dash Pulse (a dash removes every enemy orb within {} m of you, at most once every {} s), Mending Parry (each orb you turn back heals {MEND_HEAL}).", m(PULSE_RADIUS), s(PULSE_COOLDOWN)),
+        format!("The Antechamber offers a choice: {REST_HEAL_PCT}% of your maximum health back, or one reward. Press E at one; the other is lost."),
+        format!("A wave of enemies comes {} s after the last one is defeated.", s(WAVE_GAP)),
+        format!("An enemy that cannot see you when it finishes winding up holds that attack and tries again sooner; the next one it fires regardless. An enemy (not the boss) that has not seen you for {} s reappears where it can.", s(LOST_TICKS)),
         format!("A gun on the floor is taken with E within {} m. Your old gun is left in its place.", m(PICKUP_REACH)),
-        format!("Clemency: {} for a main fight cleared, {} for a side fight, {} for the boss, plus each enemy's own value. You keep it all when you die.", r.clemency_main, r.clemency_detour, r.clemency_boss),
-        "Each death reads the next count of the indictment and adds years to the sentence: 1 for the first death, 2 for the second, and so on.".to_string(),
-        "The Antechamber's fountain restores all health once.".to_string(),
+        format!("Clemency: {} for a main fight cleared, {} for a side fight, {} for the boss, plus each enemy's own value. You keep it all when you die. Dying mid-fight credits that fight's share for each of its enemies you killed. Your first death adds a grant of {FIRST_DEATH_GRANT}. Each 10 years of sentence add {SENTENCE_BONUS_PCT}% to all Clemency earned.", r.clemency_main, r.clemency_detour, r.clemency_boss),
+        format!("Each death reads the next count of the indictment and adds years to the sentence: 1 for the first death, 2 for the second, and so on. The first run to reach a tier {FAR_TIER} fight, and the first win, each read a count too."),
     ]
 }
 
@@ -429,14 +429,14 @@ mod tests {
 
     #[test]
     fn the_carbine_entry_matches_its_data() {
-        // weapons.json: 7 damage every 105 ms, which the game rounds to 6
-        // ticks: 10 shots a second, 70 damage a second; 90 m/s for 1.6 s
+        // weapons.json: 8 damage every 105 ms, which the game rounds to 6
+        // ticks: 10 shots a second, 80 damage a second; 90 m/s for 1.6 s
         let c = content();
         let v: Value = serde_json::from_str(&codex_json(&c)).unwrap();
         let l1 = &v["guns"][0]["levels"][0];
-        assert_eq!(l1["damage"], "7");
+        assert_eq!(l1["damage"], "8");
         assert_eq!(l1["rate"], "10 shots/s (0.1 s apart)");
-        assert_eq!(l1["dps"], "70");
+        assert_eq!(l1["dps"], "80");
         assert_eq!(l1["speed"], "90 m/s");
         assert_eq!(l1["range"], "144 m");
     }
@@ -446,12 +446,12 @@ mod tests {
         let c = content();
         let p = c.patterns.iter().find(|p| p.id == "spiral_quad").unwrap();
         let t = volley(&p.volleys[0]);
-        // patterns.json: 4 orbs of 34 cm radius at 8.2 m/s, 36 times, 75 ms
+        // patterns.json: 4 orbs of 34 cm radius at 8.2 m/s, 28 times, 75 ms
         // apart (rounded to 5 ticks, 0.08 s), turned 9° each time
         assert!(t.starts_with("Ring of 4 0.68 m orbs"), "{t}");
         assert!(t.contains("at 8.2 m/s"), "{t}");
         assert!(
-            t.contains("fired 36 times, 0.08 s apart, each turned 9° from the last"),
+            t.contains("fired 28 times, 0.08 s apart, each turned 9° from the last"),
             "{t}"
         );
         assert!(t.ends_with(&format!("{ORB_DAMAGE} damage a hit.")), "{t}");
