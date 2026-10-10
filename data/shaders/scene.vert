@@ -11,6 +11,8 @@ uniform mat4 uVP;
 out vec3 vWorld;
 out vec3 vNormal;
 out vec4 vColor;
+// a facade's position on its panel, in metres: along the face, up it
+out vec2 vFacade;
 void main() {
   vec3 w = iA.xyz * aPos.x + iB.xyz * aPos.y + iC.xyz * aPos.z + vec3(iA.w, iB.w, iC.w);
   // the columns carry a non-uniform scale, so normals take the inverse
@@ -21,5 +23,6 @@ void main() {
   vNormal = n;
   vWorld = w;
   vColor = iD;
+  vFacade = vec2((aPos.z + 0.5) * length(iC.xyz), (aPos.x + 0.5) * length(iA.xyz));
   gl_Position = uVP * vec4(w, 1.0);
 }

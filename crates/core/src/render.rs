@@ -21,9 +21,11 @@ pub const STATIC_BUFFER: u32 = 0;
 pub const DYNAMIC_BUFFER: u32 = 1;
 
 pub const PASS_SOLID: u32 = 0;
-pub const PASS_INK: u32 = 1;
-pub const PASS_GLOW: u32 = 2;
-pub const PASSES: usize = 3;
+/// facades: solid, their windows drawn by the shader
+pub const PASS_FACADE: u32 = 1;
+pub const PASS_INK: u32 = 2;
+pub const PASS_GLOW: u32 = 3;
+pub const PASSES: usize = 4;
 
 pub const NEAR: i32 = ONE / 5;
 pub const FAR: i32 = fx::int(900);
@@ -61,7 +63,12 @@ impl Batch {
 
     /// A shape, and its outline if it is inked.
     pub fn shape(&mut self, s: &Shape) {
-        self.push(s.mesh, &s.at, s.rgb, s.glow, PASS_SOLID);
+        let pass = if s.mesh == Mesh::Facade {
+            PASS_FACADE
+        } else {
+            PASS_SOLID
+        };
+        self.push(s.mesh, &s.at, s.rgb, s.glow, pass);
         if s.ink {
             self.ink(s.mesh, &s.at);
         }

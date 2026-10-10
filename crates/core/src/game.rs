@@ -303,8 +303,8 @@ impl Game {
 
     pub fn resize(&mut self, css_w: i32, css_h: i32, dpr_pct: i32) -> [i32; 2] {
         let (cw, ch) = (css_w.max(1), css_h.max(1));
-        let mut w = cw as i64 * dpr_pct.clamp(50, 300) as i64 / 100;
-        let mut h = ch as i64 * dpr_pct.clamp(50, 300) as i64 / 100;
+        let mut w = cw as i64 * dpr_pct.clamp(25, 300) as i64 / 100;
+        let mut h = ch as i64 * dpr_pct.clamp(25, 300) as i64 / 100;
         if w * h > MAX_PIXELS {
             let k = fx::isqrt((MAX_PIXELS * 1_000_000 / (w * h)) as u64) as i64;
             w = w * k / 1000;
@@ -538,6 +538,8 @@ impl Game {
         u.extend(self.c.pal.c("fog"));
         u.extend([int(70), int(520)]);
         u.extend(self.c.pal.c("light"));
+        u.extend(self.c.pal.c("window_dark"));
+        u.extend(self.c.pal.c("ink"));
         u
     }
 
@@ -911,8 +913,8 @@ pub fn numbers() -> String {
         },
         "draw_values": render::DRAW_VALUES,
         "buffers": { "static": render::STATIC_BUFFER, "dynamic": render::DYNAMIC_BUFFER },
-        "passes": { "solid": render::PASS_SOLID, "ink": render::PASS_INK, "glow": render::PASS_GLOW },
-        "uniforms": [["uLightDir", 3], ["uSky", 3], ["uFog", 3], ["uFogRange", 2], ["uLight", 3]],
+        "passes": { "solid": render::PASS_SOLID, "facade": render::PASS_FACADE, "ink": render::PASS_INK, "glow": render::PASS_GLOW },
+        "uniforms": [["uLightDir", 3], ["uSky", 3], ["uFog", 3], ["uFogRange", 2], ["uLight", 3], ["uWindowDark", 3], ["uInk", 3]],
         "view_values": 16,
         "percent": 100,
     })

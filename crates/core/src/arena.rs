@@ -112,6 +112,22 @@ impl<'a> B<'a> {
         self.shape(mesh, boxed(c, size), rgb, 0, true);
     }
 
+    /// A facade panel facing `n`, `w` along the face and `h` high, its
+    /// centre `at` (just proud of the wall); the shader draws its windows.
+    /// `seed`, in the glow channel, picks which are lit.
+    fn facade(&mut self, at: V3, n: V3, w: i32, h: i32, lit: Rgb, seed: i32) {
+        // the panel's +y turns to the normal; x runs up the wall and z
+        // along it, so the basis stays right-handed (x × y = z)
+        let along = V3::UP.cross(n);
+        let af = Affine {
+            c0: V3::UP.scale(h),
+            c1: n.scale(ONE / 64),
+            c2: along.scale(w),
+            t: at.add(n.scale(dm(1) / 2)),
+        };
+        self.shape(Mesh::Facade, af, lit, seed, false);
+    }
+
     fn glow(&mut self, mesh: Mesh, c: V3, size: V3, rgb: Rgb) {
         self.shape(mesh, boxed(c, size), rgb, ONE, false);
     }
@@ -162,7 +178,7 @@ impl<'a> B<'a> {
                 dm(self.rng.range(-9, 9)),
             );
             self.deco(
-                Mesh::Sphere,
+                Mesh::Blob,
                 v3(x, y, z).add(off),
                 v3(r * 2, r * 2 * 4 / 5, r * 2),
                 g,
@@ -179,7 +195,7 @@ impl<'a> B<'a> {
     fn bush(&mut self, x: i32, y: i32, z: i32) {
         let g = self.pick(&self.pal.greens.clone());
         let r = dm(self.rng.range(6, 12));
-        self.deco(Mesh::Sphere, v3(x, y + r / 2, z), v3(r * 2, r, r * 2), g);
+        self.deco(Mesh::Blob, v3(x, y + r / 2, z), v3(r * 2, r, r * 2), g);
     }
 
     fn lamp(&mut self, x: i32, y: i32, z: i32) {
@@ -187,7 +203,7 @@ impl<'a> B<'a> {
         let lamp = self.c("lamp");
         self.deco(Mesh::Cyl, v3(x, y + m(2), z), v3(dm(2), m(4), dm(2)), metal);
         self.deco(Mesh::Cube, v3(x, y + m(4), z), v3(dm(6), dm(1), dm(6)), metal);
-        self.glow(Mesh::Sphere, v3(x, y + dm(37), z), v3(dm(5), dm(5), dm(5)), lamp);
+        self.glow(Mesh::Blob, v3(x, y + dm(37), z), v3(dm(5), dm(5), dm(5)), lamp);
     }
 
     fn crate_stack(&mut self, x: i32, y: i32, z: i32) {
@@ -341,8 +357,6 @@ impl<'a> B<'a> {
         let storey = dm(32);
         let floors = (h - m(2)) / storey;
         let lit = self.c("window");
-        let dark = self.c("window_dark");
-        let ink = self.c("ink");
         for (fi, &on) in faces.iter().enumerate() {
             if !on {
                 continue;
@@ -361,82 +375,68 @@ impl<'a> B<'a> {
                 continue;
             }
             let shop = detail && self.rng.chance(60);
-            for f in 0..floors {
-                let y = m(2) + storey * f + storey / 2;
-                if f == 0 && shop {
-                    // a shopfront: a glowing window, an awning and a sign
-                    let along = if fi < 2 {
-                        v3(0, 0, span * 7 / 10)
-                    } else {
-                        v3(span * 7 / 10, 0, 0)
-                    };
-                    let at = v3(x, dm(14), z).add(n.scale(half_depth + dm(1)));
-                    let size = along.add(n.scale(dm(1))).add(v3(0, dm(18), 0));
-                    let sz = v3(size.x.abs().max(dm(1)), size.y, size.z.abs().max(dm(1)));
-                    self.glow(Mesh::Cube, at, sz, lit);
-                    let cloth = self.pick(&[self.c("cloth"), self.c("cloth_2")]);
-                    let aw_at = v3(x, dm(26), z).add(n.scale(half_depth + dm(6)));
-                    let aw = along.add(n.scale(dm(12))).add(v3(0, dm(2), 0));
-                    let aws = v3(aw.x.abs().max(dm(2)), aw.y, aw.z.abs().max(dm(2)));
-                    self.deco(Mesh::Cube, aw_at, aws, cloth);
-                    let sign_at = v3(x, dm(31), z).add(n.scale(half_depth + dm(2)));
-                    self.sign(sign_at, span / 3, dm(7), fi < 2);
-                    continue;
-                }
-                if !detail {
-                    // far off, a storey's windows read as one band: a run of
-                    // lit and dark panes in a few boxes instead of one each,
-                    // which keeps the skyline cheap to draw (SECOND-ORDER G6)
-                    let runs = 3;
-                    let run_w = (span - m(1)) / runs;
-                    for k in 0..runs {
-                        let off = -span / 2 + m(1) / 2 + run_w * k + run_w / 2;
-                        let along = if fi < 2 { v3(0, 0, off) } else { v3(off, 0, 0) };
-                        let at = v3(x, y, z).add(along).add(n.scale(half_depth));
-                        let size = if fi < 2 {
-                            v3(dm(1), dm(15), run_w - dm(4))
-                        } else {
-                            v3(run_w - dm(4), dm(15), dm(1))
-                        };
-                        if self.rng.chance(45) {
-                            self.glow(Mesh::Cube, at, size, lit);
-                        } else {
-                            self.shape(Mesh::Cube, boxed(at, size), dark, 0, false);
+            if shop {
+                // a shopfront: a glowing window, an awning and a sign
+                let along = if fi < 2 {
+                    v3(0, 0, span * 7 / 10)
+                } else {
+                    v3(span * 7 / 10, 0, 0)
+                };
+                let at = v3(x, dm(14), z).add(n.scale(half_depth + dm(1)));
+                let size = along.add(n.scale(dm(1))).add(v3(0, dm(18), 0));
+                let sz = v3(size.x.abs().max(dm(1)), size.y, size.z.abs().max(dm(1)));
+                self.glow(Mesh::Cube, at, sz, lit);
+                let cloth = self.pick(&[self.c("cloth"), self.c("cloth_2")]);
+                let aw_at = v3(x, dm(26), z).add(n.scale(half_depth + dm(6)));
+                let aw = along.add(n.scale(dm(12))).add(v3(0, dm(2), 0));
+                let aws = v3(aw.x.abs().max(dm(2)), aw.y, aw.z.abs().max(dm(2)));
+                self.deco(Mesh::Cube, aw_at, aws, cloth);
+                let sign_at = v3(x, dm(31), z).add(n.scale(half_depth + dm(2)));
+                self.sign(sign_at, span / 3, dm(7), fi < 2);
+            }
+            // The windows: one facade panel over the face, its grid of
+            // windows drawn by the shader (a lit or dark pane in each cell
+            // of `col_w` by `storey`, chosen by a hash of the cell and the
+            // panel's seed). One instance where there were seventy: a
+            // software renderer's cost is per instance (SECOND-ORDER G7).
+            let first = if shop { 1 } else { 0 };
+            let rows = floors - first;
+            if rows > 0 {
+                let along_mid = -span / 2 + m(1) / 2 + col_w * cols / 2;
+                let along = if fi < 2 {
+                    v3(0, 0, along_mid)
+                } else {
+                    v3(along_mid, 0, 0)
+                };
+                let y_mid = m(2) + storey * first + storey * rows / 2;
+                let at = v3(x, y_mid, z).add(along).add(n.scale(half_depth));
+                let seed = self.rng.range(0, 999) * (ONE / 1000);
+                self.facade(at, n, col_w * cols, storey * rows, lit, seed);
+            }
+            if detail {
+                for f in first..floors {
+                    let y = m(2) + storey * f + storey / 2;
+                    for k in 0..cols {
+                        if !self.rng.chance(8) {
+                            continue;
                         }
-                    }
-                    continue;
-                }
-                for k in 0..cols {
-                    let off = -span / 2 + col_w / 2 + m(1) / 2 + col_w * k;
-                    let along = if fi < 2 { v3(0, 0, off) } else { v3(off, 0, 0) };
-                    let at = v3(x, y, z).add(along).add(n.scale(half_depth));
-                    let size = if fi < 2 {
-                        v3(dm(1), dm(15), dm(11))
-                    } else {
-                        v3(dm(11), dm(15), dm(1))
-                    };
-                    let lit_now = self.rng.chance(45);
-                    if lit_now {
-                        self.glow(Mesh::Cube, at, size, lit);
-                    } else {
-                        self.shape(Mesh::Cube, boxed(at, size), dark, 0, false);
-                    }
-                    if detail && self.rng.chance(8) {
-                        // an air-conditioning box under the window
+                        // an air-conditioning box under a window
+                        let off = -span / 2 + col_w / 2 + m(1) / 2 + col_w * k;
+                        let along = if fi < 2 { v3(0, 0, off) } else { v3(off, 0, 0) };
                         let ac = self.c("metal");
-                        let below = at.add(v3(0, -dm(11), 0)).add(n.scale(dm(3)));
+                        let below = v3(x, y - dm(11), z).add(along).add(n.scale(half_depth + dm(3)));
                         self.deco(Mesh::Cube, below, v3(dm(7), dm(5), dm(7)), ac);
                     }
-                }
-                if detail && f > 0 && self.rng.chance(12) {
-                    // a balcony slab with a rail
-                    let at = v3(x, y - storey / 2 + dm(1), z).add(n.scale(half_depth + dm(5)));
-                    let size = if fi < 2 {
-                        v3(dm(10), dm(2), span / 3)
-                    } else {
-                        v3(span / 3, dm(2), dm(10))
-                    };
-                    self.deco(Mesh::Cube, at, size, trim);
+                    if f > 0 && self.rng.chance(12) {
+                        // a balcony slab
+                        let at = v3(x, y - storey / 2 + dm(1), z).add(n.scale(half_depth + dm(5)));
+                        let size = if fi < 2 {
+                            v3(dm(10), dm(2), span / 3)
+                        } else {
+                            v3(span / 3, dm(2), dm(10))
+                        };
+                        self.deco(Mesh::Cube, at, size, trim);
+                    }
                 }
             }
             if detail && self.rng.chance(50) {
@@ -462,7 +462,6 @@ impl<'a> B<'a> {
                 self.deco(Mesh::Cube, at, size, g);
             }
         }
-        let _ = ink;
         self.roof_clutter(x, z, w, d, h);
     }
 
@@ -616,7 +615,7 @@ impl<'a> B<'a> {
             let p = at.add(off);
             self.block(p.x, 0, p.z, dm(12), m(6), dm(12), stone);
             self.deco(
-                Mesh::Sphere,
+                Mesh::Blob,
                 v3(p.x, m(6) + dm(5), p.z),
                 v3(dm(9), dm(9), dm(9)),
                 trim,
@@ -771,7 +770,7 @@ impl<'a> B<'a> {
                     dm(self.rng.range(-60, 60)),
                 );
                 self.shape(
-                    Mesh::Sphere,
+                    Mesh::Blob,
                     boxed(c.add(off), v3(s * 2, s, s * 2)),
                     cloud,
                     ONE / 3,
@@ -935,7 +934,7 @@ impl<'a> B<'a> {
         self.deco(Mesh::Cyl, v3(0, dm(4), 0), v3(m(8), dm(8), m(8)), stone);
         self.glow(Mesh::Cyl, v3(0, dm(8), 0), v3(m(7), dm(1), m(7)), water);
         self.block(0, 0, 0, dm(14), m(4), dm(14), stone);
-        self.deco(Mesh::Sphere, v3(0, dm(43), 0), v3(dm(12), dm(12), dm(12)), trim);
+        self.deco(Mesh::Blob, v3(0, dm(43), 0), v3(dm(12), dm(12), dm(12)), trim);
         // cover blocks in a broken ring
         for k in 0..6 {
             let a = fx::TURN / 6 * k + deg(30);
@@ -976,7 +975,7 @@ impl<'a> B<'a> {
                 for g in 0..n {
                     let c = self.pick(&self.pal.signs.clone());
                     self.deco(
-                        Mesh::Sphere,
+                        Mesh::Blob,
                         v3(x - dm(10) + dm(10) * g, dm(13), z),
                         v3(dm(4), dm(4), dm(4)),
                         c,
@@ -1026,7 +1025,7 @@ impl<'a> B<'a> {
                 } else {
                     self.pick(&self.pal.signs.clone())
                 };
-                self.glow(Mesh::Sphere, p.add(v3(0, -dm(4), 0)), v3(dm(5), dm(6), dm(5)), c);
+                self.glow(Mesh::Blob, p.add(v3(0, -dm(4), 0)), v3(dm(5), dm(6), dm(5)), c);
             }
         }
     }
@@ -1206,12 +1205,7 @@ impl<'a> B<'a> {
             .then(&Affine::rot_z(deg(25)))
             .then(&Affine::scale(v3(m(2), m(3), m(2))));
         self.shape(Mesh::Cyl, tilt, metal, 0, true);
-        self.glow(
-            Mesh::Sphere,
-            v3(m(7), dm(22), m(9)),
-            v3(dm(9), dm(9), dm(9)),
-            glow,
-        );
+        self.glow(Mesh::Blob, v3(m(7), dm(22), m(9)), v3(dm(9), dm(9), dm(9)), glow);
         for (x, z) in [(-m(16), -m(10)), (m(16), -m(14)), (-m(18), m(14)), (m(15), m(16))] {
             self.planter(x, 0, z);
         }
@@ -1226,7 +1220,7 @@ impl<'a> B<'a> {
         self.deco(Mesh::Cyl, v3(0, dm(35) / 10, 0), v3(m(6), dm(7), m(6)), stone);
         self.glow(Mesh::Cyl, v3(0, dm(7), 0), v3(m(5), dm(1), m(5)), water);
         self.glow(
-            Mesh::Sphere,
+            Mesh::Blob,
             v3(0, m(2), 0),
             v3(dm(8), dm(8), dm(8)),
             self.c("pickup_heal"),
@@ -1290,7 +1284,7 @@ impl<'a> B<'a> {
                     let fig = inner.add(v3(0, dm(16), 0));
                     self.deco(Mesh::Cone, fig, v3(dm(8), dm(14), dm(8)), hood);
                     self.glow(
-                        Mesh::Sphere,
+                        Mesh::Blob,
                         fig.add(v3(0, dm(3), 0)),
                         v3(dm(2), dm(1), dm(2)),
                         self.c("enemy_eye"),

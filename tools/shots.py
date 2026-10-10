@@ -25,7 +25,10 @@ threading.Thread(target=srv.serve_forever, daemon=True).start()
 base = f"http://127.0.0.1:{srv.server_address[1]}"
 
 with sync_playwright() as p:
-    b = p.chromium.launch(args=["--use-angle=metal", "--enable-gpu", "--ignore-gpu-blocklist"])
+    import os
+    soft = ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"]
+    gpu = ["--use-angle=metal", "--enable-gpu", "--ignore-gpu-blocklist"]
+    b = p.chromium.launch(args=soft if os.environ.get("SOFT") else gpu)
     pg = b.new_page(viewport={"width": 1280, "height": 720})
     logs = []
     pg.on("console", lambda m: logs.append(f"{m.type}: {m.text}"))
@@ -35,6 +38,19 @@ with sync_playwright() as p:
     pg.wait_for_timeout(800)
     fps = pg.evaluate("() => new Promise(r => { let n = 0; const t0 = performance.now(); const f = () => { n++; if (performance.now() - t0 < 2000) requestAnimationFrame(f); else r(n / 2); }; requestAnimationFrame(f); })")
     print("frames a second on the title:", fps)
+    pg.click("#begin")
+    pg.wait_for_timeout(300)
+    if pg.evaluate("() => document.body.dataset.mode") == "intro":
+        pg.click("#intro-next")
+    pg.click("#start-run")
+    pg.wait_for_timeout(1500)
+    fps = pg.evaluate("() => new Promise(r => { let n = 0; const t0 = performance.now(); const f = () => { n++; if (performance.now() - t0 < 3000) requestAnimationFrame(f); else r(n / 3); }; requestAnimationFrame(f); })")
+    print("frames a second in the crater:", fps)
+    pg.reload()
+    pg.wait_for_selector("body[data-ready='true']", state="attached", timeout=30000)
+    pg.evaluate("() => localStorage.clear()")
+    pg.reload()
+    pg.wait_for_selector("body[data-ready='true']", state="attached", timeout=30000)
     pg.screenshot(path=str(OUT / "1-title.png"))
     pg.click("#begin")
     pg.wait_for_timeout(5500)

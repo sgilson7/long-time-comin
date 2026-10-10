@@ -29,6 +29,11 @@ export function makeRenderer(canvas, N, shaders, meshData) {
   const gl = canvas.getContext("webgl2", { antialias: true, powerPreference: "high-performance" });
   if (!gl) return null;
 
+  // a CPU drawing in place of a GPU: the page then draws fewer pixels
+  const info = gl.getExtension("WEBGL_debug_renderer_info");
+  const name = info ? String(gl.getParameter(info.UNMASKED_RENDERER_WEBGL)) : "";
+  const software = shaders.software.some((s) => name.includes(s));
+
   const program = link(gl, shaders.vertex, shaders.fragment);
   gl.useProgram(program);
   gl.enable(gl.DEPTH_TEST);
@@ -77,6 +82,7 @@ export function makeRenderer(canvas, N, shaders, meshData) {
   }
 
   return {
+    software,
     // The arena never moves: uploaded once a scene, with its light and fog.
     setScene(values, uniformValues, clearColor) {
       gl.bindBuffer(gl.ARRAY_BUFFER, instanceBuffers[staticSlot]);

@@ -48,12 +48,13 @@ function fillCopy(copy) {
 }
 
 async function start() {
-  const names = ["weapons", "patterns", "enemies", "zone", "upgrades", "palette", "story", "copy", "controls", "sounds"];
+  const names = ["weapons", "patterns", "enemies", "zone", "upgrades", "palette", "story", "copy", "controls", "sounds", "display"];
   const texts = await Promise.all(
     names.map((n) => file(`data/${n}.json`)).concat([file("data/shaders/scene.vert"), file("data/shaders/scene.frag")]),
   );
-  const [weapons, patterns, enemies, zone, upgrades, palette, story, copyText, controlsText, soundsText, vertex, fragment] =
+  const [weapons, patterns, enemies, zone, upgrades, palette, story, copyText, controlsText, soundsText, displayText, vertex, fragment] =
     texts;
+  const display = JSON.parse(displayText);
   const copy = JSON.parse(copyText);
   fillCopy(copy);
   setupSound(JSON.parse(soundsText));
@@ -70,7 +71,7 @@ async function start() {
   }
 
   const canvas = el("view");
-  const renderer = makeRenderer(canvas, N, { vertex, fragment }, (id) => mesh(id));
+  const renderer = makeRenderer(canvas, N, { vertex, fragment, software: display.software }, (id) => mesh(id));
   if (!renderer) el("message").textContent = copy.no_webgl;
   const save = () => storage.save(game.saved());
   const input = makeInput(canvas, JSON.parse(controlsText), N.actions, () => wake(BUILD));
@@ -168,7 +169,8 @@ async function start() {
   });
 
   function resize() {
-    const [w, h] = game.resize(canvas.clientWidth, canvas.clientHeight, window.devicePixelRatio || 1);
+    const scale = renderer && renderer.software ? display.software_scale : 1;
+    const [w, h] = game.resize(canvas.clientWidth, canvas.clientHeight, (window.devicePixelRatio || 1) * scale);
     if (renderer) renderer.resize(w, h);
   }
   window.addEventListener("resize", resize);

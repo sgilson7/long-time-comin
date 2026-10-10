@@ -19,10 +19,17 @@ pub enum Mesh {
     Cone = 6,
     /// an open band, seen from inside and out: ground waves, rings on the floor
     Ring = 7,
+    /// a low sphere for scenery (crowns, clouds, lamps): an eighth of the
+    /// sphere's vertices
+    Blob = 8,
+    /// a flat panel facing +y: windows, drawn as their one visible face
+    Panel = 9,
+    /// a facade: a panel whose windows the shader draws
+    Facade = 10,
 }
 
 impl Mesh {
-    pub const ALL: [Mesh; 8] = [
+    pub const ALL: [Mesh; 11] = [
         Mesh::Cube,
         Mesh::Wedge,
         Mesh::Octa,
@@ -31,6 +38,9 @@ impl Mesh {
         Mesh::Cyl,
         Mesh::Cone,
         Mesh::Ring,
+        Mesh::Blob,
+        Mesh::Panel,
+        Mesh::Facade,
     ];
 
     pub fn from_name(s: &str) -> Option<Mesh> {
@@ -95,17 +105,16 @@ pub fn vertices(mesh: Mesh) -> Vec<i32> {
                 push_tri(&mut o, b, ny, a);
             }
         }
-        Mesh::Ground => {
+        Mesh::Ground | Mesh::Panel | Mesh::Facade => {
             let p = |x: i32, z: i32| v3(x * H, 0, z * H);
             push_quad(&mut o, p(-1, 1), p(1, 1), p(1, -1), p(-1, -1));
         }
-        Mesh::Sphere => {
+        Mesh::Sphere | Mesh::Blob => {
             // latitude and longitude bands; each vertex's normal is itself
-            const LAT: i32 = 10;
-            const LON: i32 = 16;
+            let (lat, lon) = if mesh == Mesh::Sphere { (10, 16) } else { (5, 8) };
             let at = |i: i32, j: i32| {
-                let lat = fx::HALF * i / LAT - fx::QUARTER;
-                let lon = fx::TURN * j / LON;
+                let lat = fx::HALF * i / lat - fx::QUARTER;
+                let lon = fx::TURN * j / lon;
                 let r = fx::cos(lat);
                 v3(
                     fx::mul(fx::mul(r, fx::cos(lon)), H),
@@ -119,13 +128,13 @@ pub fn vertices(mesh: Mesh) -> Vec<i32> {
                     o.extend_from_slice(&[p.x, p.y, p.z, n.x, n.y, n.z]);
                 }
             };
-            for i in 0..LAT {
-                for j in 0..LON {
+            for i in 0..lat {
+                for j in 0..lon {
                     let (a, b, c, d) = (at(i, j), at(i, j + 1), at(i + 1, j + 1), at(i + 1, j));
                     if i > 0 {
                         tri(a, b, c);
                     }
-                    if i < LAT - 1 {
+                    if i < lat - 1 {
                         tri(a, c, d);
                     }
                 }
@@ -191,6 +200,7 @@ mod tests {
             (Mesh::Wedge, wedge_centre),
             (Mesh::Octa, V3::ZERO),
             (Mesh::Sphere, V3::ZERO),
+            (Mesh::Blob, V3::ZERO),
             (Mesh::Cyl, V3::ZERO),
             (Mesh::Cone, v3(0, -H / 2, 0)),
         ] {
