@@ -14,7 +14,7 @@ Long Time Comin' is a Builder project built in one session on 2026-10-10 from `B
 ## What exists
 
 - **Core** (`crates/core/src`): `player` (run, up to four jumps, dash, grapple, parry, health), `orbs` (volleys and their orbs and waves), `weapons`, `enemy` (five kinds, the Bailiff's phases), `arena` (the seeded builder for seven archetypes and the court), `level` (boxes, grid, rays), `route` (the zone graph), `meta` (the record), `world` (one arena's tick), `draw`, `render` (four passes: solid, facade, ink, glow), `game` (modes, clock, camera, HUD and screen JSON), `content`, `balance`. `fx`, `geom`, `rng`, `mesh` are Food Truck Circus's, with Ring, Blob, Panel and Facade meshes added.
-- **Data**: 3 guns of 3 levels, 21 patterns, 6 enemies, the zone and its 10 encounters, 11 upgrades, the palette, the story (sentencing, 10 counts, addenda, verdict), copy, controls, sounds, display, shaders.
+- **Data**: 3 guns of 3 levels, 47 patterns (23 of them zone two's), 16 enemies (seven and a boss in each built zone), two built zones with their routes and encounters (16 and 12), 12 upgrades, the palette, the story (sentencing, 10 counts, addenda, an interlude, the verdict), copy, controls, sounds, display, shaders.
 - **Page**: `app.js` (loop and modes), `hud.js`, `screens.js` (sentencing, Holding, map, indictment, verdict), `sound.js`, Iron Vector's `input.js`, and `gl.js` (Iron Vector's, with the passes).
 - **Art**: `tools/art.py` → `web/art/` (title, sentencing, indictment, verdict, 3 guns, 8 icons), TikZ kept in `tools/art/`.
 - **Probes** (ignored tests): `crates/core/tests/run_probe.rs` runs a scripted player through whole routes; `crates/core/tests/draw_cost.rs` prints each scene's instances and vertices.
@@ -49,3 +49,4 @@ A subagent played seven runs through the playtest harness (`cargo run --release 
 - That CI checked Firefox and WebKit: it runs Chromium only. Run the three-engine check locally before pushing.
 - That CI's Chromium is fast: it draws on SwiftShader. The walk to the first gate waits up to 120 s, and instance count is what costs there (G7).
 - That `scripts/serve.py` survives a rebuild: `build.sh` deletes `dist/`.
+- That a newly built native program will start on this Mac (Z13). If `cargo test` or the harness sits with no CPU time, check `syspolicyd` (`ps -o time,%cpu,command -p $(pgrep syspolicyd)`); `sudo killall syspolicyd` restarts it. Until then CI runs the tests on a pull request, and `scripts/break_tests.py` runs there through `breaks.yml`.
