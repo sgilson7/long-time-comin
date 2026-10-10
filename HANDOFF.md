@@ -29,6 +29,8 @@ A subagent played seven runs through the playtest harness (`cargo run --release 
 
 ## Round 4 (2026-10-10): the see-through camera, the Clerk, zone two
 
+**Live:** pull request #1 (zone-two) passed the full check on CI (run 38085164272: fmt, clippy, 124 core and 11 boundary tests, the wasm build and audit, the browser check) and the break tests (run 38085164277: all twenty breaks fail their tests); merged to `main`, run 38085439338 passed check and deploy. Build 23046805 (commit 6e2b5ee) is live, and `BUILDER_ORIGIN=https://sgilson7.github.io/long-time-comin tests/browser/check.py` passed in Chromium, Firefox and WebKit against it. The core tests could not run on this Mac (Z13); the three-engine browser check and the wasm import audit did, against the local build, before the push.
+
 `BRIEF.md` has the request; `PLAN.md` (Round 4) the design; `SECOND-ORDER.md` rows R4 and Z1 to Z11 what was chosen and found, and B2 the break tests.
 
 - **Camera.** The shader cuts the arena's scenery out of a cone from the lens to the head and a sphere round the lens (`balance.rs` `SEE_*`). The reported fault had a cause of its own: since round two the camera started every arena behind the shut entry gate, which was not solid (Z1); it is now.
