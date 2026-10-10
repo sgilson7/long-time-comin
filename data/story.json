@@ -1,0 +1,42 @@
+{
+  "_about": "The story's words. The indictment is read one count per death, in order; after the last count, a death adds one of the addenda. {years}, {total} and {year} are filled in by the core.",
+  "case": "THE TRIBUNAL OF THE LAST HOUR · Case 2081-1 · The People of Meridian v. the Defendant",
+  "sentencing": [
+    "You were tried in a court that sits after the end of things, and found guilty of a crime you do not remember.",
+    "The sentence is Corrective Return: to be sent back to the night of 14 March 2081 and stop yourself before you do it.",
+    "The Bailiff of Hours fired you down the years. It aimed fifty years early.",
+    "You land in 2031, in a city waiting for a future you already ended. The only way to the night is through the half century. Walk."
+  ],
+  "counts": [
+    "COUNT I. That on the evening of 14 March 2081 the Defendant entered the Meridian Observatory with a key they had no right to hold.",
+    "COUNT II. That the Defendant there started the instrument known as the Long Door, built by their own hand over eleven years and registered with the city as a weather clock.",
+    "COUNT III. That the Long Door was built to hold one evening open, so that one person in it would not die, and that the Defendant knew what holding it would cost.",
+    "COUNT IV. That at 21:14 the Defendant stopped the clocks of the city of Meridian, and with them the tomorrow of its nine million people.",
+    "COUNT V. That the people of Meridian remain in that evening. They are not dead. They do not age. They will not see the fifteenth of March.",
+    "COUNT VI. That the one person the Long Door was built for is among them, and does not know.",
+    "COUNT VII. That the Defendant, alone outside the Stilling, walked the stopped streets for thirty-one days before surrendering to this court.",
+    "COUNT VIII. That the Defendant asked for no counsel, and offered one sentence in their defence: I would do it again.",
+    "COUNT IX. That the court finds that sentence to be the crime. The Defendant who would do it again must be met before they do.",
+    "COUNT X. That the Defendant you are walking toward is you, older by every year this court has added."
+  ],
+  "addenda": [
+    "ADDENDUM. The court notes the Defendant has fallen again in {year}. The time is added.",
+    "ADDENDUM. The Bailiff reports the Defendant returned without complaint. The time is added.",
+    "ADDENDUM. The clerk asks that the record show the Defendant is getting further. The time is added anyway.",
+    "ADDENDUM. No new charge. The court only wished to remind the Defendant that it is still sitting."
+  ],
+  "death_title": "THE BAILIFF COLLECTS YOU",
+  "time_served": "Time served: {years} years added. Sentence now {total} years.",
+  "victory_title": "THE BAILIFF KNEELS",
+  "victory": [
+    "The Bailiff of Hours kneels in its own court. It was never sent to bring you back. It was sent to keep you from arriving.",
+    "2031 is behind you. Ahead lie the Flood Years, the Glass Decade, and the night of the Stilling.",
+    "The route past the Waiting City is sealed in this build. The court grants you Clemency for getting this far."
+  ],
+  "bosses": {
+    "bailiff": { "name": "THE BAILIFF OF HOURS", "title": "Officer of the Tribunal. Keeps the accused where the court puts them." },
+    "witness": { "name": "THE WITNESS", "title": "Sealed in this build." },
+    "jury": { "name": "THE JURY OF GLASS", "title": "Sealed in this build." },
+    "defendant": { "name": "THE DEFENDANT", "title": "Sealed in this build." }
+  }
+}

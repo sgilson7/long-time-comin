@@ -1,0 +1,18 @@
+{
+  "KeyW": "forward",
+  "KeyS": "back",
+  "KeyA": "left",
+  "KeyD": "right",
+  "ArrowUp": "forward",
+  "ArrowDown": "back",
+  "ArrowLeft": "left",
+  "ArrowRight": "right",
+  "Space": "jump",
+  "ShiftLeft": "dash",
+  "ShiftRight": "dash",
+  "Mouse0": "fire",
+  "Mouse2": "parry",
+  "KeyQ": "parry",
+  "KeyF": "grapple",
+  "KeyE": "interact"
+}

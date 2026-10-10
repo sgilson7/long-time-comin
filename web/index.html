@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Reference default. connect-src 'self' keeps fetches on this origin;
+       'wasm-unsafe-eval' lets the page compile its own WebAssembly module;
+       form-action 'none' blocks form posts. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; connect-src 'self'; style-src 'self'; img-src 'self' data:; media-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>Long Time Comin'</title>
+  <meta name="description" content="A third-person bullet-hell roguelike in the browser. Sent back in time to stop yourself, fifty years too early, you cross a city of orbs one arena at a time; every death reads the next count of your indictment.">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body data-ready="false" data-mode="loading">
+  <canvas id="view"></canvas>
+
+  <!-- play -->
+  <div id="hud" hidden>
+    <div id="vignette"></div>
+    <div id="reticle"><span></span></div>
+    <div id="gate-labels"></div>
+    <div id="top-left">
+      <div class="place"><span id="h-zone"></span> · <span id="h-year"></span></div>
+      <div class="node" id="h-node"></div>
+      <div class="left" id="h-enemies"></div>
+    </div>
+    <div id="top-right">
+      <div class="clem" id="h-clemency"></div>
+    </div>
+    <div id="boss" hidden>
+      <div class="boss-name" id="b-name"></div>
+      <div class="boss-title" id="b-title"></div>
+      <div class="bar"><div class="fill" id="b-fill"></div></div>
+    </div>
+    <div id="bottom-left">
+      <div class="label" data-copy="hud_health"></div>
+      <div class="bar health"><div class="fill" id="h-health"></div><span id="h-health-text"></span></div>
+      <div class="pips-row">
+        <span class="label" data-copy="hud_jumps"></span><span class="pips" id="h-jumps"></span>
+        <span class="label" data-copy="hud_dash"></span><span class="pips" id="h-dash"></span>
+      </div>
+      <div class="pips-row abilities">
+        <span class="ability" id="h-hook" data-copy="hud_hook" hidden></span>
+        <span class="ability" id="h-parry" data-copy="hud_parry" hidden></span>
+      </div>
+    </div>
+    <div id="bottom-right">
+      <img id="h-gun-art" alt="">
+      <div class="gun-name"><span id="h-gun"></span> <span id="h-gun-level"></span></div>
+      <div class="gun-trait" id="h-gun-trait"></div>
+    </div>
+    <div id="prompt" hidden></div>
+    <div id="hint"></div>
+    <div id="callout"><div class="word" id="c-word"></div></div>
+    <div id="engage" hidden><button id="engage-btn" class="big" data-copy="click_to_play"></button></div>
+  </div>
+
+  <!-- the title -->
+  <div id="title" class="overlay" hidden>
+    <img class="art" src="art/title.png" alt="">
+    <div class="title-block">
+      <h1 data-copy="title"></h1>
+      <p class="subtitle" data-copy="subtitle"></p>
+      <button id="begin" class="big" data-copy="begin"></button>
+    </div>
+    <div id="build" class="build"></div>
+  </div>
+
+  <!-- the sentencing -->
+  <div id="intro" class="overlay paper" hidden>
+    <img class="art" src="art/sentencing.png" alt="">
+    <div class="sheet">
+      <div class="case" id="i-case"></div>
+      <div id="i-lines"></div>
+      <button id="intro-next" class="big" data-copy="continue"></button>
+    </div>
+  </div>
+
+  <!-- the Holding -->
+  <div id="holding" class="overlay" hidden>
+    <div class="holding-grid">
+      <section class="record">
+        <h2 data-copy="holding_title"></h2>
+        <p class="lede" data-copy="holding_text"></p>
+        <div class="stats">
+          <div><span class="big-num" id="m-clemency"></span><span data-copy="clemency"></span></div>
+          <div><span class="big-num" id="m-deaths"></span><span data-copy="deaths"></span></div>
+          <div><span class="big-num" id="m-years"></span><span id="m-years-label"></span></div>
+        </div>
+        <h4 data-copy="your_body"></h4>
+        <ul id="m-build"></ul>
+        <button id="start-run" class="big" data-copy="start_run"></button>
+        <details class="about">
+          <summary data-copy="controls_heading"></summary>
+          <table class="controls"></table>
+        </details>
+        <div class="tools">
+          <button id="replay" class="small" data-copy="read_again"></button>
+          <button id="reset" class="small" data-copy="reset"></button>
+        </div>
+        <p class="credit" data-copy="credit"></p>
+        <p class="credit" data-copy="save_note"></p>
+      </section>
+      <section class="shop">
+        <div id="upgrades"></div>
+      </section>
+      <section class="case-file">
+        <h3 data-copy="indictment"></h3>
+        <div class="counts-read"><span data-copy="counts_read"></span> <span id="m-counts"></span></div>
+        <ol id="m-indictment"></ol>
+        <h3 data-copy="route_heading"></h3>
+        <ol id="m-route"></ol>
+      </section>
+    </div>
+  </div>
+
+  <!-- the map -->
+  <div id="map" class="overlay center" hidden>
+    <div class="panel map-panel">
+      <h2 data-copy="map_heading"></h2>
+      <p class="hint" data-copy="map_hint"></p>
+      <div id="graph">
+        <svg id="edges" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
+        <div id="nodes"></div>
+      </div>
+      <button id="map-close" class="big" data-copy="resume"></button>
+    </div>
+  </div>
+
+  <!-- paused -->
+  <div id="paused" class="overlay center" hidden>
+    <div class="panel">
+      <h2 data-copy="paused"></h2>
+      <button id="resume" class="big" data-copy="resume"></button>
+      <button id="pause-map" data-copy="map"></button>
+      <button id="abandon" data-copy="abandon"></button>
+      <table class="controls"></table>
+    </div>
+  </div>
+
+  <!-- the indictment, read on a death -->
+  <div id="dead" class="overlay paper" hidden>
+    <img class="art" src="art/indictment.png" alt="">
+    <div class="sheet">
+      <div class="stamp" id="d-title"></div>
+      <div class="case" id="d-case"></div>
+      <ol id="d-counts"></ol>
+      <p class="newest" id="d-newest"></p>
+      <p class="served" id="d-served"></p>
+      <p class="earned" id="d-earned"></p>
+      <button id="dead-next" class="big" data-copy="to_holding"></button>
+    </div>
+  </div>
+
+  <!-- the verdict, after the Bailiff -->
+  <div id="won" class="overlay paper" hidden>
+    <img class="art" src="art/verdict.png" alt="">
+    <div class="sheet">
+      <div class="stamp" id="w-title"></div>
+      <div id="w-lines"></div>
+      <p class="earned" id="w-earned"></p>
+      <button id="won-next" class="big" data-copy="verdict_back"></button>
+    </div>
+  </div>
+
+  <div id="message"></div>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

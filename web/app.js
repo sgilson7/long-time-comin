@@ -1,0 +1,214 @@
+// The page draws what the core returns and decides nothing. It loads the data
+// files, starts the core through the shim, and each display frame passes the
+// clock, the held actions and the mouse movement in, then draws what comes
+// out. The core says which mode the game is in; the page shows that screen.
+import init, { Game, numbers, mesh } from "./pkg/ltc_shim.js";
+import { makeRenderer } from "./gl.js";
+import { makeInput } from "./input.js";
+import { makeHud } from "./hud.js";
+import { makeScreens } from "./screens.js";
+import { setup as setupSound, wake, toggleMute, play } from "./sound.js";
+
+const BUILD = "__BUILD__";
+const SAVE_KEY = "long-time-comin.record";
+const el = (id) => document.getElementById(id);
+const file = (path) => fetch(`${path}?v=${BUILD}`).then((r) => r.text());
+
+// Browser storage can be missing or refused; the game works without it.
+const storage = {
+  load() {
+    try {
+      return localStorage.getItem(SAVE_KEY) || "";
+    } catch {
+      return "";
+    }
+  },
+  save(text) {
+    try {
+      localStorage.setItem(SAVE_KEY, text);
+    } catch {
+      // nothing to do: the record is simply not kept
+    }
+  },
+};
+
+function fillCopy(copy) {
+  for (const node of document.querySelectorAll("[data-copy]")) {
+    node.textContent = copy[node.dataset.copy];
+  }
+  document.title = copy.title;
+  el("build").textContent = BUILD;
+  for (const table of document.querySelectorAll("table.controls")) {
+    for (const [keys, does] of copy.controls) {
+      const row = table.insertRow();
+      row.insertCell().textContent = keys;
+      row.insertCell().textContent = does;
+    }
+  }
+}
+
+async function start() {
+  const names = ["weapons", "patterns", "enemies", "zone", "upgrades", "palette", "story", "copy", "controls", "sounds"];
+  const texts = await Promise.all(
+    names.map((n) => file(`data/${n}.json`)).concat([file("data/shaders/scene.vert"), file("data/shaders/scene.frag")]),
+  );
+  const [weapons, patterns, enemies, zone, upgrades, palette, story, copyText, controlsText, soundsText, vertex, fragment] =
+    texts;
+  const copy = JSON.parse(copyText);
+  fillCopy(copy);
+  setupSound(JSON.parse(soundsText));
+  await init();
+  const N = JSON.parse(numbers());
+
+  let game;
+  try {
+    game = new Game(weapons, patterns, enemies, zone, upgrades, palette, story, copyText, storage.load());
+  } catch (e) {
+    el("message").textContent = String(e);
+    document.body.dataset.ready = "true";
+    return;
+  }
+
+  const canvas = el("view");
+  const renderer = makeRenderer(canvas, N, { vertex, fragment }, (id) => mesh(id));
+  if (!renderer) el("message").textContent = copy.no_webgl;
+  const save = () => storage.save(game.saved());
+  const input = makeInput(canvas, JSON.parse(controlsText), N.actions, () => wake(BUILD));
+  const hud = makeHud(copy, play);
+  let shownMode = null;
+  const screens = makeScreens(game, copy, () => {
+    save();
+    showMode(JSON.parse(game.hud()).mode, true);
+  });
+
+  // a button that changes the mode: wake the sound, act, keep the record
+  const act = (fn) => () => {
+    wake(BUILD);
+    fn();
+    if (document.activeElement) document.activeElement.blur();
+    save();
+  };
+  const engage = () => {
+    input.engage();
+    hud.reset(JSON.parse(game.hud()));
+  };
+  el("begin").addEventListener("click", act(() => game.begin()));
+  el("intro-next").addEventListener("click", act(() => game.finish_intro()));
+  el("replay").addEventListener("click", act(() => game.replay_intro()));
+  el("start-run").addEventListener(
+    "click",
+    act(() => {
+      game.start_run();
+      engage();
+    }),
+  );
+  el("engage-btn").addEventListener("click", act(engage));
+  el("resume").addEventListener(
+    "click",
+    act(() => {
+      game.resume();
+      engage();
+    }),
+  );
+  el("map-close").addEventListener(
+    "click",
+    act(() => {
+      game.resume();
+      engage();
+    }),
+  );
+  el("pause-map").addEventListener("click", act(() => game.toggle_map()));
+  const abandon = el("abandon");
+  abandon.addEventListener("click", () => {
+    if (!abandon.classList.contains("armed")) {
+      abandon.classList.add("armed");
+      abandon.textContent = copy.abandon_confirm;
+      return;
+    }
+    abandon.classList.remove("armed");
+    abandon.textContent = copy.abandon;
+    act(() => game.abandon())();
+  });
+  el("dead-next").addEventListener("click", act(() => game.to_holding()));
+  el("won-next").addEventListener("click", act(() => game.to_holding()));
+  const reset = el("reset");
+  reset.addEventListener("click", () => {
+    if (!reset.classList.contains("armed")) {
+      reset.classList.add("armed");
+      reset.textContent = copy.reset_confirm;
+      return;
+    }
+    reset.classList.remove("armed");
+    reset.textContent = copy.reset;
+    act(() => game.reset())();
+  });
+
+  // losing the pointer in play pauses; Tab or M opens the map
+  document.addEventListener("pointerlockchange", () => {
+    if (!document.pointerLockElement && JSON.parse(game.hud()).mode === "play") game.pause();
+  });
+  window.addEventListener("keydown", (e) => {
+    const mode = document.body.dataset.mode;
+    if (e.code === "Tab" || e.code === "KeyM") {
+      e.preventDefault();
+      if (mode === "play" || mode === "map" || mode === "paused") game.toggle_map();
+    }
+    if (e.code === "Escape" && mode === "map") game.resume();
+    if (e.code === "Escape" && mode === "play") game.pause();
+    if (e.code === "KeyN") toggleMute();
+    wake(BUILD);
+  });
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) game.pause();
+  });
+
+  function resize() {
+    const [w, h] = game.resize(canvas.clientWidth, canvas.clientHeight, window.devicePixelRatio || 1);
+    if (renderer) renderer.resize(w, h);
+  }
+  window.addEventListener("resize", resize);
+  resize();
+
+  const overlays = { title: "title", intro: "intro", holding: "holding", map: "map", paused: "paused", dead: "dead", won: "won" };
+  function showMode(mode, again) {
+    if (mode === shownMode && !again) return;
+    document.body.dataset.mode = mode;
+    for (const [m, id] of Object.entries(overlays)) el(id).hidden = mode !== m;
+    el("hud").hidden = !["play", "paused", "map"].includes(mode);
+    const s = JSON.parse(game.screen());
+    if (mode === "intro") screens.intro(s);
+    if (mode === "holding") screens.holding(s);
+    if (mode === "map") screens.map(s);
+    if (mode === "dead") screens.dead(s);
+    if (mode === "won") screens.won(s);
+    if (mode === "dead" || mode === "won" || mode === "holding") input.release();
+    if (mode === "dead" || mode === "won") save();
+    shownMode = mode;
+  }
+
+  function frame(now) {
+    const { bits, dx, dy } = input.read();
+    game.advance(now, bits, dx, dy);
+    const h = JSON.parse(game.hud());
+    showMode(h.mode, false);
+    if (h.mode === "play") {
+      hud.update(h);
+      el("engage").hidden = input.engaged();
+    }
+    if (renderer) {
+      if (game.scene_version() !== sceneVersion) {
+        sceneVersion = game.scene_version();
+        renderer.setScene(game.static_instances(), game.uniforms(), game.clear_color());
+      }
+      renderer.frame(game.view(), game.instances(), game.draws());
+    }
+    requestAnimationFrame(frame);
+  }
+  let sceneVersion = null;
+
+  hud.reset(JSON.parse(game.hud()));
+  document.body.dataset.ready = "true";
+  requestAnimationFrame(frame);
+}
+
+start();

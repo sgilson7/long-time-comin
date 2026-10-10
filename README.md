@@ -1,0 +1,59 @@
+# Long Time Comin'
+
+A third-person bullet-hell roguelike that runs in the browser. You committed a crime in 2081 the court calls the Stilling, and were sentenced to go back and stop yourself. The court's Bailiff aimed fifty years early. You land in 2031 and have to cross the half century on foot, one arena at a time, through rings, spirals and flowers of large orbs.
+
+**Play:** https://sgilson7.github.io/long-time-comin/
+
+- **Runs.** Zone one, *The Waiting City, 2031*, is a graph of arenas: one main path from the crater where you land to the Court of Hours, and side paths of harder fights that rejoin it and end in a reward you can see on the map before you choose (a levelled gun, more health, more speed, another jump, up to four). Every run rolls its own graph.
+- **Three guns.** Carbine (automatic, accurate), Scattergun (pellets, close), Hourglass Launcher (a slow orb that bursts). Levels I to III, found on side paths; one carried at a time, as in Returnal and Tower of Guns.
+- **Orbs.** Enemies fire volleys from `data/patterns.json`: rings, aimed fans, spirals (each repeat turned a little), flowers (orbs curling both ways), blooms (fast out, then hanging), spheres, and ground waves you jump. A ring fired from a roof tilts through you.
+- **Moving.** Run, up to four jumps, a dash that orbs pass through, and air control close to the ground's, after Returnal, Saros and Iron Vector.
+- **The Bailiff of Hours**, the zone's boss, has three phases and calls help at each.
+- **Death.** The Bailiff collects you; the court reads the next count of your indictment and adds years to your sentence (Sifu's count: 1, then 2 more, then 3 more). You return to the Holding, where the Clemency the run earned buys upgrades: more health and speed, a double jump, a third dash, a better starting gun, Recess (survive one killing blow), the **Writ of Reach** (a grappling hook after Risk of Rain 2's Loader: hold F and keep the speed when you let go) and **Objection** (a parry after Saros: gold orbs that reach you inside it fly back at whoever fired them).
+- **The route** has three bosses and then a final one. Zones two to four (2048, 2064, 2081) are sealed in this build.
+
+## Controls
+
+| Input | Does |
+| --- | --- |
+| W A S D | Move |
+| Mouse | Look and aim |
+| Left mouse (hold) | Fire |
+| Space | Jump, and again in the air |
+| Shift | Dash: orbs pass through you |
+| E | Take a gun from the floor |
+| F (hold) | Grappling hook, once bought |
+| Right mouse or Q | Parry gold orbs, once bought |
+| Tab or M | Map |
+| Esc | Pause |
+| N | Sound on or off |
+
+## How it is built
+
+Long Time Comin' is a [Builder](https://github.com/sgilson7/builder-setting) project, and its parents are Sam's other games.
+
+- **From Iron Vector:** the 3D engine. Q16.16 fixed-point maths with no floats in the core, one instanced draw per mesh, the core computing every matrix, the camera and the HUD, pointer-lock input, box collision moved one axis at a time, and a fixed 60 ticks a second drawn between ticks.
+- **From Food Truck Circus:** the sphere, cylinder and cone meshes, the build and check scripts, and the TikZ art pipeline after `Sam_Comm_final.png`.
+- **New here:** two render passes, an ink outline (the inverted hull: each inked shape drawn again a little larger with its front faces culled, which leaves the plum line of the TikZ art) and an additive glow for the orbs; toon-banded light; a seeded arena builder that walls each square of the city in facades with lit windows, rooftop clutter, ivy, shops, a skyline out to the clouds and a clock tower stopped at 21:14.
+
+The layers:
+
+- **`crates/core`** holds every rule: movement, orbs and patterns, guns, enemies, the boss, arenas, the route, the record, the camera and the HUD. No input or output, no floats, no clock.
+- **`crates/shim`** moves values across the WebAssembly boundary and decides nothing.
+- **`web/`** is a static page with a WebGL 2 canvas. It draws what the core returns.
+- **`data/`** holds every gun, enemy, pattern, zone rule, upgrade, colour, word, sound recipe and shader.
+- **`tools/art.py`** draws every picture as TikZ; the sources are kept in `tools/art/`.
+
+```bash
+./scripts/setup.sh   # once: Playwright and three browser engines
+./scripts/check.sh   # fmt, clippy, the core tests, the wasm build and audit, the browser check
+python3 scripts/serve.py 8000
+```
+
+A push to `main` runs the same check in Chromium and deploys `dist/` to GitHub Pages if it passes.
+
+`BRIEF.md` holds the request, `PLAN.md` the decisions, `SECOND-ORDER.md` what was found while building, and `HANDOFF.md` where the work stands.
+
+## Credits
+
+Made by Sam Gilson. Inspired by Returnal, Saros, Realm of the Mad God, Hades, Risk of Rain 2, Tower of Guns and Sifu; it uses nothing of theirs.
