@@ -1,16 +1,104 @@
 {
-  "_about": "What Clemency buys in the Holding, between runs. effect kinds: max_health (amount in health points), speed (amount in percent), jumps (amount added to the jumps a run starts with), dash (charges added), grapple, parry, recess, armory (the level the Carbine starts at). requires: an upgrade that must be owned first.",
+  "_about": "What Clemency buys in the Holding, between runs. effect kinds: max_health (amount in health points), speed (amount in percent), jumps (added to the jumps a run starts with), dash (charges added), grapple, parry, recess, armory (the level the Carbine starts at). requires: an upgrade that must be owned first. What each does is written by crates/core/src/codex.rs from these numbers and balance.rs.",
   "upgrades": [
-    { "id": "constitution_1", "name": "Constitution I", "text": "+20 max health.", "cost": 8, "requires": "", "effect": "max_health", "amount": 20, "icon": "heart" },
-    { "id": "objection", "name": "Objection", "text": "Right mouse: a quarter-second parry. Gold orbs that reach you inside it are turned back at whoever fired them.", "cost": 15, "requires": "", "effect": "parry", "amount": 0, "icon": "parry" },
-    { "id": "writ", "name": "The Writ of Reach", "text": "F: a grappling hook. Hold to be hauled to whatever it hits, and keep the speed when you let go.", "cost": 18, "requires": "", "effect": "grapple", "amount": 0, "icon": "hook" },
-    { "id": "fleet_1", "name": "Fleet I", "text": "+6% run speed.", "cost": 10, "requires": "", "effect": "speed", "amount": 6, "icon": "speed" },
-    { "id": "spare_leap", "name": "Spare Leap", "text": "Start every run with a double jump.", "cost": 14, "requires": "", "effect": "jumps", "amount": 1, "icon": "jump" },
-    { "id": "constitution_2", "name": "Constitution II", "text": "+25 max health.", "cost": 16, "requires": "constitution_1", "effect": "max_health", "amount": 25, "icon": "heart" },
-    { "id": "armory", "name": "Standing Armory", "text": "Start every run with a level 2 Carbine.", "cost": 14, "requires": "", "effect": "armory", "amount": 2, "icon": "gun" },
-    { "id": "second_dash", "name": "Third Step", "text": "A third dash charge.", "cost": 20, "requires": "fleet_1", "effect": "dash", "amount": 1, "icon": "dash" },
-    { "id": "fleet_2", "name": "Fleet II", "text": "+6% run speed.", "cost": 20, "requires": "fleet_1", "effect": "speed", "amount": 6, "icon": "speed" },
-    { "id": "recess", "name": "Recess", "text": "Once a run, a killing blow leaves you standing on a third of your health.", "cost": 30, "requires": "constitution_1", "effect": "recess", "amount": 0, "icon": "gavel" },
-    { "id": "constitution_3", "name": "Constitution III", "text": "+30 max health.", "cost": 28, "requires": "constitution_2", "effect": "max_health", "amount": 30, "icon": "heart" }
+    {
+      "id": "constitution_1",
+      "name": "Constitution I",
+      "cost": 8,
+      "requires": "",
+      "effect": "max_health",
+      "amount": 20,
+      "icon": "heart"
+    },
+    {
+      "id": "objection",
+      "name": "Objection",
+      "cost": 15,
+      "requires": "",
+      "effect": "parry",
+      "amount": 0,
+      "icon": "parry"
+    },
+    {
+      "id": "writ",
+      "name": "The Writ of Reach",
+      "cost": 18,
+      "requires": "",
+      "effect": "grapple",
+      "amount": 0,
+      "icon": "hook"
+    },
+    {
+      "id": "fleet_1",
+      "name": "Fleet I",
+      "cost": 10,
+      "requires": "",
+      "effect": "speed",
+      "amount": 6,
+      "icon": "speed"
+    },
+    {
+      "id": "spare_leap",
+      "name": "Spare Leap",
+      "cost": 14,
+      "requires": "",
+      "effect": "jumps",
+      "amount": 1,
+      "icon": "jump"
+    },
+    {
+      "id": "constitution_2",
+      "name": "Constitution II",
+      "cost": 16,
+      "requires": "constitution_1",
+      "effect": "max_health",
+      "amount": 25,
+      "icon": "heart"
+    },
+    {
+      "id": "armory",
+      "name": "Standing Armory",
+      "cost": 14,
+      "requires": "",
+      "effect": "armory",
+      "amount": 2,
+      "icon": "gun"
+    },
+    {
+      "id": "second_dash",
+      "name": "Third Step",
+      "cost": 20,
+      "requires": "fleet_1",
+      "effect": "dash",
+      "amount": 1,
+      "icon": "dash"
+    },
+    {
+      "id": "fleet_2",
+      "name": "Fleet II",
+      "cost": 20,
+      "requires": "fleet_1",
+      "effect": "speed",
+      "amount": 6,
+      "icon": "speed"
+    },
+    {
+      "id": "recess",
+      "name": "Recess",
+      "cost": 30,
+      "requires": "constitution_1",
+      "effect": "recess",
+      "amount": 0,
+      "icon": "gavel"
+    },
+    {
+      "id": "constitution_3",
+      "name": "Constitution III",
+      "cost": 28,
+      "requires": "constitution_2",
+      "effect": "max_health",
+      "amount": 30,
+      "icon": "heart"
+    }
   ]
 }

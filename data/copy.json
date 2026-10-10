@@ -1,14 +1,14 @@
 {
-  "_about": "Every word the page shows that is not the story (story.json) or a gun, enemy or upgrade's own name (their files). {placeholders} are filled by the core or the page.",
+  "_about": "Every word the page shows that is not the story (story.json), a name in another data file, or a Codex line (written by crates/core/src/codex.rs from the game's numbers). Mechanical text here (controls, hints, buttons) carries no voice. {placeholders} are filled by the core or the page.",
   "title": "Long Time Comin'",
-  "subtitle": "You were sent back to stop yourself. They sent you fifty years early.",
+  "subtitle": "Sentenced to stop yourself. Delivered fifty years early.",
   "press_start": "Click to begin",
   "begin": "Begin",
   "continue": "Continue",
   "to_holding": "Return to the Holding",
   "start_run": "Walk into 2031",
   "holding_title": "The Holding",
-  "holding_text": "A bench, a lamp, and the clerk who counts your Clemency. Spend it on what the court allows.",
+  "holding_text": "A bench, a lamp, and a clerk who writes everything down and has never been seen to blink. Clemency is the only coin the court accepts.",
   "clemency": "Clemency",
   "deaths": "Deaths",
   "sentence": "Sentence",
@@ -34,7 +34,7 @@
   "sealed": "Sealed in this build",
   "boss_label": "Boss",
   "map_heading": "The Waiting City, 2031",
-  "map_hint": "Tab or M to close. The bright line is the main path; side paths are harder and end in the reward shown.",
+  "map_hint": "Tab, M or Esc closes the map. Solid lines are the main path; dashed lines are side paths, which end in the reward shown.",
   "here": "You are here",
   "paused": "Paused",
   "resume": "Resume",
@@ -51,21 +51,21 @@
   "reward_health": "+max health",
   "reward_speed": "+speed",
   "prompt_take": "E: take the {gun} (leave the {held})",
-  "hint_arrival": "WASD move · Space jump · Shift dash through orbs · hold Left Mouse to fire · walk into the glowing gate",
-  "hint_fight": "Big orbs hurt. Jump the rings that run along the ground. Dash makes you untouchable for a moment.",
-  "hint_cleared": "Cleared. Blue gates follow the main path; orange gates take a harder side path to its reward.",
-  "hint_rest": "The water heals you fully. The Court of Hours lies beyond.",
+  "hint_arrival": "W A S D move · mouse aims · hold left mouse to fire · Space jumps · Shift dashes · walk into the lit gate to leave",
+  "hint_fight": "Orbs deal damage on contact. Ground waves deal damage unless you are above them: jump them, or stand on something. You take no damage early in a dash.",
+  "hint_cleared": "Arena cleared. Blue gates continue the main path. Orange gates lead to a side path: harder fights, and the reward shown over the gate.",
+  "hint_rest": "Walk into the fountain to restore all health once. The gate leads to the boss.",
   "callout_cleared": "ARENA CLEARED",
-  "callout_recess": "RECESS: THE BLOW IS STRUCK FROM THE RECORD",
-  "callout_fell": "THE CITY CATCHES YOU",
-  "callout_fountain": "RESTORED",
+  "callout_recess": "RECESS. THE BLOW IS STRUCK FROM THE RECORD.",
+  "callout_fell": "FELL: RETURNED TO THE LAST FLOOR",
+  "callout_fountain": "HEALTH RESTORED",
   "callout_phase": "THE COURT RECONVENES",
   "callout_boss_down": "THE BAILIFF FALLS",
   "callout_gun": "{gun}",
   "callout_health": "MAX HEALTH +{n}",
   "callout_speed": "SPEED +{n}%",
   "callout_jump": "JUMP {n} OF {max}",
-  "callout_jump_full": "FOUR JUMPS ALREADY: RESTORED INSTEAD",
+  "callout_jump_full": "ALREADY AT FOUR JUMPS: HEALTH RESTORED",
   "callout_objection": "OBJECTION!",
   "hud_health": "Health",
   "hud_jumps": "Jumps",
@@ -78,20 +78,91 @@
   "no_webgl": "This browser has no WebGL 2, which the game needs to draw.",
   "controls_heading": "Controls",
   "controls": [
-    ["W A S D", "Move"],
-    ["Mouse", "Look and aim"],
-    ["Left mouse (hold)", "Fire"],
-    ["Space", "Jump, again in the air"],
-    ["Shift", "Dash: orbs pass through you"],
-    ["E", "Take a gun"],
-    ["F (hold)", "Grappling hook, once bought"],
-    ["Right mouse or Q", "Parry gold orbs, once bought"],
-    ["Tab or M", "Map"],
-    ["Esc", "Pause"],
-    ["N", "Sound on or off"]
+    [
+      "W A S D",
+      "Move. Running speed {run} m/s."
+    ],
+    [
+      "Mouse",
+      "Aim. The camera turns with it."
+    ],
+    [
+      "Left mouse (hold)",
+      "Fire the gun you carry."
+    ],
+    [
+      "Space",
+      "Jump. Press again in the air for each further jump you have, up to {max_jumps}."
+    ],
+    [
+      "Shift",
+      "Dash {dash_distance} m in {dash_time} s. No damage for the first {dash_iframes} s. Uses a charge; each recharges in {dash_recharge} s."
+    ],
+    [
+      "E",
+      "Take a gun from the floor within {pickup_reach} m. Your old gun is left in its place."
+    ],
+    [
+      "F (hold)",
+      "Grappling hook, once the Writ of Reach is bought. Range {grapple_range} m."
+    ],
+    [
+      "Right mouse or Q",
+      "Parry, once Objection is bought. Lasts {parry_window} s and turns back gold orbs."
+    ],
+    [
+      "Tab or M",
+      "Open or close the map. The game is paused while it is open."
+    ],
+    [
+      "Esc",
+      "Pause and release the mouse."
+    ],
+    [
+      "N",
+      "Sound on or off."
+    ]
   ],
   "reset": "Erase the record",
   "reset_confirm": "Erase everything? Click again",
   "credit": "Made by Sam Gilson. Art drawn in TikZ.",
-  "save_note": "Your record is kept in this browser."
+  "save_note": "Your record is kept in this browser.",
+  "codex": "Codex",
+  "codex_title": "Codex",
+  "codex_tabs": [
+    [
+      "controls",
+      "Controls"
+    ],
+    [
+      "guns",
+      "Guns"
+    ],
+    [
+      "enemies",
+      "Enemies"
+    ],
+    [
+      "upgrades",
+      "Upgrades"
+    ],
+    [
+      "rules",
+      "Rules"
+    ]
+  ],
+  "codex_level": "Level",
+  "codex_damage": "Damage per hit",
+  "codex_rate": "Fire rate",
+  "codex_dps": "Damage per second",
+  "codex_speed": "Shot speed",
+  "codex_range": "Range",
+  "codex_spread": "Spread",
+  "codex_health": "Health",
+  "codex_size": "Size",
+  "codex_touch": "Touch",
+  "codex_clemency": "Clemency",
+  "codex_cost": "Cost",
+  "codex_needs": "Needs",
+  "close": "Close"
 }

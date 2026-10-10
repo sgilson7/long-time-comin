@@ -1,37 +1,136 @@
 {
-  "_about": "The three guns. Units: damage in health points, rate_ms between shots, speed_cms in cm/s, spread_deg the half-angle of the cone a shot may stray in, size_cm the shot's radius, life_ms how long it flies, splash_cm the radius of the blast and splash its damage, pierce how many enemies a shot passes through. Levels 1 to 3: a run finds higher levels on side paths.",
+  "_about": "The three guns. Units: damage in health points, rate_ms between shots, speed_cms in cm/s, spread_deg the half-angle of the cone a shot may stray in, size_cm the shot's radius, life_ms how long it flies, splash_cm the radius of the blast and splash its damage, pierce how many enemies a shot passes through. Every number the Codex and the HUD show for a gun is computed from these by crates/core/src/codex.rs. Levels 1 to 3: a run finds higher levels on side paths.",
   "weapons": [
     {
       "id": "carbine",
       "name": "Carbine",
-      "blurb": "Automatic and accurate. Hold to fire.",
+      "blurb": "Automatic rifle. Accurate at range.",
       "colour": "shot_carbine",
       "levels": [
-        { "damage": 7, "rate_ms": 105, "pellets": 1, "spread_deg": 1, "speed_cms": 9000, "size_cm": 9, "life_ms": 1600, "splash_cm": 0, "splash": 0, "pierce": 0, "trait": "" },
-        { "damage": 9, "rate_ms": 95, "pellets": 1, "spread_deg": 1, "speed_cms": 9500, "size_cm": 10, "life_ms": 1600, "splash_cm": 0, "splash": 0, "pierce": 0, "trait": "More damage, faster" },
-        { "damage": 11, "rate_ms": 85, "pellets": 1, "spread_deg": 1, "speed_cms": 10000, "size_cm": 11, "life_ms": 1700, "splash_cm": 0, "splash": 0, "pierce": 1, "trait": "Shots pass through one enemy" }
+        {
+          "damage": 7,
+          "rate_ms": 105,
+          "pellets": 1,
+          "spread_deg": 1,
+          "speed_cms": 9000,
+          "size_cm": 9,
+          "life_ms": 1600,
+          "splash_cm": 0,
+          "splash": 0,
+          "pierce": 0
+        },
+        {
+          "damage": 9,
+          "rate_ms": 100,
+          "pellets": 1,
+          "spread_deg": 1,
+          "speed_cms": 9500,
+          "size_cm": 10,
+          "life_ms": 1600,
+          "splash_cm": 0,
+          "splash": 0,
+          "pierce": 0
+        },
+        {
+          "damage": 11,
+          "rate_ms": 80,
+          "pellets": 1,
+          "spread_deg": 1,
+          "speed_cms": 10000,
+          "size_cm": 11,
+          "life_ms": 1700,
+          "splash_cm": 0,
+          "splash": 0,
+          "pierce": 1
+        }
       ]
     },
     {
       "id": "scattergun",
       "name": "Scattergun",
-      "blurb": "A fistful of pellets. Brutal up close.",
+      "blurb": "Fires a spread of pellets. Strongest up close.",
       "colour": "shot_scatter",
       "levels": [
-        { "damage": 6, "rate_ms": 620, "pellets": 9, "spread_deg": 5, "speed_cms": 7000, "size_cm": 8, "life_ms": 420, "splash_cm": 0, "splash": 0, "pierce": 0, "trait": "" },
-        { "damage": 7, "rate_ms": 560, "pellets": 11, "spread_deg": 5, "speed_cms": 7500, "size_cm": 8, "life_ms": 450, "splash_cm": 0, "splash": 0, "pierce": 0, "trait": "More pellets, faster" },
-        { "damage": 7, "rate_ms": 500, "pellets": 14, "spread_deg": 6, "speed_cms": 8000, "size_cm": 9, "life_ms": 480, "splash_cm": 0, "splash": 0, "pierce": 1, "trait": "Pellets pass through one enemy" }
+        {
+          "damage": 6,
+          "rate_ms": 620,
+          "pellets": 9,
+          "spread_deg": 5,
+          "speed_cms": 7000,
+          "size_cm": 8,
+          "life_ms": 420,
+          "splash_cm": 0,
+          "splash": 0,
+          "pierce": 0
+        },
+        {
+          "damage": 7,
+          "rate_ms": 560,
+          "pellets": 11,
+          "spread_deg": 5,
+          "speed_cms": 7500,
+          "size_cm": 8,
+          "life_ms": 450,
+          "splash_cm": 0,
+          "splash": 0,
+          "pierce": 0
+        },
+        {
+          "damage": 7,
+          "rate_ms": 500,
+          "pellets": 14,
+          "spread_deg": 6,
+          "speed_cms": 8000,
+          "size_cm": 9,
+          "life_ms": 480,
+          "splash_cm": 0,
+          "splash": 0,
+          "pierce": 1
+        }
       ]
     },
     {
       "id": "launcher",
       "name": "Hourglass Launcher",
-      "blurb": "A slow orb of stopped time that bursts on contact.",
+      "blurb": "Fires a slow orb that bursts, damaging every enemy near it.",
       "colour": "shot_launcher",
       "levels": [
-        { "damage": 30, "rate_ms": 800, "pellets": 1, "spread_deg": 0, "speed_cms": 3800, "size_cm": 26, "life_ms": 2200, "splash_cm": 350, "splash": 26, "pierce": 0, "trait": "" },
-        { "damage": 34, "rate_ms": 720, "pellets": 1, "spread_deg": 0, "speed_cms": 4200, "size_cm": 28, "life_ms": 2200, "splash_cm": 430, "splash": 30, "pierce": 0, "trait": "Bigger burst, faster" },
-        { "damage": 40, "rate_ms": 640, "pellets": 1, "spread_deg": 0, "speed_cms": 4600, "size_cm": 30, "life_ms": 2400, "splash_cm": 520, "splash": 36, "pierce": 0, "trait": "The burst erases orbs inside it" }
+        {
+          "damage": 30,
+          "rate_ms": 800,
+          "pellets": 1,
+          "spread_deg": 0,
+          "speed_cms": 3800,
+          "size_cm": 26,
+          "life_ms": 2200,
+          "splash_cm": 350,
+          "splash": 26,
+          "pierce": 0
+        },
+        {
+          "damage": 34,
+          "rate_ms": 720,
+          "pellets": 1,
+          "spread_deg": 0,
+          "speed_cms": 4200,
+          "size_cm": 28,
+          "life_ms": 2200,
+          "splash_cm": 430,
+          "splash": 30,
+          "pierce": 0
+        },
+        {
+          "damage": 40,
+          "rate_ms": 640,
+          "pellets": 1,
+          "spread_deg": 0,
+          "speed_cms": 4600,
+          "size_cm": 30,
+          "life_ms": 2400,
+          "splash_cm": 520,
+          "splash": 36,
+          "pierce": 0
+        }
       ]
     }
   ]

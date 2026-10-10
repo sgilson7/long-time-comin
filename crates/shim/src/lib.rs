@@ -96,6 +96,10 @@ impl Game {
         self.inner.screen_json()
     }
 
+    pub fn codex(&self) -> String {
+        self.inner.codex_json()
+    }
+
     pub fn begin(&mut self) {
         self.inner.begin()
     }

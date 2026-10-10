@@ -38,8 +38,12 @@ function fillCopy(copy) {
   }
   document.title = copy.title;
   el("build").textContent = BUILD;
+}
+
+// The controls tables, from the core's Codex (its rows carry the numbers).
+function fillControls(rows) {
   for (const table of document.querySelectorAll("table.controls")) {
-    for (const [keys, does] of copy.controls) {
+    for (const [keys, does] of rows) {
       const row = table.insertRow();
       row.insertCell().textContent = keys;
       row.insertCell().textContent = does;
@@ -69,6 +73,9 @@ async function start() {
     document.body.dataset.ready = "true";
     return;
   }
+
+  const codex = JSON.parse(game.codex());
+  fillControls(codex.controls);
 
   const canvas = el("view");
   const renderer = makeRenderer(canvas, N, { vertex, fragment, software: display.software }, (id) => mesh(id));
@@ -130,6 +137,19 @@ async function start() {
     abandon.textContent = copy.abandon;
     act(() => game.abandon())();
   });
+  // the Codex opens over whatever is showing; in play it pauses first
+  for (const b of document.querySelectorAll(".open-codex")) {
+    b.addEventListener("click", () => {
+      game.pause();
+      screens.codex(codex);
+      el("codex").hidden = false;
+      b.blur();
+    });
+  }
+  el("codex-close").addEventListener("click", () => {
+    el("codex").hidden = true;
+    el("codex-close").blur();
+  });
   el("dead-next").addEventListener("click", act(() => game.to_holding()));
   el("won-next").addEventListener("click", act(() => game.to_holding()));
   const reset = el("reset");
@@ -158,6 +178,10 @@ async function start() {
     if (e.code === "Tab" || e.code === "KeyM") {
       e.preventDefault();
       if (mode === "play" || mode === "map" || mode === "paused") game.toggle_map();
+    }
+    if (e.code === "Escape" && !el("codex").hidden) {
+      el("codex").hidden = true;
+      return;
     }
     if (e.code === "Escape" && mode === "map") game.resume();
     if (e.code === "Escape" && mode === "play") game.pause();

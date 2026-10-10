@@ -179,3 +179,25 @@ table.controls td:first-child { font-weight: 700; white-space: nowrap; }
   .holding-grid { grid-template-columns: 1fr; }
   #bottom-left { width: 60vw; }
 }
+
+/* ---- the Codex ---- */
+#codex { z-index: 30; }
+.codex-panel { width: min(96vw, 1100px); max-width: none; max-height: 92vh; }
+#codex-tabs { display: flex; gap: 8px; flex-wrap: wrap; }
+.tab.on { background: var(--salmon); }
+#codex-body { overflow: auto; max-height: 64vh; display: flex; flex-direction: column; gap: 12px; padding-right: 6px; }
+.codex-card { background: #fff3d6; border: 3px solid var(--ink); border-radius: 12px; padding: 10px 14px; }
+.codex-card.row { display: flex; gap: 12px; align-items: flex-start; }
+.codex-card h3 { margin: 0 0 4px; text-transform: uppercase; }
+.codex-card h4 { margin: 10px 0 2px; }
+.codex-card p { margin: 4px 0; font-size: 0.9rem; line-height: 1.35; }
+.codex-card .note { font-size: 0.82rem; opacity: 0.85; }
+.codex-card .icon { width: 56px; height: 56px; }
+.codex-card .gun-art { float: right; width: 200px; height: 80px; object-fit: contain; }
+table.levels, table.stats { border-collapse: collapse; font-size: 0.85rem; margin: 6px 0; }
+table.levels th, table.levels td, table.stats td { border: 1px solid var(--ink-soft); padding: 3px 7px; text-align: left; }
+table.levels th { background: var(--paper-2); }
+.attack { border-left: 4px solid var(--violet); padding-left: 10px; margin: 6px 0; }
+.attack .windup { font-weight: 700; }
+.attack ul, ul.rules { margin: 2px 0; padding-left: 18px; font-size: 0.85rem; line-height: 1.35; }
+ul.rules li { margin-bottom: 6px; }

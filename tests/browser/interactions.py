@@ -5,7 +5,11 @@ it idle. These drive the game the way a person would and assert what the page
 shows. Expected values are worked out by hand from the data files, never
 copied from the game's own output:
 
-- story.json's sentencing has 4 lines; its indictment has 10 counts.
+- story.json's sentencing has 5 lines; its indictment has 10 counts.
+- the Codex has 5 tabs (copy.json codex_tabs), 11 control rows
+  (copy.json controls), 3 guns (weapons.json) and 6 enemies (enemies.json).
+- the crater's gate is open, so its label shows; the first fight's gates
+  stay dark and unlabelled until its enemies are defeated.
 - upgrades.json lists 11 upgrades; the cheapest (Constitution I) costs 8, so
   a new record with 0 Clemency can buy none of them.
 - zone.json lists 4 zones, 1 built: 3 are sealed.
@@ -44,7 +48,7 @@ def run(page, check, engine):
     click(page, "#begin")
     check(mode(page) == "intro", "a first visit reads the sentencing")
     lines = page.query_selector_all("#i-lines .line")
-    check(len(lines) == 4, f"the sentencing has 4 lines ({len(lines)})")
+    check(len(lines) == 5, f"the sentencing has 5 lines ({len(lines)})")
     click(page, "#intro-next")
 
     check(mode(page) == "holding", "then the Holding")
@@ -54,6 +58,22 @@ def run(page, check, engine):
     check(page.inner_text("#m-counts") == "0 / 10", f"no count read yet ({page.inner_text('#m-counts')!r})")
     sealed = page.query_selector_all("#m-route li.sealed")
     check(len(sealed) == 3, f"three zones sealed in this build ({len(sealed)})")
+
+    click(page, "#holding .open-codex")
+    check(page.is_visible("#codex"), "the Codex opens from the Holding")
+    tabs = page.query_selector_all("#codex-tabs .tab")
+    rows = page.query_selector_all("#codex-body table.stats tr")
+    check(len(tabs) == 5 and len(rows) == 11, f"5 tabs, 11 control rows ({len(tabs)}, {len(rows)})")
+    click(page, "#codex-tabs .tab:nth-child(2)")
+    guns = page.query_selector_all("#codex-body .codex-card")
+    check(len(guns) == 3, f"three guns ({len(guns)})")
+    click(page, "#codex-tabs .tab:nth-child(3)")
+    foes = page.query_selector_all("#codex-body .codex-card")
+    check(len(foes) == 6, f"six enemies ({len(foes)})")
+    body = page.inner_text("#codex-body")
+    check("{" not in body, "no unfilled placeholder in the Codex")
+    click(page, "#codex-close")
+    check(page.is_hidden("#codex"), "and closes")
 
     click(page, "#start-run")
     check(mode(page) == "play", f"starting a run plays ({mode(page)})")
@@ -65,6 +85,8 @@ def run(page, check, engine):
     check(len(jumps) == 1 and len(dashes) == 2, f"one jump and two dashes ({len(jumps)}, {len(dashes)})")
     if not page.is_hidden("#engage"):
         click(page, "#engage-btn")
+    labels = page.query_selector_all("#gate-labels .gate-label")
+    check(len(labels) >= 1, f"the crater's open gate is labelled ({len(labels)})")
 
     # run north through the crater's gate into the first fight
     check(mode(page) == "play", f"still playing before the walk ({mode(page)})")
@@ -79,6 +101,9 @@ def run(page, check, engine):
     page.keyboard.up("KeyW")
     node = page.inner_text("#h-node")
     check(moved, f"walking north through the gate reaches the next arena ({node!r}, mode {mode(page)})")
+    page.wait_for_timeout(300)
+    labels = page.query_selector_all("#gate-labels .gate-label")
+    check(len(labels) == 0, f"a fight's gates say nothing until it is won ({len(labels)})")
     if mode(page) != "play":
         click(page, "#resume")
 

@@ -135,8 +135,6 @@ struct GunLevelFile {
     splash_cm: i32,
     splash: i32,
     pierce: i32,
-    #[serde(rename = "trait")]
-    trait_text: String,
 }
 
 /// One level of one gun, in simulation units.
@@ -152,7 +150,6 @@ pub struct GunLevel {
     pub splash_radius: i32,
     pub splash: i32,
     pub pierce: i32,
-    pub trait_text: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -414,7 +411,6 @@ struct UpgradesFile {
 pub struct Upgrade {
     pub id: String,
     pub name: String,
-    pub text: String,
     pub cost: i32,
     pub requires: String,
     pub effect: String,
@@ -565,6 +561,19 @@ impl Content {
             .to_string()
     }
 
+    /// A list of two-string rows from copy.json (the controls table).
+    pub fn copy_rows(&self, key: &str) -> Vec<(String, String)> {
+        self.copy
+            .get(key)
+            .and_then(|v| v.as_array())
+            .map(|rows| {
+                rows.iter()
+                    .filter_map(|r| Some((r.get(0)?.as_str()?.to_string(), r.get(1)?.as_str()?.to_string())))
+                    .collect()
+            })
+            .unwrap_or_default()
+    }
+
     pub fn has_copy(&self, key: &str) -> bool {
         self.copy.get(key).is_some_and(|v| v.is_string())
     }
@@ -606,7 +615,6 @@ fn parse_guns(text: &str, pal: &Palette) -> Result<Vec<Gun>, String> {
                 splash_radius: cm(l.splash_cm),
                 splash: l.splash,
                 pierce: l.pierce,
-                trait_text: l.trait_text.clone(),
             })
             .collect();
         out.push(Gun {

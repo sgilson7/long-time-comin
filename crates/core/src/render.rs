@@ -40,6 +40,8 @@ const INK_MAX: i32 = ONE / 4;
 pub struct Batch {
     lists: Vec<Vec<i32>>,
     ink: Rgb,
+    /// while set, outlines are black and three times as thick (enemies)
+    pub bold: bool,
 }
 
 fn slot(mesh: Mesh, pass: u32) -> usize {
@@ -51,6 +53,7 @@ impl Batch {
         Batch {
             lists: vec![Vec::new(); PASSES * Mesh::ALL.len()],
             ink,
+            bold: false,
         }
     }
 
@@ -81,6 +84,10 @@ impl Batch {
     }
 
     pub fn ink(&mut self, mesh: Mesh, a: &Affine) {
+        if self.bold {
+            self.push(mesh, &inflate_by(a, BOLD_INK), BOLD_COLOUR, 0, PASS_INK);
+            return;
+        }
         let ink = self.ink;
         self.push(mesh, &inflate(a), ink, 0, PASS_INK);
     }
@@ -114,11 +121,22 @@ impl Batch {
     }
 }
 
+/// An enemy's outline: this thick, and black.
+const BOLD_INK: i32 = ONE * 9 / 100;
+const BOLD_COLOUR: Rgb = [0, 0, 0];
+
 /// The same shape grown by the ink's thickness on every side.
 pub fn inflate(a: &Affine) -> Affine {
+    let biggest = [a.c0.len(), a.c1.len(), a.c2.len()]
+        .into_iter()
+        .max()
+        .unwrap_or(0);
+    inflate_by(a, (INK_MIN + fx::mul(biggest, INK_PER_METRE)).min(INK_MAX))
+}
+
+/// The same shape grown by `t` on every side.
+pub fn inflate_by(a: &Affine, t: i32) -> Affine {
     let lens = [a.c0.len(), a.c1.len(), a.c2.len()];
-    let biggest = lens.iter().copied().max().unwrap_or(0);
-    let t = (INK_MIN + fx::mul(biggest, INK_PER_METRE)).min(INK_MAX);
     let grow = |c: V3, l: i32| {
         if l == 0 {
             c

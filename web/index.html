@@ -96,6 +96,7 @@
           <table class="controls"></table>
         </details>
         <div class="tools">
+          <button class="small open-codex" data-copy="codex"></button>
           <button id="replay" class="small" data-copy="read_again"></button>
           <button id="reset" class="small" data-copy="reset"></button>
         </div>
@@ -134,6 +135,7 @@
       <h2 data-copy="paused"></h2>
       <button id="resume" class="big" data-copy="resume"></button>
       <button id="pause-map" data-copy="map"></button>
+      <button class="open-codex" data-copy="codex"></button>
       <button id="abandon" data-copy="abandon"></button>
       <table class="controls"></table>
     </div>
@@ -161,6 +163,16 @@
       <div id="w-lines"></div>
       <p class="earned" id="w-earned"></p>
       <button id="won-next" class="big" data-copy="verdict_back"></button>
+    </div>
+  </div>
+
+  <!-- the Codex: every control, gun, enemy, upgrade and rule, in numbers -->
+  <div id="codex" class="overlay center" hidden>
+    <div class="panel codex-panel">
+      <h2 data-copy="codex_title"></h2>
+      <div id="codex-tabs"></div>
+      <div id="codex-body"></div>
+      <button id="codex-close" class="big" data-copy="close"></button>
     </div>
   </div>
 

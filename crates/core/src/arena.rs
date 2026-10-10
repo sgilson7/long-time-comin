@@ -85,6 +85,8 @@ const CANAL: (i32, i32) = (-int(17), -int(7));
 /// shallow enough to jump out of (a jump clears 1.5 m): falling in is a
 /// detour, never a trap (SECOND-ORDER G5)
 const CANAL_DEPTH: i32 = ONE * 12 / 10;
+/// a walkway slab's thickness
+const DECK: i32 = ONE * 4 / 10;
 
 fn m(x: i32) -> i32 {
     int(x)
@@ -323,6 +325,108 @@ impl<'a> B<'a> {
             self.bush(x + w / 4, h, z - d / 4);
         } else {
             self.crate_stack(x - w / 4, h, z + d / 4);
+        }
+    }
+
+    /// A walkway or bridge: a slab whose top is at `h`, over the rectangle
+    /// from `(x0, z0)` to `(x1, z1)`, with rails along both long sides and a
+    /// solid post at each `post`. Under it is clear to walk through when
+    /// `h` is above a body's height (SECOND-ORDER V1).
+    fn deck(&mut self, x0: i32, z0: i32, x1: i32, z1: i32, h: i32, posts: &[(i32, i32)]) {
+        let stone = self.c("stone");
+        let trim = self.c("trim");
+        let (cx, cz) = ((x0 + x1) / 2, (z0 + z1) / 2);
+        let (w, d) = ((x1 - x0).abs(), (z1 - z0).abs());
+        self.block(cx, h - DECK, cz, w, DECK, d, stone);
+        self.deco(
+            Mesh::Cube,
+            v3(cx, h - DECK - dm(1), cz),
+            v3(w - dm(4), dm(2), d - dm(4)),
+            crate::render::shade(trim, 85),
+        );
+        // rails: a top bar and posts along the two long sides
+        let along_x = w >= d;
+        for side in [-1, 1] {
+            let (a, b) = if along_x {
+                (
+                    v3(x0.min(x1), h + dm(9), cz + side * (d / 2 - dm(1))),
+                    v3(x0.max(x1), h + dm(9), cz + side * (d / 2 - dm(1))),
+                )
+            } else {
+                (
+                    v3(cx + side * (w / 2 - dm(1)), h + dm(9), z0.min(z1)),
+                    v3(cx + side * (w / 2 - dm(1)), h + dm(9), z0.max(z1)),
+                )
+            };
+            self.rod(a, b, dm(1), trim, true);
+            let n = (a.dist(b) / m(2)).max(1);
+            for k in 0..=n {
+                let p = a.lerp(b, fx::div(k * ONE, n * ONE));
+                self.rod(p.add(v3(0, -dm(9), 0)), p, dm(1) / 2, trim, false);
+            }
+        }
+        for &(px, pz) in posts {
+            self.block(px, 0, pz, dm(7), h - DECK, dm(7), crate::render::shade(stone, 85));
+        }
+    }
+
+    /// Cover to hide behind: `n` broken walls a little taller than a body,
+    /// set where they block nothing the arena needs (gate approaches, the
+    /// entrance, stairs and decks).
+    fn cover_walls(&mut self, half: i32, n: i32) {
+        let mut placed = 0;
+        let mut tries = 0;
+        while placed < n && tries < 200 {
+            tries += 1;
+            let x = dm(self.rng.range(-(half / dm(1)) + 40, half / dm(1) - 40));
+            let z = dm(self.rng.range(-(half / dm(1)) + 40, half / dm(1) - 100));
+            if x.abs() < m(4) || z.abs() < m(4) || (self.canal && x < CANAL.1 + m(3)) {
+                continue;
+            }
+            let along_x = self.rng.chance(50);
+            let (w, d) = if along_x { (m(4), dm(6)) } else { (dm(6), m(4)) };
+            let probe = Level::new(self.solids.clone());
+            // room round it to walk, and nothing over it
+            if probe.blocked(
+                v3(x - w / 2 - m(2), -dm(5), z - d / 2 - m(2)),
+                v3(x + w / 2 + m(2), m(8), z + d / 2 + m(2)),
+            ) {
+                continue;
+            }
+            let wall = self.pick(&self.pal.walls.clone());
+            let h = dm(21);
+            self.block(x, 0, z, w, h, d, wall);
+            // a broken top: a notch and fallen bricks
+            let notch = if along_x {
+                v3(x + w / 4, h, z)
+            } else {
+                v3(x, h, z + d / 4)
+            };
+            self.deco(
+                Mesh::Cube,
+                notch.add(v3(0, dm(2), 0)),
+                v3(
+                    if along_x { m(1) } else { d },
+                    dm(4),
+                    if along_x { d } else { m(1) },
+                ),
+                crate::render::shade(wall, 85),
+            );
+            let brick = self.c("paving_dark");
+            for k in 0..3 {
+                let off = if along_x {
+                    v3(dm(8) * (k - 1), 0, d)
+                } else {
+                    v3(d, 0, dm(8) * (k - 1))
+                };
+                self.deco(
+                    Mesh::Octa,
+                    v3(x, dm(1), z).add(off),
+                    v3(dm(4), dm(3), dm(4)),
+                    brick,
+                );
+            }
+            placed += 1;
         }
     }
 
@@ -943,9 +1047,20 @@ impl<'a> B<'a> {
             let wall = self.pick(&self.pal.walls.clone());
             self.block(x, 0, z, m(3), dm(16), dm(8), wall);
         }
-        self.platform(-m(19), m(10), m(8), m(8), m(3), (ONE, 0));
-        self.platform(m(19), -m(10), m(8), m(8), m(3), (-ONE, 0));
-        for (x, z) in [(-m(8), -m(20)), (m(8), m(20)), (m(20), m(12)), (-m(20), -m(12))] {
+        // two towers on the north side joined by a bridge you can walk under,
+        // and a low terrace in the south-east
+        self.platform(-m(19), -m(12), m(8), m(8), m(4), (0, ONE));
+        self.platform(m(19), -m(12), m(8), m(8), m(4), (0, ONE));
+        self.deck(
+            -m(15),
+            -m(13) - dm(5),
+            m(15),
+            -m(10) - dm(5),
+            m(4),
+            &[(-m(5), -m(12)), (m(5), -m(12))],
+        );
+        self.platform(m(17), m(12), m(6), m(6), m(2), (-ONE, 0));
+        for (x, z) in [(-m(8), -m(20)), (m(8), m(20)), (m(22), -m(2)), (-m(22), m(4))] {
             self.planter(x, 0, z);
         }
     }
@@ -1011,6 +1126,26 @@ impl<'a> B<'a> {
             );
             self.stairs(s * (m(10) + dm(78)), 0, 0, -s * ONE, 0, m(5), m(3));
         }
+        // a gallery at five metres along the north side, reached from the
+        // footbridge by two side walks; the gate path runs under it
+        self.deck(
+            -m(20),
+            -m(17) - dm(5),
+            m(20),
+            -m(14) - dm(5),
+            m(5),
+            &[(-m(19), -m(16)), (-m(6), -m(16)), (m(6), -m(16)), (m(19), -m(16))],
+        );
+        for sx in [-1, 1] {
+            self.deck(
+                sx * m(8),
+                -m(14) - dm(5),
+                sx * m(11),
+                -m(2),
+                m(5),
+                &[(sx * m(10), -m(12))],
+            );
+        }
         // lanterns strung over the stalls
         let lamp = self.c("lamp");
         let ink = self.c("ink");
@@ -1033,13 +1168,14 @@ impl<'a> B<'a> {
     fn rooftops(&mut self) {
         // the floor is broken into roofs at different heights, stairs between
         let blocks = [
-            (-m(15), -m(14), m(14), m(12), m(2)),
+            (-m(15), -m(14), m(14), m(12), m(4)),
             (m(15), -m(14), m(14), m(12), m(4)),
             (-m(15), m(15), m(14), m(10), m(4)),
             (m(15), m(15), m(14), m(10), m(2)),
             (0, 0, m(8), m(8), m(6)),
         ];
-        let dirs = [(ONE, 0), (-ONE, 0), (ONE, 0), (-ONE, 0), (0, ONE)];
+        // the north roofs climb from their south sides, clear of the bridge
+        let dirs = [(0, ONE), (0, ONE), (ONE, 0), (-ONE, 0), (0, ONE)];
         for (k, (x, z, w, d, h)) in blocks.iter().enumerate() {
             let wall = self.pick(&self.pal.walls.clone());
             self.block(*x, 0, *z, *w, *h, *d, wall);
@@ -1055,6 +1191,15 @@ impl<'a> B<'a> {
             let run = dm(6) * ((h + dm(4) - 1) / dm(4));
             let (ox, oz) = (x + fx::mul(sx, w / 2 + run), z + fx::mul(sz, d / 2 + run));
             self.stairs(ox, 0, oz, -sx, -sz, *h, m(3));
+        }
+        // a bridge between the two north roofs, over the way to the gate,
+        // and a catwalk off the south-west roof that looks over the tower's stair
+        self.deck(-m(8), -m(15) - dm(5), m(8), -m(12) - dm(5), m(4), &[]);
+        self.deck(-m(8), m(10), -m(2), m(13), m(4), &[(-m(3), m(11) + dm(5))]);
+        // parapets on the high roofs to duck behind
+        for (x, z) in [(-m(15), -m(9)), (m(15), -m(9))] {
+            let wall = self.pick(&self.pal.walls.clone());
+            self.block(x, m(4), z, m(6), dm(12), dm(5), wall);
         }
         // skylights and vents on the low roofs
         let glass = self.c("window");
@@ -1073,7 +1218,7 @@ impl<'a> B<'a> {
     }
 
     fn canal(&mut self) {
-        // the dry canal: a channel two and a half metres down along the west
+        // the dry canal: a channel 1.2 m down along the west
         // side, bridges over it, stairs into it (the floor is laid in pieces
         // round it by `floor`)
         let water = self.c("water");
@@ -1128,7 +1273,18 @@ impl<'a> B<'a> {
             self.lamp(x1 + m(2), 0, k * m(10) + m(5));
         }
         self.platform(m(16), -m(12), m(8), m(8), m(3), (-ONE, 0));
-        self.platform(m(14), m(12), m(6), m(6), m(2), (0, -ONE));
+        // an aqueduct at five metres from the west wall over the channel to
+        // a tower in the east; walk under it, or climb it
+        self.platform(m(16), m(7), m(6), m(6), m(5), (0, ONE));
+        self.deck(
+            -m(26),
+            m(5) + dm(5),
+            m(13),
+            m(8) + dm(5),
+            m(5),
+            &[(-m(20), m(7)), (-m(4), m(7)), (m(5), m(7))],
+        );
+        self.stairs(-m(24) - dm(5), 0, m(8) + dm(5) + dm(78), 0, -ONE, m(5), m(3));
     }
 
     fn atrium(&mut self) {
@@ -1154,14 +1310,25 @@ impl<'a> B<'a> {
         {
             let s = -1;
             let x = s * (HALF - m(3));
-            self.block(x, m(5), 0, m(6), dm(5), m(30), stone);
+            self.block(x, m(5), -m(3) + dm(5), m(6), dm(5), m(35), stone);
             self.deco(
                 Mesh::Cube,
-                v3(x - s * m(3), m(6), 0),
-                v3(dm(2), m(1), m(30)),
+                v3(x - s * m(3), m(6), -m(3) + dm(5)),
+                v3(dm(2), m(1), m(35)),
                 trim,
             );
             self.stairs(x, 0, m(15) + dm(78), 0, -ONE, m(5), m(3));
+            // a high walk across the north, past the ring of columns and over
+            // the way to the north gate, to a tower in the north-east
+            self.deck(
+                x + m(3),
+                -m(19) - dm(5),
+                m(19),
+                -m(16) - dm(5),
+                m(5) + dm(5),
+                &[(-m(8), -m(18)), (m(8), -m(18))],
+            );
+            self.platform(m(22), -m(18), m(6), m(6), m(5) + dm(5), (0, ONE));
             // banners hanging from the balcony
             for k in -2..=2 {
                 let c = if k % 2 == 0 {
@@ -1210,6 +1377,16 @@ impl<'a> B<'a> {
             self.planter(x, 0, z);
         }
         self.platform(-m(18), -m(2), m(6), m(10), m(3), (ONE, 0));
+        // the end of a broken overpass, its stair at the south end
+        self.deck(
+            m(11),
+            -m(12),
+            m(14),
+            m(2),
+            m(4),
+            &[(m(12) + dm(5), -m(8)), (m(12) + dm(5), -m(2))],
+        );
+        self.stairs(m(12) + dm(5), 0, m(2) + dm(60), 0, -ONE, m(4), m(3));
     }
 
     fn antechamber(&mut self) {
@@ -1309,10 +1486,31 @@ impl<'a> B<'a> {
                 false,
             );
         }
+        // four raised stands between the pillars: a ground wave cannot reach
+        // a body standing on one (SECOND-ORDER V2)
+        for (sx, sz) in [(1, 1), (-1, 1), (1, -1), (-1, -1)] {
+            let (x, z) = (sx * m(16) + sx * dm(3), sz * m(16) + sz * dm(3));
+            // the stair comes off the side facing the middle along z, clear
+            // of the bridge
+            self.platform(x, z, m(5), m(5), m(3), (0, -sz * ONE));
+        }
+        // the two southern stands are joined by a bridge you can run under
+        let zb = m(16) + dm(3);
+        self.deck(
+            -m(14),
+            zb - m(1) - dm(5),
+            m(14),
+            zb + m(1) + dm(5),
+            m(3),
+            &[(-m(5), zb), (m(5), zb)],
+        );
         // eight pillars for cover
         for k in 0..8 {
             let a = fx::TURN / 8 * k + deg(22);
-            let (x, z) = (fx::mul(fx::cos(a), m(17)), fx::mul(fx::sin(a), m(17)));
+            // the two by the southern bridge stand further in, clear of it
+            // and of the Bailiff's circle
+            let r = if k == 1 || k == 2 { m(11) } else { m(17) };
+            let (x, z) = (fx::mul(fx::cos(a), r), fx::mul(fx::sin(a), r));
             self.solids.push(Solid::stand(x, 0, z, dm(18), m(6), dm(18)));
             self.deco(Mesh::Cyl, v3(x, m(3), z), v3(m(2), m(6), m(2)), court);
             self.deco(
@@ -1425,6 +1623,9 @@ pub fn build(kind: &str, seed: u64, exits: &[Side], pal: &Palette) -> Arena {
             "atrium" => b.atrium(),
             _ => b.plaza(),
         }
+        if matches!(kind, "plaza" | "market" | "rooftops" | "canal" | "atrium") {
+            b.cover_walls(HALF, 5);
+        }
         let props = if matches!(kind, "rest" | "arrival") {
             10
         } else {
@@ -1454,8 +1655,24 @@ pub fn build(kind: &str, seed: u64, exits: &[Side], pal: &Palette) -> Arena {
                     v3(x - m(1), top + dm(1), z - m(1)),
                     v3(x + m(1), top + m(3), z + m(1)),
                 ) {
-                    ground_spawns.push(p);
-                    air_spawns.push(p.add(v3(0, m(4), 0)));
+                    // nothing stands on a walkway's narrow slab: a turret
+                    // there could only be reached by climbing (SECOND-ORDER V3)
+                    let on_deck = level.solids.iter().any(|s| {
+                        s.max.y == top
+                            && s.max.y - s.min.y == DECK
+                            && x >= s.min.x
+                            && x <= s.max.x
+                            && z >= s.min.z
+                            && z <= s.max.z
+                    });
+                    if !on_deck {
+                        ground_spawns.push(p);
+                    }
+                    // a floater spawned inside a bridge would be stuck there
+                    let air = p.add(v3(0, m(4), 0));
+                    if !level.sphere_hits(air, m(2)) {
+                        air_spawns.push(air);
+                    }
                 }
             }
             x += m(6);
@@ -1567,6 +1784,144 @@ mod size {
             }
             let n = b.count();
             assert!(n < 16_000, "{kind}: {n}");
+        }
+    }
+}
+
+#[cfg(test)]
+mod reach {
+    use super::*;
+    use crate::balance::{PLAYER_HEIGHT, PLAYER_RADIUS, STEP_UP};
+    use crate::content::tests::content;
+    use std::collections::BTreeSet;
+
+    const GRID: i32 = ONE / 2;
+
+    /// Can a body stand with its feet at `p`?
+    fn fits(l: &Level, p: V3) -> bool {
+        let r = PLAYER_RADIUS;
+        !l.blocked(
+            v3(p.x - r, p.y + ONE / 20, p.z - r),
+            v3(p.x + r, p.y + PLAYER_HEIGHT, p.z + r),
+        )
+    }
+
+    /// Every place a body can walk to from the start without jumping: a
+    /// step onto anything up to `STEP_UP` higher, a drop onto anything
+    /// lower. Returns the feet positions reached.
+    fn walk(a: &Arena) -> Vec<V3> {
+        let l = &a.level;
+        let snap = |v: i32| (v / GRID) * GRID;
+        let start = v3(snap(a.start.x), a.start.y, snap(a.start.z));
+        let mut seen: BTreeSet<(i32, i32, i32)> = BTreeSet::new();
+        let mut todo = vec![start];
+        let mut out = Vec::new();
+        seen.insert((start.x, start.y, start.z));
+        while let Some(p) = todo.pop() {
+            out.push(p);
+            for (dx, dz) in [(GRID, 0), (-GRID, 0), (0, GRID), (0, -GRID)] {
+                let (nx, nz) = (p.x + dx, p.z + dz);
+                if nx.abs() > int(40) || nz.abs() > int(40) {
+                    continue;
+                }
+                // as the game does: the body stands on the highest top under
+                // its footprint that it can step up to
+                let r = PLAYER_RADIUS;
+                let (lo, hi) = (v3(nx - r, -int(10), nz - r), v3(nx + r, p.y + STEP_UP, nz + r));
+                let mut top: Option<i32> = None;
+                l.each_near(lo, hi, |s| {
+                    let over = s.min.x < hi.x && s.max.x > lo.x && s.min.z < hi.z && s.max.z > lo.z;
+                    if over && s.max.y <= p.y + STEP_UP {
+                        top = Some(top.map_or(s.max.y, |t: i32| t.max(s.max.y)));
+                    }
+                });
+                let Some(y) = top else {
+                    continue;
+                };
+                let n = v3(nx, y, nz);
+                if y < p.y - int(6) || !fits(l, n) {
+                    continue;
+                }
+                if seen.insert((n.x, n.y, n.z)) {
+                    todo.push(n);
+                }
+            }
+        }
+        out
+    }
+
+    #[test]
+    fn every_gate_can_be_walked_to_and_every_fight_has_heights_and_shelter() {
+        let c = content();
+        for kind in [
+            "arrival", "rest", "plaza", "market", "rooftops", "canal", "atrium", "boss",
+        ] {
+            // cover walls are placed at random, so many seeds
+            for seed in 1..=20 {
+                let a = build(kind, seed, &[Side::North, Side::East], &c.pal);
+                let reached = walk(&a);
+                for (g, _) in a.gates.iter().skip(1) {
+                    let near = reached
+                        .iter()
+                        .any(|p| p.sub(*g).len_xz() < int(2) && p.y.abs() < ONE);
+                    assert!(near, "{kind} seed {seed}: the gate at {g:?} cannot be walked to");
+                }
+                if matches!(kind, "arrival" | "rest") {
+                    continue;
+                }
+                let high = reached.iter().map(|p| p.y).max().unwrap_or(0);
+                assert!(
+                    high >= int(3),
+                    "{kind} seed {seed}: nothing 3 m up can be climbed to ({high})"
+                );
+                // a place on the ground with a solid overhead within 6 m
+                let under = reached.iter().any(|p| {
+                    p.y <= ONE
+                        && a.level
+                            .ray(p.add(v3(0, PLAYER_HEIGHT + ONE / 10, 0)), V3::UP, int(5))
+                            .is_some()
+                });
+                assert!(under, "{kind} seed {seed}: nowhere to walk under");
+            }
+        }
+    }
+
+    #[test]
+    fn nothing_solid_stands_through_a_walkway() {
+        // a pillar or a stair through a deck would block the walk along it
+        // or the climb to it; the reachability walk cannot see that when
+        // another way up exists
+        let c = content();
+        for kind in [
+            "arrival", "plaza", "market", "rooftops", "canal", "atrium", "boss",
+        ] {
+            let a = build(kind, 2, &[Side::North, Side::East], &c.pal);
+            let decks: Vec<&Solid> = a
+                .level
+                .solids
+                .iter()
+                .filter(|s| s.max.y - s.min.y == DECK && s.min.y > int(2))
+                .collect();
+            assert!(!decks.is_empty(), "{kind}: no decks");
+            for d in &decks {
+                for o in &a.level.solids {
+                    if std::ptr::eq(*d, o) {
+                        continue;
+                    }
+                    let horizontal =
+                        o.min.x < d.max.x && o.max.x > d.min.x && o.min.z < d.max.z && o.max.z > d.min.z;
+                    // something from below that rises above the walking
+                    // surface (a stair or post that ends flush with it is
+                    // how a deck is reached or held up)
+                    let pierces = o.min.y < d.min.y && o.max.y > d.max.y + ONE / 20;
+                    // the arena's invisible bound is tall and far out: skip it
+                    let bound = o.max.y >= int(60);
+                    assert!(
+                        !(horizontal && pierces && !bound),
+                        "{kind}: {o:?} rises through the deck {d:?}"
+                    );
+                }
+            }
         }
     }
 }

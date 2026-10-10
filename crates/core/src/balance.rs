@@ -115,9 +115,9 @@ pub const RECESS_HEALTH_PCT: i32 = 35;
 // ---- the camera ----------------------------------------------------------
 
 pub const FOV: i32 = deg(72);
-pub const CAMERA_BACK: i32 = ONE * 5;
-pub const CAMERA_UP: i32 = ONE * 21 / 10;
-pub const CAMERA_RIGHT: i32 = ONE * 9 / 10;
+pub const CAMERA_BACK: i32 = ONE * 64 / 10;
+pub const CAMERA_UP: i32 = ONE * 24 / 10;
+pub const CAMERA_RIGHT: i32 = ONE;
 /// a camera pulled in nearer than this to the head stops drawing the body,
 /// which would fill the screen
 pub const CAMERA_HIDE_BODY: i32 = ONE * 16 / 10;

@@ -86,8 +86,8 @@ const WIN_TICKS: i32 = secs(5, 2);
 /// the first wave comes this long after you arrive
 const FIRST_WAVE: i32 = secs(1, 1);
 /// a killed enemy leaves a heal this often, in percent
-const HEAL_DROP_PCT: i32 = 18;
-const HEAL_DROP: i32 = 8;
+pub const HEAL_DROP_PCT: i32 = 18;
+pub const HEAL_DROP: i32 = 8;
 
 #[derive(Debug, Clone)]
 pub struct World {

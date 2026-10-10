@@ -46,9 +46,13 @@ pub fn world(b: &mut Batch, c: &Content, w: &World, alpha: i32, clock: i32, body
     if body {
         player(b, c, &w.player, w.held.gun, alpha);
     }
+    // enemies in a heavy black line, so their shapes stand out from the
+    // warm city behind them
+    b.bold = true;
     for e in w.enemies.iter().filter(|e| e.alive()) {
         enemy(b, c, e, alpha);
     }
+    b.bold = false;
     orbs(b, c, w, alpha);
     for s in &w.shots {
         let at = s.prev.lerp(s.pos, alpha);
@@ -445,7 +449,8 @@ fn gate(b: &mut Batch, c: &Content, g: &crate::world::Gate, cleared: bool, clock
             pulse,
         );
     }
-    if let Some(r) = g.reward {
+    // the reward floats over the gate only once the gate is open
+    if let Some(r) = g.reward.filter(|_| cleared) {
         let k = match r {
             crate::route::Reward::Gun(gun, l) => PickupKind::Gun(gun, l),
             crate::route::Reward::Jump => PickupKind::Jump,

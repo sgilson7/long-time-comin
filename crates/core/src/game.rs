@@ -549,6 +549,11 @@ impl Game {
 
     // ---- the HUD ---------------------------------------------------------
 
+    /// The Codex: controls, guns, enemies, upgrades and rules, in numbers.
+    pub fn codex_json(&self) -> String {
+        crate::codex::codex_json(&self.c)
+    }
+
     pub fn hud_json(&self) -> String {
         let mut h = json!({ "mode": self.mode });
         let Some(run) = &self.run else {
@@ -575,6 +580,8 @@ impl Game {
         let gates: Vec<Value> = w
             .gates
             .iter()
+            // a gate says where it leads only once the arena is clear
+            .filter(|_| w.cleared)
             .filter_map(|g| {
                 let to = g.to?;
                 let at = g.pos.add(v3(0, int(9), 0));
@@ -646,7 +653,7 @@ impl Game {
             "gun": gun.name,
             "gun_id": gun.id,
             "gun_level": roman(w.held.level),
-            "gun_trait": gl.trait_text,
+            "gun_trait": crate::codex::gun_summary(gl),
             "gun_colour": hex(c.pal.c(&gun.colour)),
             "grapple": p.build.grapple,
             "grapple_ready": p.build.grapple && p.grapple_cooldown == 0,
@@ -754,7 +761,7 @@ impl Game {
                 json!({
                     "id": u.id,
                     "name": u.name,
-                    "text": u.text,
+                    "text": crate::codex::upgrade_effect(u),
                     "cost": u.cost,
                     "icon": u.icon,
                     "owned": m.owns(&u.id),

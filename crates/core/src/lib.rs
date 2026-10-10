@@ -8,6 +8,7 @@
 
 pub mod arena;
 pub mod balance;
+pub mod codex;
 pub mod content;
 pub mod draw;
 pub mod enemy;
