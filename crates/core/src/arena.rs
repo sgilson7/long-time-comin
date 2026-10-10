@@ -20,6 +20,8 @@ use crate::mesh::Mesh;
 use crate::rng::Rng;
 use std::collections::BTreeSet;
 
+mod ice;
+
 /// Half the width of an arena's floor.
 pub const HALF: i32 = int(28);
 /// the gap in the wall a gate stands in
@@ -34,6 +36,8 @@ pub struct Shape {
     pub rgb: Rgb,
     pub glow: i32,
     pub ink: bool,
+    /// drawn as an added halo of light (the aurora), not a solid
+    pub halo: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -69,6 +73,15 @@ pub struct Arena {
     pub centre: V3,
     /// where a rest node's fountain heals
     pub fountain: Option<V3>,
+    /// updraft vents: stand on one and it throws you up
+    pub vents: Vec<Vent>,
+}
+
+/// An updraft vent: its top's centre and how wide it is.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Vent {
+    pub pos: V3,
+    pub radius: i32,
 }
 
 // The builder's helpers take a box's six numbers and a colour, as the TikZ
@@ -80,6 +93,9 @@ struct B<'a> {
     rng: Rng,
     pal: &'a Palette,
     canal: bool,
+    vents: Vec<Vent>,
+    /// zone two: steps, decks and cover in ice instead of stone
+    ice: bool,
 }
 
 /// The dry canal's channel runs north to south between these two x values.
@@ -88,7 +104,7 @@ const CANAL: (i32, i32) = (-int(17), -int(7));
 /// detour, never a trap (SECOND-ORDER G5)
 const CANAL_DEPTH: i32 = ONE * 12 / 10;
 /// a walkway slab's thickness
-const DECK: i32 = ONE * 4 / 10;
+pub(crate) const DECK: i32 = ONE * 4 / 10;
 
 fn m(x: i32) -> i32 {
     int(x)
@@ -108,6 +124,19 @@ impl<'a> B<'a> {
             rgb,
             glow,
             ink,
+            halo: false,
+        });
+    }
+
+    /// Light added over what is behind it, `strength` of full.
+    fn halo(&mut self, mesh: Mesh, at: Affine, rgb: Rgb, strength: i32) {
+        self.shapes.push(Shape {
+            mesh,
+            at,
+            rgb,
+            glow: strength,
+            ink: false,
+            halo: true,
         });
     }
 
@@ -290,8 +319,11 @@ impl<'a> B<'a> {
         let step_h = dm(4);
         let run = dm(6);
         let steps = (rise + step_h - 1) / step_h;
-        let stone = self.c("stone");
-        let dark = self.c("paving_dark");
+        let (stone, dark) = if self.ice {
+            (self.c("ice_white"), self.c("ice_snow_dark"))
+        } else {
+            (self.c("stone"), self.c("paving_dark"))
+        };
         for k in 0..steps {
             let top = ((k + 1) * step_h).min(rise);
             let cx = x + fx::mul(dx, run * k + run / 2);
@@ -302,10 +334,19 @@ impl<'a> B<'a> {
         }
     }
 
+    /// A slab's body and its trim: stone and terracotta in the city, ice
+    /// and the expedition's red on the ice.
+    fn slab_colours(&self) -> (Rgb, Rgb) {
+        if self.ice {
+            (self.c("ice_blue"), self.c("ice_red"))
+        } else {
+            (self.c("stone"), self.c("trim"))
+        }
+    }
+
     /// A raised platform with a rail of posts and a stair down one side.
     fn platform(&mut self, x: i32, z: i32, w: i32, d: i32, h: i32, stair_dir: (i32, i32)) {
-        let stone = self.c("stone");
-        let trim = self.c("trim");
+        let (stone, trim) = self.slab_colours();
         self.block(x, 0, z, w, h, d, stone);
         self.deco(
             Mesh::Cube,
@@ -323,7 +364,9 @@ impl<'a> B<'a> {
             let at = v3(x + px * (w / 2 - dm(3)), h, z + pz * (d / 2 - dm(3)));
             self.deco(Mesh::Cyl, at.add(v3(0, dm(5), 0)), v3(dm(2), m(1), dm(2)), trim);
         }
-        if self.rng.chance(50) {
+        if self.ice {
+            self.drift(x + w / 4, h, z - d / 4);
+        } else if self.rng.chance(50) {
             self.bush(x + w / 4, h, z - d / 4);
         } else {
             self.crate_stack(x - w / 4, h, z + d / 4);
@@ -335,8 +378,7 @@ impl<'a> B<'a> {
     /// solid post at each `post`. Under it is clear to walk through when
     /// `h` is above a body's height (SECOND-ORDER V1).
     fn deck(&mut self, x0: i32, z0: i32, x1: i32, z1: i32, h: i32, posts: &[(i32, i32)]) {
-        let stone = self.c("stone");
-        let trim = self.c("trim");
+        let (stone, trim) = self.slab_colours();
         let (cx, cz) = ((x0 + x1) / 2, (z0 + z1) / 2);
         let (w, d) = ((x1 - x0).abs(), (z1 - z0).abs());
         self.block(cx, h - DECK, cz, w, DECK, d, stone);
@@ -395,7 +437,11 @@ impl<'a> B<'a> {
             ) {
                 continue;
             }
-            let wall = self.pick(&self.pal.walls.clone());
+            let wall = if self.ice {
+                self.c("ice_deep")
+            } else {
+                self.pick(&self.pal.walls.clone())
+            };
             let h = dm(21);
             self.block(x, 0, z, w, h, d, wall);
             // a broken top: a notch and fallen bricks
@@ -414,7 +460,11 @@ impl<'a> B<'a> {
                 ),
                 crate::render::shade(wall, 85),
             );
-            let brick = self.c("paving_dark");
+            let brick = if self.ice {
+                self.c("ice_white")
+            } else {
+                self.c("paving_dark")
+            };
             for k in 0..3 {
                 let off = if along_x {
                     v3(dm(8) * (k - 1), 0, d)
@@ -1638,18 +1688,22 @@ pub fn segment(a: V3, b: V3, w: i32) -> Option<Affine> {
     })
 }
 
-/// Builds the arena for an archetype. `exits` are the sides with a way on;
-/// the player enters from the south.
-pub fn build(kind: &str, seed: u64, exits: &[Side], pal: &Palette) -> Arena {
+/// Builds the arena for an archetype of a zone. `exits` are the sides with
+/// a way on; the player enters from the south.
+pub fn build(zone: &str, kind: &str, seed: u64, exits: &[Side], pal: &Palette) -> Arena {
     let mut b = B {
         solids: Vec::new(),
         shapes: Vec::new(),
         rng: Rng::new(seed),
         pal,
         canal: kind == "canal",
+        vents: Vec::new(),
+        ice: zone == "white_waste",
     };
     let is_court = kind == "boss";
-    if is_court {
+    if zone == "white_waste" {
+        b.ice(kind, exits);
+    } else if is_court {
         b.court();
         b.shape(
             Mesh::Ground,
@@ -1689,6 +1743,13 @@ pub fn build(kind: &str, seed: u64, exits: &[Side], pal: &Palette) -> Arena {
         };
         b.scatter_props(HALF, props);
         b.skyline(HALF);
+    }
+    if !is_court {
+        // the gate you came in by is shut, and solid: the camera backing
+        // toward it stops in front of it instead of looking at its back
+        let (g, _) = Side::South.place(HALF);
+        b.solids
+            .push(Solid::stand(g.x, 0, g.z + dm(5), m(5), m(6), dm(4)));
     }
     let level = Level::new(b.solids.clone());
     // spawn points: a grid over the floor, kept where a body fits
@@ -1777,6 +1838,7 @@ pub fn build(kind: &str, seed: u64, exits: &[Side], pal: &Palette) -> Arena {
             v3(0, m(4), 0)
         },
         fountain: if kind == "rest" { Some(v3(0, 0, 0)) } else { None },
+        vents: b.vents,
     }
 }
 
@@ -1791,7 +1853,7 @@ mod tests {
         for kind in [
             "arrival", "rest", "plaza", "market", "rooftops", "canal", "atrium", "boss",
         ] {
-            let a = build(kind, 7, &[Side::North, Side::East], &c.pal);
+            let a = build("waiting_city", kind, 7, &[Side::North, Side::East], &c.pal);
             assert!(
                 a.ground_spawns.len() > 30,
                 "{kind}: {} spawns",
@@ -1813,9 +1875,9 @@ mod tests {
     #[test]
     fn the_same_seed_builds_the_same_arena_and_another_seed_does_not() {
         let c = content();
-        let a = build("plaza", 3, &[Side::North], &c.pal);
-        let b = build("plaza", 3, &[Side::North], &c.pal);
-        let d = build("plaza", 4, &[Side::North], &c.pal);
+        let a = build("waiting_city", "plaza", 3, &[Side::North], &c.pal);
+        let b = build("waiting_city", "plaza", 3, &[Side::North], &c.pal);
+        let d = build("waiting_city", "plaza", 4, &[Side::North], &c.pal);
         assert_eq!(a, b);
         assert_ne!(a.shapes, d.shapes);
     }
@@ -1823,9 +1885,9 @@ mod tests {
     #[test]
     fn a_gate_on_each_exit_side_and_one_behind_the_player() {
         let c = content();
-        let a = build("market", 1, &[Side::North, Side::East], &c.pal);
+        let a = build("waiting_city", "market", 1, &[Side::North, Side::East], &c.pal);
         assert_eq!(a.gates.len(), 3);
-        let b = build("market", 1, &[Side::North], &c.pal);
+        let b = build("waiting_city", "market", 1, &[Side::North], &c.pal);
         assert_eq!(b.gates.len(), 2);
         // the gate's floor is open to walk to
         for (g, _) in &a.gates {
@@ -1851,14 +1913,24 @@ mod size {
         // what the page uploads once a scene; a GPU of a school laptop draws
         // this many boxes, each with its ink, comfortably
         let c = content();
-        for kind in ["plaza", "market", "boss"] {
-            let a = build(kind, 9, &[Side::North, Side::East], &c.pal);
+        let kinds = [
+            ("waiting_city", "plaza"),
+            ("waiting_city", "market"),
+            ("waiting_city", "boss"),
+            ("white_waste", "crevasse"),
+            ("white_waste", "wreck"),
+            ("white_waste", "pylons"),
+            ("white_waste", "hall"),
+            ("white_waste", "boss"),
+        ];
+        for (zone, kind) in kinds {
+            let a = build(zone, kind, 9, &[Side::North, Side::East], &c.pal);
             let mut b = crate::render::Batch::new([0; 3]);
             for s in &a.shapes {
                 b.shape(s);
             }
             let n = b.count();
-            assert!(n < 16_000, "{kind}: {n}");
+            assert!(n < 16_000, "{zone} {kind}: {n}");
         }
     }
 }
@@ -1876,7 +1948,7 @@ mod reach {
         ] {
             // cover walls are placed at random, so many seeds
             for seed in 1..=20 {
-                let a = build(kind, seed, &[Side::North, Side::East], &c.pal);
+                let a = build("waiting_city", kind, seed, &[Side::North, Side::East], &c.pal);
                 let reached = walk(&a.level, a.start);
                 for (g, _) in a.gates.iter().skip(1) {
                     let near = reached
@@ -1905,15 +1977,82 @@ mod reach {
     }
 
     #[test]
+    fn every_ice_gate_can_be_walked_to_and_every_ice_fight_has_heights_and_shelter() {
+        let c = content();
+        for kind in [
+            "arrival", "rest", "crevasse", "terraces", "wreck", "pylons", "hall", "boss",
+        ] {
+            for seed in 1..=20 {
+                let a = build("white_waste", kind, seed, &[Side::North, Side::East], &c.pal);
+                let reached = walk(&a.level, a.start);
+                for (g, _) in a.gates.iter().skip(1) {
+                    let near = reached
+                        .iter()
+                        .any(|p| p.sub(*g).len_xz() < int(2) && p.y.abs() < ONE);
+                    assert!(near, "{kind} seed {seed}: the gate at {g:?} cannot be walked to");
+                }
+                assert!(
+                    a.ground_spawns.len() > 30,
+                    "{kind} seed {seed}: {} spawns",
+                    a.ground_spawns.len()
+                );
+                if matches!(kind, "arrival" | "rest") {
+                    continue;
+                }
+                let high = reached.iter().map(|p| p.y).max().unwrap_or(0);
+                assert!(
+                    high >= int(3),
+                    "{kind} seed {seed}: nothing 3 m up can be climbed to ({high})"
+                );
+                let under = reached.iter().any(|p| {
+                    p.y <= ONE
+                        && a.level
+                            .ray(p.add(v3(0, PLAYER_HEIGHT + ONE / 10, 0)), V3::UP, int(5))
+                            .is_some()
+                });
+                assert!(under, "{kind} seed {seed}: nowhere to walk under");
+                // zone two's own verticality: vents in every fight
+                assert!(!a.vents.is_empty(), "{kind}: no updraft vents");
+                // a vent with room over it to be thrown up
+                for v in &a.vents {
+                    let clear = a
+                        .level
+                        .ray(v.pos.add(v3(0, PLAYER_HEIGHT, 0)), V3::UP, int(4))
+                        .is_none();
+                    assert!(
+                        clear,
+                        "{kind} seed {seed}: the vent at {:?} has a ceiling over it",
+                        v.pos
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
     fn nothing_solid_stands_through_a_walkway() {
         // a pillar or a stair through a deck would block the walk along it
         // or the climb to it; the reachability walk cannot see that when
         // another way up exists
         let c = content();
-        for kind in [
-            "arrival", "plaza", "market", "rooftops", "canal", "atrium", "boss",
-        ] {
-            let a = build(kind, 2, &[Side::North, Side::East], &c.pal);
+        let kinds = [
+            ("waiting_city", "arrival"),
+            ("waiting_city", "plaza"),
+            ("waiting_city", "market"),
+            ("waiting_city", "rooftops"),
+            ("waiting_city", "canal"),
+            ("waiting_city", "atrium"),
+            ("waiting_city", "boss"),
+            ("white_waste", "arrival"),
+            ("white_waste", "crevasse"),
+            ("white_waste", "terraces"),
+            ("white_waste", "wreck"),
+            ("white_waste", "pylons"),
+            ("white_waste", "hall"),
+            ("white_waste", "boss"),
+        ];
+        for (zone, kind) in kinds {
+            let a = build(zone, kind, 2, &[Side::North, Side::East], &c.pal);
             let decks: Vec<&Solid> = a
                 .level
                 .solids

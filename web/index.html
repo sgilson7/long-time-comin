@@ -8,7 +8,7 @@
        form-action 'none' blocks form posts. -->
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; connect-src 'self'; style-src 'self'; img-src 'self' data:; media-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'none'">
   <title>Long Time Comin'</title>
-  <meta name="description" content="A third-person bullet-hell roguelike in the browser. Sent back in time to stop yourself, fifty years too early, you cross a city of orbs one arena at a time; every death reads the next count of your indictment.">
+  <meta name="description" content="A third-person bullet-hell roguelike in the browser. Sent back in time to stop yourself, fifty years too early, you cross a city of orbs and then the ice one arena at a time; every death reads the next count of your indictment.">
   <link rel="stylesheet" href="style.css">
 </head>
 <body data-ready="false" data-mode="loading">
@@ -46,6 +46,7 @@
       <div class="pips-row abilities">
         <span class="ability" id="h-hook" data-copy="hud_hook" hidden></span>
         <span class="ability" id="h-parry" data-copy="hud_parry" hidden></span>
+        <span class="ability" id="h-wall" data-copy="hud_wall" hidden></span>
       </div>
       <div class="pips-row" id="h-perks"></div>
     </div>
@@ -96,6 +97,7 @@
         <ul id="m-build"></ul>
         <p class="lede" id="m-bonus"></p>
         <button id="start-run" class="big" data-copy="start_run"></button>
+        <div id="start-later"></div>
         <details class="about">
           <summary data-copy="controls_heading"></summary>
           <table class="controls"></table>
@@ -124,7 +126,7 @@
   <!-- the map -->
   <div id="map" class="overlay center" hidden>
     <div class="panel map-panel">
-      <h2 data-copy="map_heading"></h2>
+      <h2 id="map-heading" data-copy="map_heading"></h2>
       <p class="hint" data-copy="map_hint"></p>
       <div id="graph">
         <svg id="edges" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
@@ -146,6 +148,18 @@
     </div>
   </div>
 
+  <!-- the interlude, between a zone's boss and the next zone -->
+  <div id="interlude" class="overlay paper" hidden>
+    <img class="art" id="l-art" src="art/interlude.png" alt="">
+    <div class="sheet">
+      <div class="stamp" id="l-title"></div>
+      <div id="l-lines"></div>
+      <p class="newest" id="l-newest"></p>
+      <p class="earned" id="l-next"></p>
+      <button id="interlude-next" class="big" data-copy="interlude_next"></button>
+    </div>
+  </div>
+
   <!-- the indictment, read on a death -->
   <div id="dead" class="overlay paper" hidden>
     <img class="art" src="art/indictment.png" alt="">
@@ -161,9 +175,9 @@
     </div>
   </div>
 
-  <!-- the verdict, after the Bailiff -->
+  <!-- the verdict, after the last built zone's boss -->
   <div id="won" class="overlay paper" hidden>
-    <img class="art" src="art/verdict.png" alt="">
+    <img class="art" id="w-art" src="art/testimony.png" alt="">
     <div class="sheet">
       <div class="stamp" id="w-title"></div>
       <div id="w-lines"></div>

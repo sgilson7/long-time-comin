@@ -216,3 +216,8 @@ ul.rules li { margin-bottom: 6px; }
 #story-banner.show { animation: story 11s ease forwards; }
 @keyframes story { 0% { opacity: 0; translate: -50% -12px; } 6% { opacity: 1; translate: -50% 0; } 85% { opacity: 1; } 100% { opacity: 0; } }
 .node .tier { font-size: 0.6rem; color: var(--ink-soft); letter-spacing: 0.1em; }
+
+/* the Holding's start on the ice, once its way is open */
+#start-later { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+button.big.later { background: #a9d3ea; font-size: 1rem; }
+button.big.later:hover:not(:disabled) { background: #c7e4f3; }

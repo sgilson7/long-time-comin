@@ -225,6 +225,33 @@ struct VolleyFile {
     aim: bool,
     #[serde(default)]
     damage: i32,
+    // a held formation (shape "form") and a second stop
+    #[serde(default)]
+    form: String,
+    #[serde(default)]
+    rows: i32,
+    #[serde(default)]
+    at: String,
+    #[serde(default)]
+    at_cm: i32,
+    #[serde(default)]
+    plane: String,
+    #[serde(default)]
+    radius_cm: i32,
+    #[serde(default)]
+    hold_ms: i32,
+    #[serde(default)]
+    stagger_ms: i32,
+    #[serde(default)]
+    launch: String,
+    #[serde(default)]
+    stop_ms: i32,
+    #[serde(default)]
+    rehold_ms: i32,
+    #[serde(default)]
+    relaunch: String,
+    #[serde(default)]
+    relaunch_cms: i32,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -233,6 +260,72 @@ pub enum Shape {
     Aimed,
     Sphere,
     Wave,
+    /// orbs placed in a shape and held before they fly
+    Form,
+}
+
+/// The shape a held formation's orbs are placed in.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Form {
+    /// `count` round a circle of `radius`
+    Ring,
+    /// `count` across by `rows` up, `radius` apart
+    Grid,
+    /// `count` across, over `radius` either side
+    Line,
+    /// `count` stacked up to `radius` above the anchor
+    Column,
+    /// `count` arms of `rows` orbs, out to `radius`
+    Star,
+    /// `count` along a spiral of `rows` turns, out to `radius`
+    Spiral,
+    /// `count` along an arc of `spread` at `radius`, centred on you
+    Arc,
+    /// `count` across like a line, rising and falling `rows` times
+    Ribbon,
+}
+
+/// Where a formation is placed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Anchor {
+    /// round the enemy
+    Body,
+    /// `at` metres from the enemy toward you
+    Front,
+    /// round your chest
+    Target,
+    /// `at` metres over your chest
+    Above,
+}
+
+/// The way a held orb sets off when its hold ends.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Launch {
+    /// on along the way it was going (an aimed orb's aim)
+    Keep,
+    /// away from the formation's centre
+    Out,
+    /// toward the formation's centre
+    In,
+    /// at your chest as it is when the orb sets off
+    Aim,
+    /// at where your chest will be when it arrives, from how you are moving
+    Lead,
+    Down,
+    /// along the line from the enemy to you when it was placed
+    Along,
+    /// round the formation's centre, in its plane
+    Spin,
+}
+
+/// A second hold: after `stop` ticks of flight the orb stops, waits
+/// `wait`, and sets off again.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Rehold {
+    pub stop: i32,
+    pub wait: i32,
+    pub launch: Launch,
+    pub speed: i32,
 }
 
 /// One volley in simulation units.
@@ -260,6 +353,24 @@ pub struct Volley {
     pub aim: bool,
     /// health a hit takes
     pub damage: i32,
+    /// the Injunction breaks it
+    pub blue: bool,
+    pub form: Form,
+    /// a grid's rows, a star's orbs to an arm, a spiral's turns, a
+    /// ribbon's rises
+    pub rows: i32,
+    pub anchor: Anchor,
+    /// the anchor's distance (Front) or height (Above)
+    pub at: i32,
+    /// a formation in the floor's plane (flat) or standing, facing you
+    pub flat: bool,
+    pub radius: i32,
+    /// ticks every orb hangs before it flies, and more for each orb after
+    /// the first
+    pub hold: i32,
+    pub stagger: i32,
+    pub launch: Launch,
+    pub rehold: Option<Rehold>,
 }
 
 impl Volley {
@@ -267,6 +378,28 @@ impl Volley {
     pub fn last_tick(&self) -> i32 {
         self.delay + (self.repeat - 1) * self.every
     }
+
+    /// How many orbs one repeat places.
+    pub fn orbs(&self) -> i32 {
+        match (self.shape, self.form) {
+            (Shape::Form, Form::Grid | Form::Star) => self.count * self.rows,
+            _ => self.count,
+        }
+    }
+}
+
+fn launch_of(s: &str, who: &str) -> Result<Launch, String> {
+    Ok(match s {
+        "" | "keep" => Launch::Keep,
+        "out" => Launch::Out,
+        "in" => Launch::In,
+        "aim" => Launch::Aim,
+        "lead" => Launch::Lead,
+        "down" => Launch::Down,
+        "along" => Launch::Along,
+        "spin" => Launch::Spin,
+        x => return Err(format!("patterns: {who} has no launch {x}")),
+    })
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -318,6 +451,9 @@ struct EnemyFile {
     attacks: Vec<AttackFile>,
     #[serde(default)]
     phases: Vec<PhaseFile>,
+    /// a pattern fired once where it dies
+    #[serde(default)]
+    burst: String,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -327,6 +463,10 @@ pub enum Kind {
     Walker,
     Moth,
     Boss,
+    /// hovers, and at the end of each rest reappears somewhere else in sight
+    Blinker,
+    /// under the floor between attacks, where it cannot be hurt
+    Burrower,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -357,18 +497,11 @@ pub struct EnemyDef {
     pub clemency: i32,
     /// a boss's phases; every other enemy has one phase of its attacks
     pub phases: Vec<Phase>,
+    /// the pattern it fires once where it dies
+    pub burst: Option<usize>,
 }
 
-// ---- the zone and the route --------------------------------------------------
-
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
-pub struct ZoneInfo {
-    pub id: String,
-    pub name: String,
-    pub year: String,
-    pub built: bool,
-    pub boss: String,
-}
+// ---- the zones and their routes ---------------------------------------------
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 pub struct RouteRules {
@@ -383,6 +516,10 @@ pub struct RouteRules {
     pub clemency_boss: i32,
     #[serde(default)]
     pub rest_rewards: Vec<String>,
+    /// rewards a zone's arrival offers as a choice of one (zone two's
+    /// expedition cache); none in zone one
+    #[serde(default)]
+    pub cache_rewards: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
@@ -391,19 +528,73 @@ pub struct EncounterFile {
     pub waves: Vec<Vec<String>>,
 }
 
+/// The palette names a zone's scene is lit and outlined with.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+pub struct Scene {
+    pub sky: String,
+    pub fog: String,
+    pub light: String,
+    pub window_dark: String,
+    pub ink: String,
+    /// where the fog starts and is full, in metres
+    pub fog_near_m: i32,
+    pub fog_far_m: i32,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+struct ZoneFileEntry {
+    id: String,
+    name: String,
+    year: String,
+    built: bool,
+    boss: String,
+    #[serde(default)]
+    scene: Option<Scene>,
+    #[serde(default)]
+    route: Option<RouteRules>,
+    #[serde(default)]
+    archetypes: Vec<String>,
+    #[serde(default)]
+    names: BTreeMap<String, String>,
+    #[serde(default)]
+    encounters: Vec<EncounterFile>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 struct ZoneFile {
-    zones: Vec<ZoneInfo>,
-    route: RouteRules,
-    archetypes: Vec<String>,
-    names: BTreeMap<String, String>,
-    encounters: Vec<EncounterFile>,
+    zones: Vec<ZoneFileEntry>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Encounter {
     pub tier: i32,
     pub waves: Vec<Vec<usize>>,
+}
+
+/// A zone of the route. A sealed zone has only its name, year and boss.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Zone {
+    pub id: String,
+    pub name: String,
+    pub year: String,
+    pub built: bool,
+    pub boss: String,
+    pub scene: Scene,
+    pub route: RouteRules,
+    pub archetypes: Vec<String>,
+    pub names: BTreeMap<String, String>,
+    pub encounters: Vec<Encounter>,
+}
+
+impl Zone {
+    pub fn place_name(&self, key: &str) -> String {
+        self.names.get(key).cloned().unwrap_or_else(|| key.to_string())
+    }
+
+    /// The highest encounter tier the zone has.
+    pub fn max_tier(&self) -> i32 {
+        self.encounters.iter().map(|e| e.tier).max().unwrap_or(1)
+    }
 }
 
 // ---- upgrades --------------------------------------------------------------
@@ -427,6 +618,9 @@ pub struct Upgrade {
 /// The rewards a side path or the Antechamber can hold.
 pub const REWARDS: &[&str] = &["weapon", "jump", "health", "speed", "pierce", "pulse", "mend"];
 
+/// The palette names whose orbs count as blue: the Injunction breaks them.
+pub const BLUE: &[&str] = &["cyan", "blue"];
+
 const EFFECTS: &[&str] = &[
     "max_health",
     "speed",
@@ -436,6 +630,7 @@ const EFFECTS: &[&str] = &[
     "parry",
     "recess",
     "armory",
+    "wall",
 ];
 
 // ---- story -----------------------------------------------------------------
@@ -452,11 +647,25 @@ pub struct Story {
     pub sentencing: Vec<String>,
     pub counts: Vec<String>,
     pub addenda: Vec<String>,
-    pub death_title: String,
+    /// the indictment's heading on a death, by the zone you died in
+    pub death_titles: BTreeMap<String, String>,
     pub time_served: String,
     pub victory_title: String,
     pub victory: Vec<String>,
+    /// the verdict's picture, web/art/<verdict_art>.png
+    pub verdict_art: String,
     pub bosses: BTreeMap<String, BossWords>,
+    /// read between a zone's boss and the next zone, by the zone just left
+    #[serde(default)]
+    pub interludes: BTreeMap<String, Interlude>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+pub struct Interlude {
+    pub title: String,
+    pub lines: Vec<String>,
+    /// its picture, web/art/<art>.png
+    pub art: String,
 }
 
 // ---- everything ------------------------------------------------------------
@@ -467,11 +676,7 @@ pub struct Content {
     pub guns: Vec<Gun>,
     pub patterns: Vec<Pattern>,
     pub enemies: Vec<EnemyDef>,
-    pub zones: Vec<ZoneInfo>,
-    pub route: RouteRules,
-    pub archetypes: Vec<String>,
-    pub names: BTreeMap<String, String>,
-    pub encounters: Vec<Encounter>,
+    pub zones: Vec<Zone>,
     pub upgrades: Vec<Upgrade>,
     pub story: Story,
     copy: BTreeMap<String, Value>,
@@ -495,42 +700,112 @@ impl Content {
         let guns = parse_guns(f.weapons, &pal)?;
         let patterns = parse_patterns(f.patterns, &pal)?;
         let enemies = parse_enemies(f.enemies, &patterns)?;
-        let zone: ZoneFile = serde_json::from_str(f.zone).map_err(|e| format!("zone: {e}"))?;
+        let file: ZoneFile = serde_json::from_str(f.zone).map_err(|e| format!("zone: {e}"))?;
         let find_enemy = |id: &str| {
             enemies
                 .iter()
                 .position(|e| e.id == id)
                 .ok_or_else(|| format!("zone: no enemy {id}"))
         };
-        let mut encounters = Vec::new();
-        for e in &zone.encounters {
-            let waves = e
-                .waves
-                .iter()
-                .map(|w| w.iter().map(|id| find_enemy(id)).collect::<Result<Vec<_>, _>>())
-                .collect::<Result<Vec<_>, _>>()?;
-            if waves.is_empty() || waves.iter().any(|w| w.is_empty()) {
-                return Err("zone: an encounter has an empty wave".into());
+        let mut zones = Vec::new();
+        for z in file.zones {
+            let mut encounters = Vec::new();
+            for e in &z.encounters {
+                let waves = e
+                    .waves
+                    .iter()
+                    .map(|w| w.iter().map(|id| find_enemy(id)).collect::<Result<Vec<_>, _>>())
+                    .collect::<Result<Vec<_>, _>>()?;
+                if waves.is_empty() || waves.iter().any(|w| w.is_empty()) {
+                    return Err(format!("zone {}: an encounter has an empty wave", z.id));
+                }
+                encounters.push(Encounter { tier: e.tier, waves });
             }
-            encounters.push(Encounter { tier: e.tier, waves });
-        }
-        let r = &zone.route;
-        if r.main_tiers.len() != r.main_fights {
-            return Err("zone: main_tiers needs one tier per main fight".into());
-        }
-        let tiers_needed = r.main_tiers.iter().flat_map(|t| [*t, *t + 1]);
-        for t in tiers_needed {
-            if !encounters.iter().any(|e| e.tier == t) {
-                return Err(format!("zone: no encounter of tier {t}"));
+            let (Some(route), Some(scene)) = (z.route.clone(), z.scene.clone()) else {
+                if z.built {
+                    return Err(format!("zone {}: a built zone needs a route and a scene", z.id));
+                }
+                zones.push(Zone {
+                    id: z.id,
+                    name: z.name,
+                    year: z.year,
+                    built: false,
+                    boss: z.boss,
+                    scene: Scene {
+                        sky: "sky".into(),
+                        fog: "fog".into(),
+                        light: "light".into(),
+                        window_dark: "window_dark".into(),
+                        ink: "ink".into(),
+                        fog_near_m: 70,
+                        fog_far_m: 520,
+                    },
+                    route: RouteRules {
+                        main_fights: 0,
+                        main_tiers: Vec::new(),
+                        detours_min: 0,
+                        detours_max: 0,
+                        detour_max: 0,
+                        rewards: Vec::new(),
+                        clemency_main: 0,
+                        clemency_detour: 0,
+                        clemency_boss: 0,
+                        rest_rewards: Vec::new(),
+                        cache_rewards: Vec::new(),
+                    },
+                    archetypes: Vec::new(),
+                    names: z.names,
+                    encounters,
+                });
+                continue;
+            };
+            if z.built {
+                let r = &route;
+                if r.main_tiers.len() != r.main_fights {
+                    return Err(format!("zone {}: main_tiers needs one tier per main fight", z.id));
+                }
+                for t in r.main_tiers.iter().flat_map(|t| [*t, *t + 1]) {
+                    let top = encounters.iter().map(|e| e.tier).max().unwrap_or(0);
+                    if !encounters.iter().any(|e| e.tier == t.min(top)) {
+                        return Err(format!("zone {}: no encounter of tier {t}", z.id));
+                    }
+                }
+                for reward in r.rewards.iter().chain(&r.rest_rewards).chain(&r.cache_rewards) {
+                    if !REWARDS.contains(&reward.as_str()) {
+                        return Err(format!("zone {}: no such reward {reward}", z.id));
+                    }
+                }
+                if z.archetypes.is_empty() {
+                    return Err(format!("zone {}: no archetypes", z.id));
+                }
+                find_enemy(&z.boss)?;
+                for name in [
+                    &scene.sky,
+                    &scene.fog,
+                    &scene.light,
+                    &scene.window_dark,
+                    &scene.ink,
+                ] {
+                    if !pal.has(name) {
+                        return Err(format!("zone {}: the scene names no colour {name}", z.id));
+                    }
+                }
             }
+            zones.push(Zone {
+                id: z.id,
+                name: z.name,
+                year: z.year,
+                built: z.built,
+                boss: z.boss,
+                scene,
+                route,
+                archetypes: z.archetypes,
+                names: z.names,
+                encounters,
+            });
         }
-        for reward in r.rewards.iter().chain(&r.rest_rewards) {
-            if !REWARDS.contains(&reward.as_str()) {
-                return Err(format!("zone: no such reward {reward}"));
-            }
-        }
-        for z in zone.zones.iter().filter(|z| z.built) {
-            find_enemy(&z.boss)?;
+        if !zones.first().is_some_and(|z| z.built) {
+            return Err("zone: the first zone must be built".into());
         }
         let upgrades: UpgradesFile =
             serde_json::from_str(f.upgrades).map_err(|e| format!("upgrades: {e}"))?;
@@ -549,11 +824,7 @@ impl Content {
             guns,
             patterns,
             enemies,
-            zones: zone.zones,
-            route: zone.route,
-            archetypes: zone.archetypes,
-            names: zone.names,
-            encounters,
+            zones,
             upgrades: upgrades.upgrades,
             story,
             copy,
@@ -595,8 +866,20 @@ impl Content {
         self.enemies.iter().position(|e| e.id == id)
     }
 
-    pub fn place_name(&self, key: &str) -> String {
-        self.names.get(key).cloned().unwrap_or_else(|| key.to_string())
+    /// The zones a run can be in, in order.
+    pub fn built_zones(&self) -> usize {
+        self.zones.iter().take_while(|z| z.built).count()
+    }
+
+    /// The zone an enemy belongs to, by index, if one lists it.
+    pub fn zone_of_enemy(&self, def: usize) -> Option<usize> {
+        let id = &self.enemies[def].id;
+        self.zones.iter().position(|z| {
+            &z.boss == id
+                || z.encounters
+                    .iter()
+                    .any(|e| e.waves.iter().any(|w| w.contains(&def)))
+        })
     }
 }
 
@@ -648,6 +931,7 @@ fn parse_patterns(text: &str, pal: &Palette) -> Result<Vec<Pattern>, String> {
                 "aimed" => Shape::Aimed,
                 "sphere" => Shape::Sphere,
                 "wave" => Shape::Wave,
+                "form" => Shape::Form,
                 s => return Err(format!("patterns: {} has no shape {s}", p.id)),
             };
             if !pal.has(&v.colour) {
@@ -657,16 +941,63 @@ fn parse_patterns(text: &str, pal: &Palette) -> Result<Vec<Pattern>, String> {
                 return Err(format!("patterns: {} repeats with no every_ms", p.id));
             }
             let speed = cms(v.speed_cms);
+            let form = match v.form.as_str() {
+                "" | "ring" => Form::Ring,
+                "grid" => Form::Grid,
+                "line" => Form::Line,
+                "column" => Form::Column,
+                "star" => Form::Star,
+                "spiral" => Form::Spiral,
+                "arc" => Form::Arc,
+                "ribbon" => Form::Ribbon,
+                s => return Err(format!("patterns: {} has no form {s}", p.id)),
+            };
+            let anchor = match v.at.as_str() {
+                "" | "self" => Anchor::Body,
+                "front" => Anchor::Front,
+                "target" => Anchor::Target,
+                "above" => Anchor::Above,
+                s => return Err(format!("patterns: {} has no anchor {s}", p.id)),
+            };
+            let flat = match v.plane.as_str() {
+                "" | "flat" => true,
+                "face" => false,
+                s => return Err(format!("patterns: {} has no plane {s}", p.id)),
+            };
+            let launch = launch_of(&v.launch, &p.id)?;
+            let rehold = if v.stop_ms > 0 {
+                Some(Rehold {
+                    stop: ms(v.stop_ms).max(1),
+                    wait: ms(v.rehold_ms),
+                    launch: launch_of(&v.relaunch, &p.id)?,
+                    speed: cms(if v.relaunch_cms > 0 {
+                        v.relaunch_cms
+                    } else {
+                        v.speed_cms
+                    }),
+                })
+            } else {
+                None
+            };
+            if shape == Shape::Form && v.radius_cm <= 0 && form != Form::Column {
+                return Err(format!("patterns: {} is a formation with no radius_cm", p.id));
+            }
+            let fastest = rehold.map_or(speed, |r| r.speed.max(speed));
             volleys.push(Volley {
                 shape,
                 count: v.count.max(1),
                 speed,
                 accel: cms2(v.accel_cms2),
                 min_speed: if v.min_cms > 0 { cms(v.min_cms) } else { 0 },
-                max_speed: if v.max_cms > 0 { cms(v.max_cms) } else { speed },
+                max_speed: if v.max_cms > 0 {
+                    cms(v.max_cms).max(fastest)
+                } else {
+                    fastest
+                },
                 curl: degs(v.curl_degs),
                 alternate: v.alternate,
                 size: cm(v.size_cm),
+                blue: BLUE.contains(&v.colour.as_str()),
                 colour: v.colour,
                 spin: fx::deg(v.spin_deg),
                 repeat: v.repeat.max(1),
@@ -684,6 +1015,16 @@ fn parse_patterns(text: &str, pal: &Palette) -> Result<Vec<Pattern>, String> {
                 } else {
                     crate::balance::ORB_DAMAGE
                 },
+                form,
+                rows: v.rows.max(1),
+                anchor,
+                at: cm(v.at_cm),
+                flat,
+                radius: cm(v.radius_cm),
+                hold: ms(v.hold_ms),
+                stagger: ms(v.stagger_ms),
+                launch,
+                rehold,
             });
         }
         out.push(Pattern { id: p.id, volleys });
@@ -713,6 +1054,8 @@ fn parse_enemies(text: &str, patterns: &[Pattern]) -> Result<Vec<EnemyDef>, Stri
             "walker" => Kind::Walker,
             "moth" => Kind::Moth,
             "boss" => Kind::Boss,
+            "blinker" => Kind::Blinker,
+            "burrower" => Kind::Burrower,
             k => return Err(format!("enemies: {} has no kind {k}", e.id)),
         };
         let phases = if kind == Kind::Boss {
@@ -764,6 +1107,16 @@ fn parse_enemies(text: &str, patterns: &[Pattern]) -> Result<Vec<EnemyDef>, Stri
             contact: e.contact,
             clemency: e.clemency,
             phases,
+            burst: if e.burst.is_empty() {
+                None
+            } else {
+                Some(
+                    patterns
+                        .iter()
+                        .position(|p| p.id == e.burst)
+                        .ok_or_else(|| format!("enemies: {} bursts into no pattern {}", e.id, e.burst))?,
+                )
+            },
         });
     }
     Ok(out)
@@ -837,5 +1190,77 @@ pub mod tests {
         assert_eq!(b.kind, Kind::Boss);
         let starts: Vec<i32> = b.phases.iter().map(|p| p.from_pct).collect();
         assert_eq!(starts, vec![100, 66, 33]);
+    }
+
+    /// The regular enemies a zone's encounters use, and its boss.
+    fn roster(c: &Content, z: usize) -> (Vec<usize>, usize) {
+        let mut ids: Vec<usize> = c.zones[z]
+            .encounters
+            .iter()
+            .flat_map(|e| e.waves.iter().flatten().copied())
+            .collect();
+        ids.sort();
+        ids.dedup();
+        (ids, c.enemy(&c.zones[z].boss).unwrap())
+    }
+
+    #[test]
+    fn zone_two_has_as_many_enemies_as_zone_one_and_none_of_its_patterns() {
+        let c = content();
+        let (one, bailiff) = roster(&c, 0);
+        let (two, witness) = roster(&c, 1);
+        assert_eq!(one.len(), 7, "zone one: six and the Clerk");
+        assert_eq!(two.len(), one.len());
+        assert!(one.iter().all(|e| !two.contains(e)), "no enemy is in both zones");
+        let patterns = |ids: &[usize], boss: usize| {
+            let mut v: Vec<usize> = ids
+                .iter()
+                .chain(std::iter::once(&boss))
+                .flat_map(|&e| {
+                    c.enemies[e]
+                        .phases
+                        .iter()
+                        .flat_map(|p| p.attacks.iter().map(|a| a.pattern))
+                })
+                .chain(ids.iter().filter_map(|&e| c.enemies[e].burst))
+                .collect();
+            v.sort();
+            v.dedup();
+            v
+        };
+        let p1 = patterns(&one, bailiff);
+        let p2 = patterns(&two, witness);
+        assert!(
+            p2.iter().all(|p| !p1.contains(p)),
+            "zone two shares no pattern with zone one"
+        );
+        // and every volley of zone two holds its orbs before they fly, or stops them in flight
+        for &p in &p2 {
+            for v in &c.patterns[p].volleys {
+                let held = v.shape == Shape::Form || v.rehold.is_some() || v.delay > 0;
+                assert!(
+                    held,
+                    "{}: a volley that neither holds nor stops",
+                    c.patterns[p].id
+                );
+            }
+            assert!(
+                c.patterns[p]
+                    .volleys
+                    .iter()
+                    .any(|v| v.shape == Shape::Form || v.rehold.is_some()),
+                "{}",
+                c.patterns[p].id
+            );
+        }
+    }
+
+    #[test]
+    fn a_zone_naming_a_colour_the_palette_lacks_is_refused() {
+        let mut f = files();
+        let bad = f.zone.replacen("\"ice_ink\"", "\"ice_ink_missing\"", 1);
+        f.zone = Box::leak(bad.into_boxed_str());
+        let e = Content::parse(&f).unwrap_err();
+        assert!(e.contains("ice_ink_missing"), "{e}");
     }
 }

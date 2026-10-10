@@ -1,5 +1,5 @@
 {
-  "_about": "Enemies. kind: turret (stands still), floater (hovers and circles at a range), walker (walks after you), moth (flies straight at you and bursts), boss. hp in health points, radius_cm the body, hover_cm the height it floats at, speed_cms, range_cm the distance it keeps, contact the damage of touching it. attacks are tried in order: pattern (patterns.json), windup_ms the glow before it fires, rest_ms after. A boss has phases instead, each starting when its health falls to from_pct.",
+  "_about": "Enemies. kind: turret (stands still), floater (hovers and circles at a range), walker (walks after you), moth (flies straight at you and bursts), boss. hp in health points, radius_cm the body, hover_cm the height it floats at, speed_cms, range_cm the distance it keeps, contact the damage of touching it. attacks are tried in order: pattern (patterns.json), windup_ms the glow before it fires, rest_ms after. A boss has phases instead, each starting when its health falls to from_pct. kind blinker: hovers, and as each rest ends reappears elsewhere in sight of you. kind burrower: under the floor between attacks, where it cannot be hurt. burst: a pattern fired once where it dies. zone: the zone whose Codex page lists it.",
   "enemies": [
     {
       "id": "sentinel",
@@ -28,7 +28,8 @@
           "windup_ms": 550,
           "rest_ms": 1100
         }
-      ]
+      ],
+      "zone": "waiting_city"
     },
     {
       "id": "bloom",
@@ -57,7 +58,8 @@
           "windup_ms": 450,
           "rest_ms": 1100
         }
-      ]
+      ],
+      "zone": "waiting_city"
     },
     {
       "id": "drifter",
@@ -81,7 +83,8 @@
           "windup_ms": 350,
           "rest_ms": 1200
         }
-      ]
+      ],
+      "zone": "waiting_city"
     },
     {
       "id": "warden",
@@ -110,7 +113,8 @@
           "windup_ms": 700,
           "rest_ms": 1500
         }
-      ]
+      ],
+      "zone": "waiting_city"
     },
     {
       "id": "lantern",
@@ -139,7 +143,8 @@
           "windup_ms": 600,
           "rest_ms": 1700
         }
-      ]
+      ],
+      "zone": "waiting_city"
     },
     {
       "id": "moth",
@@ -152,7 +157,38 @@
       "range_cm": 0,
       "contact": 14,
       "clemency": 0,
-      "attacks": []
+      "attacks": [],
+      "zone": "waiting_city"
+    },
+    {
+      "id": "clerk",
+      "name": "Clerk of Minutes",
+      "kind": "blinker",
+      "hp": 120,
+      "radius_cm": 70,
+      "hover_cm": 220,
+      "speed_cms": 0,
+      "range_cm": 1300,
+      "contact": 10,
+      "clemency": 2,
+      "attacks": [
+        {
+          "pattern": "cross_streams",
+          "windup_ms": 500,
+          "rest_ms": 900
+        },
+        {
+          "pattern": "minute_hand",
+          "windup_ms": 450,
+          "rest_ms": 900
+        },
+        {
+          "pattern": "stamp",
+          "windup_ms": 550,
+          "rest_ms": 1000
+        }
+      ],
+      "zone": "waiting_city"
     },
     {
       "id": "bailiff",
@@ -234,6 +270,263 @@
               "pattern": "accel_ring",
               "windup_ms": 400,
               "rest_ms": 600
+            }
+          ]
+        }
+      ],
+      "zone": "waiting_city"
+    },
+    {
+      "id": "cairn",
+      "name": "Cairn",
+      "kind": "turret",
+      "hp": 180,
+      "radius_cm": 85,
+      "hover_cm": 150,
+      "speed_cms": 0,
+      "range_cm": 0,
+      "contact": 12,
+      "clemency": 2,
+      "attacks": [
+        {
+          "pattern": "halo",
+          "windup_ms": 600,
+          "rest_ms": 750
+        },
+        {
+          "pattern": "crown",
+          "windup_ms": 500,
+          "rest_ms": 850
+        },
+        {
+          "pattern": "orrery",
+          "windup_ms": 500,
+          "rest_ms": 900
+        }
+      ],
+      "zone": "white_waste"
+    },
+    {
+      "id": "rime_kite",
+      "name": "Rime Kite",
+      "kind": "floater",
+      "hp": 110,
+      "radius_cm": 70,
+      "hover_cm": 450,
+      "speed_cms": 480,
+      "range_cm": 1500,
+      "contact": 10,
+      "clemency": 1,
+      "attacks": [
+        {
+          "pattern": "lattice",
+          "windup_ms": 500,
+          "rest_ms": 1000
+        },
+        {
+          "pattern": "snowfall",
+          "windup_ms": 450,
+          "rest_ms": 1000
+        }
+      ],
+      "zone": "white_waste"
+    },
+    {
+      "id": "hauler",
+      "name": "Hauler",
+      "kind": "walker",
+      "hp": 300,
+      "radius_cm": 115,
+      "hover_cm": 0,
+      "speed_cms": 320,
+      "range_cm": 800,
+      "contact": 20,
+      "clemency": 2,
+      "attacks": [
+        {
+          "pattern": "palisade",
+          "windup_ms": 650,
+          "rest_ms": 900
+        },
+        {
+          "pattern": "rampart",
+          "windup_ms": 550,
+          "rest_ms": 1000
+        }
+      ],
+      "zone": "white_waste"
+    },
+    {
+      "id": "shardling",
+      "name": "Shardling",
+      "kind": "moth",
+      "hp": 30,
+      "radius_cm": 40,
+      "hover_cm": 200,
+      "speed_cms": 850,
+      "range_cm": 0,
+      "contact": 12,
+      "clemency": 0,
+      "attacks": [],
+      "burst": "shatter",
+      "zone": "white_waste"
+    },
+    {
+      "id": "auger",
+      "name": "Auger",
+      "kind": "burrower",
+      "hp": 200,
+      "radius_cm": 90,
+      "hover_cm": 0,
+      "speed_cms": 700,
+      "range_cm": 800,
+      "contact": 14,
+      "clemency": 2,
+      "attacks": [
+        {
+          "pattern": "geyser",
+          "windup_ms": 500,
+          "rest_ms": 1350
+        },
+        {
+          "pattern": "upwell",
+          "windup_ms": 500,
+          "rest_ms": 1400
+        }
+      ],
+      "zone": "white_waste"
+    },
+    {
+      "id": "prism",
+      "name": "Prism",
+      "kind": "floater",
+      "hp": 150,
+      "radius_cm": 75,
+      "hover_cm": 700,
+      "speed_cms": 300,
+      "range_cm": 1700,
+      "contact": 10,
+      "clemency": 2,
+      "attacks": [
+        {
+          "pattern": "cage",
+          "windup_ms": 600,
+          "rest_ms": 1100
+        },
+        {
+          "pattern": "refract",
+          "windup_ms": 450,
+          "rest_ms": 900
+        }
+      ],
+      "zone": "white_waste"
+    },
+    {
+      "id": "aurora",
+      "name": "Aurora",
+      "kind": "floater",
+      "hp": 190,
+      "radius_cm": 90,
+      "hover_cm": 950,
+      "speed_cms": 220,
+      "range_cm": 1900,
+      "contact": 10,
+      "clemency": 2,
+      "attacks": [
+        {
+          "pattern": "ribbon",
+          "windup_ms": 600,
+          "rest_ms": 1150
+        },
+        {
+          "pattern": "curtain",
+          "windup_ms": 550,
+          "rest_ms": 1250
+        }
+      ],
+      "zone": "white_waste"
+    },
+    {
+      "id": "witness",
+      "name": "The Witness",
+      "kind": "boss",
+      "hp": 4600,
+      "radius_cm": 280,
+      "hover_cm": 700,
+      "speed_cms": 380,
+      "range_cm": 1600,
+      "contact": 25,
+      "clemency": 40,
+      "attacks": [],
+      "zone": "white_waste",
+      "phases": [
+        {
+          "from_pct": 100,
+          "summons": [],
+          "attacks": [
+            {
+              "pattern": "testimony",
+              "windup_ms": 700,
+              "rest_ms": 900
+            },
+            {
+              "pattern": "deposition",
+              "windup_ms": 700,
+              "rest_ms": 1000
+            },
+            {
+              "pattern": "oath",
+              "windup_ms": 600,
+              "rest_ms": 900
+            }
+          ]
+        },
+        {
+          "from_pct": 66,
+          "summons": [
+            "cairn",
+            "shardling",
+            "shardling"
+          ],
+          "attacks": [
+            {
+              "pattern": "perjury",
+              "windup_ms": 600,
+              "rest_ms": 1000
+            },
+            {
+              "pattern": "long_view",
+              "windup_ms": 600,
+              "rest_ms": 1000
+            },
+            {
+              "pattern": "inquest",
+              "windup_ms": 600,
+              "rest_ms": 1100
+            }
+          ]
+        },
+        {
+          "from_pct": 33,
+          "summons": [
+            "prism",
+            "rime_kite"
+          ],
+          "attacks": [
+            {
+              "pattern": "last_word",
+              "windup_ms": 700,
+              "rest_ms": 1050
+            },
+            {
+              "pattern": "closing",
+              "windup_ms": 700,
+              "rest_ms": 1150
+            },
+            {
+              "pattern": "recital",
+              "windup_ms": 500,
+              "rest_ms": 950
             }
           ]
         }

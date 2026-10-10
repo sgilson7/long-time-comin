@@ -1,6 +1,6 @@
 # Long Time Comin'
 
-A third-person bullet-hell roguelike that runs in the browser. You committed a crime in 2081 the court calls the Stilling, and were sentenced to go back and stop yourself. The court's Bailiff aimed fifty years early. You land in 2031 and have to cross the half century on foot, one arena at a time, through rings, spirals and flowers of large orbs.
+A third-person bullet-hell roguelike that runs in the browser. You committed a crime in 2081 the court calls the Stilling, and were sentenced to go back and stop yourself. The court's Bailiff aimed fifty years early. You land in 2031 and have to cross the half century on foot, one arena at a time, through rings, spirals and flowers of large orbs, and then north across the ice.
 
 **Play:** https://sgilson7.github.io/long-time-comin/
 
@@ -8,9 +8,11 @@ A third-person bullet-hell roguelike that runs in the browser. You committed a c
 - **Three guns.** Carbine (automatic, accurate), Scattergun (pellets, close), Hourglass Launcher (a slow orb that bursts). Levels I to III, found on side paths; one carried at a time, as in Returnal and Tower of Guns.
 - **Orbs.** Enemies fire volleys from `data/patterns.json`: rings, aimed fans, spirals (each repeat turned a little), flowers (orbs curling both ways), blooms (fast out, then hanging), spheres, and ground waves you jump. A ring fired from a roof tilts through you.
 - **Moving.** Run, up to four jumps, a dash that orbs pass through, and air control close to the ground's, after Returnal, Saros and Iron Vector.
-- **The Bailiff of Hours**, the zone's boss, has three phases and calls help at each.
-- **Death.** The Bailiff collects you; the court reads the next count of your indictment and adds years to your sentence (Sifu's count: 1, then 2 more, then 3 more). You return to the Holding, where the Clemency the run earned buys upgrades: more health and speed, a double jump, a third dash, a better starting gun, Recess (survive one killing blow), the **Writ of Reach** (a grappling hook after Risk of Rain 2's Loader: hold F and keep the speed when you let go) and **Objection** (a parry after Saros: gold orbs that reach you inside it fly back at whoever fired them).
-- **The route** has three bosses and then a final one. Zones two to four (2048, 2064, 2081) are sealed in this build.
+- **The Bailiff of Hours**, the zone's boss, has three phases and calls help at each. Beating it does not end the run: an interlude (the years between, a company built on knowing what comes next) carries you into zone two.
+- **Zone two**, *The White Waste, 2046*: an expedition to the ice to fetch the Observatory's key. Five new arenas (a crevasse with ice bridges, stepped plateaus, a frozen icebreaker, a field of radio masts round a catwalk, an ice cave), updraft vents, seven new enemies and the Witness. Their patterns are held formations: orbs placed in a ring, grid, line, column, star, spiral or ribbon, held, then released together or in turn, outward, inward, at you or at where you are heading. Once the Bailiff has been beaten, a run can start on the ice.
+- **Death.** The court reads the next count of your indictment and adds years to your sentence (Sifu's count: 1, then 2 more, then 3 more). You return to the Holding, where the Clemency the run earned buys upgrades: more health and speed, a double jump, a third dash, a better starting gun, Recess (survive one killing blow), the **Writ of Reach** (a grappling hook after Risk of Rain 2's Loader: hold F and keep the speed when you let go), **Objection** (a parry after Saros: gold orbs that reach you inside it fly back at whoever fired them) and the **Injunction** (R: a wall in front of you for half a second that breaks blue orbs).
+- **The camera** never hides you: scenery between it and you is cut away in the shader.
+- **The route** has three bosses and then a final one. Zones three and four (2064, 2081) are sealed in this build.
 
 ## Controls
 
@@ -24,6 +26,7 @@ A third-person bullet-hell roguelike that runs in the browser. You committed a c
 | E | Take a gun from the floor |
 | F (hold) | Grappling hook, once bought |
 | Right mouse or Q | Parry gold orbs, once bought |
+| R | The Injunction: a wall that breaks blue orbs, once bought |
 | Tab or M | Map |
 | Esc | Pause |
 | N | Sound on or off |

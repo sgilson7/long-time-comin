@@ -3,8 +3,9 @@
 //! movement, and read back what to draw and what the screens say.
 //!
 //! Modes: the title, the sentencing (the story's opening), the Holding (the
-//! hub between runs), play, the paused and map overlays, the indictment
-//! read on a death, and the verdict after the Bailiff. Only play runs the
+//! hub between runs), play, the paused and map overlays, the interlude
+//! between one zone's boss and the next zone, the indictment read on a
+//! death, and the verdict after the last built zone's boss. Only play runs the
 //! simulation, at a fixed 60 ticks a second; `advance` runs the ticks the
 //! elapsed time owes, and drawing is placed between the last two. Mouse look
 //! is applied every frame, before any tick, so the view never waits.
@@ -39,6 +40,7 @@ pub const ACTIONS: &[(&str, u32)] = &[
     ("interact", 1 << 9),
     // set while the pointer is captured; without it the simulation holds still
     ("focus", 1 << 10),
+    ("wall", 1 << 11),
 ];
 
 fn bit(name: &str) -> u32 {
@@ -61,11 +63,14 @@ pub enum Mode {
     Play,
     Paused,
     Map,
+    Interlude,
     Dead,
     Won,
 }
 
 struct Run {
+    /// the zone the run is in, by index
+    zone: usize,
     route: Route,
     at: usize,
     visited: Vec<usize>,
@@ -94,6 +99,8 @@ pub struct Game {
     story_seq: u32,
     /// the count a first win read, for the verdict
     win_count: Option<String>,
+    /// the count a first crossing read, for the interlude
+    crossing_count: Option<String>,
     hub: Arena,
     hub_seed: u64,
     menu_us: i64,
@@ -138,7 +145,7 @@ impl Game {
         })?;
         let meta = Meta::load(saved, &c);
         let hub_seed = 2031;
-        let hub = arena::build("arrival", hub_seed, &[], &c.pal);
+        let hub = arena::build(&c.zones[0].id, "arrival", hub_seed, &[], &c.pal);
         let mut g = Game {
             c,
             meta,
@@ -149,6 +156,7 @@ impl Game {
             story: None,
             story_seq: 0,
             win_count: None,
+            crossing_count: None,
             hub,
             hub_seed,
             menu_us: 0,
@@ -235,16 +243,28 @@ impl Game {
     }
 
     pub fn start_run(&mut self) {
+        self.start_run_at(0);
+    }
+
+    /// A run from the start of zone `zone`; a zone past the furthest one
+    /// unlocked starts at zone one.
+    pub fn start_run_at(&mut self, zone: usize) {
         if !matches!(self.mode, Mode::Holding | Mode::Dead | Mode::Won) {
             return;
         }
+        let zone = if zone as i32 <= self.meta.unlocked {
+            zone
+        } else {
+            0
+        };
         let (build, gun_level) = self.meta.build(&self.c);
-        let route = Route::build_for(&self.c, self.meta.run_seed(), gun_level);
+        let route = Route::build_for(&self.c, zone, self.meta.run_seed(), gun_level);
         let player = Player::new(V3::ZERO, 0, build);
         let held = Held::new(self.c.gun("carbine"), gun_level);
         let start = route.start();
         let world = self.world_for(&route, start, player, held, 0);
         self.run = Some(Run {
+            zone,
             route,
             at: start,
             visited: vec![start],
@@ -309,6 +329,43 @@ impl Game {
         if matches!(self.mode, Mode::Paused | Mode::Map) {
             self.die();
         }
+    }
+
+    /// From the interlude into the next zone: the body, its gun and its
+    /// rewards carried, its health restored.
+    pub fn continue_run(&mut self) {
+        if self.mode != Mode::Interlude {
+            return;
+        }
+        let Some(mut run) = self.run.take() else {
+            return;
+        };
+        run.earned += run.world.earned;
+        let zone = run.zone + 1;
+        let (_, gun_level) = self.meta.build(&self.c);
+        let route = Route::build_for(
+            &self.c,
+            zone,
+            self.meta.run_seed(),
+            gun_level.max(run.world.held.level),
+        );
+        let mut player = run.world.player.clone();
+        player.health = player.build.max_health;
+        let held = run.world.held;
+        let seq = run.world.seq;
+        let start = route.start();
+        run.world = self.world_for(&route, start, player, held, seq);
+        run.route = route;
+        run.zone = zone;
+        run.at = start;
+        run.visited = vec![start];
+        run.counted = false;
+        let name = self.node_name(&run.route.nodes[start]);
+        run.world.note("enter", name);
+        self.run = Some(run);
+        self.crossing_count = None;
+        self.mode = Mode::Play;
+        self.enter();
     }
 
     pub fn to_holding(&mut self) {
@@ -412,13 +469,14 @@ impl Game {
         let cam = play_camera(&run.world, ONE);
         run.world.tick(&self.c, ctl, cam.eye, cam.fwd);
         let node = &run.route.nodes[run.at];
+        let rules = &self.c.zones[run.zone].route;
         if run.world.cleared && !run.counted && node.kind == NodeKind::Fight {
             run.counted = true;
             run.cleared += 1;
             run.earned += if node.detour {
-                self.c.route.clemency_detour
+                rules.clemency_detour
             } else {
-                self.c.route.clemency_main
+                rules.clemency_main
             };
         }
         match run.world.outcome {
@@ -427,10 +485,19 @@ impl Game {
             Outcome::Died => self.die(),
             Outcome::Won => {
                 let run = self.run.as_mut().unwrap();
-                run.earned += self.c.route.clemency_boss;
+                run.earned += self.c.zones[run.zone].route.clemency_boss;
                 run.cleared += 1;
+                let next = run.zone + 1;
+                if next < self.c.built_zones() {
+                    // the next zone: the interlude first
+                    let year = self.c.zones[next].year.clone();
+                    self.crossing_count = self.meta.record_crossing(&self.c, next, &year);
+                    run.world.outcome = Outcome::Playing;
+                    self.mode = Mode::Interlude;
+                    return;
+                }
                 let (total, cleared) = (run.total(), run.cleared);
-                let year = self.c.zones[0].year.clone();
+                let year = self.c.zones[run.zone].year.clone();
                 let (banked, newest) = self.meta.record_win(&self.c, total, cleared, &year);
                 self.last = (banked, cleared);
                 self.win_count = newest;
@@ -453,7 +520,7 @@ impl Game {
         // the first run to reach the zone's hardest fights hears a count
         if run.route.nodes[to].tier >= FAR_TIER && !self.meta.reached_far {
             self.meta.reached_far = true;
-            let year = self.c.zones[0].year.clone();
+            let year = self.c.zones[run.zone].year.clone();
             let line = self.meta.read_next(&self.c, &year);
             self.story_seq += 1;
             self.story = Some((self.story_seq, line));
@@ -471,20 +538,21 @@ impl Game {
         };
         // a fight left unfinished still counts for the enemies it cost
         let node = &run.route.nodes[run.at];
+        let z = &self.c.zones[run.zone];
         let partial = match node.encounter {
             Some(e) if node.kind == NodeKind::Fight && !run.counted => {
-                let total: i32 = self.c.encounters[e].waves.iter().map(|w| w.len() as i32).sum();
+                let total: i32 = z.encounters[e].waves.iter().map(|w| w.len() as i32).sum();
                 let per = if node.detour {
-                    self.c.route.clemency_detour
+                    z.route.clemency_detour
                 } else {
-                    self.c.route.clemency_main
+                    z.route.clemency_main
                 };
                 per * run.world.kills.min(total) / total.max(1)
             }
             _ => 0,
         };
         let (total, cleared) = (run.total() + partial, run.cleared);
-        let year = self.c.zones[0].year.clone();
+        let year = z.year.clone();
         let reading = self.meta.record_death(&self.c, total, cleared, &year);
         self.last = (reading.banked, cleared);
         self.reading = Some(reading);
@@ -501,12 +569,18 @@ impl Game {
         self.draw();
     }
 
+    /// The zone the scene is in: the run's, or zone one's for the menus.
+    fn scene_zone(&self) -> &crate::content::Zone {
+        &self.c.zones[self.run.as_ref().map_or(0, |r| r.zone)]
+    }
+
     fn build_scene(&mut self) {
+        let ink = self.c.pal.c(&self.scene_zone().scene.ink);
         let arena = match &self.run {
             Some(r) => &r.world.arena,
             None => &self.hub,
         };
-        let mut b = Batch::new(self.c.pal.c("ink"));
+        let mut b = Batch::new(ink);
         for s in &arena.shapes {
             b.shape(s);
         }
@@ -517,21 +591,27 @@ impl Game {
     }
 
     fn draw(&mut self) {
-        let mut b = Batch::new(self.c.pal.c("ink"));
+        let mut b = Batch::new(self.c.pal.c(&self.scene_zone().scene.ink));
         let clock = (self.menu_us * TICKS_PER_SECOND as i64 / 1_000_000) as i32;
         let in_run = matches!(
             self.mode,
-            Mode::Play | Mode::Paused | Mode::Map | Mode::Dead | Mode::Won
+            Mode::Play | Mode::Paused | Mode::Map | Mode::Interlude | Mode::Dead | Mode::Won
         );
+        // the head the scenery is cut away in front of, and the floor under it
+        let mut focus = None;
         match (&self.run, in_run) {
             (Some(run), true) => {
                 self.camera = play_camera(&run.world, self.alpha);
                 let p = &run.world.player;
-                let head = p.prev_pos.lerp(p.pos, self.alpha).add(v3(0, CAMERA_UP, 0));
+                let feet = p.prev_pos.lerp(p.pos, self.alpha);
+                let head = feet.add(v3(0, CAMERA_UP, 0));
                 let body = self.camera.eye.dist(head) > CAMERA_HIDE_BODY;
+                if matches!(self.mode, Mode::Play | Mode::Paused | Mode::Map) {
+                    focus = Some((feet.add(v3(0, PLAYER_HEIGHT * 9 / 10, 0)), feet.y));
+                }
                 let cam = self.camera;
                 draw::world(&mut b, &self.c, &run.world, self.alpha, clock, body, &cam);
-                if self.mode == Mode::Dead || self.mode == Mode::Won {
+                if matches!(self.mode, Mode::Dead | Mode::Won | Mode::Interlude) {
                     // the camera drifts up and away while the court reads
                     let up = fx::mul(int(1), (clock % 600) * ONE / 120);
                     self.camera.eye = self.camera.eye.add(v3(0, up, 0));
@@ -571,6 +651,10 @@ impl Game {
         self.values = values;
         self.draws = draws;
         self.view = self.camera.values(self.aspect());
+        // the see-through focus: the head and the floor; at the eye itself
+        // (nothing is cut) in the menus
+        let (at, floor) = focus.unwrap_or((self.camera.eye, self.camera.eye.y));
+        self.view.extend([at.x, at.y, at.z, floor]);
         let _ = self.hub_seed;
     }
 
@@ -595,19 +679,23 @@ impl Game {
     }
 
     pub fn scene_uniforms(&self) -> Vec<i32> {
+        let s = &self.scene_zone().scene;
+        let pal = &self.c.pal;
         let l = v3(-ONE * 4 / 10, ONE * 8 / 10, ONE * 45 / 100).norm();
         let mut u = vec![l.x, l.y, l.z];
-        u.extend(self.c.pal.c("sky"));
-        u.extend(self.c.pal.c("fog"));
-        u.extend([int(70), int(520)]);
-        u.extend(self.c.pal.c("light"));
-        u.extend(self.c.pal.c("window_dark"));
-        u.extend(self.c.pal.c("ink"));
+        u.extend(pal.c(&s.sky));
+        u.extend(pal.c(&s.fog));
+        u.extend([int(s.fog_near_m), int(s.fog_far_m)]);
+        u.extend(pal.c(&s.light));
+        u.extend(pal.c(&s.window_dark));
+        u.extend(pal.c(&s.ink));
+        u.extend([SEE_NEAR, SEE_WIDE_LENS, SEE_WIDE_HEAD, SEE_SHORT]);
+        u.push(SEE_SOLID_PCT * ONE / 100);
         u
     }
 
     pub fn clear_color(&self) -> Vec<i32> {
-        self.c.pal.c("fog").to_vec()
+        self.c.pal.c(&self.scene_zone().scene.fog).to_vec()
     }
 
     // ---- the HUD ---------------------------------------------------------
@@ -679,6 +767,7 @@ impl Game {
         // hints show for a few seconds, then get out of the way
         let fresh = |since: i32| w.tick - since < HINT_TICKS;
         let hint = match node.kind {
+            NodeKind::Arrival if !node.cache.is_empty() => c.say("hint_landing"),
             NodeKind::Arrival => c.say("hint_arrival"),
             NodeKind::Rest => c.say("hint_rest"),
             NodeKind::Fight if w.cleared && fresh(w.cleared_at) => c.say("hint_cleared"),
@@ -764,8 +853,11 @@ impl Game {
             "parrying": p.parry_window > 0,
             "recess": p.recess_left,
             "boss": boss,
-            "zone": c.zones[0].name,
-            "year": c.zones[0].year,
+            "zone": c.zones[run.zone].name,
+            "year": c.zones[run.zone].year,
+            "wall": p.build.wall,
+            "wall_ready": p.build.wall && p.wall_cooldown == 0,
+            "walling": p.wall_left > 0,
             "node": self.node_name(node),
             "enemies": enemies,
             "cleared": w.cleared,
@@ -824,7 +916,7 @@ impl Game {
             NodeKind::Boss => "boss",
             NodeKind::Fight => n.archetype.as_str(),
         };
-        self.c.place_name(key)
+        self.c.zones[n.zone].place_name(key)
     }
 
     pub fn reward_label(&self, r: Reward) -> String {
@@ -938,12 +1030,18 @@ impl Game {
                 "parry": build.parry,
                 "recess": build.recess,
                 "gun": format!("{} {}", c.guns[c.gun("carbine")].name, roman(gun_level)),
+                "wall": build.wall,
             },
             "zones": c.zones.iter().map(|z| json!({
                 "name": z.name,
                 "year": z.year,
                 "built": z.built,
                 "boss": c.story.bosses.get(&z.boss).map(|b| b.name.clone()).unwrap_or_default(),
+            })).collect::<Vec<_>>(),
+            // where a run may start: zone one, and each zone past a boss beaten
+            "starts": (1..=m.unlocked.max(0) as usize).filter(|&z| z < c.built_zones()).map(|z| json!({
+                "zone": z,
+                "label": c.say("start_later").replace("{year}", &c.zones[z].year).replace("{zone}", &c.zones[z].name),
             })).collect::<Vec<_>>(),
             "guns": c.guns.iter().map(|g| json!({ "id": g.id, "name": g.name, "blurb": g.blurb })).collect::<Vec<_>>(),
         });
@@ -976,12 +1074,37 @@ impl Game {
                 .enumerate()
                 .flat_map(|(i, n)| n.next.iter().map(move |&j| json!([i, j])))
                 .collect();
-            s["map"] = json!({ "nodes": nodes, "edges": edges, "here": self.node_name(&r.nodes[run.at]) });
+            let z = &c.zones[run.zone];
+            s["map"] = json!({
+                "nodes": nodes,
+                "edges": edges,
+                "here": self.node_name(&r.nodes[run.at]),
+                "heading": format!("{}, {}", z.name, z.year),
+            });
             s["run"] = json!({ "clemency": run.total(), "cleared": run.cleared });
         }
+        if self.mode == Mode::Interlude {
+            let z = self.run.as_ref().map_or(0, |r| r.zone);
+            let words = c.story.interludes.get(&c.zones[z].id);
+            s["interlude"] = json!({
+                "title": words.map(|w| w.title.clone()).unwrap_or_default(),
+                "lines": words.map(|w| w.lines.clone()).unwrap_or_default(),
+                "newest": self.crossing_count.clone().unwrap_or_default(),
+                "next": c.zones.get(z + 1).map(|n| format!("{}, {}", n.name, n.year)).unwrap_or_default(),
+                "art": words.map(|w| w.art.clone()).unwrap_or_default(),
+            });
+        }
         if let Some(rd) = &self.reading {
+            let zone = self.run.as_ref().map_or(0, |r| r.zone);
+            let title = c
+                .story
+                .death_titles
+                .get(&c.zones[zone].id)
+                .or_else(|| c.story.death_titles.values().next())
+                .cloned()
+                .unwrap_or_default();
             s["reading"] = json!({
-                "title": c.story.death_title,
+                "title": title,
                 "counts": rd.counts,
                 "newest": rd.newest,
                 "time_served": c.story.time_served
@@ -995,6 +1118,7 @@ impl Game {
         }
         if self.mode == Mode::Won {
             s["verdict"] = json!({
+                "art": c.story.verdict_art,
                 "title": c.story.victory_title,
                 "lines": c.story.victory,
                 "newest": self.win_count.clone().unwrap_or_default(),
@@ -1021,6 +1145,7 @@ pub fn controls(held: u32, pressed: u32) -> Controls {
         grapple_pressed: hit("grapple"),
         parry_pressed: hit("parry"),
         interact_pressed: hit("interact"),
+        wall_pressed: hit("wall"),
     }
 }
 
@@ -1071,8 +1196,10 @@ pub fn numbers() -> String {
         "draw_values": render::DRAW_VALUES,
         "buffers": { "static": render::STATIC_BUFFER, "dynamic": render::DYNAMIC_BUFFER },
         "passes": { "solid": render::PASS_SOLID, "facade": render::PASS_FACADE, "ink": render::PASS_INK, "glow": render::PASS_GLOW },
-        "uniforms": [["uLightDir", 3], ["uSky", 3], ["uFog", 3], ["uFogRange", 2], ["uLight", 3], ["uWindowDark", 3], ["uInk", 3]],
-        "view_values": 16,
+        "uniforms": [["uLightDir", 3], ["uSky", 3], ["uFog", 3], ["uFogRange", 2], ["uLight", 3], ["uWindowDark", 3], ["uInk", 3], ["uSee", 4], ["uSeeSolid", 1]],
+        // the view values: the matrix, the eye, then the see-through focus
+        // (the head, and the floor under it)
+        "view": { "matrix": [0, 16], "eye": [16, 19], "focus": [19, 23] },
         "percent": 100,
     })
     .to_string()
@@ -1172,33 +1299,81 @@ pub(crate) mod tests {
         assert!(g.buy("constitution_1"));
     }
 
-    #[test]
-    fn felling_the_bailiff_reads_the_verdict_and_banks_the_boss_clemency() {
-        let mut g = game_with(r#"{"seen_intro": true}"#);
-        g.begin();
-        g.start_run();
-        // straight to the court
+    /// Straight to the run's boss, its last phase, one blow from down.
+    fn fell_the_boss(g: &mut Game) {
         let boss = g.run.as_ref().unwrap().route.boss();
         g.go(boss);
         assert_eq!(g.run.as_ref().unwrap().world.kind, NodeKind::Boss);
-        frames(&mut g, 120, 0);
+        frames(g, 120, 0);
         let run = g.run.as_mut().unwrap();
-        let b = run.world.boss.expect("the Bailiff came");
-        // its last phase, nearly down; the next hit is the last
+        let b = run.world.boss.expect("the boss came");
         run.world.enemies[b].phase = 2;
         run.world.enemies[b].hp = 1;
         run.world.enemies[b].state = crate::enemy::State::Rest(1000);
         run.world.player.iframes = 100_000;
         run.world.enemies[b].hurt(5);
-        frames(&mut g, 200, 0);
+        frames(g, 200, 0);
+    }
+
+    #[test]
+    fn felling_the_bailiff_crosses_to_the_ice_and_felling_the_witness_reads_the_verdict() {
+        let mut g = game_with(r#"{"seen_intro": true}"#);
+        g.begin();
+        g.start_run();
+        g.run.as_mut().unwrap().world.held = Held::new(2, 3);
+        fell_the_boss(&mut g);
+        assert_eq!(g.mode, Mode::Interlude, "the Bailiff does not end the run");
+        let s: Value = serde_json::from_str(&g.screen_json()).unwrap();
+        assert_eq!(s["interlude"]["title"], "THE YEARS BETWEEN");
+        // the first crossing reads a count
+        assert_eq!(s["interlude"]["newest"], g.c.story.counts[0].as_str());
+        assert_eq!(g.meta.unlocked, 1);
+        g.run.as_mut().unwrap().world.player.health = 5;
+        g.continue_run();
+        assert_eq!(g.mode, Mode::Play);
+        let run = g.run.as_ref().unwrap();
+        assert_eq!(run.zone, 1);
+        assert_eq!(run.world.zone, 1);
+        assert_eq!(run.world.kind, NodeKind::Arrival);
+        // the body comes along healed, with what it carried
+        assert_eq!(run.world.player.health, run.world.player.build.max_health);
+        assert_eq!((run.world.held.gun, run.world.held.level), (2, 3));
+        // the Bailiff's Clemency is the run's, not yet banked
+        assert!(run.earned >= g.c.zones[0].route.clemency_boss);
+        assert_eq!(g.meta.clemency, 0);
+        let h: Value = serde_json::from_str(&g.hud_json()).unwrap();
+        assert_eq!(h["zone"], "The White Waste");
+        assert_eq!(h["node"], "The Landing");
+        fell_the_boss(&mut g);
         assert_eq!(g.mode, Mode::Won);
         assert_eq!(g.meta.wins, 1);
-        // zone.json's clemency_boss is 25
-        assert!(g.meta.clemency >= 25, "{}", g.meta.clemency);
+        assert_eq!(
+            c_of(&g).enemies[g.run.as_ref().unwrap().world.enemies[0].def].id,
+            "witness"
+        );
+        // both bosses' Clemency banked: 25 and 40 in zone.json
+        assert!(g.meta.clemency >= 65, "{}", g.meta.clemency);
         let s: Value = serde_json::from_str(&g.screen_json()).unwrap();
         assert_eq!(s["verdict"]["title"], g.c.story.victory_title.as_str());
         g.to_holding();
         assert_eq!(g.mode, Mode::Holding);
+        // and a run may now start on the ice
+        let s: Value = serde_json::from_str(&g.screen_json()).unwrap();
+        assert_eq!(s["starts"][0]["zone"], 1);
+        g.start_run_at(1);
+        assert_eq!(g.run.as_ref().unwrap().zone, 1);
+    }
+
+    fn c_of(g: &Game) -> &Content {
+        &g.c
+    }
+
+    #[test]
+    fn a_run_cannot_start_in_a_zone_not_yet_reached() {
+        let mut g = game_with(r#"{"seen_intro": true}"#);
+        g.begin();
+        g.start_run_at(1);
+        assert_eq!(g.run.as_ref().unwrap().zone, 0);
     }
 
     #[test]
@@ -1210,7 +1385,7 @@ pub(crate) mod tests {
         g.go(first);
         let run = g.run.as_mut().unwrap();
         let node = run.route.nodes[run.at].clone();
-        let total: i32 = g.c.encounters[node.encounter.unwrap()]
+        let total: i32 = g.c.zones[0].encounters[node.encounter.unwrap()]
             .waves
             .iter()
             .map(|w| w.len() as i32)
@@ -1221,7 +1396,7 @@ pub(crate) mod tests {
         assert_eq!(g.mode, Mode::Dead);
         // clemency_main (3) times the share killed, rounded down; no
         // first-death grant (this record has died before)
-        let expect = g.c.route.clemency_main * (total / 2) / total;
+        let expect = g.c.zones[0].route.clemency_main * (total / 2) / total;
         assert_eq!(g.meta.clemency, expect, "{} of {total} killed", total / 2);
     }
 
@@ -1281,6 +1456,25 @@ pub(crate) mod tests {
     }
 
     #[test]
+    fn at_an_arenas_start_the_camera_stands_in_front_of_the_shut_gate() {
+        // the shut gate you came in by stands at the south edge; a camera
+        // behind it would show nothing but its back (SECOND-ORDER Z1)
+        for zone in [0, 1] {
+            let mut g = game_with(r#"{"seen_intro": true, "unlocked": 1}"#);
+            g.begin();
+            g.start_run_at(zone);
+            let first = g.run.as_ref().unwrap().route.nodes[0].next[0];
+            for at in [0, first] {
+                if at != 0 {
+                    g.go(at);
+                }
+                let cam = play_camera(&g.run.as_ref().unwrap().world, ONE);
+                assert!(cam.eye.z < arena::HALF + ONE / 4, "zone {zone}: {:?}", cam.eye);
+            }
+        }
+    }
+
+    #[test]
     fn every_copy_key_the_core_uses_is_in_copy_json() {
         let g = game_with("");
         for key in [
@@ -1309,6 +1503,11 @@ pub(crate) mod tests {
             "why_owned",
             "why_requires",
             "why_cost",
+            "start_later",
+            "interlude_next",
+            "hud_wall",
+            "hint_landing",
+            "build_wall",
         ] {
             assert!(g.c.has_copy(key), "copy.json has no {key}");
         }
@@ -1319,7 +1518,9 @@ pub(crate) mod tests {
         let g = game_with("");
         let src = [
             include_str!("draw.rs"),
+            include_str!("draw/beasts.rs"),
             include_str!("arena.rs"),
+            include_str!("arena/ice.rs"),
             include_str!("world.rs"),
             include_str!("game.rs"),
         ];
@@ -1332,5 +1533,46 @@ pub(crate) mod tests {
         for gun in &g.c.guns {
             assert!(g.c.pal.has(&gun.colour));
         }
+    }
+
+    #[test]
+    fn scenery_may_be_cut_away_in_front_of_you_and_bodies_may_not() {
+        let mut g = game_with(r#"{"seen_intro": true}"#);
+        g.begin();
+        g.start_run();
+        frames(&mut g, 2, 0);
+        // every draw says whether it is scenery (the static buffer) or not
+        for d in g.draws.chunks(render::DRAW_VALUES) {
+            assert_eq!(d[5], (d[0] == render::STATIC_BUFFER) as u32, "{d:?}");
+        }
+        // in play the view carries the head and the floor under it
+        let v = &g.view;
+        assert_eq!(v.len(), 23);
+        let p = g.run.as_ref().unwrap().world.player.pos;
+        assert_eq!((v[19], v[21], v[22]), (p.x, p.z, p.y));
+        assert!(v[20] > p.y + int(1));
+        // in the menus nothing is cut: the focus is the eye itself
+        g.pause();
+        g.abandon();
+        g.to_holding();
+        g.draw();
+        let v = &g.view;
+        assert_eq!((v[19], v[20], v[21]), (v[16], v[17], v[18]));
+    }
+
+    #[test]
+    fn the_ice_is_lit_and_outlined_in_its_own_colours() {
+        let mut g = game_with(r#"{"seen_intro": true, "unlocked": 1}"#);
+        g.begin();
+        let city = g.scene_uniforms();
+        g.start_run_at(1);
+        let ice = g.scene_uniforms();
+        assert_ne!(city, ice);
+        assert_eq!(g.clear_color(), g.c.pal.c("ice_fog").to_vec());
+        // the see-through sizes ride with the scene
+        assert_eq!(
+            ice[ice.len() - 5..ice.len() - 1],
+            [SEE_NEAR, SEE_WIDE_LENS, SEE_WIDE_HEAD, SEE_SHORT]
+        );
     }
 }

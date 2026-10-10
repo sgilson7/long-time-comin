@@ -6,7 +6,9 @@
 //! shape again a little larger with its front faces culled, which leaves a
 //! plum outline round it (the inverted hull); the glow pass adds a soft halo
 //! round each orb. The core orders the draws solid, ink, glow, and the page
-//! sets the GL state each pass needs.
+//! sets the GL state each pass needs. Each draw also says whether the
+//! scenery it holds may be cut away in front of the player (the arena's,
+//! uploaded once) or not (bodies, orbs, pickups).
 
 use crate::arena::Shape;
 use crate::content::Rgb;
@@ -15,7 +17,7 @@ use crate::geom::{Affine, Mat4, V3};
 use crate::mesh::Mesh;
 
 pub const INSTANCE_VALUES: usize = 16;
-pub const DRAW_VALUES: usize = 5;
+pub const DRAW_VALUES: usize = 6;
 pub const BYTES_PER_VALUE: usize = 4;
 pub const STATIC_BUFFER: u32 = 0;
 pub const DYNAMIC_BUFFER: u32 = 1;
@@ -66,6 +68,10 @@ impl Batch {
 
     /// A shape, and its outline if it is inked.
     pub fn shape(&mut self, s: &Shape) {
+        if s.halo {
+            self.push(s.mesh, &s.at, s.rgb, s.glow, PASS_GLOW);
+            return;
+        }
         let pass = if s.mesh == Mesh::Facade {
             PASS_FACADE
         } else {
@@ -113,7 +119,15 @@ impl Batch {
                 }
                 let offset = (values.len() * BYTES_PER_VALUE) as u32;
                 let count = (v.len() / INSTANCE_VALUES) as u32;
-                draws[pass as usize].extend_from_slice(&[buffer, mesh as u32, offset, count, pass]);
+                let see_through = (buffer == STATIC_BUFFER) as u32;
+                draws[pass as usize].extend_from_slice(&[
+                    buffer,
+                    mesh as u32,
+                    offset,
+                    count,
+                    pass,
+                    see_through,
+                ]);
                 values.extend_from_slice(v);
             }
         }

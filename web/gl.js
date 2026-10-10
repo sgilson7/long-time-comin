@@ -1,7 +1,9 @@
 // The WebGL 2 renderer. It uploads what the core returns and draws it; every
 // size, stride and offset comes from the core's numbers(), so this file holds
-// no layout of its own. Iron Vector's renderer, with the core's three passes:
-// solid, ink (front faces culled, which leaves the outline) and glow (added).
+// no layout of its own. Iron Vector's renderer, with the core's passes:
+// solid, facade, ink (front faces culled, which leaves the outline) and glow
+// (added). A draw the core marks see-through has the scenery between the
+// camera and the player cut away by the shader.
 
 function compile(gl, type, source) {
   const shader = gl.createShader(type);
@@ -59,7 +61,10 @@ export function makeRenderer(canvas, N, shaders, meshData) {
   const sceneUniforms = N.uniforms.map(([name, size]) => ({ loc: uniform(name), size }));
   const uVP = uniform("uVP");
   const uEye = uniform("uEye");
+  const uFocus = uniform("uFocus");
   const uPass = uniform("uPass");
+  const uCut = uniform("uCut");
+  const V = N.view;
 
   const instanceBuffers = [gl.createBuffer(), gl.createBuffer()];
   const staticSlot = N.buffers.static;
@@ -105,14 +110,20 @@ export function makeRenderer(canvas, N, shaders, meshData) {
       gl.bufferData(gl.ARRAY_BUFFER, values, gl.STREAM_DRAW);
       gl.depthMask(true);
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-      gl.uniformMatrix4fv(uVP, false, view.subarray(0, N.view_values));
-      gl.uniform3fv(uEye, view.subarray(N.view_values));
+      gl.uniformMatrix4fv(uVP, false, view.subarray(...V.matrix));
+      gl.uniform3fv(uEye, view.subarray(...V.eye));
+      gl.uniform4fv(uFocus, view.subarray(...V.focus));
       let current = -1;
+      let cut = -1;
       for (let i = 0; i < draws.length; i += N.draw_values) {
-        const [buffer, meshId, byteOffset, count, pass] = draws.subarray(i, i + N.draw_values);
+        const [buffer, meshId, byteOffset, count, pass, seeThrough] = draws.subarray(i, i + N.draw_values);
         if (pass !== current) {
           enterPass(pass);
           current = pass;
+        }
+        if (seeThrough !== cut) {
+          gl.uniform1f(uCut, seeThrough);
+          cut = seeThrough;
         }
         const mesh = meshes[meshId];
         gl.bindBuffer(gl.ARRAY_BUFFER, mesh.buffer);

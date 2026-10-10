@@ -84,10 +84,19 @@ async function start() {
   const input = makeInput(canvas, JSON.parse(controlsText), N.actions, () => wake(BUILD));
   const hud = makeHud(copy, play);
   let shownMode = null;
-  const screens = makeScreens(game, copy, () => {
-    save();
-    showMode(JSON.parse(game.hud()).mode, true);
-  });
+  const screens = makeScreens(
+    game,
+    copy,
+    () => {
+      save();
+      showMode(JSON.parse(game.hud()).mode, true);
+    },
+    (zone) =>
+      act(() => {
+        game.start_run_at(zone);
+        engage();
+      })(),
+  );
 
   // a button that changes the mode: wake the sound, act, keep the record
   const act = (fn) => () => {
@@ -150,6 +159,13 @@ async function start() {
     el("codex").hidden = true;
     el("codex-close").blur();
   });
+  el("interlude-next").addEventListener(
+    "click",
+    act(() => {
+      game.continue_run();
+      engage();
+    }),
+  );
   el("dead-next").addEventListener("click", act(() => game.to_holding()));
   el("won-next").addEventListener("click", act(() => game.to_holding()));
   const reset = el("reset");
@@ -200,7 +216,7 @@ async function start() {
   window.addEventListener("resize", resize);
   resize();
 
-  const overlays = { title: "title", intro: "intro", holding: "holding", map: "map", paused: "paused", dead: "dead", won: "won" };
+  const overlays = { title: "title", intro: "intro", holding: "holding", map: "map", paused: "paused", interlude: "interlude", dead: "dead", won: "won" };
   function showMode(mode, again) {
     if (mode === shownMode && !again) return;
     document.body.dataset.mode = mode;
@@ -210,10 +226,11 @@ async function start() {
     if (mode === "intro") screens.intro(s);
     if (mode === "holding") screens.holding(s);
     if (mode === "map") screens.map(s);
+    if (mode === "interlude") screens.interlude(s);
     if (mode === "dead") screens.dead(s);
     if (mode === "won") screens.won(s);
-    if (mode === "dead" || mode === "won" || mode === "holding") input.release();
-    if (mode === "dead" || mode === "won") save();
+    if (mode === "dead" || mode === "won" || mode === "holding" || mode === "interlude") input.release();
+    if (mode === "dead" || mode === "won" || mode === "interlude") save();
     shownMode = mode;
   }
 

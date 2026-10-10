@@ -14,5 +14,6 @@
   "Mouse2": "parry",
   "KeyQ": "parry",
   "KeyF": "grapple",
-  "KeyE": "interact"
+  "KeyE": "interact",
+  "KeyR": "wall"
 }

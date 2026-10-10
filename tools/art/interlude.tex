@@ -1,0 +1,443 @@
+\documentclass[tikz,border=0pt]{standalone}
+\usepackage{xcolor}
+\usetikzlibrary{calc}
+% Palette: Sam_Comm_final.png by eye, and data/palette.json.
+\definecolor{ink}{HTML}{3B2340}
+\definecolor{sky}{HTML}{EFC46A}
+\definecolor{skyhi}{HTML}{F5DA92}
+\definecolor{skylow}{HTML}{E9B060}
+\definecolor{cloud}{HTML}{F2D58A}
+\definecolor{wallA}{HTML}{E88A73}
+\definecolor{wallB}{HTML}{EE9F7E}
+\definecolor{wallC}{HTML}{E47A7E}
+\definecolor{wallD}{HTML}{F0B07E}
+\definecolor{wallE}{HTML}{D9765F}
+\definecolor{wallF}{HTML}{E99A8A}
+\definecolor{greenA}{HTML}{8DBB7E}
+\definecolor{greenB}{HTML}{6FA77A}
+\definecolor{greenC}{HTML}{A9C97F}
+\definecolor{greenD}{HTML}{5E9C6A}
+\definecolor{window}{HTML}{F6E7A0}
+\definecolor{windark}{HTML}{8C5A64}
+\definecolor{metal}{HTML}{8D9A93}
+\definecolor{metaldark}{HTML}{5E6B66}
+\definecolor{wood}{HTML}{B9835A}
+\definecolor{paving}{HTML}{E2BD8C}
+\definecolor{ground}{HTML}{D3A77D}
+\definecolor{stone}{HTML}{E7C9A0}
+\definecolor{clock}{HTML}{F8EBC8}
+\definecolor{court}{HTML}{9E4F55}
+\definecolor{courtdark}{HTML}{6E3542}
+\definecolor{goldtrim}{HTML}{F2B53A}
+\definecolor{paper}{HTML}{F6E7C4}
+\definecolor{paperdark}{HTML}{E3CC98}
+\definecolor{violet}{HTML}{7B2FF7}
+\definecolor{magenta}{HTML}{FF2E88}
+\definecolor{cyan}{HTML}{13CFE3}
+\definecolor{gold}{HTML}{FFB000}
+\definecolor{coat}{HTML}{2F4858}
+\definecolor{coatdark}{HTML}{22323F}
+\definecolor{trim}{HTML}{F26B38}
+\definecolor{skin}{HTML}{E0AC69}
+\definecolor{hair}{HTML}{3B2340}
+\definecolor{gun}{HTML}{3E3A46}
+\definecolor{robe}{HTML}{2D2240}
+\definecolor{bossface}{HTML}{F8EBC8}
+\definecolor{eye}{HTML}{FF2E88}
+\definecolor{red}{HTML}{B3262E}
+\definecolor{heart}{HTML}{FF4F6D}
+\definecolor{jump}{HTML}{8DE36B}
+\definecolor{lamp}{HTML}{FFE6A3}
+\definecolor{night}{HTML}{4A3357}
+\definecolor{nightsky}{HTML}{6B4A6E}
+\definecolor{icesky}{HTML}{A7C4E2}
+\definecolor{icefog}{HTML}{8FAFD2}
+\definecolor{icesnow}{HTML}{EEF5F9}
+\definecolor{icesnowdark}{HTML}{CFDDE7}
+\definecolor{icewhite}{HTML}{E4F1F8}
+\definecolor{iceblue}{HTML}{A9D3EA}
+\definecolor{icedeep}{HTML}{6FA9D2}
+\definecolor{iceglow}{HTML}{8FE3FF}
+\definecolor{icerock}{HTML}{5E6E82}
+\definecolor{icerockdark}{HTML}{3F4C5F}
+\definecolor{icered}{HTML}{D94A3A}
+\definecolor{hull}{HTML}{A8392F}
+\definecolor{hulldark}{HTML}{6C2A27}
+\definecolor{icemetal}{HTML}{8A97A6}
+\definecolor{canvas}{HTML}{E9C47C}
+\definecolor{auroragreen}{HTML}{5CF2B0}
+\definecolor{aurorapink}{HTML}{F27AD0}
+\definecolor{cobalt}{HTML}{1F4FFF}
+\definecolor{ember}{HTML}{FF6A1A}
+\definecolor{witnessrobe}{HTML}{1E2742}
+\definecolor{witnessice}{HTML}{CDEBFA}
+\definecolor{navy}{HTML}{1C2A44}
+\definecolor{water}{HTML}{2C6690}
+\definecolor{dawn}{HTML}{F7C89A}
+% One ink for every outline (the TikZ house style and the game's ink pass).
+\newcommand{\Ink}{1.1pt}
+\tikzset{inked/.style={draw=ink, line width=\Ink, line join=round, line cap=round}}
+\begin{document}
+\begin{tikzpicture}
+\clip (0,0) rectangle (32,18);
+\fill[icesky] (0,0) rectangle (32,18);
+\fill[dawn, opacity=0.85] (0,0) rectangle (1.45,18);
+\fill[dawn, opacity=0.78] (1.4,0) rectangle (2.85,18);
+\fill[dawn, opacity=0.71] (2.8,0) rectangle (4.25,18);
+\fill[dawn, opacity=0.64] (4.2,0) rectangle (5.65,18);
+\fill[dawn, opacity=0.57] (5.6,0) rectangle (7.05,18);
+\fill[dawn, opacity=0.5] (7,0) rectangle (8.45,18);
+\fill[dawn, opacity=0.43] (8.4,0) rectangle (9.85,18);
+\fill[dawn, opacity=0.36] (9.8,0) rectangle (11.25,18);
+\fill[dawn, opacity=0.29] (11.2,0) rectangle (12.65,18);
+\fill[dawn, opacity=0.22] (12.6,0) rectangle (14.05,18);
+\fill[dawn, opacity=0.15] (14,0) rectangle (15.45,18);
+\fill[dawn, opacity=0.08] (15.4,0) rectangle (16.85,18);
+\fill[skyhi, opacity=0.6] (0,12) rectangle (9,18);
+\filldraw[inked,fill=cloud] (1.7,15.5) circle (0.715);
+\filldraw[inked,fill=cloud] (2.415,15.825) circle (0.91);
+\filldraw[inked,fill=cloud] (3.26,15.955) circle (1.04);
+\filldraw[inked,fill=cloud] (4.105,15.695) circle (0.78);
+\filldraw[inked,fill=cloud] (4.755,15.435) circle (0.585);
+\fill[cloud] (1.7,15.305) rectangle (4.755,15.565);
+\draw[ink, line width=1.1pt, line cap=round] (1.375,15.305) -- (5.08,15.305);
+\filldraw[inked,fill=cloud] (8.5,16.4) circle (0.55);
+\filldraw[inked,fill=cloud] (9.05,16.65) circle (0.7);
+\filldraw[inked,fill=cloud] (9.7,16.75) circle (0.8);
+\filldraw[inked,fill=cloud] (10.35,16.55) circle (0.6);
+\filldraw[inked,fill=cloud] (10.85,16.35) circle (0.45);
+\fill[cloud] (8.5,16.25) rectangle (10.85,16.45);
+\draw[ink, line width=1.1pt, line cap=round] (8.25,16.25) -- (11.1,16.25);
+\fill[auroragreen, opacity=0.18] (18,12) rectangle (18.759,14.2);
+\fill[auroragreen, opacity=0.3] (18.9,12.627) rectangle (19.659,16.082);
+\fill[auroragreen, opacity=0.42] (19.8,13.069) rectangle (20.559,17.408);
+\fill[auroragreen, opacity=0.18] (20.7,13.196) rectangle (21.459,17.789);
+\fill[auroragreen, opacity=0.3] (21.6,12.97) rectangle (22.359,17.111);
+\fill[auroragreen, opacity=0.42] (22.5,12.458) rectangle (23.259,15.574);
+\fill[auroragreen, opacity=0.18] (23.4,11.811) rectangle (24.159,14.389);
+\fill[auroragreen, opacity=0.3] (24.3,11.219) rectangle (25.059,14.981);
+\fill[auroragreen, opacity=0.42] (25.2,10.858) rectangle (25.959,15.342);
+\fill[auroragreen, opacity=0.18] (26.1,10.834) rectangle (26.859,15.366);
+\fill[auroragreen, opacity=0.3] (27,11.153) rectangle (27.759,15.047);
+\fill[auroragreen, opacity=0.42] (27.9,11.723) rectangle (28.659,14.477);
+\fill[auroragreen, opacity=0.18] (28.8,12.374) rectangle (29.559,15.322);
+\fill[auroragreen, opacity=0.3] (29.7,12.915) rectangle (30.459,16.944);
+\fill[auroragreen, opacity=0.42] (30.6,13.186) rectangle (31.359,17.757);
+\fill[auroragreen, opacity=0.18] (31.5,13.107) rectangle (32.259,17.521);
+\fill[aurorapink, opacity=0.18] (20,13.4) rectangle (21.035,15.6);
+\fill[aurorapink, opacity=0.3] (21.278,13.818) rectangle (22.313,17.273);
+\fill[aurorapink, opacity=0.42] (22.556,14.113) rectangle (23.591,18.452);
+\fill[aurorapink, opacity=0.18] (23.833,14.197) rectangle (24.868,18.79);
+\fill[aurorapink, opacity=0.3] (25.111,14.047) rectangle (26.146,18.187);
+\fill[aurorapink, opacity=0.42] (26.389,13.705) rectangle (27.424,16.821);
+\fill[aurorapink, opacity=0.18] (27.667,13.274) rectangle (28.702,15.852);
+\fill[aurorapink, opacity=0.3] (28.944,12.879) rectangle (29.979,16.641);
+\fill[aurorapink, opacity=0.42] (30.222,12.639) rectangle (31.257,17.123);
+\fill[aurorapink, opacity=0.18] (31.5,12.622) rectangle (32.535,17.155);
+\filldraw[inked,fill=icerock] (17.5,5.2) -- (23.5,5.2) -- (20.5,10) -- cycle;
+\filldraw[inked,fill=icewhite,line width=0.6pt] (19.24,7.984) -- (21.76,7.984) -- (20.98,7.6) -- (20.38,8.08) -- (19.9,7.696) -- cycle;
+\filldraw[inked,fill=icewhite] (19.24,7.984) -- (20.5,10) -- (21.76,7.984) -- cycle;
+\filldraw[inked,fill=icerock] (21.5,5.2) -- (28.5,5.2) -- (25,11.4) -- cycle;
+\filldraw[inked,fill=icewhite,line width=0.6pt] (23.53,8.796) -- (26.47,8.796) -- (25.56,8.3) -- (24.86,8.92) -- (24.3,8.424) -- cycle;
+\filldraw[inked,fill=icewhite] (23.53,8.796) -- (25,11.4) -- (26.47,8.796) -- cycle;
+\filldraw[inked,fill=icerock] (27,5.2) -- (32,5.2) -- (29.5,9.6) -- cycle;
+\filldraw[inked,fill=icewhite,line width=0.6pt] (28.45,7.752) -- (30.55,7.752) -- (29.9,7.4) -- (29.4,7.84) -- (29,7.488) -- cycle;
+\filldraw[inked,fill=icewhite] (28.45,7.752) -- (29.5,9.6) -- (30.55,7.752) -- cycle;
+\filldraw[inked,fill=wallD] (-0.4,5.2) rectangle (1.356,11.893);
+\filldraw[inked,fill=wallD] (-0.48,11.893) rectangle (1.436,12.113);
+\filldraw[inked,line width=0.6pt,fill=window] (-0.028,5.65) rectangle (0.292,6.07);
+\filldraw[inked,line width=0.6pt,fill=windark] (-0.028,6.4) rectangle (0.292,6.82);
+\filldraw[inked,line width=0.6pt,fill=windark] (-0.028,7.15) rectangle (0.292,7.57);
+\filldraw[inked,line width=0.6pt,fill=window] (-0.028,7.9) rectangle (0.292,8.32);
+\filldraw[inked,line width=0.6pt,fill=window] (-0.028,8.65) rectangle (0.292,9.07);
+\filldraw[inked,line width=0.6pt,fill=windark] (-0.028,9.4) rectangle (0.292,9.82);
+\filldraw[inked,line width=0.6pt,fill=window] (-0.028,10.15) rectangle (0.292,10.57);
+\filldraw[inked,line width=0.6pt,fill=window] (-0.028,10.9) rectangle (0.292,11.32);
+\filldraw[inked,line width=0.6pt,fill=window] (0.664,5.65) rectangle (0.984,6.07);
+\filldraw[inked,line width=0.6pt,fill=windark] (0.664,6.4) rectangle (0.984,6.82);
+\filldraw[inked,line width=0.6pt,fill=windark] (0.664,7.15) rectangle (0.984,7.57);
+\filldraw[inked,line width=0.6pt,fill=windark] (0.664,7.9) rectangle (0.984,8.32);
+\filldraw[inked,line width=0.6pt,fill=window] (0.664,8.65) rectangle (0.984,9.07);
+\filldraw[inked,line width=0.6pt,fill=windark] (0.664,9.4) rectangle (0.984,9.82);
+\filldraw[inked,line width=0.6pt,fill=windark] (0.664,10.15) rectangle (0.984,10.57);
+\filldraw[inked,line width=0.6pt,fill=windark] (0.664,10.9) rectangle (0.984,11.32);
+\filldraw[inked,line width=0.9pt,fill=metal] (0.179,12.113) rectangle (0.779,12.513);
+\filldraw[inked,fill=metaldark,line width=0.6pt] (0.479,12.313) circle (0.13);
+\draw[ink, line width=1pt, line cap=round] (0.208,12.113) -- (0.208,12.713);
+\draw[ink, line width=1pt, line cap=round] (1.208,12.113) -- (1.208,12.713);
+\filldraw[inked,fill=violet] (0.008,12.713) rectangle (1.408,13.413);
+\draw[paper, line width=1.5pt] (0.258,13.063) -- (0.558,13.213) -- (0.858,12.963) -- (1.158,13.163);
+\draw[ink, line width=0.9pt, line cap=round] (-0.065,12.113) -- (-0.065,12.613);
+\draw[ink, line width=0.9pt, line cap=round] (0.475,12.113) -- (0.475,12.613);
+\filldraw[inked,line width=0.9pt,fill=wood] (-0.145,12.613) rectangle (0.555,13.263);
+\filldraw[inked,fill=wallE,line width=0.9pt] (-0.195,13.263) -- (0.605,13.263) -- (0.205,13.563) -- cycle;
+\filldraw[inked,fill=wallD] (1.456,5.2) rectangle (3.211,10.527);
+\filldraw[inked,fill=wallD] (1.376,10.527) rectangle (3.291,10.747);
+\filldraw[inked,line width=0.6pt,fill=window] (1.828,5.65) rectangle (2.148,6.07);
+\filldraw[inked,line width=0.6pt,fill=window] (1.828,6.4) rectangle (2.148,6.82);
+\filldraw[inked,line width=0.6pt,fill=windark] (1.828,7.15) rectangle (2.148,7.57);
+\filldraw[inked,line width=0.6pt,fill=windark] (1.828,7.9) rectangle (2.148,8.32);
+\filldraw[inked,line width=0.6pt,fill=windark] (1.828,8.65) rectangle (2.148,9.07);
+\filldraw[inked,line width=0.6pt,fill=windark] (1.828,9.4) rectangle (2.148,9.82);
+\filldraw[inked,line width=0.7pt,fill=metal] (1.778,9.12) rectangle (2.198,9.38);
+\filldraw[inked,line width=0.6pt,fill=windark] (2.52,5.65) rectangle (2.84,6.07);
+\filldraw[inked,line width=0.6pt,fill=window] (2.52,6.4) rectangle (2.84,6.82);
+\filldraw[inked,line width=0.6pt,fill=windark] (2.52,7.15) rectangle (2.84,7.57);
+\filldraw[inked,line width=0.6pt,fill=windark] (2.52,7.9) rectangle (2.84,8.32);
+\filldraw[inked,line width=0.6pt,fill=windark] (2.52,8.65) rectangle (2.84,9.07);
+\filldraw[inked,line width=0.6pt,fill=window] (2.52,9.4) rectangle (2.84,9.82);
+\draw[ink, line width=0.9pt, line cap=round] (2.267,10.747) -- (2.267,11.763);
+\draw[ink, line width=0.7pt, line cap=round] (2.017,11.001) -- (2.517,11.001);
+\draw[ink, line width=0.7pt, line cap=round] (2.017,11.255) -- (2.517,11.255);
+\draw[ink, line width=0.7pt, line cap=round] (2.017,11.509) -- (2.517,11.509);
+\draw[ink, line width=1pt, line cap=round] (1.971,10.747) -- (1.971,11.347);
+\draw[ink, line width=1pt, line cap=round] (2.971,10.747) -- (2.971,11.347);
+\filldraw[inked,fill=magenta] (1.771,11.347) rectangle (3.171,12.047);
+\draw[paper, line width=1.5pt] (2.021,11.697) -- (2.321,11.847) -- (2.621,11.597) -- (2.921,11.797);
+\filldraw[inked,fill=greenC] (2.217,10.627) -- (2.567,10.627) -- (2.467,6.948) -- (2.267,8.551) -- cycle;
+\filldraw[inked,fill=wallC] (3.311,5.2) rectangle (4.654,12.634);
+\filldraw[inked,fill=wallC] (3.231,12.634) rectangle (4.734,12.854);
+\filldraw[inked,line width=0.6pt,fill=window] (3.822,5.65) rectangle (4.142,6.07);
+\filldraw[inked,line width=0.6pt,fill=window] (3.822,6.4) rectangle (4.142,6.82);
+\filldraw[inked,line width=0.6pt,fill=windark] (3.822,7.15) rectangle (4.142,7.57);
+\filldraw[inked,line width=0.6pt,fill=window] (3.822,7.9) rectangle (4.142,8.32);
+\filldraw[inked,line width=0.6pt,fill=windark] (3.822,8.65) rectangle (4.142,9.07);
+\filldraw[inked,line width=0.6pt,fill=windark] (3.822,9.4) rectangle (4.142,9.82);
+\filldraw[inked,line width=0.6pt,fill=windark] (3.822,10.15) rectangle (4.142,10.57);
+\filldraw[inked,line width=0.6pt,fill=windark] (3.822,10.9) rectangle (4.142,11.32);
+\filldraw[inked,line width=0.6pt,fill=windark] (3.822,11.65) rectangle (4.142,12.07);
+\draw[ink, line width=0.9pt, line cap=round] (3.937,12.854) -- (3.937,14.843);
+\draw[ink, line width=0.7pt, line cap=round] (3.687,13.351) -- (4.187,13.351);
+\draw[ink, line width=0.7pt, line cap=round] (3.687,13.849) -- (4.187,13.849);
+\draw[ink, line width=0.7pt, line cap=round] (3.687,14.346) -- (4.187,14.346);
+\draw[ink, line width=0.9pt, line cap=round] (3.593,12.854) -- (3.593,13.354);
+\draw[ink, line width=0.9pt, line cap=round] (4.133,12.854) -- (4.133,13.354);
+\filldraw[inked,line width=0.9pt,fill=wood] (3.513,13.354) rectangle (4.213,14.004);
+\filldraw[inked,fill=wallE,line width=0.9pt] (3.463,14.004) -- (4.263,14.004) -- (3.863,14.304) -- cycle;
+\filldraw[inked,fill=greenB] (3.843,12.734) -- (4.193,12.734) -- (4.093,10.531) -- (3.893,9.863) -- cycle;
+\filldraw[inked,fill=wallD] (4.754,5.2) rectangle (6.642,9.402);
+\filldraw[inked,fill=wallD] (4.674,9.402) rectangle (6.722,9.622);
+\filldraw[inked,line width=0.6pt,fill=windark] (5.17,5.65) rectangle (5.49,6.07);
+\filldraw[inked,line width=0.6pt,fill=windark] (5.17,6.4) rectangle (5.49,6.82);
+\filldraw[inked,line width=0.6pt,fill=window] (5.17,7.15) rectangle (5.49,7.57);
+\filldraw[inked,line width=0.6pt,fill=windark] (5.17,7.9) rectangle (5.49,8.32);
+\filldraw[inked,line width=0.6pt,fill=windark] (5.906,5.65) rectangle (6.226,6.07);
+\filldraw[inked,line width=0.6pt,fill=windark] (5.906,6.4) rectangle (6.226,6.82);
+\filldraw[inked,line width=0.6pt,fill=window] (5.906,7.15) rectangle (6.226,7.57);
+\filldraw[inked,line width=0.6pt,fill=windark] (5.906,7.9) rectangle (6.226,8.32);
+\draw[ink, line width=0.9pt, line cap=round] (5.497,9.622) -- (5.497,10.832);
+\draw[ink, line width=0.7pt, line cap=round] (5.247,9.925) -- (5.747,9.925);
+\draw[ink, line width=0.7pt, line cap=round] (5.247,10.227) -- (5.747,10.227);
+\draw[ink, line width=0.7pt, line cap=round] (5.247,10.529) -- (5.747,10.529);
+\draw[ink, line width=0.9pt, line cap=round] (5.287,9.622) -- (5.287,10.986);
+\draw[ink, line width=0.7pt, line cap=round] (5.037,9.963) -- (5.537,9.963);
+\draw[ink, line width=0.7pt, line cap=round] (5.037,10.304) -- (5.537,10.304);
+\draw[ink, line width=0.7pt, line cap=round] (5.037,10.645) -- (5.537,10.645);
+\filldraw[inked,fill=wallC] (6.742,5.2) rectangle (8.801,11.641);
+\filldraw[inked,fill=wallC] (6.662,11.641) rectangle (8.881,11.861);
+\filldraw[inked,line width=0.6pt,fill=windark] (7.017,5.65) rectangle (7.337,6.07);
+\filldraw[inked,line width=0.7pt,fill=metal] (6.967,5.37) rectangle (7.387,5.63);
+\filldraw[inked,line width=0.6pt,fill=windark] (7.017,6.4) rectangle (7.337,6.82);
+\filldraw[inked,line width=0.6pt,fill=window] (7.017,7.15) rectangle (7.337,7.57);
+\filldraw[inked,line width=0.6pt,fill=windark] (7.017,7.9) rectangle (7.337,8.32);
+\filldraw[inked,line width=0.6pt,fill=windark] (7.017,8.65) rectangle (7.337,9.07);
+\filldraw[inked,line width=0.6pt,fill=windark] (7.017,9.4) rectangle (7.337,9.82);
+\filldraw[inked,line width=0.6pt,fill=windark] (7.017,10.15) rectangle (7.337,10.57);
+\filldraw[inked,line width=0.6pt,fill=window] (7.611,5.65) rectangle (7.931,6.07);
+\filldraw[inked,line width=0.6pt,fill=windark] (7.611,6.4) rectangle (7.931,6.82);
+\filldraw[inked,line width=0.6pt,fill=windark] (7.611,7.15) rectangle (7.931,7.57);
+\filldraw[inked,line width=0.6pt,fill=windark] (7.611,7.9) rectangle (7.931,8.32);
+\filldraw[inked,line width=0.6pt,fill=windark] (7.611,8.65) rectangle (7.931,9.07);
+\filldraw[inked,line width=0.6pt,fill=windark] (7.611,9.4) rectangle (7.931,9.82);
+\filldraw[inked,line width=0.6pt,fill=windark] (7.611,10.15) rectangle (7.931,10.57);
+\filldraw[inked,line width=0.6pt,fill=window] (8.206,5.65) rectangle (8.526,6.07);
+\filldraw[inked,line width=0.6pt,fill=window] (8.206,6.4) rectangle (8.526,6.82);
+\filldraw[inked,line width=0.6pt,fill=windark] (8.206,7.15) rectangle (8.526,7.57);
+\filldraw[inked,line width=0.6pt,fill=windark] (8.206,7.9) rectangle (8.526,8.32);
+\filldraw[inked,line width=0.6pt,fill=windark] (8.206,8.65) rectangle (8.526,9.07);
+\filldraw[inked,line width=0.6pt,fill=windark] (8.206,9.4) rectangle (8.526,9.82);
+\filldraw[inked,line width=0.6pt,fill=windark] (8.206,10.15) rectangle (8.526,10.57);
+\draw[ink, line width=0.9pt, line cap=round] (7.824,11.861) -- (7.824,13.948);
+\draw[ink, line width=0.7pt, line cap=round] (7.574,12.382) -- (8.074,12.382);
+\draw[ink, line width=0.7pt, line cap=round] (7.574,12.904) -- (8.074,12.904);
+\draw[ink, line width=0.7pt, line cap=round] (7.574,13.426) -- (8.074,13.426);
+\draw[ink, line width=0.9pt, line cap=round] (7.099,11.861) -- (7.099,12.361);
+\draw[ink, line width=0.9pt, line cap=round] (7.639,11.861) -- (7.639,12.361);
+\filldraw[inked,line width=0.9pt,fill=wood] (7.019,12.361) rectangle (7.719,13.011);
+\filldraw[inked,fill=wallE,line width=0.9pt] (6.969,13.011) -- (7.769,13.011) -- (7.369,13.311) -- cycle;
+\filldraw[inked,line width=0.9pt,fill=metal] (7.104,11.861) rectangle (7.704,12.261);
+\filldraw[inked,fill=metaldark,line width=0.6pt] (7.404,12.061) circle (0.13);
+\filldraw[inked,fill=greenC] (7.716,11.741) -- (8.066,11.741) -- (7.966,9.603) -- (7.766,9.163) -- cycle;
+\filldraw[inked,fill=wallB] (8.901,5.2) rectangle (10.613,12.457);
+\filldraw[inked,fill=wallB] (8.821,12.457) rectangle (10.693,12.677);
+\filldraw[inked,line width=0.6pt,fill=windark] (9.258,5.65) rectangle (9.578,6.07);
+\filldraw[inked,line width=0.6pt,fill=windark] (9.258,6.4) rectangle (9.578,6.82);
+\filldraw[inked,line width=0.6pt,fill=windark] (9.258,7.15) rectangle (9.578,7.57);
+\filldraw[inked,line width=0.6pt,fill=windark] (9.258,7.9) rectangle (9.578,8.32);
+\filldraw[inked,line width=0.6pt,fill=windark] (9.258,8.65) rectangle (9.578,9.07);
+\filldraw[inked,line width=0.6pt,fill=window] (9.258,9.4) rectangle (9.578,9.82);
+\filldraw[inked,line width=0.6pt,fill=windark] (9.258,10.15) rectangle (9.578,10.57);
+\filldraw[inked,line width=0.6pt,fill=window] (9.258,10.9) rectangle (9.578,11.32);
+\filldraw[inked,line width=0.6pt,fill=windark] (9.935,5.65) rectangle (10.255,6.07);
+\filldraw[inked,line width=0.6pt,fill=windark] (9.935,6.4) rectangle (10.255,6.82);
+\filldraw[inked,line width=0.6pt,fill=windark] (9.935,7.15) rectangle (10.255,7.57);
+\filldraw[inked,line width=0.6pt,fill=window] (9.935,7.9) rectangle (10.255,8.32);
+\filldraw[inked,line width=0.6pt,fill=windark] (9.935,8.65) rectangle (10.255,9.07);
+\filldraw[inked,line width=0.6pt,fill=windark] (9.935,9.4) rectangle (10.255,9.82);
+\filldraw[inked,line width=0.6pt,fill=windark] (9.935,10.15) rectangle (10.255,10.57);
+\filldraw[inked,line width=0.6pt,fill=window] (9.935,10.9) rectangle (10.255,11.32);
+\filldraw[inked,line width=0.9pt,fill=metal] (9.223,12.677) rectangle (9.823,13.077);
+\filldraw[inked,fill=metaldark,line width=0.6pt] (9.523,12.877) circle (0.13);
+\draw[ink, line width=0.9pt, line cap=round] (9.6,12.677) -- (9.6,13.916);
+\draw[ink, line width=0.7pt, line cap=round] (9.35,12.986) -- (9.85,12.986);
+\draw[ink, line width=0.7pt, line cap=round] (9.35,13.296) -- (9.85,13.296);
+\draw[ink, line width=0.7pt, line cap=round] (9.35,13.606) -- (9.85,13.606);
+\filldraw[inked,fill=wallF] (10.713,5.2) rectangle (12.25,10.896);
+\filldraw[inked,fill=wallF] (10.633,10.896) rectangle (12.33,11.116);
+\filldraw[inked,line width=0.6pt,fill=window] (11.012,5.65) rectangle (11.332,6.07);
+\filldraw[inked,line width=0.6pt,fill=window] (11.012,6.4) rectangle (11.332,6.82);
+\filldraw[inked,line width=0.6pt,fill=windark] (11.012,7.15) rectangle (11.332,7.57);
+\filldraw[inked,line width=0.6pt,fill=windark] (11.012,7.9) rectangle (11.332,8.32);
+\filldraw[inked,line width=0.6pt,fill=windark] (11.012,8.65) rectangle (11.332,9.07);
+\filldraw[inked,line width=0.6pt,fill=window] (11.012,9.4) rectangle (11.332,9.82);
+\filldraw[inked,line width=0.6pt,fill=window] (11.631,5.65) rectangle (11.951,6.07);
+\filldraw[inked,line width=0.6pt,fill=windark] (11.631,6.4) rectangle (11.951,6.82);
+\filldraw[inked,line width=0.6pt,fill=windark] (11.631,7.15) rectangle (11.951,7.57);
+\filldraw[inked,line width=0.6pt,fill=windark] (11.631,7.9) rectangle (11.951,8.32);
+\filldraw[inked,line width=0.6pt,fill=windark] (11.631,8.65) rectangle (11.951,9.07);
+\filldraw[inked,line width=0.6pt,fill=windark] (11.631,9.4) rectangle (11.951,9.82);
+\draw[ink, line width=1pt, line cap=round] (11.42,11.116) -- (11.42,11.716);
+\draw[ink, line width=1pt, line cap=round] (12.42,11.116) -- (12.42,11.716);
+\filldraw[inked,fill=gold] (11.22,11.716) rectangle (12.62,12.416);
+\draw[paper, line width=1.5pt] (11.47,12.066) -- (11.77,12.216) -- (12.07,11.966) -- (12.37,12.166);
+\draw[ink, line width=0.9pt, line cap=round] (11.416,11.116) -- (11.416,12.857);
+\draw[ink, line width=0.7pt, line cap=round] (11.166,11.551) -- (11.666,11.551);
+\draw[ink, line width=0.7pt, line cap=round] (11.166,11.986) -- (11.666,11.986);
+\draw[ink, line width=0.7pt, line cap=round] (11.166,12.421) -- (11.666,12.421);
+\filldraw[inked,fill=greenD] (11.385,10.996) -- (11.735,10.996) -- (11.635,9.243) -- (11.435,8.558) -- cycle;
+\filldraw[inked,fill=wallC] (12.35,5.2) rectangle (14.527,12.73);
+\filldraw[inked,fill=wallC] (12.27,12.73) rectangle (14.607,12.95);
+\filldraw[inked,line width=0.6pt,fill=window] (12.654,5.65) rectangle (12.974,6.07);
+\filldraw[inked,line width=0.6pt,fill=windark] (12.654,6.4) rectangle (12.974,6.82);
+\filldraw[inked,line width=0.6pt,fill=window] (12.654,7.15) rectangle (12.974,7.57);
+\filldraw[inked,line width=0.6pt,fill=window] (12.654,7.9) rectangle (12.974,8.32);
+\filldraw[inked,line width=0.6pt,fill=windark] (12.654,8.65) rectangle (12.974,9.07);
+\filldraw[inked,line width=0.6pt,fill=windark] (12.654,9.4) rectangle (12.974,9.82);
+\filldraw[inked,line width=0.6pt,fill=windark] (12.654,10.15) rectangle (12.974,10.57);
+\filldraw[inked,line width=0.6pt,fill=window] (12.654,10.9) rectangle (12.974,11.32);
+\filldraw[inked,line width=0.6pt,fill=window] (12.654,11.65) rectangle (12.974,12.07);
+\filldraw[inked,line width=0.6pt,fill=windark] (13.278,5.65) rectangle (13.598,6.07);
+\filldraw[inked,line width=0.6pt,fill=windark] (13.278,6.4) rectangle (13.598,6.82);
+\filldraw[inked,line width=0.6pt,fill=windark] (13.278,7.15) rectangle (13.598,7.57);
+\filldraw[inked,line width=0.6pt,fill=window] (13.278,7.9) rectangle (13.598,8.32);
+\filldraw[inked,line width=0.7pt,fill=metal] (13.228,7.62) rectangle (13.648,7.88);
+\filldraw[inked,line width=0.6pt,fill=window] (13.278,8.65) rectangle (13.598,9.07);
+\filldraw[inked,line width=0.7pt,fill=metal] (13.228,8.37) rectangle (13.648,8.63);
+\filldraw[inked,line width=0.6pt,fill=windark] (13.278,9.4) rectangle (13.598,9.82);
+\filldraw[inked,line width=0.6pt,fill=windark] (13.278,10.15) rectangle (13.598,10.57);
+\filldraw[inked,line width=0.6pt,fill=window] (13.278,10.9) rectangle (13.598,11.32);
+\filldraw[inked,line width=0.6pt,fill=window] (13.278,11.65) rectangle (13.598,12.07);
+\filldraw[inked,line width=0.6pt,fill=windark] (13.903,5.65) rectangle (14.223,6.07);
+\filldraw[inked,line width=0.6pt,fill=window] (13.903,6.4) rectangle (14.223,6.82);
+\filldraw[inked,line width=0.6pt,fill=window] (13.903,7.15) rectangle (14.223,7.57);
+\filldraw[inked,line width=0.6pt,fill=windark] (13.903,7.9) rectangle (14.223,8.32);
+\filldraw[inked,line width=0.6pt,fill=windark] (13.903,8.65) rectangle (14.223,9.07);
+\filldraw[inked,line width=0.6pt,fill=window] (13.903,9.4) rectangle (14.223,9.82);
+\filldraw[inked,line width=0.6pt,fill=windark] (13.903,10.15) rectangle (14.223,10.57);
+\filldraw[inked,line width=0.6pt,fill=windark] (13.903,10.9) rectangle (14.223,11.32);
+\filldraw[inked,line width=0.6pt,fill=window] (13.903,11.65) rectangle (14.223,12.07);
+\filldraw[inked,line width=0.9pt,fill=metal] (13.361,12.95) rectangle (13.961,13.35);
+\filldraw[inked,fill=metaldark,line width=0.6pt] (13.661,13.15) circle (0.13);
+\filldraw[inked,fill=stone] (5.6,5.2) rectangle (7.1,12.7);
+\filldraw[inked,fill=wallE] (5.35,12.7) rectangle (7.35,13.05);
+\filldraw[inked,fill=stone] (5.5,13.05) rectangle (7.2,14.275);
+\filldraw[inked,fill=clock] (6.35,13.83) circle (0.6);
+\draw[ink, line width=1.6pt] (6.35,13.83) circle (0.516);
+\foreach \k in {0,...,11} { \fill[ink] ($(6.35,13.83)+(\k*30:0.444)$) circle (0.036); }
+\draw[ink, line width=3.2pt, line cap=round] (6.35,13.83) -- (6.052,13.867);
+\draw[ink, line width=2.2pt, line cap=round] (6.35,13.83) -- (6.78,13.875);
+\filldraw[inked,fill=ink] (6.35,13.83) circle (0.042);
+\filldraw[inked,fill=wallE] (5.3,14.275) -- (7.4,14.275) -- (6.35,15.625) -- cycle;
+\filldraw[inked,line width=0.7pt,fill=windark] (6.2,5.8) rectangle (6.5,6.3);
+\filldraw[inked,line width=0.7pt,fill=windark] (6.2,7) rectangle (6.5,7.5);
+\filldraw[inked,line width=0.7pt,fill=windark] (6.2,8.2) rectangle (6.5,8.7);
+\filldraw[inked,line width=0.7pt,fill=windark] (6.2,9.4) rectangle (6.5,9.9);
+\filldraw[inked,line width=0.7pt,fill=windark] (6.2,10.6) rectangle (6.5,11.1);
+\filldraw[inked,line width=0.7pt,fill=windark] (6.2,11.8) rectangle (6.5,12.3);
+\filldraw[inked,fill=wallC] (9.2,5.2) rectangle (11.6,16.2);
+\filldraw[inked,line width=0.6pt,fill=windark] (9.45,5.8) rectangle (9.85,6.3);
+\filldraw[inked,line width=0.6pt,fill=windark] (10.17,5.8) rectangle (10.57,6.3);
+\filldraw[inked,line width=0.6pt,fill=windark] (10.89,5.8) rectangle (11.29,6.3);
+\filldraw[inked,line width=0.6pt,fill=windark] (9.45,6.58) rectangle (9.85,7.08);
+\filldraw[inked,line width=0.6pt,fill=windark] (10.17,6.58) rectangle (10.57,7.08);
+\filldraw[inked,line width=0.6pt,fill=windark] (10.89,6.58) rectangle (11.29,7.08);
+\filldraw[inked,line width=0.6pt,fill=windark] (9.45,7.36) rectangle (9.85,7.86);
+\filldraw[inked,line width=0.6pt,fill=windark] (10.17,7.36) rectangle (10.57,7.86);
+\filldraw[inked,line width=0.6pt,fill=windark] (10.89,7.36) rectangle (11.29,7.86);
+\filldraw[inked,line width=0.6pt,fill=windark] (9.45,8.14) rectangle (9.85,8.64);
+\filldraw[inked,line width=0.6pt,fill=windark] (10.17,8.14) rectangle (10.57,8.64);
+\filldraw[inked,line width=0.6pt,fill=windark] (10.89,8.14) rectangle (11.29,8.64);
+\filldraw[inked,line width=0.6pt,fill=windark] (9.45,8.92) rectangle (9.85,9.42);
+\filldraw[inked,line width=0.6pt,fill=windark] (10.17,8.92) rectangle (10.57,9.42);
+\filldraw[inked,line width=0.6pt,fill=windark] (10.89,8.92) rectangle (11.29,9.42);
+\filldraw[inked,line width=0.6pt,fill=windark] (9.45,9.7) rectangle (9.85,10.2);
+\filldraw[inked,line width=0.6pt,fill=windark] (10.17,9.7) rectangle (10.57,10.2);
+\filldraw[inked,line width=0.6pt,fill=windark] (10.89,9.7) rectangle (11.29,10.2);
+\filldraw[inked,line width=0.6pt,fill=windark] (9.45,10.48) rectangle (9.85,10.98);
+\filldraw[inked,line width=0.6pt,fill=windark] (10.17,10.48) rectangle (10.57,10.98);
+\filldraw[inked,line width=0.6pt,fill=windark] (10.89,10.48) rectangle (11.29,10.98);
+\filldraw[inked,line width=0.6pt,fill=windark] (9.45,11.26) rectangle (9.85,11.76);
+\filldraw[inked,line width=0.6pt,fill=windark] (10.17,11.26) rectangle (10.57,11.76);
+\filldraw[inked,line width=0.6pt,fill=windark] (10.89,11.26) rectangle (11.29,11.76);
+\filldraw[inked,line width=0.6pt,fill=windark] (9.45,12.04) rectangle (9.85,12.54);
+\filldraw[inked,line width=0.6pt,fill=windark] (10.17,12.04) rectangle (10.57,12.54);
+\filldraw[inked,line width=0.6pt,fill=windark] (10.89,12.04) rectangle (11.29,12.54);
+\filldraw[inked,line width=0.6pt,fill=windark] (9.45,12.82) rectangle (9.85,13.32);
+\filldraw[inked,line width=0.6pt,fill=windark] (10.17,12.82) rectangle (10.57,13.32);
+\filldraw[inked,line width=0.6pt,fill=windark] (10.89,12.82) rectangle (11.29,13.32);
+\filldraw[inked,line width=0.6pt,fill=lamp] (9.45,13.6) rectangle (9.85,14.1);
+\filldraw[inked,line width=0.6pt,fill=lamp] (10.17,13.6) rectangle (10.57,14.1);
+\filldraw[inked,line width=0.6pt,fill=lamp] (10.89,13.6) rectangle (11.29,14.1);
+\filldraw[inked,line width=0.6pt,fill=windark] (9.45,14.38) rectangle (9.85,14.88);
+\filldraw[inked,line width=0.6pt,fill=windark] (10.17,14.38) rectangle (10.57,14.88);
+\filldraw[inked,line width=0.6pt,fill=windark] (10.89,14.38) rectangle (11.29,14.88);
+\filldraw[inked,line width=0.6pt,fill=windark] (9.45,15.16) rectangle (9.85,15.66);
+\filldraw[inked,line width=0.6pt,fill=windark] (10.17,15.16) rectangle (10.57,15.66);
+\filldraw[inked,line width=0.6pt,fill=windark] (10.89,15.16) rectangle (11.29,15.66);
+\filldraw[inked,fill=wallE] (9.05,16.2) rectangle (11.75,16.55);
+\draw[ink, line width=1.2pt, line cap=round] (10.4,16.55) -- (10.4,17.8);
+\filldraw[inked,fill=stone] (-0.5,4.2) rectangle (13.5,5.3);
+\filldraw[inked,fill=water] (-0.5,-0.5) -- (32.5,-0.5) -- (32.5,5.2) -- (13.5,5.2) -- (13.5,4.2) -- (-0.5,4.2) -- cycle;
+\draw[iceglow, line width=1.4pt, opacity=0.6] (8.147,0.6) -- (10.319,0.6);
+\draw[iceglow, line width=1.4pt, opacity=0.6] (2.735,1.35) -- (3.995,1.35);
+\draw[iceglow, line width=1.4pt, opacity=0.6] (1.026,2.1) -- (3.189,2.1);
+\draw[iceglow, line width=1.4pt, opacity=0.6] (25.209,2.85) -- (26.126,2.85);
+\draw[iceglow, line width=1.4pt, opacity=0.6] (6.667,3.6) -- (7.811,3.6);
+\draw[iceglow, line width=1.4pt, opacity=0.6] (13.675,0.6) -- (14.815,0.6);
+\draw[iceglow, line width=1.4pt, opacity=0.6] (28.794,1.35) -- (30.702,1.35);
+\draw[iceglow, line width=1.4pt, opacity=0.6] (7.274,2.1) -- (9.046,2.1);
+\draw[iceglow, line width=1.4pt, opacity=0.6] (4.499,2.85) -- (6.668,2.85);
+\draw[iceglow, line width=1.4pt, opacity=0.6] (23.898,3.6) -- (24.768,3.6);
+\filldraw[inked,fill=icewhite] (15,2) -- (16.6,2) -- (16.44,2.35) -- (15.24,2.4) -- cycle;
+\filldraw[inked,fill=icewhite] (19,3.4) -- (20.1,3.4) -- (19.99,3.75) -- (19.165,3.8) -- cycle;
+\filldraw[inked,fill=icewhite] (23.5,1.4) -- (25.7,1.4) -- (25.48,1.75) -- (23.83,1.8) -- cycle;
+\filldraw[inked,fill=icewhite] (27,3.8) -- (28.4,3.8) -- (28.26,4.15) -- (27.21,4.2) -- cycle;
+\filldraw[inked,fill=icewhite] (29.5,1) -- (31.3,1) -- (31.12,1.35) -- (29.77,1.4) -- cycle;
+\filldraw[inked,fill=hull] (13.2,2.925) -- (20.45,2.925) -- (21.45,4.05) -- (12.7,4.05) -- cycle;
+\filldraw[inked,line width=0.8pt,fill=hulldark] (13.325,2.925) rectangle (20.325,3.2);
+\filldraw[inked,fill=icewhite] (17.7,4.05) rectangle (19.7,5.175);
+\filldraw[inked,line width=0.6pt,fill=lamp] (17.95,4.55) rectangle (18.262,4.862);
+\filldraw[inked,line width=0.6pt,fill=lamp] (18.512,4.55) rectangle (18.825,4.862);
+\filldraw[inked,line width=0.6pt,fill=lamp] (19.075,4.55) rectangle (19.387,4.862);
+\filldraw[inked,fill=icered] (20.075,4.05) rectangle (20.575,5.425);
+\draw[ink, line width=2.0pt, line cap=round] (14.7,4.05) -- (14.7,7.55);
+\draw[ink, line width=1.25pt, line cap=round] (13.825,6.175) -- (15.575,6.175);
+\draw[ink, line width=2.0pt, line cap=round] (16.7,4.05) -- (16.7,6.675);
+\draw[ink, line width=1.25pt, line cap=round] (15.825,5.3) -- (17.575,5.3);
+\draw[icewhite, line width=1.8pt] (12.8,2.4) .. controls (14.0,2.2) and (15.0,2.5) .. (13.8,2.3);
+\draw[icewhite, line width=1.2pt, opacity=0.8] (13,2.25) -- (13.9,2.3);
+\draw[icewhite, line width=1.2pt, opacity=0.62] (11.8,2.13) -- (12.7,2.18);
+\draw[icewhite, line width=1.2pt, opacity=0.44] (10.6,2.01) -- (11.5,2.06);
+\draw[icewhite, line width=1.2pt, opacity=0.26] (9.4,1.89) -- (10.3,1.94);
+\end{tikzpicture}
+\end{document}

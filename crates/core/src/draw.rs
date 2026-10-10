@@ -13,6 +13,8 @@ use crate::player::Player;
 use crate::render::{boxed, mix, shade, Batch};
 use crate::world::{FxKind, PickupKind, World};
 
+mod beasts;
+
 fn dm(x: i32) -> i32 {
     ONE * x / 10
 }
@@ -62,6 +64,9 @@ pub fn world(
     }
     b.bold = false;
     orbs(b, c, w, alpha, cam);
+    if let Some(wall) = w.wall() {
+        injunction(b, c, &wall, w.player.wall_left);
+    }
     for s in &w.shots {
         let at = s.prev.lerp(s.pos, alpha);
         let tail = at.sub(s.vel.scale(ONE * 6 / 10));
@@ -459,7 +464,7 @@ pub fn pickup_icon(b: &mut Batch, c: &Content, k: PickupKind, at: V3, spin: i32,
         PickupKind::Gun(g, level) => {
             gun_model(b, c, g, at, spin, 0, scale * 2);
             for k in 0..level {
-                let p = at.add(v3(dm(3) * (k - 1) * scale / ONE, dm(6) * scale / ONE, 0));
+                let p = at.add(v3(fx::mul(dm(3) * (k - 1), scale), fx::mul(dm(6), scale), 0));
                 b.inked(Mesh::Octa, &boxed(p, v3(cm(15), cm(15), cm(15))), col, ONE);
             }
         }
@@ -512,6 +517,7 @@ fn gate(b: &mut Batch, c: &Content, g: &crate::world::Gate, cleared: bool, clock
 
 fn orbs(b: &mut Batch, c: &Content, w: &World, alpha: i32, cam: &crate::render::Camera) {
     let gold_ring = c.pal.c("gold");
+    let blue_rim = c.pal.c("ice_white");
     let chest = w
         .player
         .prev_pos
@@ -528,8 +534,29 @@ fn orbs(b: &mut Batch, c: &Content, w: &World, alpha: i32, cam: &crate::render::
             b.glow(Mesh::Sphere, &boxed(at, v3(r, r, r)), o.rgb, ONE / 4);
             continue;
         }
+        // a held orb hangs smaller and swells to full size as it is about
+        // to fly, a ring round it while it waits
+        let r = if o.wait > 0 {
+            let k = fx::div(o.wait.min(HOLD_TELL) * ONE, HOLD_TELL * ONE);
+            fx::mul(r, ONE - k * 4 / 10)
+        } else {
+            r
+        };
         b.inked(Mesh::Sphere, &boxed(at, v3(r, r, r)), o.rgb, ONE);
         b.glow(Mesh::Sphere, &boxed(at, v3(r * 2, r * 2, r * 2)), o.rgb, ONE / 2);
+        if o.wait > 0 {
+            let ring = Affine::translate(at)
+                .then(&Affine::rot_y(o.age * deg(9)))
+                .then(&Affine::scale(v3(r * 2, cm(4), r * 2)));
+            b.push(Mesh::Ring, &ring, o.rgb, ONE, crate::render::PASS_SOLID);
+        }
+        if o.blue {
+            // a pale rim: the Injunction breaks these
+            let rim = Affine::translate(at)
+                .then(&Affine::rot_x(fx::QUARTER))
+                .then(&Affine::scale(v3(r * 13 / 10, cm(5), r * 13 / 10)));
+            b.push(Mesh::Ring, &rim, blue_rim, ONE, crate::render::PASS_SOLID);
+        }
         if o.gold {
             let ring = Affine::translate(at)
                 .then(&Affine::rot_y(o.age * deg(6)))
@@ -559,6 +586,34 @@ fn orbs(b: &mut Batch, c: &Content, w: &World, alpha: i32, cam: &crate::render::
     }
 }
 
+/// The Injunction's wall: a pane of light in front of you, edged, fading
+/// as its half second runs out.
+fn injunction(b: &mut Batch, c: &Content, wall: &crate::world::WallPlane, left: i32) {
+    let k = fx::div(left * ONE, WALL_TICKS.max(1) * ONE);
+    let rgb = c.pal.c("wall_glow");
+    let mid = wall.centre;
+    let up = WALL_HEIGHT;
+    let centre = v3(mid.x, wall.floor + up / 2, mid.z);
+    let pane = Affine {
+        c0: wall.across.scale(WALL_HALF_WIDTH * 2),
+        c1: V3::UP.scale(up),
+        c2: wall.normal.scale(cm(6)),
+        t: centre,
+    };
+    b.glow(Mesh::Cube, &pane, rgb, ONE / 3 + k / 3);
+    let half = wall.across.scale(WALL_HALF_WIDTH);
+    let (lo, hi) = (wall.floor, wall.floor + up);
+    let corners = [
+        v3(mid.x, lo, mid.z).sub(half),
+        v3(mid.x, lo, mid.z).add(half),
+        v3(mid.x, hi, mid.z).add(half),
+        v3(mid.x, hi, mid.z).sub(half),
+    ];
+    for i in 0..4 {
+        rod(b, corners[i], corners[(i + 1) % 4], cm(6), rgb, ONE, false);
+    }
+}
+
 /// An enemy, by kind. It grows in as it spawns, flashes white when hit,
 /// and its core glows brighter through a windup.
 pub fn enemy(b: &mut Batch, c: &Content, e: &Enemy, alpha: i32) {
@@ -576,6 +631,19 @@ pub fn enemy(b: &mut Batch, c: &Content, e: &Enemy, alpha: i32) {
     let eye = c.pal.c("enemy_eye");
     let core = c.pal.c("enemy_core");
     let charge = e.glow(c);
+    // zone two's enemies wind up in cobalt, zone one's in violet
+    let core = if c.zone_of_enemy(e.def).unwrap_or(0) > 0 {
+        c.pal.c("frost_core")
+    } else {
+        core
+    };
+    if beasts::draw(b, c, e, d, at, s, &paint) {
+        if charge > 0 && d.kind != Kind::Boss && !e.buried {
+            let h = fx::mul(s, ONE + charge);
+            b.glow(Mesh::Sphere, &boxed(at, v3(h, h, h)), core, charge / 2);
+        }
+        return;
+    }
     let f = Affine::translate(at)
         .then(&Affine::rot_y(e.yaw))
         .then(&Affine::scale(v3(s, s, s)));
@@ -610,7 +678,7 @@ pub fn enemy(b: &mut Batch, c: &Content, e: &Enemy, alpha: i32) {
                 ONE,
             );
         }
-        Kind::Floater => {
+        Kind::Floater | Kind::Blinker | Kind::Burrower => {
             let lantern = d.id == "lantern";
             if lantern {
                 // a lantern: a cone cap, a cage, a burning core, a chain

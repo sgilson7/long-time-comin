@@ -31,11 +31,12 @@ Commands (several per call, run in order; time is in seconds of game time):
   holding                   from the indictment or verdict back to the Holding
   shop                      list upgrades, their effects, costs and whether you can buy them
   buy <upgrade_id>          spend Clemency
-  start                     start a run (from the Holding)
+  start [zone]              start a run (from the Holding); 'start 1' starts on the ice once the Bailiff is beaten
+  north                     from the interlude after a zone's boss into the next zone
   codex [guns|enemies|upgrades|rules|controls]   the in-game Codex text
   map                       the run's route: nodes, rewards, where you are
   hold <keys> <s>           hold keys for s seconds. keys: w a s d fire (any mix, e.g. 'hold w d fire 1.5')
-  tap <key>                 press once: jump dash parry hook interact
+  tap <key>                 press once: jump dash parry hook interact wall
   hook <s>                  fire the grappling hook and hold it for s seconds
   turn <deg>                turn the view (positive = left); pitch <deg> tilts it (positive = up)
   aim [n]                   point the view and gun at enemy n from the status list (default: nearest)
@@ -47,7 +48,8 @@ Commands (several per call, run in order; time is in seconds of game time):
   wait <s>                  stand still
   pause | resume            as Esc and the Resume button
   abandon                   give up the run (counts as a death)
-  reset                     wipe the session (a fresh record)";
+  reset                     wipe the session (a fresh record)
+  record <json>             start over from a saved record, e.g. record {\"seen_intro\":true,\"unlocked\":1}";
 
 fn main() {
     let mut args = std::env::args().skip(1);
@@ -70,13 +72,22 @@ fn main() {
         .map(|s| s.to_string())
         .filter(|s| !s.is_empty())
         .collect();
+    let (out, log) = session(old, &new);
+    fs::write(&log_path, log.join("\n") + "\n").expect("write log");
+    println!("{out}");
+}
+
+/// One call: replay the log `old`, run the `new` commands, and return what
+/// they printed and the log to keep. No files: `main` reads and writes them
+/// (and a WebAssembly build can call this from a browser).
+pub fn session(old: Vec<String>, new: &[String]) -> (String, Vec<String>) {
     let mut h = Harness::new();
     for c in &old {
         let _ = h.run(c, false);
     }
     h.out.clear();
     let mut kept = Vec::new();
-    for c in &new {
+    for c in new {
         h.out.push(format!("$ {c}"));
         match h.run(c, true) {
             Ok(()) => kept.push(c.clone()),
@@ -94,8 +105,7 @@ fn main() {
             Some("help" | "status" | "shop" | "codex" | "map")
         )
     }));
-    fs::write(&log_path, log.join("\n") + "\n").expect("write log");
-    println!("{}", h.out.join("\n"));
+    (h.out.join("\n"), log)
 }
 
 struct Harness {
@@ -116,6 +126,10 @@ fn metres(v: i32) -> String {
 
 impl Harness {
     fn new() -> Harness {
+        Harness::from_record("")
+    }
+
+    fn from_record(saved: &str) -> Harness {
         let g = Game::new(
             include_str!("../../../data/weapons.json"),
             include_str!("../../../data/patterns.json"),
@@ -125,7 +139,7 @@ impl Harness {
             include_str!("../../../data/palette.json"),
             include_str!("../../../data/story.json"),
             include_str!("../../../data/copy.json"),
-            "",
+            saved,
         )
         .expect("data");
         Harness {
@@ -153,6 +167,12 @@ impl Harness {
         match w.first().copied().unwrap_or("") {
             "help" => self.say(HELP),
             "status" => {}
+            "record" => {
+                let json = cmd.trim_start_matches("record").trim();
+                let out = std::mem::take(&mut self.out);
+                *self = Harness::from_record(json);
+                self.out = out;
+            }
             "begin" => self.g.begin(),
             "intro" => {
                 if print {
@@ -169,8 +189,15 @@ impl Harness {
                     return Err(format!("start only from the Holding (now {mode:?})"));
                 }
                 self.g.to_holding();
-                self.g.start_run();
+                let zone = w.get(1).and_then(|s| s.parse::<usize>().ok()).unwrap_or(0);
+                self.g.start_run_at(zone);
                 self.last_hp = self.g.world().map_or(0, |w| w.player.health);
+            }
+            "north" => {
+                if mode != Mode::Interlude {
+                    return Err(format!("north only from the interlude (now {mode:?})"));
+                }
+                self.g.continue_run();
             }
             "buy" => {
                 let id = w.get(1).ok_or("buy what?")?;
@@ -290,6 +317,7 @@ impl Harness {
                 c.grapple_held = true;
             }
             "interact" | "e" => c.interact_pressed = true,
+            "wall" | "r" => c.wall_pressed = true,
             _ => return Err(format!("tap what? ({k})")),
         }
         self.step(&c);
@@ -528,6 +556,20 @@ impl Harness {
                 for l in v["lines"].as_array().unwrap() {
                     self.say(format!("  > {}", l.as_str().unwrap_or("")));
                 }
+            }
+            Mode::Interlude => {
+                let v = &screen["interlude"];
+                self.say(format!("INTERLUDE: {}", v["title"].as_str().unwrap_or("")));
+                for l in v["lines"].as_array().unwrap() {
+                    self.say(format!("  > {}", l.as_str().unwrap_or("")));
+                }
+                if let Some(n) = v["newest"].as_str().filter(|s| !s.is_empty()) {
+                    self.say(format!("  the court reads: {n}"));
+                }
+                self.say(format!(
+                    "  next: {}. 'north' to go on.",
+                    v["next"].as_str().unwrap_or("")
+                ));
             }
             Mode::Paused => self.say("Paused. 'resume' to continue."),
             Mode::Map => self.say("Map open. 'resume' to close."),
@@ -843,6 +885,15 @@ fn bot(w: &World, t: i32, stuck: bool) -> (Controls, i32, i32) {
             ctl.move_x = if (t / 150) % 2 == 0 { ONE } else { -ONE };
             break;
         }
+    }
+    // the Injunction: blue orbs coming at you from in front
+    if p.build.wall && p.wall_cooldown == 0 {
+        let f = ltc_core::geom::facing(yaw, 0);
+        let coming = w.orbs.iter().any(|o| {
+            let rel = o.pos.sub(chest);
+            o.blue && o.speed > 0 && rel.dot(f) > 0 && rel.len() < int(7) && o.dir.dot(rel.norm()) < -ONE / 2
+        });
+        ctl.wall_pressed = coming;
     }
     if stuck {
         ctl.jump_pressed = t % 20 == 0;

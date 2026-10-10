@@ -1,5 +1,5 @@
 {
-  "_about": "The story's words. The indictment is read one count per death, in order; after the last count, a death adds one of the addenda. {years}, {total} and {year} are filled in by the core. The last line of the verdict is mechanical and says what the build holds.",
+  "_about": "The story's words. The indictment is read one count per death, in order; after the last count, a death adds one of the addenda. {years}, {total} and {year} are filled in by the core. death_titles head the indictment by the zone you died in. interludes are read between a zone's boss and the next zone, by the zone just left. The verdict follows the last built zone's boss; its last line is mechanical and says what the build holds.",
   "case": "IN THE TRIBUNAL OF THE LAST HOUR, WHICH SITS AFTER EVERYTHING ELSE HAS RISEN · Case 2081-1 · The City of Meridian, and its nine million mornings, against the Defendant",
   "sentencing": [
     "There is a court that sits after the last hour has been struck. It keeps no calendar, because it has no further use for one. It tried you there. You do not remember the trial. The clerk says nobody does, and that this is a mercy the court extends to everyone, whether they want it or not.",
@@ -26,14 +26,13 @@
     "ADDENDUM. No new charge. The court wished only to remind the Defendant that it is still sitting, and that it has nowhere else to be.",
     "ADDENDUM. A juror asked how many times a person may be sent back before they become someone else. The question was struck from the record. The years were not."
   ],
-  "death_title": "THE BAILIFF COLLECTS YOU",
   "time_served": "The court adds {years}. Your sentence now runs to {total}.",
-  "victory_title": "THE BAILIFF KNEELS",
+  "victory_title": "THE WITNESS STEPS DOWN",
   "victory": [
-    "The Bailiff of Hours goes down on one knee in its own court, and the stopped clock above the bench says nothing, which is what it has always said.",
-    "It was not sent to bring you back. It was sent to make sure you never arrived. A court that sits at the end of things is careful about what it lets reach it.",
-    "2031 is behind you. Ahead are the Flood Years, the Glass Decade, and the night of the fourteenth of March, where someone is waiting who already knows what you will say.",
-    "Zones two to four are sealed in this build. The Clemency from this run has been added to your record."
+    "The Witness lowers its arms. The ice it grew into goes clear, the way a window does when the frost on it gives up, and inside it is a woman in an old red coat, asleep, with a key on a string round her neck.",
+    "You take the key. She does not wake. The Witness watches you do it, which is all it has ever done, and the court will hear about this from it, in detail, in time.",
+    "In 2081 someone will stand at the door of the Meridian Observatory and reach into a pocket and find nothing there. It will be you, reaching. You have decided not to think yet about what you will do instead.",
+    "The Glass Decade and the night of the fourteenth of March are sealed in this build. The Clemency from this run has been added to your record."
   ],
   "bosses": {
     "bailiff": {
@@ -42,7 +41,7 @@
     },
     "witness": {
       "name": "THE WITNESS",
-      "title": "Sealed in this build."
+      "title": "Every court needs one who saw. This one has watched the ice since before there was ice, and it has already seen what you will do."
     },
     "jury": {
       "name": "THE JURY OF GLASS",
@@ -52,5 +51,24 @@
       "name": "THE DEFENDANT",
       "title": "Sealed in this build."
     }
-  }
+  },
+  "death_titles": {
+    "waiting_city": "THE BAILIFF COLLECTS YOU",
+    "white_waste": "THE ICE GIVES YOU BACK TO THE COURT"
+  },
+  "interludes": {
+    "waiting_city": {
+      "title": "THE YEARS BETWEEN",
+      "lines": [
+        "The Bailiff of Hours goes down on one knee in its own court, and the stopped clock above the bench says nothing, which is what it has always said. It was not sent to bring you back. It was sent to make sure you never arrived.",
+        "It does not get up. The court, which does not lose things, loses track of you for a while, and the clerk writes that down too.",
+        "You have what nobody else in 2031 has: the next fifty years, read once, out of order. You know which harbours will flood and which will hold, which small firms will matter, which bridges will never be built. You do not need luck. You have the minutes.",
+        "By 2044 the company has your name on its door and two floors of a tower in the new city. People call it foresight. A newspaper calls you the most patient investor in Meridian, and you read the article twice, because you already know how the paper ends.",
+        "Count the first says the key was given to someone else, a long time before, for a different reason. It was given to Ines Calder, the Observatory's first keeper. In 2039 she took it north on the Long Patience, to measure the weather at the top of the world, and the ice kept her, and the key, until someone went to fetch it. You know who. You have seen that face in mirrors.",
+        "So in the spring of 2046 you pay for a ship of your own and sail north to fetch it first. Behind you the city is busy and bright and has thirty-five years left. Ahead is the White Waste, where the year turns so slowly that the court keeps someone there to watch it."
+      ],
+      "art": "interlude"
+    }
+  },
+  "verdict_art": "testimony"
 }

@@ -6,7 +6,7 @@
 //! Units shown: metres, seconds, metres a second, degrees, health points.
 
 use crate::balance::*;
-use crate::content::{Content, EnemyDef, GunLevel, Kind, Shape, Upgrade, Volley};
+use crate::content::{Anchor, Content, EnemyDef, Form, GunLevel, Kind, Launch, Shape, Upgrade, Volley};
 use crate::enemy::PHASE_TICKS;
 use crate::fx::{self, ONE};
 use serde_json::{json, Value};
@@ -79,6 +79,8 @@ fn numbers() -> Vec<(&'static str, String)> {
         ("dash_charges", DASH_CHARGES.to_string()),
         ("grapple_range", m(GRAPPLE_RANGE)),
         ("parry_window", s(PARRY_WINDOW)),
+        ("wall_time", s(WALL_TICKS)),
+        ("wall_width", m(WALL_HALF_WIDTH * 2)),
         ("pickup_reach", m(PICKUP_REACH)),
     ]
 }
@@ -185,6 +187,7 @@ pub fn volley(v: &Volley) -> String {
             m(v.size),
             m(WAVE_HEIGHT)
         ),
+        Shape::Form => formation(v, &size, &speed),
     };
     if v.curl != 0 {
         let way = if v.alternate {
@@ -203,11 +206,75 @@ pub fn volley(v: &Volley) -> String {
     if v.delay > 0 {
         text += &format!("; starts {} s into the attack", s(v.delay));
     }
+    if let Some(r) = v.rehold {
+        text += &format!(
+            "; after {} s of flight each stops, waits {} s, then flies {} at {} m/s",
+            s(r.stop),
+            s(r.wait),
+            launch_words(r.launch),
+            mps(r.speed)
+        );
+    }
     if v.gold {
         text += "; gold: Objection can turn these back";
     }
+    if v.blue {
+        text += "; blue: the Injunction breaks these";
+    }
     let damage = v.damage;
     text + &format!(". {damage} damage a hit.")
+}
+
+fn launch_words(l: Launch) -> &'static str {
+    match l {
+        Launch::Keep => "on the way it was going",
+        Launch::Out => "outward from the shape's centre",
+        Launch::In => "inward to the shape's centre",
+        Launch::Aim => "at where you are at that moment",
+        Launch::Lead => "at where you will be if you keep moving as you are",
+        Launch::Down => "straight down",
+        Launch::Along => "along the line from the enemy to where you were",
+        Launch::Spin => "round the shape's centre",
+    }
+}
+
+/// A held formation in words.
+fn formation(v: &Volley, size: &str, speed: &str) -> String {
+    let r = m(v.radius);
+    let shape = match v.form {
+        Form::Ring => format!("a ring of {} {size} {r} m in radius", v.count),
+        Form::Grid => format!("a grid of {} by {} {size}, {r} m apart", v.count, v.rows),
+        Form::Line => format!("a line of {} {size} {} m long", v.count, m(v.radius * 2)),
+        Form::Column => format!("a column of {} {size} {r} m tall", v.count),
+        Form::Star => format!("a star of {} arms of {} {size}, {r} m long", v.count, v.rows),
+        Form::Spiral => format!("a spiral of {} {size}, {} turns out to {r} m", v.count, v.rows),
+        Form::Arc => format!("an arc of {} {size} across {}° at {r} m", v.count, deg(v.spread)),
+        Form::Ribbon => format!("a wavy line of {} {size} {} m long", v.count, m(v.radius * 2)),
+    };
+    let plane = if v.flat {
+        "lying flat"
+    } else {
+        "standing, facing you"
+    };
+    let place = match v.anchor {
+        Anchor::Body => "round the enemy".to_string(),
+        Anchor::Front => format!("{} m in front of the enemy, toward you", m(v.at)),
+        Anchor::Target => "round you".to_string(),
+        Anchor::Above => format!("{} m over you", m(v.at)),
+    };
+    let release = if v.stagger > 0 {
+        format!(
+            "Held {} s, then they fly one after another, {} s apart,",
+            s(v.hold.max(1)),
+            s(v.stagger)
+        )
+    } else {
+        format!("Held {} s, then all fly at once", s(v.hold.max(1)))
+    };
+    format!(
+        "Formation: {shape}, {plane}, {place}. {release} {} {speed}",
+        launch_words(v.launch)
+    )
 }
 
 fn movement(d: &EnemyDef, c: &Content) -> String {
@@ -230,6 +297,17 @@ fn movement(d: &EnemyDef, c: &Content) -> String {
         Kind::Moth => format!(
             "Flies straight at you at up to {} m/s, weaving. It bursts on touching you.",
             mps(d.speed)
+        ),
+        Kind::Blinker => format!(
+            "Hovers {} m above the floor. As each rest ends it vanishes and reappears about {} m from you, where it can see you, then winds up.",
+            m(d.hover),
+            m(d.range)
+        ),
+        Kind::Burrower => format!(
+            "Between attacks it is under the floor and cannot be hurt; a ring of cracks shows where, and turns ember just before it comes up. Under the floor it moves at up to {} m/s to about {} m from you. It surfaces, winds up and fires, and stays up for {} s afterwards.",
+            mps(d.speed),
+            m(d.range),
+            s(crate::enemy::BURROW_LINGER)
         ),
         Kind::Boss => {
             let changes: Vec<String> = d
@@ -284,13 +362,23 @@ fn enemy(d: &EnemyDef, c: &Content) -> Value {
             })
         })
         .collect();
+    let zone = c
+        .zone_of_enemy(c.enemy(&d.id).unwrap_or(0))
+        .map(|z| c.zones[z].name.clone())
+        .unwrap_or_default();
+    let mut moves = movement(d, c);
+    if let Some(p) = d.burst {
+        let words: Vec<String> = c.patterns[p].volleys.iter().map(volley).collect();
+        moves += &format!(" When it dies it leaves this behind: {}", words.join(" "));
+    }
     json!({
         "name": d.name,
+        "zone": zone,
         "health": d.hp,
         "size": format!("{} m across", m(d.radius * 2)),
         "touch": format!("{} damage", d.contact),
         "clemency": d.clemency,
-        "moves": movement(d, c),
+        "moves": moves,
         "order": match d.kind {
             Kind::Boss => "Attacks in the listed order within its phase, repeating.",
             Kind::Moth => "No ranged attack.",
@@ -332,13 +420,31 @@ pub fn upgrade_effect(u: &Upgrade) -> String {
             mps(PARRY_SPEED),
             s(PARRY_COOLDOWN)
         ),
+        "wall" => format!(
+            "R: a wall of light {} m wide and {} m tall stands {} m in front of you for {} s, turning as you turn. Every blue orb (cyan in the Waiting City, cobalt on the ice; each has a pale rim) that meets it breaks. Orbs of other colours, ground waves and enemies pass through it. {} s cooldown.",
+            m(WALL_HALF_WIDTH * 2),
+            m(WALL_HEIGHT),
+            m(WALL_AHEAD),
+            s(WALL_TICKS),
+            s(WALL_COOLDOWN)
+        ),
         _ => String::new(),
     }
 }
 
 /// The rules not tied to one gun or enemy.
 fn rules(c: &Content) -> Vec<String> {
-    let r = &c.route;
+    let clemency: Vec<String> = c
+        .zones
+        .iter()
+        .filter(|z| z.built)
+        .map(|z| {
+            format!(
+                "in {}, {} for a main fight cleared, {} for a side fight, {} for the boss",
+                z.name, z.route.clemency_main, z.route.clemency_detour, z.route.clemency_boss
+            )
+        })
+        .collect();
     vec![
         format!("You start each run with {BASE_HEALTH} health, {BASE_JUMPS} jump and {DASH_CHARGES} dash charges, before upgrades."),
         format!("Running speed: {} m/s. A standing jump rises about {} m; each further jump in the air is a little lower. At most {MAX_JUMPS} jumps.", mps(RUN_SPEED), m(jump_height())),
@@ -359,7 +465,11 @@ fn rules(c: &Content) -> Vec<String> {
         format!("A wave of enemies comes {} s after the last one is defeated.", s(WAVE_GAP)),
         format!("An enemy that cannot see you when it finishes winding up holds that attack and tries again sooner; the next one it fires regardless. An enemy (not the boss) that has not seen you for {} s reappears where it can.", s(LOST_TICKS)),
         format!("A gun on the floor is taken with E within {} m. Your old gun is left in its place.", m(PICKUP_REACH)),
-        format!("Clemency: {} for a main fight cleared, {} for a side fight, {} for the boss, plus each enemy's own value. You keep it all when you die. Dying mid-fight credits that fight's share for each of its enemies you killed. Your first death adds a grant of {FIRST_DEATH_GRANT}. Each 10 years of sentence add {SENTENCE_BONUS_PCT}% to all Clemency earned.", r.clemency_main, r.clemency_detour, r.clemency_boss),
+        format!("Clemency: {}; plus each enemy's own value. You keep it all when you die. Dying mid-fight credits that fight's share for each of its enemies you killed. Your first death adds a grant of {FIRST_DEATH_GRANT}. Each 10 years of sentence add {SENTENCE_BONUS_PCT}% to all Clemency earned.", clemency.join("; ")),
+        "Beating a zone's boss does not end the run: after an interlude the run goes on into the next zone, with your health restored and everything you carry kept. Once a zone's boss has been beaten, a run can also start at the next zone, from the Holding.".to_string(),
+        "Zone two's arrival holds a cache of two rewards: press E at one to take it; the other is lost.".to_string(),
+        format!("Updraft vents (glowing grates on the ice) throw you about {} m up when you stand on them. You keep your air jumps.", m(fx::div(fx::mul(VENT_SPEED, VENT_SPEED) / 2, GRAVITY))),
+        "Some attacks place their orbs in a shape and hold them still before they fly: a held orb is smaller, with a ring round it, and swells to full size just before it moves. Held orbs hurt to touch.".to_string(),
         format!("Each death reads the next count of the indictment and adds years to the sentence: 1 for the first death, 2 for the second, and so on. The first run to reach a tier {FAR_TIER} fight, and the first win, each read a count too."),
     ]
 }

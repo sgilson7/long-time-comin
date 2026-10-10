@@ -27,11 +27,21 @@ Long Time Comin' is a Builder project built in one session on 2026-10-10 from `B
 
 A subagent played seven runs through the playtest harness (`cargo run --release -q -p ltc_core --example playtest -- SESSION_DIR help`) and recommended changes; SECOND-ORDER H1 to P9 record what was done and measured. To measure difficulty again, run consecutive autopilot runs through the harness (commands `start`, `go main`, `fight 150`, `holding`).
 
+## Round 4 (2026-10-10): the see-through camera, the Clerk, zone two
+
+`BRIEF.md` has the request; `PLAN.md` (Round 4) the design; `SECOND-ORDER.md` rows R4 and Z1 to Z11 what was chosen and found, and B2 the break tests.
+
+- **Camera.** The shader cuts the arena's scenery out of a cone from the lens to the head and a sphere round the lens (`balance.rs` `SEE_*`). The reported fault had a cause of its own: since round two the camera started every arena behind the shut entry gate, which was not solid (Z1); it is now.
+- **Zone one's seventh enemy:** the Clerk of Minutes (`blinker`), in three new encounters.
+- **Zone two, the White Waste (2046):** `zone.json` now holds a route per zone; a run crosses from the Bailiff through an interlude into the ice; a run can start on the ice once the Bailiff has been beaten. Arenas in `crates/core/src/arena/ice.rs`; enemies' models in `crates/core/src/draw/beasts.rs`; held formations in `orbs.rs` (`Shape::Form`, `Launch`, `Rehold`); the Injunction (R) in `player.rs` and `world.rs` (`WallPlane`); vents in `arena.rs` (`Vent`) and `world.rs`.
+- **Art:** `interlude.png`, `testimony.png` (the verdict), `icons/wall.png`.
+- **Harness:** `record <json>` starts from a saved record, `start 1` starts on the ice, `north` leaves the interlude, `tap wall`; the autopilot raises the wall at blue orbs.
+
 ## What remains
 
 - Sam's playtest (`TRIAGE.md`). Every feel and balance number is the agent's guess (SECOND-ORDER T1); the probe shows the curve (no wins with no upgrades, about half with 62 Clemency of upgrades), not whether it is fun (T2, P2).
 - Sam's reading of the story's words (T3).
-- Zones two to four, their bosses and the final boss are sealed. `zone.json` lists them; `route.rs` builds one zone.
+- Zones three and four and the final boss are sealed. `zone.json` lists them; a third zone needs its entry in `zone.json` (scene, route, archetypes, names, encounters), a builder in `arena.rs`'s style, its enemies and an interlude in `story.json`.
 - Not built: music, a sensitivity setting, enemy pathfinding (walkers walk straight and turn at walls).
 
 ## What the next session must not assume

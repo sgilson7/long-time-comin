@@ -21,7 +21,13 @@ fn print_the_cost_of_each_archetype() {
     })
     .unwrap();
     for kind in ["arrival", "plaza", "market", "boss"] {
-        let a = arena::build(kind, 9, &[arena::Side::North, arena::Side::East], &c.pal);
+        let a = arena::build(
+            "waiting_city",
+            kind,
+            9,
+            &[arena::Side::North, arena::Side::East],
+            &c.pal,
+        );
         let mut b = Batch::new([0; 3]);
         for s in &a.shapes {
             b.shape(s);
