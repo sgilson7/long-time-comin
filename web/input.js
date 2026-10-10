@@ -30,7 +30,10 @@ export function makeInput(canvas, controls, actions, onEngage) {
       state.fallback = true;
       onEngage();
     };
-    if (!canvas.requestPointerLock) return fallBack();
+    // Under automation (the browser check) the lock may be granted and
+    // dropped at once, which left the run frozen in play (SECOND-ORDER G9):
+    // a driven browser always takes the fallback.
+    if (!canvas.requestPointerLock || navigator.webdriver) return fallBack();
     const tryPlain = () => {
       const plain = canvas.requestPointerLock();
       if (plain && plain.catch) plain.catch(fallBack);
