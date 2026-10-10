@@ -1563,16 +1563,30 @@ mod tests {
         };
         w.tick(&c, &wall, eye, fwd);
         assert!(w.wall().is_some());
+        // 15 m/s from 5 m out: the blue orb meets the wall, 1.8 m out, a
+        // few ticks before either orb could reach you
+        for _ in 0..12 {
+            w.tick(&c, &Controls::default(), eye, fwd);
+        }
+        let right = right_of(w.player.yaw);
+        let chest = w.player.chest();
+        let in_front = |o: &Orb| o.pos.sub(chest).dot(right).abs() < ONE;
+        assert!(
+            !w.orbs.iter().any(|o| o.blue && in_front(o)),
+            "the blue orb in front broke at the wall"
+        );
+        assert!(w.orbs.iter().any(|o| !o.blue), "the other colour still flies");
+        assert_eq!(
+            w.player.health, w.player.build.max_health,
+            "nothing has reached you yet"
+        );
         for _ in 0..20 {
             w.tick(&c, &Controls::default(), eye, fwd);
         }
         assert!(
-            !w.orbs
-                .iter()
-                .any(|o| o.blue && o.pos.sub(w.player.chest()).dot(right_of(w.player.yaw)).abs() < ONE),
-            "the blue orb in front broke"
+            w.orbs.iter().any(|o| o.blue),
+            "the blue orb wide of the wall did not break"
         );
-        assert!(w.orbs.iter().any(|o| o.blue), "the blue orb wide of it did not");
         // the other colour came through and hit
         assert_eq!(w.player.health, w.player.build.max_health - ORB_DAMAGE);
     }
