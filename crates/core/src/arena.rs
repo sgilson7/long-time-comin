@@ -1658,8 +1658,10 @@ pub fn build(kind: &str, seed: u64, exits: &[Side], pal: &Palette) -> Arena {
                     // nothing stands on a walkway's narrow slab: a turret
                     // there could only be reached by climbing (SECOND-ORDER V3)
                     let on_deck = level.solids.iter().any(|s| {
+                        // a walkway or balcony: a thin slab held off the floor
                         s.max.y == top
-                            && s.max.y - s.min.y == DECK
+                            && s.max.y - s.min.y <= ONE * 6 / 10
+                            && s.min.y > int(2)
                             && x >= s.min.x
                             && x <= s.max.x
                             && z >= s.min.z

@@ -172,6 +172,35 @@ impl Game {
         self.mode
     }
 
+    // ---- for tools that drive the game without a page (the playtest
+    // harness): read and steer the arena in play, and the record ----------
+
+    pub fn world(&self) -> Option<&World> {
+        self.run.as_ref().map(|r| &r.world)
+    }
+
+    pub fn world_mut(&mut self) -> Option<&mut World> {
+        self.run.as_mut().map(|r| &mut r.world)
+    }
+
+    /// The run's map and where in it the player is.
+    pub fn route(&self) -> Option<(&Route, usize)> {
+        self.run.as_ref().map(|r| (&r.route, r.at))
+    }
+
+    pub fn meta(&self) -> &Meta {
+        &self.meta
+    }
+
+    pub fn content(&self) -> &Content {
+        &self.c
+    }
+
+    /// The name the HUD gives a node.
+    pub fn name_of(&self, n: &crate::route::Node) -> String {
+        self.node_name(n)
+    }
+
     // ---- what the page asks for ----------------------------------------
 
     /// From the title: the sentencing on a first visit, else the Holding.
