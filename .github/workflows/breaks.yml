@@ -1,0 +1,24 @@
+name: Break tests (rule 6)
+
+# Breaks each covered behaviour in turn and expects its test to fail
+# (scripts/break_tests.py). Slow, so it runs by hand, or on a pull request
+# that changes the list. It builds nothing that deploys.
+on:
+  workflow_dispatch:
+  pull_request:
+    paths: [scripts/break_tests.py]
+
+permissions:
+  contents: read
+
+jobs:
+  breaks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+      - name: Rust toolchain
+        run: rustup toolchain install stable --profile minimal
+      - uses: Swatinem/rust-cache@v2
+      - name: Break each behaviour; its test must fail
+        run: python3 scripts/break_tests.py
