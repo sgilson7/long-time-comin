@@ -23,6 +23,8 @@ export function makeHud(copy, play) {
   const callout = el("callout");
   const word = el("c-word");
   const labels = el("gate-labels");
+  const foes = el("foes");
+  const reticle = el("reticle");
 
   return {
     // Forget what was heard, so a new arena's first note is not missed and
@@ -55,7 +57,7 @@ export function makeHud(copy, play) {
       if (el("h-gun-art").getAttribute("src") !== art) el("h-gun-art").setAttribute("src", art);
       el("bottom-right").style.setProperty("--gun", h.gun_colour);
       el("vignette").style.setProperty("--hurt", h.hurt);
-      el("reticle").className = h.reticle;
+      reticle.className = `${h.reticle} ${reticle.classList.contains("hitmark") ? "hitmark" : ""}`;
 
       const boss = el("boss");
       boss.hidden = !h.boss;
@@ -80,10 +82,30 @@ export function makeHud(copy, play) {
         node.style.top = `${g.y}%`;
       });
 
+      while (foes.children.length < h.foes.length) {
+        const node = document.createElement("div");
+        node.appendChild(document.createElement("span"));
+        foes.appendChild(node);
+      }
+      while (foes.children.length > h.foes.length) foes.lastChild.remove();
+      h.foes.forEach((f, k) => {
+        const node = foes.children[k];
+        node.className = f.edge ? "foe edge" : f.hurt ? "foe hurt" : "foe";
+        node.style.left = `${f.x}%`;
+        node.style.top = `${f.y}%`;
+        node.style.setProperty("--a", `${f.angle}deg`);
+        node.firstChild.style.width = `${f.pct}%`;
+      });
+
       for (const n of h.notes) {
         if (n.seq <= lastSeq) continue;
         lastSeq = n.seq;
         play(n.sound);
+        if (n.sound === "hit" || n.sound === "kill") {
+          reticle.classList.remove("hitmark");
+          void reticle.offsetWidth;
+          reticle.classList.add("hitmark");
+        }
         if (!n.text) continue;
         word.textContent = n.text;
         callout.classList.remove("pop");

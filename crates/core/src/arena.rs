@@ -82,7 +82,9 @@ struct B<'a> {
 
 /// The dry canal's channel runs north to south between these two x values.
 const CANAL: (i32, i32) = (-int(17), -int(7));
-const CANAL_DEPTH: i32 = ONE * 25 / 10;
+/// shallow enough to jump out of (a jump clears 1.5 m): falling in is a
+/// detour, never a trap (SECOND-ORDER G5)
+const CANAL_DEPTH: i32 = ONE * 12 / 10;
 
 fn m(x: i32) -> i32 {
     int(x)
@@ -379,6 +381,29 @@ impl<'a> B<'a> {
                     self.deco(Mesh::Cube, aw_at, aws, cloth);
                     let sign_at = v3(x, dm(31), z).add(n.scale(half_depth + dm(2)));
                     self.sign(sign_at, span / 3, dm(7), fi < 2);
+                    continue;
+                }
+                if !detail {
+                    // far off, a storey's windows read as one band: a run of
+                    // lit and dark panes in a few boxes instead of one each,
+                    // which keeps the skyline cheap to draw (SECOND-ORDER G6)
+                    let runs = 3;
+                    let run_w = (span - m(1)) / runs;
+                    for k in 0..runs {
+                        let off = -span / 2 + m(1) / 2 + run_w * k + run_w / 2;
+                        let along = if fi < 2 { v3(0, 0, off) } else { v3(off, 0, 0) };
+                        let at = v3(x, y, z).add(along).add(n.scale(half_depth));
+                        let size = if fi < 2 {
+                            v3(dm(1), dm(15), run_w - dm(4))
+                        } else {
+                            v3(run_w - dm(4), dm(15), dm(1))
+                        };
+                        if self.rng.chance(45) {
+                            self.glow(Mesh::Cube, at, size, lit);
+                        } else {
+                            self.shape(Mesh::Cube, boxed(at, size), dark, 0, false);
+                        }
+                    }
                     continue;
                 }
                 for k in 0..cols {
@@ -1076,9 +1101,12 @@ impl<'a> B<'a> {
                 );
             }
         }
-        // stairs down into the channel from the east quay
+        // stairs out of the channel on both sides, every so often
         let steps = (depth + dm(4) - 1) / dm(4);
-        self.stairs(x1 - dm(6) * steps, -depth, 0, ONE, 0, depth, m(3));
+        for z in [-m(20), 0, m(20)] {
+            self.stairs(x1 - dm(6) * steps, -depth, z, ONE, 0, depth, m(3));
+            self.stairs(x0 + dm(6) * steps, -depth, z + m(10), -ONE, 0, depth, m(3));
+        }
         // the quay's edge, boats aground, lamp posts
         self.deco(
             Mesh::Cube,
@@ -1544,7 +1572,7 @@ mod size {
                 b.shape(s);
             }
             let n = b.count();
-            assert!(n < 40_000, "{kind}: {n}");
+            assert!(n < 16_000, "{kind}: {n}");
         }
     }
 }

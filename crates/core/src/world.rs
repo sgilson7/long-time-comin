@@ -86,7 +86,7 @@ const WIN_TICKS: i32 = secs(5, 2);
 /// the first wave comes this long after you arrive
 const FIRST_WAVE: i32 = secs(1, 1);
 /// a killed enemy leaves a heal this often, in percent
-const HEAL_DROP_PCT: i32 = 12;
+const HEAL_DROP_PCT: i32 = 18;
 const HEAL_DROP: i32 = 8;
 
 #[derive(Debug, Clone)]
@@ -500,7 +500,13 @@ impl World {
                     }
                     self.wave_timer = secs(3, 4);
                     if self.kind == NodeKind::Boss {
-                        self.note("boss_intro", String::new());
+                        let name = c
+                            .story
+                            .bosses
+                            .get(&c.zones[0].boss)
+                            .map(|b| b.name.clone())
+                            .unwrap_or_default();
+                        self.note("boss_intro", name);
                     } else {
                         self.note("wave", String::new());
                     }

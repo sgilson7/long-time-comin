@@ -102,7 +102,7 @@ pub const WAVE_WIDTH: i32 = ONE * 6 / 10;
 pub const PICKUP_REACH: i32 = int(2);
 pub const HEALTH_PICKUP: i32 = 25;
 pub const SPEED_PICKUP_PCT: i32 = 8;
-pub const HEAL_ON_CLEAR: i32 = 12;
+pub const HEAL_ON_CLEAR: i32 = 20;
 /// a gate is passed by walking into a circle this wide around it
 pub const GATE_REACH: i32 = ONE * 22 / 10;
 /// after an arena is cleared, the next wave of reward dust settles this long
@@ -132,8 +132,8 @@ pub const AIM_RANGE: i32 = int(220);
 
 // ---- damage -----------------------------------------------------------------
 
-pub const ORB_DAMAGE: i32 = 14;
+pub const ORB_DAMAGE: i32 = 12;
 pub const WAVE_DAMAGE: i32 = 18;
 /// Orbs are judged smaller than they are drawn, as in Returnal: a graze
 /// that looks close is a miss.
-pub const ORB_HIT_PCT: i32 = 70;
+pub const ORB_HIT_PCT: i32 = 62;

@@ -409,6 +409,8 @@ impl Game {
         let held = run.world.held;
         let seq = run.world.seq;
         run.world = self.world_for(&run.route, to, player, held, seq);
+        let name = self.node_name(&run.route.nodes[to]);
+        run.world.note("enter", name);
         run.at = to;
         run.visited.push(to);
         run.counted = false;
@@ -618,6 +620,14 @@ impl Game {
             .map(|n| json!({ "seq": n.seq, "sound": n.sound, "text": n.text }))
             .collect();
         let enemies = w.alive_enemies() + w.waves_left.iter().map(|v| v.len()).sum::<usize>();
+        // the boss has its own bar; every other enemy gets a marker
+        let foes: Vec<Value> = w
+            .enemies
+            .iter()
+            .enumerate()
+            .filter(|(i, e)| e.hurtable() && Some(*i) != w.boss)
+            .map(|(_, e)| self.marker(e.pos, c.enemies[e.def].radius, e.health_pct()))
+            .collect();
         h = json!({
             "mode": self.mode,
             "health": p.health,
@@ -654,8 +664,37 @@ impl Game {
             "hint": hint,
             "reticle": reticle,
             "notes": notes,
+            "foes": foes,
         });
         h.to_string()
+    }
+
+    /// Where to mark an enemy on screen: over it, or at the screen's edge
+    /// pointing the way to it, with the angle the arrow turns (degrees,
+    /// clockwise from pointing right).
+    fn marker(&self, at: V3, radius: i32, pct: i32) -> Value {
+        let cam = &self.camera;
+        let over = at.add(v3(0, radius + ONE / 2, 0));
+        let screen = cam.screen(self.aspect(), over);
+        if let Some((x, y)) = screen {
+            if (0..=100 * ONE).contains(&x) && (0..=100 * ONE).contains(&y) {
+                return json!({ "x": x / ONE, "y": y / ONE, "edge": false, "pct": pct, "hurt": pct < 100, "angle": 0 });
+            }
+        }
+        let right = cam.fwd.cross(V3::UP).norm();
+        let up = right.cross(cam.fwd);
+        let rel = at.sub(cam.eye);
+        let (sx, sy) = (rel.dot(right), -rel.dot(up));
+        let a = fx::atan2(sy, sx);
+        let deg = (a as i64 * 360 / fx::TURN as i64) as i32;
+        json!({
+            "x": 50 + fx::mul(fx::cos(a), int(44)) / ONE,
+            "y": 50 + fx::mul(fx::sin(a), int(40)) / ONE,
+            "edge": true,
+            "pct": pct,
+            "hurt": pct < 100,
+            "angle": deg,
+        })
     }
 
     fn node_name(&self, n: &crate::route::Node) -> String {

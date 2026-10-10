@@ -69,7 +69,9 @@ def run(page, check, engine):
     # run north through the crater's gate into the first fight
     page.keyboard.down("KeyW")
     try:
-        page.wait_for_function("() => document.getElementById('h-node').textContent !== 'The Crater'", timeout=40000)
+        # generous: on a software renderer (CI) the page runs at a few
+        # frames a second and the simulation's catch-up is capped per frame
+        page.wait_for_function("() => document.getElementById('h-node').textContent !== 'The Crater'", timeout=120000)
         moved = True
     except Exception:
         moved = False
