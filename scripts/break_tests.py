@@ -31,10 +31,10 @@ BREAKS = [
  ("see-through flag", "crates/core/src/render.rs", "let see_through = (buffer == STATIC_BUFFER) as u32;", "let see_through = 1;", "scenery_may_be_cut"),
  ("zone scene", "crates/core/src/game.rs", "        &self.c.zones[self.run.as_ref().map_or(0, |r| r.zone)]", "        &self.c.zones[0]", "the_ice_is_lit"),
  ("crossing", "crates/core/src/game.rs", "                if next < self.c.built_zones() {", "                if next < 1 {", "felling_the_bailiff_crosses"),
- ("ice reach", "crates/core/src/arena/ice.rs", "        for (x0, x1) in [(-m(18), -m(13)), (m(9), m(13))] {", "        for (x0, x1) in [(-m(18), -m(18)), (m(9), m(9))] {", "every_ice_gate"),
+ ("ice reach", "crates/core/src/arena/ice.rs", "                if gaps[si] && mid.abs() < GATE_GAP / 2 + w / 2 {", "                if false && gaps[si] && mid.abs() < GATE_GAP / 2 + w / 2 {", "every_ice_gate"),
  ("vent headroom", "crates/core/src/arena/ice.rs", "        self.vent(0, 0, -m(7));", "        self.vent(0, 0, -m(10));", "every_ice_gate"),
  ("unique patterns", "data/enemies.json", '"pattern": "halo"', '"pattern": "ring_16"', "zone_two_has_as_many"),
- ("shut gate is solid", "crates/core/src/arena.rs", "        b.solids.push(Solid::stand(g.x, 0, g.z + dm(5), m(5), m(6), dm(4)));", "", "at_an_arenas_start"),
+ ("shut gate is solid", "crates/core/src/arena.rs", "            .push(Solid::stand(g.x, 0, g.z + dm(5), m(5), m(6), dm(4)));", "            .push(Solid::stand(g.x, 0, g.z + dm(5), 0, 0, 0));", "at_an_arenas_start"),
 ]
 
 

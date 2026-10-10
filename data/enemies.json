@@ -450,7 +450,7 @@
       "id": "witness",
       "name": "The Witness",
       "kind": "boss",
-      "hp": 4600,
+      "hp": 4200,
       "radius_cm": 280,
       "hover_cm": 700,
       "speed_cms": 380,
@@ -509,7 +509,6 @@
         {
           "from_pct": 33,
           "summons": [
-            "prism",
             "rime_kite"
           ],
           "attacks": [
