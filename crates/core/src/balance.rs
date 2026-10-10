@@ -91,6 +91,23 @@ pub const PARRY_REACH: i32 = ONE * 25 / 10;
 pub const PARRY_SPEED: i32 = per_tick(60, 1);
 pub const PARRY_DAMAGE: i32 = 60;
 
+// ---- the Injunction (the projected wall) ---------------------------------
+
+/// the wall stands this long
+pub const WALL_TICKS: i32 = secs(1, 2);
+pub const WALL_COOLDOWN: i32 = secs(4, 1);
+/// its middle is this far in front of the chest, along the way you face
+pub const WALL_AHEAD: i32 = ONE * 18 / 10;
+/// this wide either side of the middle, and from a little under the feet
+/// to this high over them
+pub const WALL_HALF_WIDTH: i32 = ONE * 24 / 10;
+pub const WALL_HEIGHT: i32 = ONE * 34 / 10;
+
+// ---- zone two's ground ------------------------------------------------------
+
+/// an updraft vent throws a body up at this speed (about 6 m)
+pub const VENT_SPEED: i32 = per_tick(175, 10);
+
 // ---- orbs ---------------------------------------------------------------
 
 /// an orb lives this long at most
@@ -152,6 +169,8 @@ pub const JUMP_CUE_TICKS: i32 = secs(1, 2);
 /// second distance of the camera, is drawn as a faint glow
 pub const ORB_FADE_NEAR: i32 = ONE * 3;
 pub const ORB_FADE_BEHIND: i32 = ONE * 9;
+/// a held orb swells to full size over the last of its hold
+pub const HOLD_TELL: i32 = secs(1, 2);
 
 // ---- the camera ----------------------------------------------------------
 
@@ -164,6 +183,16 @@ pub const CAMERA_RIGHT: i32 = ONE;
 pub const CAMERA_HIDE_BODY: i32 = ONE * 16 / 10;
 /// the camera stays this far in front of a wall it backs into
 pub const CAMERA_MARGIN: i32 = ONE * 3 / 10;
+/// The scenery between the camera and the head is cut away so it never
+/// hides you: everything within `SEE_NEAR` of the lens, and a cone from
+/// the lens to `SEE_SHORT` short of the head, `SEE_WIDE_LENS` wide at the
+/// lens and `SEE_WIDE_HEAD` near the head, solid within `SEE_SOLID_PCT`
+/// percent of its width and screen-door transparent beyond.
+pub const SEE_NEAR: i32 = ONE * 9 / 10;
+pub const SEE_WIDE_LENS: i32 = ONE * 7 / 10;
+pub const SEE_WIDE_HEAD: i32 = ONE * 16 / 10;
+pub const SEE_SHORT: i32 = ONE * 8 / 10;
+pub const SEE_SOLID_PCT: i32 = 60;
 pub const PITCH_MIN: i32 = -deg(70);
 pub const PITCH_MAX: i32 = deg(80);
 /// angle units of turn per pixel of mouse movement (about 0.1°)

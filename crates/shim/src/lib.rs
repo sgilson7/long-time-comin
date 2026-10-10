@@ -120,6 +120,16 @@ impl Game {
         self.inner.start_run()
     }
 
+    /// A run from the start of a later zone, once its way is open.
+    pub fn start_run_at(&mut self, zone: u32) {
+        self.inner.start_run_at(zone as usize)
+    }
+
+    /// From the interlude into the next zone.
+    pub fn continue_run(&mut self) {
+        self.inner.continue_run()
+    }
+
     pub fn pause(&mut self) {
         self.inner.pause()
     }

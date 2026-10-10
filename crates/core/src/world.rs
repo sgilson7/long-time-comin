@@ -111,6 +111,8 @@ pub const HEAL_DROP: i32 = 8;
 #[derive(Debug, Clone)]
 pub struct World {
     pub arena: Arena,
+    /// the zone it is in, by index
+    pub zone: usize,
     pub kind: NodeKind,
     pub player: Player,
     pub held: Held,
@@ -165,7 +167,8 @@ impl World {
             .iter()
             .map(|e| if e.main { Side::North } else { Side::East })
             .collect();
-        let arena = arena::build(&node.archetype, node.seed, &sides, &c.pal);
+        let z = &c.zones[node.zone];
+        let arena = arena::build(&z.id, &node.archetype, node.seed, &sides, &c.pal);
         player.arrive(arena.start, arena.start_yaw);
         let mut gates = Vec::new();
         for (k, (pos, yaw)) in arena.gates.iter().enumerate() {
@@ -180,11 +183,12 @@ impl World {
         }
         let waves_left = node
             .encounter
-            .map(|e| c.encounters[e].waves.clone())
+            .map(|e| z.encounters[e].waves.clone())
             .unwrap_or_default();
         let fight = matches!(node.kind, NodeKind::Fight | NodeKind::Boss);
         let mut w = World {
             arena,
+            zone: node.zone,
             kind: node.kind,
             player,
             held,
@@ -218,8 +222,22 @@ impl World {
             offer: None,
         };
         if node.kind == NodeKind::Boss {
-            let boss = c.enemy(&c.zones[0].boss).unwrap_or(0);
+            let boss = c.enemy(&c.zones[node.zone].boss).unwrap_or(0);
             w.waves_left = vec![vec![boss]];
+        }
+        if node.kind == NodeKind::Arrival && !node.cache.is_empty() {
+            // the expedition's cache: take one
+            for (k, r) in node.cache.iter().enumerate() {
+                let x = if k == 0 { -int(3) } else { int(3) };
+                let at = w.arena.start.add(v3(x, 0, -int(6)));
+                w.pickups.push(Pickup {
+                    pos: at,
+                    kind: reward_pickup(*r),
+                    taken: false,
+                    age: 0,
+                    group: 2,
+                });
+            }
         }
         if node.kind == NodeKind::Rest {
             // the Antechamber's choice: half your health back from the
@@ -277,7 +295,7 @@ impl World {
             .map_or(max, |h| h.t + skip);
         let mut who = None;
         for (i, e) in self.enemies.iter().enumerate() {
-            if !e.alive() {
+            if !e.alive() || e.buried {
                 continue;
             }
             if let Some(t) = ray_sphere(o, d, e.pos, c.enemies[e.def].radius) {
@@ -293,7 +311,7 @@ impl World {
     fn spawn(&mut self, c: &Content, def: usize) {
         let d = &c.enemies[def];
         let feet = self.player.pos;
-        let air = matches!(d.kind, crate::content::Kind::Floater | crate::content::Kind::Moth);
+        let air = flies(d.kind);
         let pool = if air {
             &self.arena.air_spawns
         } else {
@@ -314,11 +332,7 @@ impl World {
             list[self.rng.range(0, list.len() as i32 - 1) as usize]
         };
         if !air && d.kind != crate::content::Kind::Boss {
-            at.y += if d.kind == crate::content::Kind::Walker {
-                d.radius
-            } else {
-                d.hover
-            };
+            at.y += standing_lift(d);
         }
         let orbit = if self.rng.chance(50) { 1 } else { -1 };
         let mut e = Enemy::new(def, d, at, orbit);
@@ -411,6 +425,8 @@ impl World {
                 Event::GrappleOff => "hook_off",
                 Event::Parry => "parry",
                 Event::HookSnag => "hook_miss",
+                Event::Wall => "wall",
+                Event::Vent => "vent",
             };
             let text = match ev {
                 Event::Recess => c.say("callout_recess"),
@@ -435,6 +451,19 @@ impl World {
         }
         self.pulse_cooldown = (self.pulse_cooldown - 1).max(0);
         self.hit_age = (self.hit_age + 1).min(1000);
+
+        // an updraft under the feet throws you up
+        let feet = self.player.pos;
+        if self.arena.vents.iter().any(|v| {
+            feet.sub(v.pos).len_xz() < v.radius
+                && feet.y >= v.pos.y - ONE / 5
+                && feet.y < v.pos.y + ONE * 3 / 2
+        }) {
+            self.player.launch_up(VENT_SPEED);
+            if self.player.events.contains(&Event::Vent) {
+                self.note("vent", String::new());
+            }
+        }
 
         // the gun
         let chest = self.player.chest();
@@ -483,6 +512,24 @@ impl World {
                 continue;
             }
             let deeds = self.enemies[i].step(c, &self.arena.level, chest, i);
+            let d = &c.enemies[self.enemies[i].def];
+            if let Some((from, to)) = deeds.blink {
+                let rgb = c.pal.c("enemy_core");
+                self.effect(FxKind::Flash, from, V3::ZERO, 14, rgb, d.radius * 3);
+                self.effect(FxKind::Flash, to, V3::ZERO, 18, rgb, d.radius * 3);
+                self.note("blink", String::new());
+            }
+            if deeds.surfaced || deeds.dove {
+                let at = self.enemies[i].pos;
+                let ground = self
+                    .arena
+                    .level
+                    .floor_below(at.x, chest.y + int(2), at.z)
+                    .unwrap_or(0);
+                let rgb = c.pal.c("spark");
+                self.sparks(v3(at.x, ground, at.z), rgb, 18, ONE / 5);
+                self.note(if deeds.surfaced { "surface" } else { "dive" }, String::new());
+            }
             let room = MAX_ORBS.saturating_sub(self.orbs.len());
             self.orbs.extend(deeds.salvo.orbs.into_iter().take(room));
             self.waves.extend(deeds.salvo.waves);
@@ -513,6 +560,7 @@ impl World {
                     let at = self.enemies[i].pos;
                     self.sparks(at, c.pal.c("enemy_eye"), 14, ONE / 5);
                     self.note("boom", String::new());
+                    self.burst(c, i);
                 }
                 let from = self.enemies[i].pos;
                 self.hurt_from(dmg, from);
@@ -574,7 +622,7 @@ impl World {
                         let name = c
                             .story
                             .bosses
-                            .get(&c.zones[0].boss)
+                            .get(&c.zones[self.zone].boss)
                             .map(|b| b.name.clone())
                             .unwrap_or_default();
                         self.note("boss_intro", name);
@@ -621,8 +669,16 @@ impl World {
         let mut parried: Vec<Orb> = Vec::new();
         let mut spent: Vec<Orb> = Vec::new();
         let parrying = self.player.parry_window > 0;
+        let moving = self.player.pos.sub(self.player.prev_pos);
+        let wall = self.wall();
+        let mut broken = 0;
         for mut o in std::mem::take(&mut self.orbs) {
-            if !o.step(level) {
+            if !o.step(level, chest, moving) {
+                spent.push(o);
+                continue;
+            }
+            if o.blue && wall.is_some_and(|w| w.breaks(&o)) {
+                broken += 1;
                 spent.push(o);
                 continue;
             }
@@ -638,6 +694,9 @@ impl World {
             kept.push(o);
         }
         self.orbs = kept;
+        if broken > 0 {
+            self.note("shatter", String::new());
+        }
         if let Some((damage, from)) = hurt {
             self.hurt_from(damage, from);
         }
@@ -779,6 +838,7 @@ impl World {
         killed.dedup();
         for i in killed {
             self.kills += 1;
+            self.burst(c, i);
             let e = &self.enemies[i];
             let (at, def) = (e.pos, e.def);
             let d = &c.enemies[def];
@@ -901,19 +961,13 @@ impl World {
     /// Brings enemy `i` back at a spawn point with a clear line to `chest`.
     fn relocate(&mut self, c: &Content, i: usize, chest: V3) {
         let d = &c.enemies[self.enemies[i].def];
-        let air = matches!(d.kind, crate::content::Kind::Floater | crate::content::Kind::Moth);
+        let air = flies(d.kind);
         let pool = if air {
             &self.arena.air_spawns
         } else {
             &self.arena.ground_spawns
         };
-        let lift = if air {
-            0
-        } else if d.kind == crate::content::Kind::Walker {
-            d.radius
-        } else {
-            d.hover
-        };
+        let lift = if air { 0 } else { standing_lift(d) };
         let level = &self.arena.level;
         let fits: Vec<V3> = pool
             .iter()
@@ -942,6 +996,36 @@ impl World {
             c.pal.c("enemy_core"),
             d.radius * 3,
         );
+    }
+
+    /// The Injunction's wall while it stands.
+    pub fn wall(&self) -> Option<WallPlane> {
+        if self.player.wall_left == 0 {
+            return None;
+        }
+        let n = facing(self.player.yaw, 0);
+        Some(WallPlane {
+            centre: self.player.chest().add(n.scale(WALL_AHEAD)),
+            normal: n,
+            across: right_of(self.player.yaw),
+            floor: self.player.pos.y - ONE / 5,
+        })
+    }
+
+    /// An enemy that bursts where it dies fires its pattern once.
+    fn burst(&mut self, c: &Content, i: usize) {
+        let d = &c.enemies[self.enemies[i].def];
+        let Some(p) = d.burst else {
+            return;
+        };
+        let at = self.enemies[i].pos;
+        let chest = self.player.chest();
+        for v in &c.patterns[p].volleys {
+            let s = orbs::fire(v, at, chest, 0, i, &c.pal, &self.arena.level);
+            let room = MAX_ORBS.saturating_sub(self.orbs.len());
+            self.orbs.extend(s.orbs.into_iter().take(room));
+            self.waves.extend(s.waves);
+        }
     }
 
     /// A hit, and where it came from.
@@ -995,6 +1079,46 @@ impl World {
             }
             e.age < e.life
         });
+    }
+}
+
+/// The Injunction's wall: a standing rectangle facing the way you face.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct WallPlane {
+    pub centre: V3,
+    pub normal: V3,
+    pub across: V3,
+    /// its foot; it stands `WALL_HEIGHT` over it
+    pub floor: i32,
+}
+
+impl WallPlane {
+    /// Does an orb meet the wall this tick? Its path from `prev` to `pos`
+    /// reaches the wall's plane, within the wall's width and height.
+    pub fn breaks(&self, o: &Orb) -> bool {
+        let r = o.radius;
+        let d0 = o.prev.sub(self.centre).dot(self.normal);
+        let d1 = o.pos.sub(self.centre).dot(self.normal);
+        if d0.min(d1) > r || d0.max(d1) < -r {
+            return false;
+        }
+        let side = o.pos.sub(self.centre).dot(self.across).abs();
+        side <= WALL_HALF_WIDTH + r && o.pos.y >= self.floor - r && o.pos.y <= self.floor + WALL_HEIGHT + r
+    }
+}
+
+/// Kinds that spawn in the air.
+fn flies(k: crate::content::Kind) -> bool {
+    use crate::content::Kind;
+    matches!(k, Kind::Floater | Kind::Moth | Kind::Blinker)
+}
+
+/// How far over the floor a ground kind's centre stands.
+fn standing_lift(d: &crate::content::EnemyDef) -> i32 {
+    use crate::content::Kind;
+    match d.kind {
+        Kind::Walker | Kind::Burrower => d.radius,
+        _ => d.hover,
     }
 }
 
@@ -1165,20 +1289,15 @@ mod tests {
         let chest = w.player.chest();
         let gold = c.pal.c("gold");
         w.orbs.push(Orb {
-            pos: chest.add(v3(0, 0, -int(2))),
-            prev: chest,
-            dir: v3(0, 0, ONE),
-            speed: ONE / 10,
-            accel: 0,
-            min_speed: 0,
-            max_speed: ONE / 10,
-            curl: 0,
-            radius: ONE * 4 / 10,
-            rgb: gold,
             gold: true,
-            age: 0,
-            owner: 0,
-            damage: ORB_DAMAGE,
+            ..Orb::new(
+                chest.add(v3(0, 0, -int(2))),
+                v3(0, 0, ONE),
+                ONE / 10,
+                ONE * 4 / 10,
+                gold,
+                ORB_DAMAGE,
+            )
         });
         let before = w.enemies[0].hp;
         let parry = Controls {
@@ -1202,20 +1321,15 @@ mod tests {
         w.cleared = true;
         let chest = w.player.chest();
         w.orbs.push(Orb {
-            pos: chest.add(v3(0, 0, -int(2))),
-            prev: chest,
-            dir: v3(0, 0, ONE),
-            speed: ONE / 10,
-            accel: 0,
-            min_speed: 0,
-            max_speed: ONE / 10,
-            curl: 0,
-            radius: ONE * 4 / 10,
-            rgb: [0; 3],
             gold: true,
-            age: 0,
-            owner: 0,
-            damage: ORB_DAMAGE,
+            ..Orb::new(
+                chest.add(v3(0, 0, -int(2))),
+                v3(0, 0, ONE),
+                ONE / 10,
+                ONE * 4 / 10,
+                [0; 3],
+                ORB_DAMAGE,
+            )
         });
         let parry = Controls {
             parry_pressed: true,
@@ -1291,20 +1405,8 @@ mod tests {
 
     fn orb_at(at: V3, gold: bool) -> Orb {
         Orb {
-            pos: at,
-            prev: at,
-            dir: v3(0, 0, ONE),
-            speed: ONE / 20,
-            accel: 0,
-            min_speed: 0,
-            max_speed: ONE / 20,
-            curl: 0,
-            radius: ONE * 4 / 10,
-            rgb: [0; 3],
             gold,
-            age: 0,
-            owner: 0,
-            damage: ORB_DAMAGE,
+            ..Orb::new(at, v3(0, 0, ONE), ONE / 20, ONE * 4 / 10, [0; 3], ORB_DAMAGE)
         }
     }
 
@@ -1410,5 +1512,210 @@ mod tests {
             matches!(e.state, enemy::State::Spawning(_)),
             "and appears as a new enemy does"
         );
+    }
+
+    fn ice_world(kind: NodeKind) -> (Content, World) {
+        let c = content();
+        let r = Route::build_for(&c, 1, 11, 1);
+        let i = r.nodes.iter().position(|n| n.kind == kind).unwrap();
+        let exits: Vec<Exit> = r.nodes[i]
+            .next
+            .iter()
+            .enumerate()
+            .map(|(k, &to)| Exit {
+                to,
+                main: k == 0,
+                reward: r.nodes[to].reward,
+            })
+            .collect();
+        let p = Player::new(V3::ZERO, 0, Build::default());
+        let w = World::new(&c, &r.nodes[i], &exits, p, Held::new(0, 1), 1);
+        (c, w)
+    }
+
+    /// An orb flying at the chest from `ahead` metres in front.
+    fn incoming(w: &World, ahead: i32, side: i32, blue: bool) -> Orb {
+        let chest = w.player.chest();
+        let n = facing(w.player.yaw, 0);
+        let at = chest
+            .add(n.scale(int(ahead)))
+            .add(right_of(w.player.yaw).scale(int(side)));
+        Orb {
+            blue,
+            ..Orb::new(at, n.neg(), ONE / 4, ONE * 3 / 10, [0; 3], ORB_DAMAGE)
+        }
+    }
+
+    #[test]
+    fn the_injunction_breaks_blue_orbs_in_front_of_you_and_lets_the_rest_through() {
+        let (c, mut w) = world_for(NodeKind::Fight);
+        w.waves_left.clear();
+        w.cleared = true;
+        w.player.build.wall = true;
+        w.orbs.push(incoming(&w, 5, 0, true));
+        w.orbs.push(incoming(&w, 5, 0, false));
+        // blue, but wide of the wall
+        w.orbs.push(incoming(&w, 5, 6, true));
+        let (eye, fwd) = eye_of(&w);
+        let wall = Controls {
+            wall_pressed: true,
+            ..Controls::default()
+        };
+        w.tick(&c, &wall, eye, fwd);
+        assert!(w.wall().is_some());
+        for _ in 0..20 {
+            w.tick(&c, &Controls::default(), eye, fwd);
+        }
+        assert!(
+            !w.orbs
+                .iter()
+                .any(|o| o.blue && o.pos.sub(w.player.chest()).dot(right_of(w.player.yaw)).abs() < ONE),
+            "the blue orb in front broke"
+        );
+        assert!(w.orbs.iter().any(|o| o.blue), "the blue orb wide of it did not");
+        // the other colour came through and hit
+        assert_eq!(w.player.health, w.player.build.max_health - ORB_DAMAGE);
+    }
+
+    #[test]
+    fn the_wall_stands_half_a_second_and_then_waits_its_cooldown() {
+        let (c, mut w) = world_for(NodeKind::Fight);
+        w.waves_left.clear();
+        w.cleared = true;
+        w.player.build.wall = true;
+        let (eye, fwd) = eye_of(&w);
+        let wall = Controls {
+            wall_pressed: true,
+            ..Controls::default()
+        };
+        w.tick(&c, &wall, eye, fwd);
+        let mut up = 0;
+        while w.wall().is_some() {
+            up += 1;
+            w.tick(&c, &wall, eye, fwd);
+            assert!(up < 100);
+        }
+        assert_eq!(up, WALL_TICKS);
+        // pressed again at once: nothing until the cooldown is over
+        w.tick(&c, &wall, eye, fwd);
+        assert!(w.wall().is_none());
+        // without the upgrade there is no wall at all
+        let (c2, mut w2) = world_for(NodeKind::Fight);
+        w2.tick(&c2, &wall, eye, fwd);
+        assert!(w2.wall().is_none());
+    }
+
+    #[test]
+    fn an_updraft_vent_throws_you_up_about_six_metres() {
+        let (c, mut w) = ice_world(NodeKind::Fight);
+        w.waves_left.clear();
+        w.cleared = true;
+        let v = *w.arena.vents.first().expect("a fight on the ice has vents");
+        w.player.pos = v.pos;
+        w.player.prev_pos = v.pos;
+        let (eye, fwd) = eye_of(&w);
+        let mut top = v.pos.y;
+        for _ in 0..120 {
+            w.tick(&c, &Controls::default(), eye, fwd);
+            top = top.max(w.player.pos.y);
+            // the first rise only: falling back into the vent throws you again
+            if w.player.vel.y < 0 {
+                break;
+            }
+        }
+        let rise = top - v.pos.y;
+        assert!(rise > int(5) && rise < int(7), "{rise}");
+    }
+
+    #[test]
+    fn a_shardling_leaves_a_held_ring_where_it_dies() {
+        let (c, mut w) = ice_world(NodeKind::Fight);
+        w.waves_left.clear();
+        let d = c.enemy("shardling").unwrap();
+        let at = w.player.chest().add(v3(0, 0, -int(8)));
+        let mut e = Enemy::new(d, &c.enemies[d], at, 1);
+        e.state = enemy::State::Rest(1000);
+        w.enemies.push(e);
+        w.enemies[0].hp = 0;
+        w.burst(&c, 0);
+        let ring = c.patterns.iter().find(|p| p.id == "shatter").unwrap().volleys[0].count as usize;
+        assert_eq!(w.orbs.len(), ring);
+        assert!(w.orbs.iter().all(|o| o.wait > 0 && o.blue && o.hub == at));
+    }
+
+    #[test]
+    fn an_auger_cannot_be_hurt_under_the_floor_and_comes_up_to_attack() {
+        let (c, mut w) = ice_world(NodeKind::Fight);
+        w.waves_left.clear();
+        let d = c.enemy("auger").unwrap();
+        let at = w.player.pos.add(v3(int(4), c.enemies[d].radius, -int(10)));
+        w.enemies.push(Enemy::new(d, &c.enemies[d], at, 1));
+        let (eye, fwd) = eye_of(&w);
+        let mut was_buried = false;
+        let mut came_up = false;
+        let mut fired = false;
+        for _ in 0..60 * 8 {
+            w.player.iframes = 1000;
+            w.tick(&c, &Controls::default(), eye, fwd);
+            let e = &w.enemies[0];
+            if e.buried {
+                was_buried = true;
+                assert!(!e.hurtable(), "under the floor it cannot be hurt");
+                assert!(e.pos.y < 0, "and is under the floor: {:?}", e.pos);
+            } else if was_buried {
+                came_up = true;
+            }
+            fired |= !w.orbs.is_empty();
+        }
+        assert!(was_buried && came_up && fired);
+    }
+
+    #[test]
+    fn a_clerk_reappears_elsewhere_in_sight_of_you() {
+        let (c, mut w) = world_for(NodeKind::Fight);
+        w.waves_left.clear();
+        let d = c.enemy("clerk").unwrap();
+        let start = w.player.chest().add(v3(int(3), int(1), -int(12)));
+        let mut e = Enemy::new(d, &c.enemies[d], start, 1);
+        e.state = enemy::State::Rest(2);
+        w.enemies.push(e);
+        let (eye, fwd) = eye_of(&w);
+        let mut moved_to = None;
+        for _ in 0..4 {
+            w.tick(&c, &Controls::default(), eye, fwd);
+            if w.enemies[0].pos.dist(start) > int(3) {
+                moved_to = Some(w.enemies[0].pos);
+                break;
+            }
+        }
+        let to = moved_to.expect("it blinked");
+        assert!(
+            w.enemies[0].sees(&w.arena.level, w.player.chest()),
+            "where it can see you"
+        );
+        assert!(
+            matches!(w.enemies[0].state, enemy::State::Windup(_)),
+            "and winds up there"
+        );
+        assert!(to.x.abs() <= int(24) && to.z.abs() <= int(24));
+    }
+
+    #[test]
+    fn the_landing_offers_a_cache_of_two_and_taking_one_loses_the_other() {
+        let (c, mut w) = ice_world(NodeKind::Arrival);
+        assert_eq!(w.pickups.len(), 2);
+        assert!(w.pickups.iter().all(|p| p.group == 2));
+        assert_ne!(w.pickups[0].kind, w.pickups[1].kind);
+        w.player.pos = w.pickups[1].pos;
+        let (eye, fwd) = eye_of(&w);
+        let take = Controls {
+            interact_pressed: true,
+            ..Controls::default()
+        };
+        w.tick(&c, &take, eye, fwd);
+        assert!(w.pickups.iter().all(|p| p.taken));
+        // zone one's crater has no cache
+        let (_, crater) = world_for(NodeKind::Arrival);
+        assert!(crater.pickups.is_empty());
     }
 }

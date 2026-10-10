@@ -1,6 +1,7 @@
 // The screens between fights: the sentencing, the Holding with its shop
-// and case file, the route map, the indictment read on a death, and the
-// verdict. Each draws what the core's screen() says.
+// and case file, the route map, the interlude between zones, the
+// indictment read on a death, and the verdict. Each draws what the core's
+// screen() says.
 
 const el = (id) => document.getElementById(id);
 
@@ -25,7 +26,7 @@ function table(rows) {
   return t;
 }
 
-export function makeScreens(game, copy, changed) {
+export function makeScreens(game, copy, changed, startAt) {
   let tab = copy.codex_tabs[0][0];
 
   // each tab of the Codex, built from the core's numbers
@@ -58,6 +59,7 @@ export function makeScreens(game, copy, changed) {
       cx.enemies.map((e) => {
         const card = make("section", "codex-card");
         card.append(make("h3", "", e.name));
+        if (e.zone) card.append(make("p", "note", e.zone));
         card.append(
           table([
             [copy.codex_health, e.health],
@@ -137,7 +139,15 @@ export function makeScreens(game, copy, changed) {
       if (b.grapple) body.push(copy.build_grapple);
       if (b.parry) body.push(copy.build_parry);
       if (b.recess) body.push(copy.build_recess);
+      if (b.wall) body.push(copy.build_wall);
       el("m-build").replaceChildren(...body.map((t) => make("li", "", t)));
+      el("start-later").replaceChildren(
+        ...s.starts.map((st) => {
+          const button = make("button", "big later", st.label);
+          button.addEventListener("click", () => startAt(st.zone));
+          return button;
+        }),
+      );
 
       const shop = el("upgrades");
       shop.replaceChildren(
@@ -173,6 +183,7 @@ export function makeScreens(game, copy, changed) {
     map(s) {
       const m = s.map;
       if (!m) return;
+      el("map-heading").textContent = m.heading;
       const svg = el("edges");
       // the SVG namespace, read off the element so no URL is written here
       const ns = svg.namespaceURI;
@@ -210,6 +221,18 @@ export function makeScreens(game, copy, changed) {
       );
     },
 
+    interlude(s) {
+      const v = s.interlude;
+      if (!v) return;
+      el("l-art").src = `art/${v.art}.png`;
+      el("l-title").textContent = v.title;
+      lines(el("l-lines"), v.lines, "line");
+      Array.from(el("l-lines").children).forEach((p, k) => p.style.setProperty("--k", k));
+      el("l-newest").textContent = v.newest;
+      el("l-newest").hidden = !v.newest;
+      el("l-next").textContent = v.next;
+    },
+
     dead(s) {
       const r = s.reading;
       if (!r) return;
@@ -226,6 +249,7 @@ export function makeScreens(game, copy, changed) {
     won(s) {
       const v = s.verdict;
       if (!v) return;
+      el("w-art").src = `art/${v.art}.png`;
       el("w-title").textContent = v.title;
       lines(el("w-lines"), v.lines, "line");
       el("w-newest").textContent = v.newest;

@@ -1,0 +1,247 @@
+\documentclass[tikz,border=0pt]{standalone}
+\usepackage{xcolor}
+\usetikzlibrary{calc}
+% Palette: Sam_Comm_final.png by eye, and data/palette.json.
+\definecolor{ink}{HTML}{3B2340}
+\definecolor{sky}{HTML}{EFC46A}
+\definecolor{skyhi}{HTML}{F5DA92}
+\definecolor{skylow}{HTML}{E9B060}
+\definecolor{cloud}{HTML}{F2D58A}
+\definecolor{wallA}{HTML}{E88A73}
+\definecolor{wallB}{HTML}{EE9F7E}
+\definecolor{wallC}{HTML}{E47A7E}
+\definecolor{wallD}{HTML}{F0B07E}
+\definecolor{wallE}{HTML}{D9765F}
+\definecolor{wallF}{HTML}{E99A8A}
+\definecolor{greenA}{HTML}{8DBB7E}
+\definecolor{greenB}{HTML}{6FA77A}
+\definecolor{greenC}{HTML}{A9C97F}
+\definecolor{greenD}{HTML}{5E9C6A}
+\definecolor{window}{HTML}{F6E7A0}
+\definecolor{windark}{HTML}{8C5A64}
+\definecolor{metal}{HTML}{8D9A93}
+\definecolor{metaldark}{HTML}{5E6B66}
+\definecolor{wood}{HTML}{B9835A}
+\definecolor{paving}{HTML}{E2BD8C}
+\definecolor{ground}{HTML}{D3A77D}
+\definecolor{stone}{HTML}{E7C9A0}
+\definecolor{clock}{HTML}{F8EBC8}
+\definecolor{court}{HTML}{9E4F55}
+\definecolor{courtdark}{HTML}{6E3542}
+\definecolor{goldtrim}{HTML}{F2B53A}
+\definecolor{paper}{HTML}{F6E7C4}
+\definecolor{paperdark}{HTML}{E3CC98}
+\definecolor{violet}{HTML}{7B2FF7}
+\definecolor{magenta}{HTML}{FF2E88}
+\definecolor{cyan}{HTML}{13CFE3}
+\definecolor{gold}{HTML}{FFB000}
+\definecolor{coat}{HTML}{2F4858}
+\definecolor{coatdark}{HTML}{22323F}
+\definecolor{trim}{HTML}{F26B38}
+\definecolor{skin}{HTML}{E0AC69}
+\definecolor{hair}{HTML}{3B2340}
+\definecolor{gun}{HTML}{3E3A46}
+\definecolor{robe}{HTML}{2D2240}
+\definecolor{bossface}{HTML}{F8EBC8}
+\definecolor{eye}{HTML}{FF2E88}
+\definecolor{red}{HTML}{B3262E}
+\definecolor{heart}{HTML}{FF4F6D}
+\definecolor{jump}{HTML}{8DE36B}
+\definecolor{lamp}{HTML}{FFE6A3}
+\definecolor{night}{HTML}{4A3357}
+\definecolor{nightsky}{HTML}{6B4A6E}
+\definecolor{icesky}{HTML}{A7C4E2}
+\definecolor{icefog}{HTML}{8FAFD2}
+\definecolor{icesnow}{HTML}{EEF5F9}
+\definecolor{icesnowdark}{HTML}{CFDDE7}
+\definecolor{icewhite}{HTML}{E4F1F8}
+\definecolor{iceblue}{HTML}{A9D3EA}
+\definecolor{icedeep}{HTML}{6FA9D2}
+\definecolor{iceglow}{HTML}{8FE3FF}
+\definecolor{icerock}{HTML}{5E6E82}
+\definecolor{icerockdark}{HTML}{3F4C5F}
+\definecolor{icered}{HTML}{D94A3A}
+\definecolor{hull}{HTML}{A8392F}
+\definecolor{hulldark}{HTML}{6C2A27}
+\definecolor{icemetal}{HTML}{8A97A6}
+\definecolor{canvas}{HTML}{E9C47C}
+\definecolor{auroragreen}{HTML}{5CF2B0}
+\definecolor{aurorapink}{HTML}{F27AD0}
+\definecolor{cobalt}{HTML}{1F4FFF}
+\definecolor{ember}{HTML}{FF6A1A}
+\definecolor{witnessrobe}{HTML}{1E2742}
+\definecolor{witnessice}{HTML}{CDEBFA}
+\definecolor{navy}{HTML}{1C2A44}
+\definecolor{water}{HTML}{2C6690}
+\definecolor{dawn}{HTML}{F7C89A}
+% One ink for every outline (the TikZ house style and the game's ink pass).
+\newcommand{\Ink}{1.1pt}
+\tikzset{inked/.style={draw=ink, line width=\Ink, line join=round, line cap=round}}
+\begin{document}
+\begin{tikzpicture}
+\clip (0,0) rectangle (32,18);
+\fill[icefog] (0,0) rectangle (32,18);
+\fill[icesky] (0,9.9) rectangle (32,18);
+\fill[auroragreen, opacity=0.18] (0.5,10.5) rectangle (1.496,12.7);
+\fill[auroragreen, opacity=0.3] (1.648,11.284) rectangle (2.645,14.738);
+\fill[auroragreen, opacity=0.42] (2.796,11.837) rectangle (3.793,16.176);
+\fill[auroragreen, opacity=0.18] (3.944,11.995) rectangle (4.941,16.588);
+\fill[auroragreen, opacity=0.3] (5.093,11.713) rectangle (6.089,15.853);
+\fill[auroragreen, opacity=0.42] (6.241,11.072) rectangle (7.237,14.188);
+\fill[auroragreen, opacity=0.18] (7.389,10.263) rectangle (8.385,12.842);
+\fill[auroragreen, opacity=0.3] (8.537,9.524) rectangle (9.533,13.286);
+\fill[auroragreen, opacity=0.42] (9.685,9.073) rectangle (10.682,13.556);
+\fill[auroragreen, opacity=0.18] (10.833,9.042) rectangle (11.83,13.575);
+\fill[auroragreen, opacity=0.3] (11.981,9.442) rectangle (12.978,13.335);
+\fill[auroragreen, opacity=0.42] (13.13,10.153) rectangle (14.126,12.908);
+\fill[auroragreen, opacity=0.18] (14.278,10.967) rectangle (15.274,13.915);
+\fill[auroragreen, opacity=0.3] (15.426,11.643) rectangle (16.422,15.673);
+\fill[auroragreen, opacity=0.42] (16.574,11.982) rectangle (17.571,16.554);
+\fill[auroragreen, opacity=0.18] (17.722,11.884) rectangle (18.719,16.298);
+\fill[auroragreen, opacity=0.3] (18.87,11.377) rectangle (19.867,14.981);
+\fill[auroragreen, opacity=0.42] (20.019,10.612) rectangle (21.015,12.991);
+\fill[auroragreen, opacity=0.18] (21.167,9.814) rectangle (22.163,13.112);
+\fill[auroragreen, opacity=0.3] (22.315,9.218) rectangle (23.311,13.469);
+\fill[auroragreen, opacity=0.42] (23.463,9) rectangle (24.459,13.6);
+\fill[auroragreen, opacity=0.18] (24.611,9.225) rectangle (25.608,13.465);
+\fill[auroragreen, opacity=0.3] (25.759,9.826) rectangle (26.756,13.105);
+\fill[auroragreen, opacity=0.42] (26.907,10.625) rectangle (27.904,13.026);
+\fill[auroragreen, opacity=0.18] (28.056,11.388) rectangle (29.052,15.009);
+\fill[auroragreen, opacity=0.3] (29.204,11.889) rectangle (30.2,16.311);
+\fill[auroragreen, opacity=0.42] (30.352,11.98) rectangle (31.348,16.548);
+\fill[auroragreen, opacity=0.18] (31.5,11.635) rectangle (32.496,15.65);
+\fill[aurorapink, opacity=0.18] (3,12.5) rectangle (4.15,14.7);
+\fill[aurorapink, opacity=0.3] (4.353,13.023) rectangle (5.503,16.477);
+\fill[aurorapink, opacity=0.42] (5.706,13.391) rectangle (6.856,17.73);
+\fill[aurorapink, opacity=0.18] (7.059,13.497) rectangle (8.209,18.089);
+\fill[aurorapink, opacity=0.3] (8.412,13.308) rectangle (9.562,17.449);
+\fill[aurorapink, opacity=0.42] (9.765,12.882) rectangle (10.915,15.998);
+\fill[aurorapink, opacity=0.18] (11.118,12.342) rectangle (12.268,14.921);
+\fill[aurorapink, opacity=0.3] (12.471,11.849) rectangle (13.621,15.611);
+\fill[aurorapink, opacity=0.42] (13.824,11.548) rectangle (14.974,16.032);
+\fill[aurorapink, opacity=0.18] (15.176,11.528) rectangle (16.326,16.061);
+\fill[aurorapink, opacity=0.3] (16.529,11.794) rectangle (17.679,15.688);
+\fill[aurorapink, opacity=0.42] (17.882,12.269) rectangle (19.032,15.024);
+\fill[aurorapink, opacity=0.18] (19.235,12.812) rectangle (20.385,15.759);
+\fill[aurorapink, opacity=0.3] (20.588,13.262) rectangle (21.738,17.292);
+\fill[aurorapink, opacity=0.42] (21.941,13.488) rectangle (23.091,18.06);
+\fill[aurorapink, opacity=0.18] (23.294,13.423) rectangle (24.444,17.837);
+\fill[aurorapink, opacity=0.3] (24.647,13.085) rectangle (25.797,16.689);
+\fill[aurorapink, opacity=0.42] (26,12.575) rectangle (27.15,14.954);
+\filldraw[inked,fill=icerockdark] (-0.5,4) -- (6.5,4) -- (3,9.5) -- cycle;
+\filldraw[inked,fill=icewhite,line width=0.6pt] (1.53,7.19) -- (4.47,7.19) -- (3.56,6.75) -- (2.86,7.3) -- (2.3,6.86) -- cycle;
+\filldraw[inked,fill=icewhite] (1.53,7.19) -- (3,9.5) -- (4.47,7.19) -- cycle;
+\filldraw[inked,fill=icerockdark] (5,4) -- (13,4) -- (9,11) -- cycle;
+\filldraw[inked,fill=icewhite,line width=0.6pt] (7.32,8.06) -- (10.68,8.06) -- (9.64,7.5) -- (8.84,8.2) -- (8.2,7.64) -- cycle;
+\filldraw[inked,fill=icewhite] (7.32,8.06) -- (9,11) -- (10.68,8.06) -- cycle;
+\filldraw[inked,fill=icerockdark] (12,4) -- (18,4) -- (15,9) -- cycle;
+\filldraw[inked,fill=icewhite,line width=0.6pt] (13.74,6.9) -- (16.26,6.9) -- (15.48,6.5) -- (14.88,7) -- (14.4,6.6) -- cycle;
+\filldraw[inked,fill=icewhite] (13.74,6.9) -- (15,9) -- (16.26,6.9) -- cycle;
+\filldraw[inked,fill=icedeep] (16.5,0) -- (32.5,0) -- (32.5,18) -- (20.5,18) -- (19.4,13.5) -- (18,11) -- (18.8,7.5) -- (16.9,4.2) -- cycle;
+\filldraw[inked,fill=iceblue] (20.5,0) -- (21.3,0) -- (21,18) -- (20.7,18) -- cycle;
+\fill[iceglow, opacity=0.35] (20.8,2) rectangle (20.95,14);
+\filldraw[inked,fill=iceblue] (22.4,0) -- (23.2,0) -- (22.9,18) -- (22.6,18) -- cycle;
+\fill[iceglow, opacity=0.35] (22.7,2) rectangle (22.85,14);
+\filldraw[inked,fill=iceblue] (24.3,0) -- (25.1,0) -- (24.8,18) -- (24.5,18) -- cycle;
+\fill[iceglow, opacity=0.35] (24.6,2) rectangle (24.75,14);
+\filldraw[inked,fill=iceblue] (26.2,0) -- (27,0) -- (26.7,18) -- (26.4,18) -- cycle;
+\fill[iceglow, opacity=0.35] (26.5,2) rectangle (26.65,14);
+\filldraw[inked,fill=iceblue] (28.1,0) -- (28.9,0) -- (28.6,18) -- (28.3,18) -- cycle;
+\fill[iceglow, opacity=0.35] (28.4,2) rectangle (28.55,14);
+\filldraw[inked,fill=iceblue] (30,0) -- (30.8,0) -- (30.5,18) -- (30.2,18) -- cycle;
+\fill[iceglow, opacity=0.35] (30.3,2) rectangle (30.45,14);
+\filldraw[inked,fill=water] (-0.5,0) -- (32.5,0) -- (32.5,4) -- (-0.5,4) -- cycle;
+\draw[iceglow, line width=2pt, opacity=0.7] (8,2.0) ellipse (8.5 and 1.0);
+\draw[icewhite, line width=0.9pt] (3.854,2.853) -- (3.842,3.153) -- (3.836,2.803);
+\draw[icewhite, line width=0.9pt] (11.635,2.632) -- (12.672,2.833) -- (13.264,2.533);
+\draw[icewhite, line width=0.9pt] (8.312,3.452) -- (8.962,3.718) -- (9.334,3.385);
+\draw[icewhite, line width=0.9pt] (7.313,1.977) -- (6.055,2.109) -- (5.336,1.843);
+\draw[icewhite, line width=0.9pt] (13.849,3.008) -- (15.213,3.076) -- (15.993,2.842);
+\draw[icewhite, line width=0.9pt] (3.436,3.199) -- (2.063,3.258) -- (1.279,3.029);
+\draw[icewhite, line width=0.9pt] (5.918,2.802) -- (6.7,3.051) -- (7.146,2.727);
+\draw[icewhite, line width=0.9pt] (3.771,0.53) -- (3.87,0.829) -- (3.927,0.479);
+\filldraw[inked,fill=witnessice] (8.3,3.6) -- (9.7,3.6) -- (9.2,6.8) -- cycle;
+\filldraw[inked,fill=witnessice] (9.367,3.6) -- (10.767,3.6) -- (10.267,8.2) -- cycle;
+\filldraw[inked,fill=witnessice] (10.433,3.6) -- (11.833,3.6) -- (11.333,9.6) -- cycle;
+\filldraw[inked,fill=witnessice] (11.5,3.6) -- (12.9,3.6) -- (12.4,6.8) -- cycle;
+\filldraw[inked,fill=witnessice] (12.567,3.6) -- (13.967,3.6) -- (13.467,8.2) -- cycle;
+\filldraw[inked,fill=witnessice] (13.633,3.6) -- (15.033,3.6) -- (14.533,9.6) -- cycle;
+\filldraw[inked,fill=witnessice] (14.7,3.6) -- (16.1,3.6) -- (15.6,6.8) -- cycle;
+\filldraw[inked,fill=witnessrobe] (9.8,3.6) -- (14.6,3.6) -- (13.1,9.6) -- (11.3,9.6) -- cycle;
+\filldraw[inked,fill=witnessrobe] (10.7,9.2) -- (13.7,9.2) -- (12.2,12.4) -- cycle;
+\filldraw[inked,fill=gold] (12.2,10.3) ellipse (0.68 and 0.44);
+\filldraw[inked,fill=ink] (12.2,10.3) circle (0.2);
+\filldraw[inked,fill=iceglow] (10.84,11.6) -- (11.16,11.6) -- (11,13) -- cycle;
+\filldraw[inked,fill=iceglow] (11.44,11.6) -- (11.76,11.6) -- (11.6,13.5) -- cycle;
+\filldraw[inked,fill=iceglow] (12.04,11.6) -- (12.36,11.6) -- (12.2,13) -- cycle;
+\filldraw[inked,fill=iceglow] (12.64,11.6) -- (12.96,11.6) -- (12.8,13.5) -- cycle;
+\filldraw[inked,fill=iceglow] (13.24,11.6) -- (13.56,11.6) -- (13.4,13) -- cycle;
+\filldraw[inked,fill=witnessice] (11.1,8.9) -- (8.2,5.6) -- (8.7,5.1) -- (11.2,8.2) -- cycle;
+\filldraw[inked,fill=iceglow] (8.1,5) -- (8.7,5) -- (8.4,4) -- cycle;
+\filldraw[inked,fill=witnessice] (13.3,8.9) -- (16.2,5.6) -- (15.7,5.1) -- (13.2,8.2) -- cycle;
+\filldraw[inked,fill=iceglow] (15.7,5) -- (16.3,5) -- (16,4) -- cycle;
+\filldraw[inked,fill=witnessice,fill opacity=0.85] (3.2,3.4) -- (5.6,3.4) -- (5.9,11.0) -- (4.4,12.2) -- (2.9,11.0) -- cycle;
+\filldraw[inked,fill=icered,fill opacity=0.85] (3.9,4.4) -- (4.9,4.4) -- (4.75,8.4) -- (4.05,8.4) -- cycle;
+\filldraw[inked,fill=skin,fill opacity=0.85] (4.4,9) circle (0.42);
+\filldraw[inked,fill=hair,fill opacity=0.85] (3.98,9.1) arc (180:0:0.42) -- cycle;
+\draw[goldtrim, line width=1pt] (4.15,8.4) -- (4.4,7.6) -- (4.65,8.4);
+\fill[iceglow, opacity=0.4] (3.3,4.0) -- (3.6,4.0) -- (3.9,11.0) -- (3.6,11.0) -- cycle;
+\filldraw[inked,fill=coatdark] (6.887,3.4) -- (7.229,3.4) -- (7.415,5.11) -- (7.111,5.11) -- cycle;
+\filldraw[inked,fill=hair] (6.83,3.362) -- (7.362,3.362) -- (7.362,3.571) -- (6.83,3.571) -- cycle;
+\filldraw[inked,fill=coatdark] (7.571,3.4) -- (7.913,3.4) -- (7.689,5.11) -- (7.385,5.11) -- cycle;
+\filldraw[inked,fill=hair] (7.514,3.362) -- (8.046,3.362) -- (8.046,3.571) -- (7.514,3.571) -- cycle;
+\filldraw[inked,fill=coat] (6.602,4.255) -- (8.198,4.255) -- (7.913,5.395) -- (6.887,5.395) -- cycle;
+\filldraw[inked,fill=coat] (6.887,5.3) -- (7.913,5.3) -- (7.97,6.478) -- (6.83,6.478) -- cycle;
+\filldraw[inked,fill=trim] (6.868,5.3) -- (7.932,5.3) -- (7.932,5.452) -- (6.868,5.452) -- cycle;
+\filldraw[inked,fill=trim] (7.172,6.44) .. controls (6.26,6.725) and (5.69,6.155) .. (4.835,6.478) -- (4.93,6.25) .. controls (5.785,5.908) and (6.355,6.345) .. (7.59,6.25) -- cycle;
+\filldraw[inked,fill=skin] (7.4,6.877) circle (0.38);
+\filldraw[inked,fill=hair] (7.001,6.877) arc (180:0:0.399) -- (7.628,6.915) -- (7.305,7.067) -- cycle;
+\draw[coat, line width=4.0pt, line cap=round] (7.875,6.25) -- (8.54,7.77);
+\draw[ink, line width=0.8pt] (8.54,7.77) -- (8.54,7.17);
+\filldraw[inked,fill=goldtrim] (8.54,6.92) circle (0.22);
+\filldraw[inked,fill=goldtrim] (8.48,6.72) rectangle (8.6,6.07);
+\filldraw[inked,fill=goldtrim] (8.6,6.17) rectangle (8.78,6.27);
+\fill[gold, opacity=0.3] (8.54,6.57) circle (0.8);
+\fill[cobalt, opacity=0.22] (16.4,9.5) circle (0.494);
+\fill[cobalt, opacity=0.3] (16.4,9.5) circle (0.351);
+\filldraw[inked,fill=cobalt] (16.4,9.5) circle (0.26);
+\fill[white, opacity=0.75] (16.309,9.591) circle (0.073);
+\draw[icewhite, line width=1.6pt] (16.4,9.5) ellipse (0.13 and 0.338);
+\fill[ember, opacity=0.22] (15.417,10.271) circle (0.494);
+\fill[ember, opacity=0.3] (15.417,10.271) circle (0.351);
+\filldraw[inked,fill=ember] (15.417,10.271) circle (0.26);
+\fill[white, opacity=0.75] (15.326,10.362) circle (0.073);
+\fill[cobalt, opacity=0.22] (12.929,10.682) circle (0.494);
+\fill[cobalt, opacity=0.3] (12.929,10.682) circle (0.351);
+\filldraw[inked,fill=cobalt] (12.929,10.682) circle (0.26);
+\fill[white, opacity=0.75] (12.838,10.773) circle (0.073);
+\draw[icewhite, line width=1.6pt] (12.929,10.682) ellipse (0.13 and 0.338);
+\fill[ember, opacity=0.22] (10.1,10.539) circle (0.494);
+\fill[ember, opacity=0.3] (10.1,10.539) circle (0.351);
+\filldraw[inked,fill=ember] (10.1,10.539) circle (0.26);
+\fill[white, opacity=0.75] (10.009,10.63) circle (0.073);
+\fill[cobalt, opacity=0.22] (8.253,9.91) circle (0.494);
+\fill[cobalt, opacity=0.3] (8.253,9.91) circle (0.351);
+\filldraw[inked,fill=cobalt] (8.253,9.91) circle (0.26);
+\fill[white, opacity=0.75] (8.162,10.001) circle (0.073);
+\draw[icewhite, line width=1.6pt] (8.253,9.91) ellipse (0.13 and 0.338);
+\fill[ember, opacity=0.22] (8.253,9.09) circle (0.494);
+\fill[ember, opacity=0.3] (8.253,9.09) circle (0.351);
+\filldraw[inked,fill=ember] (8.253,9.09) circle (0.26);
+\fill[white, opacity=0.75] (8.162,9.181) circle (0.073);
+\fill[cobalt, opacity=0.22] (10.1,8.461) circle (0.494);
+\fill[cobalt, opacity=0.3] (10.1,8.461) circle (0.351);
+\filldraw[inked,fill=cobalt] (10.1,8.461) circle (0.26);
+\fill[white, opacity=0.75] (10.009,8.552) circle (0.073);
+\draw[icewhite, line width=1.6pt] (10.1,8.461) ellipse (0.13 and 0.338);
+\fill[ember, opacity=0.22] (12.929,8.318) circle (0.494);
+\fill[ember, opacity=0.3] (12.929,8.318) circle (0.351);
+\filldraw[inked,fill=ember] (12.929,8.318) circle (0.26);
+\fill[white, opacity=0.75] (12.838,8.409) circle (0.073);
+\fill[cobalt, opacity=0.22] (15.417,8.729) circle (0.494);
+\fill[cobalt, opacity=0.3] (15.417,8.729) circle (0.351);
+\filldraw[inked,fill=cobalt] (15.417,8.729) circle (0.26);
+\fill[white, opacity=0.75] (15.326,8.82) circle (0.073);
+\draw[icewhite, line width=1.6pt] (15.417,8.729) ellipse (0.13 and 0.338);
+\end{tikzpicture}
+\end{document}

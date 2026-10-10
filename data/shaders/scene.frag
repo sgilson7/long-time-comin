@@ -17,6 +17,14 @@ uniform vec3 uLight;
 uniform vec3 uWindowDark;
 uniform vec3 uInk;
 uniform float uPass;
+// See-through: the head (xyz) and the floor under it (w); the cut's sizes
+// from balance.rs (near the lens, wide at the lens, wide by the head, how
+// far short of the head it stops) and the share of its width cut solid;
+// and whether this draw is scenery that may be cut.
+uniform vec4 uFocus;
+uniform vec4 uSee;
+uniform float uSeeSolid;
+uniform float uCut;
 // a facade's window grid: one window to a cell this wide and tall, in
 // metres (crates/core/src/arena.rs: col_w and storey), and the window's
 // half size and its frame's, as fractions of the cell
@@ -25,7 +33,29 @@ const vec2 PANE = vec2(0.23, 0.235);
 const vec2 FRAME = vec2(0.2, 0.21);
 const float LIT = 0.45;
 out vec4 outColor;
+// Is this fragment of scenery between the camera and the player? Inside the
+// cut's core it goes; at its rim every other pixel goes, which reads as glass.
+bool seeThrough() {
+  if (uCut < 0.5 || uPass > 2.5) return false;
+  vec3 axis = uFocus.xyz - uEye;
+  float len = length(axis);
+  if (len < uSee.x) return false;
+  // the floor at and below the feet always stays
+  if (vWorld.y < uFocus.w + 0.15) return false;
+  vec3 rel = vWorld - uEye;
+  if (length(rel) < uSee.x) return true;
+  vec3 dir = axis / len;
+  float t = dot(rel, dir);
+  if (t <= 0.0 || t > len - uSee.w) return false;
+  float wide = mix(uSee.y, uSee.z, t / len);
+  float off = length(rel - dir * t);
+  if (off > wide) return false;
+  if (off < wide * uSeeSolid) return true;
+  vec2 cell = floor(gl_FragCoord.xy);
+  return mod(cell.x + cell.y, 2.0) < 1.0;
+}
 void main() {
+  if (seeThrough()) discard;
   vec3 n = normalize(vNormal);
   float d = length(vWorld - uEye);
   float f = clamp((d - uFogRange.x) / (uFogRange.y - uFogRange.x), 0.0, 1.0);

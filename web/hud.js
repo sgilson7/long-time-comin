@@ -55,6 +55,9 @@ export function makeHud(copy, play) {
       el("h-parry").hidden = !h.parry;
       el("h-parry").classList.toggle("ready", h.parry_ready);
       el("h-parry").classList.toggle("active", h.parrying);
+      el("h-wall").hidden = !h.wall;
+      el("h-wall").classList.toggle("ready", h.wall_ready);
+      el("h-wall").classList.toggle("active", h.walling);
       text("h-gun", h.gun);
       text("h-gun-level", h.gun_level);
       text("h-gun-trait", h.gun_trait);

@@ -5,11 +5,17 @@
 //! taken in order from the current phase. A boss moves to its next phase
 //! when its health falls past the phase's `from_pct`, calls its summons, and
 //! holds still for a moment while the arena is cleared of its orbs.
+//!
+//! Two kinds move by their own rules. A blinker (the Clerk of Minutes)
+//! hovers, and as each rest ends it vanishes and reappears somewhere else
+//! in sight of you. A burrower (the Auger) spends its rests under the
+//! floor, where it cannot be hurt, moving to a place at its range from you,
+//! and surfaces to attack.
 
 use crate::balance::*;
 use crate::content::{Content, EnemyDef, Kind, Pattern};
 use crate::fx::{self, int, ONE};
-use crate::geom::{v3, yaw_pitch_of, V3};
+use crate::geom::{facing, v3, yaw_pitch_of, V3};
 use crate::level::Level;
 use crate::orbs::{self, Salvo};
 
@@ -19,6 +25,16 @@ pub const SPAWN_TICKS: i32 = secs(4, 5);
 pub const PHASE_TICKS: i32 = secs(3, 2);
 /// how high a walker's step can climb
 const WALKER_STEP: i32 = ONE * 6 / 10;
+/// a blinker reappears at least this far from where it was, and inside
+/// this square round the arena's middle
+const BLINK_MIN: i32 = int(4);
+const BLINK_BOUND: i32 = int(24);
+/// how many places a blinker tries before it stays where it is
+const BLINK_TRIES: i32 = 12;
+/// a burrower stays up this long after its attack, open to fire
+pub const BURROW_LINGER: i32 = secs(4, 5);
+/// and moves this far under the floor
+const BURROW_DEPTH: i32 = int(3);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum State {
@@ -52,6 +68,10 @@ pub struct Enemy {
     pub held_fire: bool,
     /// ticks since it last had a clear line to its target
     pub unseen: i32,
+    /// a burrower under the floor
+    pub buried: bool,
+    /// ticks a surfaced burrower stays up after its attack
+    pub linger: i32,
 }
 
 /// What an enemy did this tick that the world must act on.
@@ -62,6 +82,11 @@ pub struct Deeds {
     pub summons: Vec<usize>,
     pub phase_changed: bool,
     pub burst: bool,
+    /// a blinker moved: from, to
+    pub blink: Option<(V3, V3)>,
+    /// a burrower came up or went down this tick
+    pub surfaced: bool,
+    pub dove: bool,
 }
 
 impl Enemy {
@@ -83,6 +108,8 @@ impl Enemy {
             home: pos,
             held_fire: false,
             unseen: 0,
+            buried: false,
+            linger: 0,
         }
     }
 
@@ -91,7 +118,7 @@ impl Enemy {
     }
 
     pub fn hurtable(&self) -> bool {
-        self.alive() && !matches!(self.state, State::Spawning(_) | State::Changing(_))
+        self.alive() && !self.buried && !matches!(self.state, State::Spawning(_) | State::Changing(_))
     }
 
     /// Takes damage; true if this blow killed it.
@@ -143,6 +170,11 @@ impl Enemy {
             self.state = if t > 1 {
                 State::Spawning(t - 1)
             } else {
+                // a burrower goes straight under
+                if d.kind == Kind::Burrower {
+                    self.dive(level, target);
+                    deeds.dove = true;
+                }
                 State::Rest(secs(1, 2) + (me as i32 % 4) * secs(1, 5))
             };
             return deeds;
@@ -183,9 +215,37 @@ impl Enemy {
             return deeds;
         };
         let pattern: &Pattern = &c.patterns[attack.pattern];
+        if d.kind == Kind::Burrower && !self.buried && matches!(self.state, State::Rest(_)) {
+            // up after its attack for a moment, then under again
+            self.linger -= 1;
+            if self.linger <= 0 {
+                self.dive(level, target);
+                deeds.dove = true;
+            }
+        }
         self.state = match self.state {
             State::Rest(t) if t > 1 => State::Rest(t - 1),
-            State::Rest(_) => State::Windup(attack.windup.max(1)),
+            State::Rest(_) => {
+                if d.kind == Kind::Blinker {
+                    let from = self.pos;
+                    if let Some(to) = self.blink_spot(d, level, target, me) {
+                        self.pos = to;
+                        self.prev = to;
+                        self.vel = V3::ZERO;
+                        deeds.blink = Some((from, to));
+                    }
+                }
+                if d.kind == Kind::Burrower && self.buried {
+                    self.buried = false;
+                    deeds.surfaced = true;
+                    let ground = level
+                        .floor_below(self.pos.x, target.y + int(2), self.pos.z)
+                        .unwrap_or(0);
+                    self.pos.y = ground + d.radius;
+                    self.prev = self.pos;
+                }
+                State::Windup(attack.windup.max(1))
+            }
             State::Windup(t) if t > 1 => State::Windup(t - 1),
             // an enemy that cannot see you holds its fire and tries again
             // sooner, so walls do not fill with orbs (SECOND-ORDER P4)
@@ -215,6 +275,7 @@ impl Enemy {
                 }
                 if t >= pattern.length() {
                     self.attack += 1;
+                    self.linger = BURROW_LINGER;
                     State::Rest(attack.rest)
                 } else {
                     State::Casting(t + 1)
@@ -223,6 +284,46 @@ impl Enemy {
             s => s,
         };
         deeds
+    }
+
+    /// A burrower goes under the floor where it stands.
+    fn dive(&mut self, level: &Level, target: V3) {
+        self.buried = true;
+        let ground = level
+            .floor_below(self.pos.x, target.y + int(2), self.pos.z)
+            .unwrap_or(0);
+        self.pos.y = ground - BURROW_DEPTH;
+        self.prev = self.pos;
+    }
+
+    /// Somewhere else in sight of `target`, about the enemy's range from
+    /// it, at its hover height; chosen from the enemy's age and index, so
+    /// the same fight blinks the same way.
+    fn blink_spot(&self, d: &EnemyDef, level: &Level, target: V3, me: usize) -> Option<V3> {
+        let seed = (self.age as u32)
+            .wrapping_mul(2_654_435_761)
+            .wrapping_add(me as u32 * 40_503);
+        for k in 0..BLINK_TRIES {
+            // twelve directions round you, five twelfths of a turn apart
+            let a = (seed % fx::TURN as u32) as i32 + fx::TURN / 12 * 5 * k;
+            let dist = d.range + int(k % 3) * 2 - int(2);
+            let flat = target.add(facing(a, 0).scale(dist));
+            if flat.x.abs() > BLINK_BOUND || flat.z.abs() > BLINK_BOUND {
+                continue;
+            }
+            let Some(ground) = level.floor_below(flat.x, target.y + int(3), flat.z) else {
+                continue;
+            };
+            let at = v3(flat.x, ground + d.hover, flat.z);
+            if at.dist(self.pos) < BLINK_MIN || level.sphere_hits(at, ONE) {
+                continue;
+            }
+            let to = target.sub(at);
+            if level.ray(at, to.norm(), to.len()).is_none() {
+                return Some(at);
+            }
+        }
+        None
     }
 
     /// The colour of the orbs its current attack fires, for the HUD.
@@ -250,6 +351,30 @@ impl Enemy {
         let side = v3(-towards.z, 0, towards.x).scale(self.orbit * ONE);
         match d.kind {
             Kind::Turret => {}
+            Kind::Blinker => {
+                // a slow bob where it stands; it moves by blinking
+                let ground = level.floor_below(self.pos.x, self.pos.y, self.pos.z).unwrap_or(0);
+                let bob = fx::sin(self.age * fx::TURN / 90) / 4;
+                self.pos.y = fx::approach(self.pos.y, ground + d.hover + bob, ONE / 30);
+            }
+            Kind::Burrower => {
+                if self.buried {
+                    // under the floor, toward a place at its range from you
+                    let away = v3(-towards.x, 0, -towards.z);
+                    let mut goal = target.add(away.scale(d.range));
+                    goal.x = goal.x.clamp(-BLINK_BOUND, BLINK_BOUND);
+                    goal.z = goal.z.clamp(-BLINK_BOUND, BLINK_BOUND);
+                    let step = v3(goal.x - self.pos.x, 0, goal.z - self.pos.z).clamp_len(d.speed);
+                    let ground = level
+                        .floor_below(self.pos.x, target.y + int(2), self.pos.z)
+                        .unwrap_or(0);
+                    self.pos = v3(self.pos.x + step.x, ground - BURROW_DEPTH, self.pos.z + step.z);
+                    self.vel = step;
+                } else {
+                    self.vel = V3::ZERO;
+                }
+                let _ = dist;
+            }
             Kind::Moth => {
                 // straight at the chest, weaving
                 let weave = side.scale(fx::sin(self.age * fx::TURN / 50) / 2);

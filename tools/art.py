@@ -29,6 +29,11 @@ generator gets wrong), and where this file enforces each:
   player_coat and player_trim (`defendant`).
 - the Bailiff: a robe, a clock for a face, a crown, two hands with gavels
   and a ring of hours, as crates/core/src/draw.rs draws it (`bailiff`).
+- the ice (zone two): cobalt orbs are the blue ones the Injunction breaks,
+  and carry a pale rim (`orb(..., rim=True)`); ember orbs do not.
+- the Witness: a hooded robe grown into ice, one great gold eye, a crown
+  of shards, arms of ice, as crates/core/src/draw/beasts.rs draws it
+  (`witness`).
 - colour is never the only cue: every shape has the plum outline.
 - repeatable: every random choice comes from a seeded generator, so the
   same script draws the same pictures.
@@ -52,6 +57,12 @@ COLOURS = {
     "coat": "2F4858", "coatdark": "22323F", "trim": "F26B38", "skin": "E0AC69", "hair": "3B2340", "gun": "3E3A46",
     "robe": "2D2240", "bossface": "F8EBC8", "eye": "FF2E88", "red": "B3262E", "heart": "FF4F6D",
     "jump": "8DE36B", "lamp": "FFE6A3", "night": "4A3357", "nightsky": "6B4A6E",
+    # zone two, the White Waste: data/palette.json's ice set
+    "icesky": "A7C4E2", "icefog": "8FAFD2", "icesnow": "EEF5F9", "icesnowdark": "CFDDE7", "icewhite": "E4F1F8",
+    "iceblue": "A9D3EA", "icedeep": "6FA9D2", "iceglow": "8FE3FF", "icerock": "5E6E82", "icerockdark": "3F4C5F",
+    "icered": "D94A3A", "hull": "A8392F", "hulldark": "6C2A27", "icemetal": "8A97A6", "canvas": "E9C47C",
+    "auroragreen": "5CF2B0", "aurorapink": "F27AD0", "cobalt": "1F4FFF", "ember": "FF6A1A",
+    "witnessrobe": "1E2742", "witnessice": "CDEBFA", "navy": "1C2A44", "water": "2C6690", "dawn": "F7C89A",
 }
 WALLS = ["wallA", "wallB", "wallC", "wallD", "wallE", "wallF"]
 GREENS = ["greenA", "greenB", "greenC", "greenD"]
@@ -192,9 +203,10 @@ def clocktower(x, y0, w, h):
     return s
 
 
-def orb(x, y, r, colour, gold=False, glow=True):
+def orb(x, y, r, colour, gold=False, glow=True, rim=False):
     """An orb as the game draws it: a halo, an inked core, a highlight.
-    Only a gold orb (one Objection parries) carries the gold ring."""
+    Only a gold orb (one Objection parries) carries the gold ring; a blue
+    orb (one the Injunction breaks) a pale rim."""
     s = ""
     if glow:
         s += f"\\fill[{colour}, opacity=0.22] {P(x, y)} circle ({f(r * 1.9)});\n"
@@ -204,6 +216,8 @@ def orb(x, y, r, colour, gold=False, glow=True):
     if gold:
         s += f"\\draw[gold, line width=2.2pt] {P(x, y)} ellipse ({f(r * 1.6)} and {f(r * 0.5)});\n"
         s += f"\\draw[ink, line width=0.7pt] {P(x, y)} ellipse ({f(r * 1.75)} and {f(r * 0.62)});\n"
+    if rim:
+        s += f"\\draw[icewhite, line width=1.6pt] {P(x, y)} ellipse ({f(r * 0.5)} and {f(r * 1.3)});\n"
     return s
 
 
@@ -526,9 +540,190 @@ def icon(kind):
     elif kind == "mend":
         s += orb(2.0, 1.7, 0.6, "gold", gold=True, glow=False)
         s += "\\filldraw[inked,fill=heart] (2,2.55) .. controls (1.2,3.2) and (1.5,3.8) .. (2,3.4) .. controls (2.5,3.8) and (2.8,3.2) .. (2,2.55) -- cycle;\n"
+    elif kind == "wall":
+        # a pane of light, a blue orb breaking on it, an ember one passing
+        s += f"\\filldraw[inked,fill=iceglow,fill opacity=0.8] (1.4,0.8) rectangle (2.4,3.2);\n"
+        s += "\\draw[icewhite, line width=1.5pt] (1.6,1.0) -- (1.6,3.0);\n"
+        s += orb(0.85, 2.4, 0.38, "cobalt", glow=False, rim=True)
+        for (x, y) in ((1.25, 2.9), (1.2, 1.9), (1.35, 2.55)):
+            s += poly([(x, y), (x + 0.18, y + 0.1), (x + 0.05, y - 0.15)], "cobalt", ",line width=0.6pt")
+        s += orb(3.2, 1.5, 0.32, "ember", glow=False)
+        s += "\\draw[ember, line width=1.4pt, opacity=0.7] (1.0,1.6) -- (2.8,1.5);\n"
     elif kind == "gavel":
         s += poly([(0.9, 0.9), (2.4, 2.4), (2.1, 2.7), (0.6, 1.2)], "wood")
         s += f"\\filldraw[inked,fill=goldtrim,rotate around={{45:(2.6,2.6)}}] (1.9,2.25) rectangle (3.3,2.95);\n"
+    return s, (W, H)
+
+
+# ---- zone two ---------------------------------------------------------------
+
+def ice_sky(W, H):
+    s = f"\\fill[icefog] (0,0) rectangle {P(W, H)};\n"
+    s += f"\\fill[icesky] (0,{f(H * 0.55)}) rectangle {P(W, H)};\n"
+    return s
+
+
+def aurora(rng, x0, x1, y0, n, colour, amp=1.2):
+    """Curtains of light: tall thin panes rising and falling, faint."""
+    s = ""
+    for k in range(n):
+        x = x0 + (x1 - x0) * k / max(1, n - 1)
+        wave = math.sin(k * 0.55)
+        h = 2.2 + abs(wave) * 2.4
+        y = y0 + wave * amp
+        s += f"\\fill[{colour}, opacity={f(0.18 + 0.12 * (k % 3))}] {P(x, y)} rectangle {P(x + (x1 - x0) / n * 0.9, y + h)};\n"
+    return s
+
+
+def mountain(x, y0, w, h, rock="icerock"):
+    s = poly([(x - w / 2, y0), (x + w / 2, y0), (x, y0 + h)], rock)
+    s += poly([(x - w * 0.21, y0 + h * 0.58), (x + w * 0.21, y0 + h * 0.58), (x + w * 0.08, y0 + h * 0.5), (x - w * 0.02, y0 + h * 0.6), (x - w * 0.1, y0 + h * 0.52)], "icewhite", ",line width=0.6pt")
+    s += poly([(x - w * 0.21, y0 + h * 0.58), (x, y0 + h), (x + w * 0.21, y0 + h * 0.58)], "icewhite")
+    return s
+
+
+def ship(x, y, s, sail=True):
+    """The expedition's icebreaker: a red hull, a white bridge, two masts."""
+    out = poly([(x - 3.2 * s, y + 0.9 * s), (x + 2.6 * s, y + 0.9 * s), (x + 3.4 * s, y + 1.8 * s), (x - 3.6 * s, y + 1.8 * s)], "hull")
+    out += rect(x - 3.1 * s, y + 0.9 * s, x + 2.5 * s, y + 1.12 * s, "hulldark", lw=0.8)
+    out += rect(x + 0.4 * s, y + 1.8 * s, x + 2.0 * s, y + 2.7 * s, "icewhite")
+    for k in range(3):
+        out += rect(x + 0.6 * s + k * 0.45 * s, y + 2.2 * s, x + 0.85 * s + k * 0.45 * s, y + 2.45 * s, "lamp", lw=0.6)
+    out += rect(x + 2.3 * s, y + 1.8 * s, x + 2.7 * s, y + 2.9 * s, "icered")
+    for mx, top in ((-2.0, 4.6), (-0.4, 3.9)):
+        out += line((x + mx * s, y + 1.8 * s), (x + mx * s, y + top * s), lw=1.6 * s)
+        out += line((x + (mx - 0.7) * s, y + (top - 1.1) * s), (x + (mx + 0.7) * s, y + (top - 1.1) * s), lw=1.0 * s)
+    return out
+
+
+def floe(x, y, w):
+    return poly([(x, y), (x + w, y), (x + w * 0.9, y + 0.35), (x + w * 0.15, y + 0.4)], "icewhite")
+
+
+def witness(x, y, s):
+    """The Witness: a robe grown into ice, one great eye, a crown of
+    shards, arms of ice lowered. (x, y) is the robe's hem centre."""
+    out = ""
+    for k in range(7):
+        a = k / 6
+        px = x - 1.6 * s + a * 3.2 * s
+        h = (1.6 + (k % 3) * 0.7) * s
+        out += poly([(px - 0.35 * s, y), (px + 0.35 * s, y), (px + 0.1 * s, y + h)], "witnessice")
+    out += poly([(x - 1.2 * s, y), (x + 1.2 * s, y), (x + 0.45 * s, y + 3.0 * s), (x - 0.45 * s, y + 3.0 * s)], "witnessrobe")
+    out += poly([(x - 0.75 * s, y + 2.8 * s), (x + 0.75 * s, y + 2.8 * s), (x, y + 4.4 * s)], "witnessrobe")
+    out += f"\\filldraw[inked,fill=gold] {P(x, y + 3.35 * s)} ellipse ({f(0.34 * s)} and {f(0.22 * s)});\n"
+    out += circle(x, y + 3.35 * s, 0.1 * s, "ink")
+    for k in range(5):
+        px = x - 0.6 * s + k * 0.3 * s
+        out += poly([(px - 0.08 * s, y + 4.0 * s), (px + 0.08 * s, y + 4.0 * s), (px, y + 4.7 * s + (k % 2) * 0.25 * s)], "iceglow")
+    for side in (-1, 1):
+        sx, sy = x + side * 0.55 * s, y + 2.5 * s
+        hx, hy = x + side * 1.9 * s, y + 0.9 * s
+        out += poly([(sx, sy + 0.15 * s), (hx + side * 0.1 * s, hy + 0.1 * s), (hx - side * 0.15 * s, hy - 0.15 * s), (sx - side * 0.05 * s, sy - 0.2 * s)], "witnessice")
+        out += poly([(hx - 0.15 * s, hy - 0.2 * s), (hx + 0.15 * s, hy - 0.2 * s), (hx, hy - 0.7 * s)], "iceglow")
+    return out
+
+
+def interlude():
+    """The Years Between: the Waiting City's harbour at dawn, a tower with
+    the company's floor lit, a clock stopped at 21:14, and the expedition's
+    ship sailing north into colder light between the ice floes. The right
+    side is cold sky and sea, under the page's sheet."""
+    W, H = 32.0, 18.0
+    rng = random.Random(2046)
+    s = f"\\fill[icesky] (0,0) rectangle {P(W, H)};\n"
+    # the sky warms toward the city on the left
+    for k in range(12):
+        x0 = k * 1.4
+        s += f"\\fill[dawn, opacity={f(0.85 - k * 0.07)}] {P(x0, 0)} rectangle {P(x0 + 1.45, H)};\n"
+    s += f"\\fill[skyhi, opacity=0.6] (0,12) rectangle (9,18);\n"
+    for (cx, cy, cs) in [(3.0, 15.5, 1.3), (9.5, 16.4, 1.0)]:
+        s += cloud(cx, cy, cs)
+    s += aurora(rng, 18.0, 31.5, 12.0, 16, "auroragreen")
+    s += aurora(rng, 20.0, 31.5, 13.4, 10, "aurorapink", amp=0.8)
+    # the far ice to the north
+    for (mx, mh, mw) in [(20.5, 4.8, 6.0), (25.0, 6.2, 7.0), (29.5, 4.4, 5.0)]:
+        s += mountain(mx, 5.2, mw, mh)
+    # the city: towers, the clock, the company's tower with one floor lit
+    x = -0.4
+    while x < 12.5:
+        w, h = rng.uniform(1.2, 2.2), rng.uniform(3.5, 8.5)
+        s += building(rng, x, 5.2, w, h, detail=True, lit_pct=35)
+        x += w + 0.1
+    s += clocktower(5.6, 5.2, 1.5, 7.5)
+    s += rect(9.2, 5.2, 11.6, 16.2, "wallC")
+    for j in range(13):
+        fill = "lamp" if j == 10 else "windark"
+        for i in range(3):
+            s += f"\\filldraw[inked,line width=0.6pt,fill={fill}] {P(9.45 + i * 0.72, 5.8 + j * 0.78)} rectangle {P(9.85 + i * 0.72, 6.3 + j * 0.78)};\n"
+    s += rect(9.05, 16.2, 11.75, 16.55, "wallE")
+    s += line((10.4, 16.55), (10.4, 17.8), lw=1.2)
+    # the harbour: the quay, the sea, floes, the ship going north
+    s += rect(-0.5, 4.2, 13.5, 5.3, "stone")
+    s += poly([(-0.5, -0.5), (W + 0.5, -0.5), (W + 0.5, 5.2), (13.5, 5.2), (13.5, 4.2), (-0.5, 4.2)], "water")
+    for k in range(10):
+        y = 0.6 + (k % 5) * 0.75
+        x0 = rng.uniform(0, W - 2)
+        s += f"\\draw[iceglow, line width=1.4pt, opacity=0.6] {P(x0, y)} -- {P(x0 + rng.uniform(0.8, 2.2), y)};\n"
+    for (fx_, fy, fw) in [(15.0, 2.0, 1.6), (19.0, 3.4, 1.1), (23.5, 1.4, 2.2), (27.0, 3.8, 1.4), (29.5, 1.0, 1.8)]:
+        s += floe(fx_, fy, fw)
+    s += ship(17.2, 1.8, 1.25)
+    s += f"\\draw[icewhite, line width=1.8pt] (12.8,2.4) .. controls (14.0,2.2) and (15.0,2.5) .. (13.8,2.3);\n"
+    # the wake behind the ship
+    for k in range(4):
+        s += f"\\draw[icewhite, line width=1.2pt, opacity={f(0.8 - k * 0.18)}] {P(13.0 - k * 1.2, 2.25 - k * 0.12)} -- {P(13.9 - k * 1.2, 2.3 - k * 0.12)};\n"
+    return s, (W, H)
+
+
+def testimony():
+    """The Witness steps down: the hollow in the ice under the aurora, the
+    Witness lowering its arms, a pillar gone clear with a sleeper in a red
+    coat inside, and the Defendant holding up a key on its string. The
+    right side is the ice wall, under the page's sheet."""
+    W, H = 32.0, 18.0
+    rng = random.Random(1439)
+    s = ice_sky(W, H)
+    s += aurora(rng, 0.5, 31.5, 10.5, 28, "auroragreen", amp=1.5)
+    s += aurora(rng, 3.0, 26.0, 12.5, 18, "aurorapink", amp=1.0)
+    for (mx, mh, mw) in [(3.0, 5.5, 7.0), (9.0, 7.0, 8.0), (15.0, 5.0, 6.0)]:
+        s += mountain(mx, 4.0, mw, mh, rock="icerockdark")
+    # the ice wall of the hollow on the right
+    s += poly([(16.5, 0), (W + 0.5, 0), (W + 0.5, H), (20.5, H), (19.4, 13.5), (18.0, 11.0), (18.8, 7.5), (16.9, 4.2)], "icedeep")
+    for k in range(6):
+        x0 = 20.5 + k * 1.9
+        s += poly([(x0, 0), (x0 + 0.8, 0), (x0 + 0.5, H), (x0 + 0.2, H)], "iceblue")
+        s += f"\\fill[iceglow, opacity=0.35] {P(x0 + 0.3, 2)} rectangle {P(x0 + 0.45, 14)};\n"
+    # the frozen lake
+    s += poly([(-0.5, 0), (W + 0.5, 0), (W + 0.5, 4.0), (-0.5, 4.0)], "water")
+    s += f"\\draw[iceglow, line width=2pt, opacity=0.7] (8,2.0) ellipse (8.5 and 1.0);\n"
+    for k in range(8):
+        a = rng.uniform(0, math.pi)
+        x0, y0 = 8 + rng.uniform(-6, 6), rng.uniform(0.5, 3.5)
+        s += f"\\draw[icewhite, line width=0.9pt] {P(x0, y0)} -- {P(x0 + math.cos(a) * 1.4, y0 + math.sin(a) * 0.3)} -- {P(x0 + math.cos(a) * 2.2, y0 + math.sin(a) * 0.15 - 0.2)};\n"
+    # the Witness, its arms lowered
+    s += witness(12.2, 3.6, 2.0)
+    # the pillar gone clear, the sleeper in her red coat inside
+    s += f"\\filldraw[inked,fill=witnessice,fill opacity=0.85] (3.2,3.4) -- (5.6,3.4) -- (5.9,11.0) -- (4.4,12.2) -- (2.9,11.0) -- cycle;\n"
+    s += poly([(3.9, 4.4), (4.9, 4.4), (4.75, 8.4), (4.05, 8.4)], "icered", ",fill opacity=0.85")
+    s += circle(4.4, 9.0, 0.42, "skin", ",fill opacity=0.85")
+    s += f"\\filldraw[inked,fill=hair,fill opacity=0.85] (3.98,9.1) arc (180:0:0.42) -- cycle;\n"
+    s += f"\\draw[goldtrim, line width=1pt] (4.15,8.4) -- (4.4,7.6) -- (4.65,8.4);\n"
+    s += f"\\fill[iceglow, opacity=0.4] (3.3,4.0) -- (3.6,4.0) -- (3.9,11.0) -- (3.6,11.0) -- cycle;\n"
+    # the Defendant, holding up the key
+    ds, dx = 1.9, 7.4
+    s += defendant(dx, 3.4, ds, gun=False)
+    hx, hy = dx + 0.6 * ds, 3.4 + 2.3 * ds
+    s += line((dx + 0.25 * ds, 3.4 + 1.5 * ds), (hx, hy), lw=4.0, colour="coat")
+    s += f"\\draw[ink, line width=0.8pt] {P(hx, hy)} -- {P(hx, hy - 0.6)};\n"
+    s += f"\\filldraw[inked,fill=goldtrim] {P(hx, hy - 0.85)} circle (0.22);\n"
+    s += f"\\filldraw[inked,fill=goldtrim] {P(hx - 0.06, hy - 1.05)} rectangle {P(hx + 0.06, hy - 1.7)};\n"
+    s += f"\\filldraw[inked,fill=goldtrim] {P(hx + 0.06, hy - 1.6)} rectangle {P(hx + 0.24, hy - 1.5)};\n"
+    s += f"\\fill[gold, opacity=0.3] {P(hx, hy - 1.2)} circle (0.8);\n"
+    # the last orbs hanging, a held ring breaking up
+    for k in range(9):
+        a = 2 * math.pi * k / 9
+        c = "cobalt" if k % 2 == 0 else "ember"
+        s += orb(12.2 + math.cos(a) * 4.2, 9.5 + math.sin(a) * 1.2, 0.26, c, rim=(c == "cobalt"))
     return s, (W, H)
 
 
@@ -537,10 +732,12 @@ PICTURES = {
     "sentencing": sentencing,
     "indictment": indictment,
     "verdict": verdict,
+    "interlude": interlude,
+    "testimony": testimony,
 }
 for g in ("carbine", "scattergun", "launcher"):
     PICTURES[f"guns/{g}"] = (lambda g=g: gun_art(g))
-for k in ("heart", "jump", "speed", "gun", "parry", "hook", "dash", "gavel", "pierce", "pulse", "mend"):
+for k in ("heart", "jump", "speed", "gun", "parry", "hook", "dash", "gavel", "pierce", "pulse", "mend", "wall"):
     PICTURES[f"icons/{k}"] = (lambda k=k: icon(k))
 
 # dpi for each kind: big pictures fill a screen, icons are small

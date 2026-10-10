@@ -1,8 +1,9 @@
-//! A run's map: zone one as a graph of arenas. One main path runs from the
-//! crater where you land to the Court of Hours; between main fights, side
-//! paths of one or two harder fights rejoin the next main node, and the last
-//! node of each holds a reward you can see on the map before you choose.
-//! Every run rolls its own graph from a seed.
+//! A run's map: a zone as a graph of arenas. One main path runs from where
+//! you arrive (the crater, the landing on the ice) to the zone's boss;
+//! between main fights, side paths of one or two harder fights rejoin the
+//! next main node, and the last node of each holds a reward you can see on
+//! the map before you choose. Every zone of every run rolls its own graph
+//! from a seed.
 
 use crate::content::Content;
 use crate::rng::Rng;
@@ -32,6 +33,8 @@ pub enum Reward {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Node {
+    /// the zone it is in, by index
+    pub zone: usize,
     pub kind: NodeKind,
     pub archetype: String,
     pub tier: i32,
@@ -43,7 +46,10 @@ pub struct Node {
     pub step: i32,
     pub lane: i32,
     pub seed: u64,
+    /// an index into the zone's encounters
     pub encounter: Option<usize>,
+    /// an arrival's cache: rewards to choose one of
+    pub cache: Vec<Reward>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -58,16 +64,19 @@ pub const STRIDE: i32 = 4;
 
 impl Route {
     pub fn build(c: &Content, seed: u64) -> Route {
-        Route::build_for(c, seed, 1)
+        Route::build_for(c, 0, seed, 1)
     }
 
-    /// A run's map for a player whose Carbine starts at `carbine_level`:
-    /// no side path offers a Carbine that is no better (SECOND-ORDER P6).
-    pub fn build_for(c: &Content, seed: u64, carbine_level: i32) -> Route {
-        let mut rng = Rng::new(seed);
-        let r = &c.route;
+    /// Zone `zone`'s map for a player whose Carbine starts at
+    /// `carbine_level`: no side path offers a Carbine that is no better
+    /// (SECOND-ORDER P6).
+    pub fn build_for(c: &Content, zone: usize, seed: u64, carbine_level: i32) -> Route {
+        let mut rng = Rng::new(seed ^ (zone as u64).wrapping_mul(0x9E37_79B9));
+        let z = &c.zones[zone];
+        let r = &z.route;
         let mut nodes = Vec::new();
         let node = |kind: NodeKind, archetype: &str, tier: i32, step: i32, rng: &mut Rng| Node {
+            zone,
             kind,
             archetype: archetype.to_string(),
             tier,
@@ -78,19 +87,34 @@ impl Route {
             lane: 0,
             seed: rng.next(),
             encounter: None,
+            cache: Vec::new(),
         };
         // the main path
-        nodes.push(node(NodeKind::Arrival, "arrival", 0, 0, &mut rng));
+        let mut arrival = node(NodeKind::Arrival, "arrival", 0, 0, &mut rng);
+        // an arrival's cache: two different rewards, take one
+        if r.cache_rewards.len() >= 2 {
+            let a = rng.range(0, r.cache_rewards.len() as i32 - 1) as usize;
+            let mut b = rng.range(0, r.cache_rewards.len() as i32 - 2) as usize;
+            if b >= a {
+                b += 1;
+            }
+            for k in [a, b] {
+                arrival
+                    .cache
+                    .push(reward_of(c, &r.cache_rewards[k], 2, carbine_level, &mut rng));
+            }
+        }
+        nodes.push(arrival);
         let mut last_arch = String::new();
         for i in 0..r.main_fights {
             let mut arch = last_arch.clone();
             while arch == last_arch {
-                arch = c.archetypes[rng.range(0, c.archetypes.len() as i32 - 1) as usize].clone();
+                arch = z.archetypes[rng.range(0, z.archetypes.len() as i32 - 1) as usize].clone();
             }
             last_arch = arch.clone();
             let tier = r.main_tiers[i];
             let mut n = node(NodeKind::Fight, &arch, tier, STRIDE * (i as i32 + 1), &mut rng);
-            n.encounter = Some(pick_encounter(c, tier, &mut rng));
+            n.encounter = Some(pick_encounter(c, zone, tier, &mut rng));
             nodes.push(n);
         }
         let rest_step = STRIDE * (r.main_fights as i32 + 1);
@@ -98,14 +122,7 @@ impl Route {
         // the Antechamber's alternative to its fountain
         if !r.rest_rewards.is_empty() {
             let pick = &r.rest_rewards[rng.range(0, r.rest_rewards.len() as i32 - 1) as usize];
-            rest.reward = Some(match pick.as_str() {
-                "pierce" => Reward::Pierce,
-                "pulse" => Reward::Pulse,
-                "mend" => Reward::Mend,
-                "jump" => Reward::Jump,
-                "speed" => Reward::Speed,
-                _ => Reward::Health,
-            });
+            rest.reward = Some(reward_of(c, pick, 3, carbine_level, &mut rng));
         }
         nodes.push(rest);
         nodes.push(node(NodeKind::Boss, "boss", 0, rest_step + STRIDE, &mut rng));
@@ -129,42 +146,33 @@ impl Route {
             let j = rng.range(0, i as i32) as usize;
             bag.swap(i, j);
         }
-        let max_tier = c.encounters.iter().map(|e| e.tier).max().unwrap_or(1);
+        let max_tier = z.max_tier();
         for (d, &from) in chosen.iter().enumerate() {
             let len = rng.range(1, r.detour_max as i32);
             let tier = (nodes[from].tier + 1).min(max_tier);
             let mut prev = from;
             for k in 0..len {
-                let mut arch = c.archetypes[rng.range(0, c.archetypes.len() as i32 - 1) as usize].clone();
+                let arches = &z.archetypes;
+                let mut arch = arches[rng.range(0, arches.len() as i32 - 1) as usize].clone();
                 if arch == nodes[prev].archetype {
-                    arch = c.archetypes[(c.archetypes.iter().position(|a| *a == arch).unwrap_or(0) + 1)
-                        % c.archetypes.len()]
-                    .clone();
+                    arch = arches[(arches.iter().position(|a| *a == arch).unwrap_or(0) + 1) % arches.len()]
+                        .clone();
                 }
                 let step = nodes[from].step + if len == 1 { STRIDE / 2 } else { 1 + 2 * k };
                 let mut n = node(NodeKind::Fight, &arch, tier, step, &mut rng);
                 n.detour = true;
                 n.lane = 1;
-                n.encounter = Some(pick_encounter(c, tier, &mut rng));
+                n.encounter = Some(pick_encounter(c, zone, tier, &mut rng));
                 if k == len - 1 {
                     let deep = from * 2 > r.main_fights;
-                    n.reward = Some(match bag.get(d).map(|s| s.as_str()).unwrap_or("health") {
-                        "weapon" => {
-                            let level = if deep { 3 } else { 2 };
-                            let carbine = c.gun("carbine");
-                            let fits: Vec<usize> = (0..c.guns.len())
-                                .filter(|&g| g != carbine || level > carbine_level)
-                                .collect();
-                            let gun = fits[rng.range(0, fits.len() as i32 - 1) as usize];
-                            Reward::Gun(gun, level)
-                        }
-                        "jump" => Reward::Jump,
-                        "speed" => Reward::Speed,
-                        "pierce" => Reward::Pierce,
-                        "pulse" => Reward::Pulse,
-                        "mend" => Reward::Mend,
-                        _ => Reward::Health,
-                    });
+                    let pick = bag.get(d).cloned().unwrap_or_else(|| "health".to_string());
+                    n.reward = Some(reward_of(
+                        c,
+                        &pick,
+                        if deep { 3 } else { 2 },
+                        carbine_level,
+                        &mut rng,
+                    ));
                 }
                 let idx = nodes.len();
                 nodes.push(n);
@@ -192,10 +200,31 @@ impl Route {
     }
 }
 
-fn pick_encounter(c: &Content, tier: i32, rng: &mut Rng) -> usize {
-    let fits: Vec<usize> = (0..c.encounters.len())
-        .filter(|&i| c.encounters[i].tier == tier)
-        .collect();
+/// A reward by its name in zone.json; a gun is of `level`, and never a
+/// Carbine no better than the one the run started with.
+fn reward_of(c: &Content, name: &str, level: i32, carbine_level: i32, rng: &mut Rng) -> Reward {
+    match name {
+        "weapon" => {
+            let carbine = c.gun("carbine");
+            let fits: Vec<usize> = (0..c.guns.len())
+                .filter(|&g| g != carbine || level > carbine_level)
+                .collect();
+            let gun = fits[rng.range(0, fits.len() as i32 - 1) as usize];
+            Reward::Gun(gun, level)
+        }
+        "jump" => Reward::Jump,
+        "speed" => Reward::Speed,
+        "pierce" => Reward::Pierce,
+        "pulse" => Reward::Pulse,
+        "mend" => Reward::Mend,
+        _ => Reward::Health,
+    }
+}
+
+fn pick_encounter(c: &Content, zone: usize, tier: i32, rng: &mut Rng) -> usize {
+    let list = &c.zones[zone].encounters;
+    let tier = tier.min(c.zones[zone].max_tier());
+    let fits: Vec<usize> = (0..list.len()).filter(|&i| list[i].tier == tier).collect();
     if fits.is_empty() {
         return 0;
     }
@@ -219,7 +248,7 @@ mod tests {
                 at = n;
                 kinds.push(r.nodes[at].kind);
             }
-            assert_eq!(kinds.len(), c.route.main_fights + 3, "seed {seed}");
+            assert_eq!(kinds.len(), c.zones[0].route.main_fights + 3, "seed {seed}");
             assert_eq!(kinds[0], NodeKind::Arrival);
             assert_eq!(kinds[kinds.len() - 2], NodeKind::Rest);
             assert_eq!(*kinds.last().unwrap(), NodeKind::Boss);
@@ -236,7 +265,7 @@ mod tests {
                 .filter(|&i| !r.nodes[i].detour && r.nodes[i].next.len() == 2)
                 .collect();
             assert!(
-                (c.route.detours_min..=c.route.detours_max).contains(&starts.len()),
+                (c.zones[0].route.detours_min..=c.zones[0].route.detours_max).contains(&starts.len()),
                 "seed {seed}: {} side paths",
                 starts.len()
             );
@@ -259,7 +288,7 @@ mod tests {
                     len += 1;
                 }
                 assert_eq!(at, s + 1, "seed {seed}: rejoins the next main node");
-                assert!(len - 1 <= c.route.detour_max);
+                assert!(len - 1 <= c.zones[0].route.detour_max);
             }
         }
     }
@@ -279,7 +308,7 @@ mod tests {
         let r = Route::build(&c, 5);
         for n in r.nodes.iter().filter(|n| n.kind == NodeKind::Fight) {
             let e = n.encounter.expect("a fight has an encounter");
-            assert_eq!(c.encounters[e].tier, n.tier);
+            assert_eq!(c.zones[0].encounters[e].tier, n.tier);
         }
     }
 
@@ -289,7 +318,7 @@ mod tests {
         let carbine = c.gun("carbine");
         let mut offered_other = false;
         for seed in 0..60 {
-            let r = Route::build_for(&c, seed, 2);
+            let r = Route::build_for(&c, 0, seed, 2);
             for n in &r.nodes {
                 if let Some(Reward::Gun(g, l)) = n.reward {
                     assert!(
@@ -307,5 +336,24 @@ mod tests {
             );
         }
         assert!(offered_other);
+    }
+
+    #[test]
+    fn a_route_on_the_ice_holds_only_the_ice_and_its_arrival_a_cache_of_two() {
+        let c = content();
+        let z = &c.zones[1];
+        for seed in 0..30 {
+            let r = Route::build_for(&c, 1, seed, 1);
+            assert!(r.nodes.iter().all(|n| n.zone == 1));
+            for n in r.nodes.iter().filter(|n| n.kind == NodeKind::Fight) {
+                assert!(z.archetypes.contains(&n.archetype), "{}", n.archetype);
+                assert_eq!(z.encounters[n.encounter.unwrap()].tier, n.tier.min(z.max_tier()));
+            }
+            let cache = &r.nodes[r.start()].cache;
+            assert_eq!(cache.len(), 2, "seed {seed}");
+            assert_ne!(cache[0], cache[1]);
+        }
+        // zone one's crater has none
+        assert!(Route::build(&c, 3).nodes[0].cache.is_empty());
     }
 }

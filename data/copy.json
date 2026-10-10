@@ -111,6 +111,10 @@
       "Parry, once Objection is bought. Lasts {parry_window} s and turns back gold orbs."
     ],
     [
+      "R",
+      "Injunction, once bought: a wall {wall_width} m wide for {wall_time} s that breaks blue orbs."
+    ],
+    [
       "Tab or M",
       "Open or close the map. The game is paused while it is open."
     ],
@@ -184,5 +188,10 @@
   "reward_mend": "Mending Parry",
   "prompt_choose": "E: take {thing}. The other choice here is lost.",
   "prompt_heal": "health +{n}",
-  "jump_cue": "JUMP"
+  "jump_cue": "JUMP",
+  "start_later": "Start in {year}: {zone}",
+  "interlude_next": "Sail north",
+  "hud_wall": "Wall (R)",
+  "hint_landing": "The expedition's cache: walk to one of the two rewards ahead and press E; the other is lost. Glowing grates are updraft vents: stand on one and it throws you up.",
+  "build_wall": "the Injunction"
 }

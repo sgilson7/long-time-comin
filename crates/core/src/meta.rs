@@ -24,6 +24,10 @@ pub struct Meta {
     pub clemency_earned: i32,
     /// a count is read the first time a run reaches the zone's hardest fights
     pub reached_far: bool,
+    /// the furthest zone a run may start in: one past each boss beaten
+    pub unlocked: i32,
+    /// zone bosses beaten, over every run
+    pub bosses_beaten: i32,
 }
 
 /// What a death adds to the record, for the indictment screen.
@@ -59,6 +63,7 @@ impl Meta {
         m.owned.dedup();
         m.clemency = m.clemency.max(0);
         m.counts_read = m.counts_read.clamp(0, c.story.counts.len() as i32);
+        m.unlocked = m.unlocked.clamp(0, c.built_zones() as i32 - 1);
         m
     }
 
@@ -110,6 +115,7 @@ impl Meta {
                 "grapple" => b.grapple = true,
                 "parry" => b.parry = true,
                 "recess" => b.recess = true,
+                "wall" => b.wall = true,
                 "armory" => gun_level = gun_level.max(u.amount),
                 _ => {}
             }
@@ -170,6 +176,7 @@ impl Meta {
     pub fn record_win(&mut self, c: &Content, earned: i32, nodes: i32, year: &str) -> (i32, Option<String>) {
         self.runs += 1;
         self.wins += 1;
+        self.bosses_beaten += 1;
         let banked = self.bank(earned, nodes);
         let newest = if self.wins == 1 {
             Some(self.read_next(c, year))
@@ -177,6 +184,15 @@ impl Meta {
             None
         };
         (banked, newest)
+    }
+
+    /// A zone's boss is down and the run goes on to zone `next`: the next
+    /// zone may be started in from now on, and the first such crossing
+    /// reads a count.
+    pub fn record_crossing(&mut self, c: &Content, next: usize, year: &str) -> Option<String> {
+        self.bosses_beaten += 1;
+        self.unlocked = self.unlocked.max(next as i32).min(c.built_zones() as i32 - 1);
+        (self.bosses_beaten == 1).then(|| self.read_next(c, year))
     }
 
     /// Adds a run's Clemency with the sentence bonus; returns what was added.

@@ -23,6 +23,8 @@ pub struct Controls {
     pub grapple_pressed: bool,
     pub parry_pressed: bool,
     pub interact_pressed: bool,
+    /// the Injunction's key went down
+    pub wall_pressed: bool,
 }
 
 /// What a run has made of the body: the upgrades bought and the pickups found.
@@ -35,6 +37,8 @@ pub struct Build {
     pub grapple: bool,
     pub parry: bool,
     pub recess: bool,
+    /// the Injunction: a wall in front of you that breaks blue orbs
+    pub wall: bool,
     /// in-run rewards: extra pierce on every shot, a dash that clears
     /// orbs, a parry that heals
     pub pierce: i32,
@@ -52,6 +56,7 @@ impl Default for Build {
             grapple: false,
             parry: false,
             recess: false,
+            wall: false,
             pierce: 0,
             pulse: false,
             mend: false,
@@ -88,6 +93,9 @@ pub struct Player {
     pub grapple_cooldown: i32,
     pub parry_window: i32,
     pub parry_cooldown: i32,
+    /// ticks the Injunction's wall still stands, and until it can again
+    pub wall_left: i32,
+    pub wall_cooldown: i32,
     pub recess_left: bool,
     pub last_ground: V3,
     /// ticks since a hit landed, for the screen's red flash
@@ -111,6 +119,10 @@ pub enum Event {
     Parry,
     /// the hook stopped moving you (an overhang, a corner) and let go
     HookSnag,
+    /// the Injunction's wall went up
+    Wall,
+    /// an updraft threw you up
+    Vent,
 }
 
 impl Player {
@@ -135,6 +147,8 @@ impl Player {
             grapple_cooldown: 0,
             parry_window: 0,
             parry_cooldown: 0,
+            wall_left: 0,
+            wall_cooldown: 0,
             recess_left: build.recess,
             last_ground: pos,
             hurt_age: 1000,
@@ -195,6 +209,19 @@ impl Player {
         true
     }
 
+    /// An updraft under the feet: up at `speed`, the air jumps kept.
+    pub fn launch_up(&mut self, speed: i32) {
+        if self.vel.y >= speed / 2 {
+            return;
+        }
+        self.release_grapple();
+        self.vel.y = speed;
+        self.grounded = false;
+        self.coyote = 0;
+        self.jumps_used = self.jumps_used.max(1);
+        self.events.push(Event::Vent);
+    }
+
     pub fn heal(&mut self, amount: i32) {
         self.health = (self.health + amount).min(self.build.max_health);
     }
@@ -238,6 +265,14 @@ impl Player {
                 self.dash_timer = 0;
                 self.dash_left += 1;
             }
+        }
+
+        self.wall_left = (self.wall_left - 1).max(0);
+        self.wall_cooldown = (self.wall_cooldown - 1).max(0);
+        if c.wall_pressed && self.build.wall && self.wall_cooldown == 0 {
+            self.wall_left = WALL_TICKS;
+            self.wall_cooldown = WALL_COOLDOWN;
+            self.events.push(Event::Wall);
         }
 
         if c.parry_pressed && self.build.parry && self.parry_cooldown == 0 {

@@ -6,11 +6,17 @@
 //! volley holds and how far each repeat is turned, make every pattern in
 //! `data/patterns.json`: spirals, flowers, blooms that burst and hang.
 //!
+//! A held formation (zone two) places its orbs in a shape round the enemy,
+//! in front of it, round you or over you, and holds them still; each sets
+//! off when its hold ends, outward, inward, at you, down, along or round.
+//! Any orb may stop again after a while in flight, wait, and set off a
+//! second time (a refraction, a boomerang).
+//!
 //! A ground wave is a ring that grows along the floor from where it was
 //! struck. It hits a body standing in it and misses one in the air.
 
 use crate::balance::*;
-use crate::content::{Palette, Rgb, Shape, Volley};
+use crate::content::{Anchor, Form, Launch, Palette, Rehold, Rgb, Shape, Volley};
 use crate::fx::{self, ONE};
 use crate::geom::{facing, right_of, v3, yaw_pitch_of, V3};
 use crate::level::Level;
@@ -33,6 +39,57 @@ pub struct Orb {
     /// the enemy that fired it, so a parried orb knows where to go
     pub owner: usize,
     pub damage: i32,
+    /// the Injunction breaks it
+    pub blue: bool,
+    /// ticks it still hangs still before it sets off; 0 once moving
+    pub wait: i32,
+    /// the hold it was given, for the drawn tell
+    pub held: i32,
+    pub launch: Launch,
+    /// its formation's centre, and the formation's plane's normal
+    pub hub: V3,
+    pub axis: V3,
+    /// the speed it sets off at
+    pub go: i32,
+    pub rehold: Option<Rehold>,
+    /// ticks flown since it last set off
+    pub flown: i32,
+}
+
+impl Orb {
+    /// A plain orb flying along `dir` at `speed`.
+    pub fn new(pos: V3, dir: V3, speed: i32, radius: i32, rgb: Rgb, damage: i32) -> Orb {
+        Orb {
+            pos,
+            prev: pos,
+            dir,
+            speed,
+            accel: 0,
+            min_speed: 0,
+            max_speed: speed,
+            curl: 0,
+            radius,
+            rgb,
+            gold: false,
+            age: 0,
+            owner: 0,
+            damage,
+            blue: false,
+            wait: 0,
+            held: 0,
+            launch: Launch::Keep,
+            hub: pos,
+            axis: V3::UP,
+            go: speed,
+            rehold: None,
+            flown: 0,
+        }
+    }
+
+    /// Hanging still, waiting to set off.
+    pub fn holding(&self) -> bool {
+        self.wait > 0 || self.speed == 0
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -88,6 +145,15 @@ pub fn fire(
             age: 0,
             owner,
             damage: v.damage,
+            blue: v.blue,
+            wait: 0,
+            held: 0,
+            launch: Launch::Keep,
+            hub: origin,
+            axis: V3::UP,
+            go: v.speed,
+            rehold: v.rehold,
+            flown: 0,
         })
     };
     let curl_of = |i: i32| {
@@ -138,6 +204,9 @@ pub fn fire(
                 }
             }
         }
+        Shape::Form => {
+            out.orbs = formation(v, origin, target, repeat, owner, rgb);
+        }
         Shape::Wave => {
             let ground = level.floor_below(origin.x, origin.y + ONE, origin.z).unwrap_or(0);
             out.waves.push(Wave {
@@ -155,12 +224,200 @@ pub fn fire(
     out
 }
 
+/// A held formation's orbs: placed, still, each with its hold.
+fn formation(v: &Volley, origin: V3, target: V3, repeat: i32, owner: usize, rgb: Rgb) -> Vec<Orb> {
+    let to = target.sub(origin);
+    let (aim_yaw, _) = yaw_pitch_of(to);
+    // across the line to you, along it (flat), and up
+    let toward = facing(aim_yaw, 0);
+    let across = right_of(aim_yaw);
+    let hub = match v.anchor {
+        Anchor::Body => origin,
+        // on the line from the enemy to you, `at` along it
+        Anchor::Front => origin.add(to.norm().scale(v.at.min(to.len()))),
+        Anchor::Target => target,
+        Anchor::Above => target.add(v3(0, v.at, 0)),
+    };
+    // A flat formation placed by the enemy lies in the plane through you
+    // (tilted as zone one's rings are), so what flies outward reaches you;
+    // one placed round or over you lies level.
+    let (_, aim_pitch) = yaw_pitch_of(target.sub(hub));
+    let level = matches!(v.anchor, Anchor::Target | Anchor::Above);
+    let tilt = if level {
+        0
+    } else {
+        fx::wrap(aim_pitch).clamp(-RING_TILT, RING_TILT)
+    };
+    let (e1, e2, axis) = if v.flat {
+        let along = facing(aim_yaw, tilt);
+        (across, along, across.cross(along).norm())
+    } else {
+        (across, V3::UP, toward)
+    };
+    let r = v.radius;
+    let n = v.count.max(1);
+    let base = v.spin.wrapping_mul(repeat);
+    let at = |a: i32, rad: i32| {
+        hub.add(e1.scale(fx::mul(fx::cos(a), rad)))
+            .add(e2.scale(fx::mul(fx::sin(a), rad)))
+    };
+    // a position k of n spread evenly over [−r, r]
+    let span = |k: i32, n: i32| if n <= 1 { 0 } else { -r + 2 * r / (n - 1) * k };
+    let mut spots = Vec::new();
+    match v.form {
+        Form::Ring => {
+            for i in 0..n {
+                spots.push(at(base + fx::TURN / n * i, r));
+            }
+        }
+        Form::Grid => {
+            // `radius` apart, centred on the hub
+            let off = |k: i32, n: i32| r * (2 * k - (n - 1)) / 2;
+            for j in 0..v.rows {
+                for i in 0..n {
+                    spots.push(hub.add(e1.scale(off(i, n))).add(e2.scale(off(j, v.rows))));
+                }
+            }
+        }
+        Form::Line => {
+            for i in 0..n {
+                spots.push(hub.add(e1.scale(span(i, n))));
+            }
+        }
+        Form::Ribbon => {
+            for i in 0..n {
+                // `rows` half-turns of a sine across the line
+                let rise = fx::sin(fx::TURN / 2 * v.rows * i / (n - 1).max(1));
+                spots.push(
+                    hub.add(e1.scale(span(i, n)))
+                        .add(V3::UP.scale(fx::mul(rise, r / 4))),
+                );
+            }
+        }
+        Form::Column => {
+            for i in 0..n {
+                let up = if n <= 1 { 0 } else { r / (n - 1) * i };
+                spots.push(hub.add(v3(0, up, 0)));
+            }
+        }
+        Form::Star => {
+            for j in 0..v.rows {
+                for i in 0..n {
+                    spots.push(at(base + fx::TURN / n * i, r / v.rows * (j + 1)));
+                }
+            }
+        }
+        Form::Spiral => {
+            for i in 0..n {
+                let f = fx::div((i + 1) * ONE, n * ONE);
+                spots.push(at(base + fx::mul(fx::TURN * v.rows, f), fx::mul(r, f)));
+            }
+        }
+        Form::Arc => {
+            for i in 0..n {
+                let off = if n <= 1 {
+                    0
+                } else {
+                    -v.spread / 2 + v.spread / (n - 1) * i
+                };
+                spots.push(hub.add(facing(aim_yaw + off + base, 0).scale(r)));
+            }
+        }
+    }
+    let along = to.norm();
+    spots
+        .into_iter()
+        .enumerate()
+        .map(|(k, pos)| {
+            let wait = (v.hold + v.stagger * k as i32).max(1);
+            let curl = if v.alternate && k % 2 == 1 {
+                -v.curl
+            } else {
+                v.curl
+            };
+            Orb {
+                pos,
+                prev: pos,
+                dir: along,
+                speed: 0,
+                accel: v.accel,
+                min_speed: v.min_speed,
+                max_speed: v.max_speed.max(v.speed),
+                curl,
+                radius: v.size,
+                rgb,
+                gold: v.gold,
+                age: 0,
+                owner,
+                damage: v.damage,
+                blue: v.blue,
+                wait,
+                held: wait,
+                launch: v.launch,
+                hub,
+                axis,
+                go: v.speed,
+                rehold: v.rehold,
+                flown: 0,
+            }
+        })
+        .collect()
+}
+
 impl Orb {
+    /// Its hold is over: it sets off, the way its launch says. `moving`
+    /// is the target's velocity, for a lead.
+    fn release(&mut self, target: V3, moving: V3) {
+        let from_hub = self.pos.sub(self.hub).norm();
+        let d = match self.launch {
+            Launch::Keep | Launch::Along => self.dir,
+            Launch::Out => from_hub,
+            Launch::In => from_hub.neg(),
+            Launch::Aim => target.sub(self.pos).norm(),
+            Launch::Lead => {
+                // where the target will be after the flight to where it is
+                let ticks = fx::div(target.dist(self.pos), self.go.max(1)) / ONE;
+                target
+                    .add(moving.scale(ticks.min(240) * ONE))
+                    .sub(self.pos)
+                    .norm()
+            }
+            Launch::Down => v3(0, -ONE, 0),
+            Launch::Spin => self.axis.cross(self.pos.sub(self.hub)).norm(),
+        };
+        if d != V3::ZERO {
+            self.dir = d;
+        }
+        self.speed = self.go;
+        self.flown = 0;
+    }
+
     /// One tick of flight; false when the orb is spent (hit a solid, flew
-    /// out of its life or out of the arena).
-    pub fn step(&mut self, level: &Level) -> bool {
+    /// out of its life or out of the arena). `target` is the chest a held
+    /// orb aims at when it sets off, and `moving` that chest's velocity.
+    pub fn step(&mut self, level: &Level, target: V3, moving: V3) -> bool {
         self.prev = self.pos;
         self.age += 1;
+        if self.wait > 0 {
+            self.wait -= 1;
+            if self.wait > 0 {
+                return self.age < ORB_LIFE && !level.sphere_hits(self.pos, self.radius / 2);
+            }
+            self.release(target, moving);
+        }
+        if let Some(r) = self.rehold {
+            self.flown += 1;
+            if self.flown > r.stop {
+                // it stops, and will set off again
+                self.speed = 0;
+                self.wait = r.wait.max(1);
+                self.held = self.wait;
+                self.launch = r.launch;
+                self.go = r.speed;
+                self.rehold = None;
+                return self.age < ORB_LIFE;
+            }
+        }
         if self.curl != 0 {
             let (s, c) = (fx::sin(self.curl), fx::cos(self.curl));
             let d = self.dir;
@@ -319,7 +576,7 @@ mod tests {
         assert_eq!(s.orbs[0].curl, -s.orbs[1].curl);
         let start = s.orbs[0].dir;
         for _ in 0..60 {
-            s.orbs[0].step(&l);
+            s.orbs[0].step(&l, V3::ZERO, V3::ZERO);
         }
         // 48°/s for one second: the direction has turned about 48°
         let cos = start.dot(s.orbs[0].dir);
@@ -337,7 +594,7 @@ mod tests {
         let mut s = fire(&v, v3(0, int(2), 0), v3(int(10), int(2), 0), 0, 0, &c.pal, &l);
         let o = &mut s.orbs[0];
         for _ in 0..120 {
-            o.step(&l);
+            o.step(&l, V3::ZERO, V3::ZERO);
         }
         assert_eq!(o.speed, v.min_speed);
     }
@@ -350,7 +607,7 @@ mod tests {
         let mut s = fire(&v, v3(0, int(2), 0), v3(0, int(2), -int(20)), 0, 0, &c.pal, &l);
         let o = &mut s.orbs[0];
         let mut ticks = 0;
-        while o.step(&l) {
+        while o.step(&l, V3::ZERO, V3::ZERO) {
             ticks += 1;
             assert!(ticks < 60, "still flying at {:?}", o.pos);
         }
@@ -361,22 +618,7 @@ mod tests {
 
     #[test]
     fn an_orb_touches_a_body_it_passes_through_and_misses_one_it_clears() {
-        let o = Orb {
-            pos: v3(0, int(1), 0),
-            prev: V3::ZERO,
-            dir: V3::ZERO,
-            speed: 0,
-            accel: 0,
-            min_speed: 0,
-            max_speed: 0,
-            curl: 0,
-            radius: ONE * 4 / 10,
-            rgb: [0; 3],
-            gold: false,
-            age: 0,
-            owner: 0,
-            damage: ORB_DAMAGE,
-        };
+        let o = Orb::new(v3(0, int(1), 0), V3::ZERO, 0, ONE * 4 / 10, [0; 3], ORB_DAMAGE);
         assert!(o.touches(V3::ZERO));
         // a body jumped 1.6 m clear: its feet are over the orb's top
         assert!(!o.touches(v3(0, ONE * 16 / 10, 0)));
@@ -399,5 +641,139 @@ mod tests {
             hit_air |= w.touches(air);
         }
         assert!(hit_ground && !hit_air);
+    }
+
+    fn pattern(id: &str) -> Vec<Volley> {
+        let c = content();
+        c.patterns.iter().find(|p| p.id == id).unwrap().volleys.clone()
+    }
+
+    #[test]
+    fn a_halo_hangs_still_then_its_outer_ring_flies_and_its_inner_ring_follows_at_twice_the_speed() {
+        let c = content();
+        let l = open_floor();
+        let (from, target) = (v3(0, int(2), 0), v3(0, int(1), -int(12)));
+        let vs = pattern("halo");
+        let mut outer = fire(&vs[0], from, target, 0, 0, &c.pal, &l).orbs;
+        let mut inner = fire(&vs[1], from, target, 0, 0, &c.pal, &l).orbs;
+        assert_eq!(
+            (outer.len() as i32, inner.len() as i32),
+            (vs[0].count, vs[1].count)
+        );
+        // placed in mid-air in front of the enemy, toward you, and still
+        let hub = outer[0].hub;
+        assert!(hub.z < -int(3) && hub.z > -int(4), "{hub:?}");
+        let start: Vec<V3> = outer.iter().map(|o| o.pos).collect();
+        for _ in 0..vs[0].hold - 1 {
+            for o in outer.iter_mut().chain(inner.iter_mut()) {
+                o.step(&l, target, V3::ZERO);
+            }
+        }
+        assert!(
+            outer.iter().zip(&start).all(|(o, s)| o.pos == *s),
+            "the outer ring has not moved"
+        );
+        // the outer ring goes first, outward from the middle
+        for o in outer.iter_mut().chain(inner.iter_mut()) {
+            o.step(&l, target, V3::ZERO);
+        }
+        assert!(outer.iter().all(|o| o.speed == vs[0].speed && o.wait == 0));
+        assert!(
+            inner.iter().all(|o| o.speed == 0 && o.wait > 0),
+            "the inner ring still waits"
+        );
+        let out = outer[0].pos.sub(outer[0].hub).norm();
+        assert!(outer[0].dir.dot(out) > ONE - ONE / 50);
+        for _ in 0..vs[1].hold - vs[0].hold {
+            for o in outer.iter_mut().chain(inner.iter_mut()) {
+                o.step(&l, target, V3::ZERO);
+            }
+        }
+        // then the inner, at twice the outer's speed
+        assert!(inner.iter().all(|o| o.wait == 0));
+        // (cm/s to metres a tick rounds each speed on its own)
+        assert!(
+            (inner[0].speed - outer[0].speed * 2).abs() <= 1,
+            "{} {}",
+            inner[0].speed,
+            outer[0].speed
+        );
+    }
+
+    #[test]
+    fn a_cage_round_you_closes_on_where_you_were() {
+        let c = content();
+        let l = open_floor();
+        let target = v3(int(5), int(1), int(5));
+        let v = &pattern("cage")[0];
+        let mut s = fire(v, v3(0, int(8), 0), target, 0, 0, &c.pal, &l).orbs;
+        let d0 = s[0].pos.dist(target);
+        // in a level ring 5.5 m round you, at your chest
+        assert!((d0 - v.radius).abs() < ONE / 20, "{d0}");
+        assert!(s.iter().all(|o| (o.pos.y - target.y).abs() < ONE / 50));
+        for _ in 0..v.hold + 30 {
+            for o in s.iter_mut() {
+                o.step(&l, v3(-int(20), int(1), 0), V3::ZERO);
+            }
+        }
+        // it closes on where you stood, not where you went
+        assert!(s.iter().all(|o| o.pos.dist(target) < d0 - int(2)));
+    }
+
+    #[test]
+    fn a_staggered_formation_sets_off_one_orb_after_another() {
+        let c = content();
+        let l = open_floor();
+        let target = v3(0, int(1), -int(14));
+        let v = &pattern("crown")[0];
+        let mut s = fire(v, v3(0, int(2), 0), target, 0, 0, &c.pal, &l).orbs;
+        assert_eq!(s.len() as i32, v.count * v.rows);
+        let mut moving = Vec::new();
+        for _ in 0..v.hold + v.stagger * (s.len() as i32) {
+            for o in s.iter_mut() {
+                o.step(&l, target, V3::ZERO);
+            }
+            moving.push(s.iter().filter(|o| o.wait == 0).count());
+        }
+        // the count rises by one every stagger, never all at once
+        assert!(moving.windows(2).all(|w| w[1] - w[0] <= 1), "{moving:?}");
+        assert_eq!(*moving.last().unwrap(), s.len());
+    }
+
+    #[test]
+    fn a_refracted_shot_stops_waits_and_comes_on_faster_at_where_you_are_then() {
+        let c = content();
+        let l = open_floor();
+        let v = &pattern("refract")[0];
+        let r = v.rehold.unwrap();
+        let mut o = fire(v, v3(0, int(2), 0), v3(0, int(2), -int(30)), 0, 0, &c.pal, &l).orbs[2].clone();
+        for _ in 0..=r.stop {
+            o.step(&l, V3::ZERO, V3::ZERO);
+        }
+        assert_eq!(o.speed, 0, "it stops");
+        let there = o.pos;
+        // you moved: it turns to where you are when it sets off
+        let now = there.add(v3(int(10), 0, 0));
+        for _ in 0..r.wait - 1 {
+            o.step(&l, now, V3::ZERO);
+        }
+        assert_eq!(o.pos, there, "and waits");
+        o.step(&l, now, V3::ZERO);
+        assert!(o.dir.x > ONE * 9 / 10, "{:?}", o.dir);
+        assert!(o.speed > v.speed, "{} vs {}", o.speed, v.speed);
+    }
+
+    #[test]
+    fn blue_orbs_are_the_cyan_and_cobalt_ones() {
+        let c = content();
+        let blue: Vec<bool> = c
+            .patterns
+            .iter()
+            .flat_map(|p| p.volleys.iter().map(|v| v.blue))
+            .collect();
+        assert!(blue.iter().any(|b| *b) && blue.iter().any(|b| !*b));
+        for v in c.patterns.iter().flat_map(|p| &p.volleys) {
+            assert_eq!(v.blue, v.colour == "cyan" || v.colour == "blue", "{}", v.colour);
+        }
     }
 }

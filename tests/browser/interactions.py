@@ -6,13 +6,14 @@ shows. Expected values are worked out by hand from the data files, never
 copied from the game's own output:
 
 - story.json's sentencing has 5 lines; its indictment has 10 counts.
-- the Codex has 5 tabs (copy.json codex_tabs), 11 control rows
-  (copy.json controls), 3 guns (weapons.json) and 7 enemies (enemies.json).
+- the Codex has 5 tabs (copy.json codex_tabs), 12 control rows
+  (copy.json controls), 3 guns (weapons.json) and 16 enemies (enemies.json:
+  seven and a boss in each of the two built zones).
 - the crater's gate is open, so its label shows; the first fight's gates
   stay dark and unlabelled until its enemies are defeated.
-- upgrades.json lists 11 upgrades; the cheapest (Constitution I) costs 8, so
+- upgrades.json lists 12 upgrades; the cheapest (Constitution I) costs 8, so
   a new record with 0 Clemency can buy none of them.
-- zone.json lists 4 zones, 1 built: 3 are sealed.
+- zone.json lists 4 zones, 2 built: 2 are sealed.
 - a run starts in the arrival node, named "The Crater" in zone.json; with
   no upgrades the body has 100 health (balance.rs BASE_HEALTH), 1 jump
   (BASE_JUMPS) and 2 dashes (DASH_CHARGES).
@@ -20,6 +21,9 @@ copied from the game's own output:
   and the boss: 8 main nodes on the map.
 - abandoning a run counts as a death: the first count is read, the
   sentence is 1 year (Sifu's count: the first death adds 1), deaths 1.
+- a record with zone two open (unlocked 1) offers one more start in the
+  Holding; it starts on the ice, at "The Landing" of "The White Waste"
+  (zone.json), whose arrival holds two rewards to choose from.
 """
 
 import json
@@ -54,22 +58,24 @@ def run(page, check, engine):
     check(mode(page) == "holding", "then the Holding")
     cards = page.query_selector_all("#upgrades .upgrade")
     buyable = page.query_selector_all("#upgrades .upgrade:not(:disabled)")
-    check(len(cards) == 11 and len(buyable) == 0, f"11 upgrades, none affordable with 0 Clemency ({len(cards)}, {len(buyable)})")
+    check(len(cards) == 12 and len(buyable) == 0, f"12 upgrades, none affordable with 0 Clemency ({len(cards)}, {len(buyable)})")
     check(page.inner_text("#m-counts") == "0 / 10", f"no count read yet ({page.inner_text('#m-counts')!r})")
     sealed = page.query_selector_all("#m-route li.sealed")
-    check(len(sealed) == 3, f"three zones sealed in this build ({len(sealed)})")
+    check(len(sealed) == 2, f"two zones sealed in this build ({len(sealed)})")
+    later = page.query_selector_all("#start-later button")
+    check(len(later) == 0, f"a new record can start only in 2031 ({len(later)})")
 
     click(page, "#holding .open-codex")
     check(page.is_visible("#codex"), "the Codex opens from the Holding")
     tabs = page.query_selector_all("#codex-tabs .tab")
     rows = page.query_selector_all("#codex-body table.stats tr")
-    check(len(tabs) == 5 and len(rows) == 11, f"5 tabs, 11 control rows ({len(tabs)}, {len(rows)})")
+    check(len(tabs) == 5 and len(rows) == 12, f"5 tabs, 12 control rows ({len(tabs)}, {len(rows)})")
     click(page, "#codex-tabs .tab:nth-child(2)")
     guns = page.query_selector_all("#codex-body .codex-card")
     check(len(guns) == 3, f"three guns ({len(guns)})")
     click(page, "#codex-tabs .tab:nth-child(3)")
     foes = page.query_selector_all("#codex-body .codex-card")
-    check(len(foes) == 7, f"seven enemies ({len(foes)})")
+    check(len(foes) == 16, f"sixteen enemies ({len(foes)})")
     body = page.inner_text("#codex-body")
     check("{" not in body, "no unfilled placeholder in the Codex")
     click(page, "#codex-close")
@@ -133,3 +139,28 @@ def run(page, check, engine):
     click(page, "#begin")
     check(mode(page) == "holding", "a returning player skips the sentencing")
     check(page.inner_text("#m-deaths") == "1", "and the record was kept")
+
+    # a record that has beaten the Bailiff can start on the ice
+    record = page.evaluate("() => localStorage.getItem('long-time-comin.record')")
+    opened = json.loads(record)
+    opened["unlocked"] = 1
+    page.evaluate("(r) => localStorage.setItem('long-time-comin.record', r)", json.dumps(opened))
+    page.reload()
+    page.wait_for_selector("body[data-ready='true']", state="attached", timeout=20000)
+    click(page, "#begin")
+    later = page.query_selector_all("#start-later button")
+    check(len(later) == 1, f"one more start, on the ice ({len(later)})")
+    click(page, "#start-later button")
+    check(mode(page) == "play", f"it plays ({mode(page)})")
+    page.wait_for_timeout(500)
+    check(page.text_content("#h-zone") == "The White Waste", f"in the White Waste ({page.text_content('#h-zone')!r})")
+    check(page.inner_text("#h-node") == "The Landing", f"at the Landing ({page.inner_text('#h-node')!r})")
+    page.keyboard.press("Escape")
+    page.wait_for_timeout(300)
+    if mode(page) == "play":
+        page.keyboard.press("Escape")
+        page.wait_for_timeout(300)
+    click(page, "#abandon")
+    click(page, "#abandon")
+    check(mode(page) == "dead", f"abandoning on the ice reads the indictment ({mode(page)})")
+    check(page.inner_text("#d-title") == STORY["death_titles"]["white_waste"], "headed as the ice's death")
