@@ -1013,6 +1013,35 @@ pub(crate) mod tests {
     }
 
     #[test]
+    fn felling_the_bailiff_reads_the_verdict_and_banks_the_boss_clemency() {
+        let mut g = game_with(r#"{"seen_intro": true}"#);
+        g.begin();
+        g.start_run();
+        // straight to the court
+        let boss = g.run.as_ref().unwrap().route.boss();
+        g.go(boss);
+        assert_eq!(g.run.as_ref().unwrap().world.kind, NodeKind::Boss);
+        frames(&mut g, 120, 0);
+        let run = g.run.as_mut().unwrap();
+        let b = run.world.boss.expect("the Bailiff came");
+        // its last phase, nearly down; the next hit is the last
+        run.world.enemies[b].phase = 2;
+        run.world.enemies[b].hp = 1;
+        run.world.enemies[b].state = crate::enemy::State::Rest(1000);
+        run.world.player.iframes = 100_000;
+        run.world.enemies[b].hurt(5);
+        frames(&mut g, 200, 0);
+        assert_eq!(g.mode, Mode::Won);
+        assert_eq!(g.meta.wins, 1);
+        // zone.json's clemency_boss is 25
+        assert!(g.meta.clemency >= 25, "{}", g.meta.clemency);
+        let s: Value = serde_json::from_str(&g.screen_json()).unwrap();
+        assert_eq!(s["verdict"]["title"], g.c.story.victory_title.as_str());
+        g.to_holding();
+        assert_eq!(g.mode, Mode::Holding);
+    }
+
+    #[test]
     fn controls_turn_bits_into_movement_and_presses() {
         let c = controls(
             bit("forward") | bit("left") | bit("fire"),

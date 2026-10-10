@@ -144,8 +144,13 @@ async function start() {
   });
 
   // losing the pointer in play pauses; Tab or M opens the map
+  // only a lock that was held and then lost pauses: a browser that grants
+  // the lock and drops it at once (headless Linux) plays on in the fallback
+  let held = false;
   document.addEventListener("pointerlockchange", () => {
-    if (!document.pointerLockElement && JSON.parse(game.hud()).mode === "play") game.pause();
+    const now = Boolean(document.pointerLockElement);
+    if (held && !now && JSON.parse(game.hud()).mode === "play") game.pause();
+    held = now;
   });
   window.addEventListener("keydown", (e) => {
     const mode = document.body.dataset.mode;

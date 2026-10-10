@@ -67,6 +67,7 @@ def run(page, check, engine):
         click(page, "#engage-btn")
 
     # run north through the crater's gate into the first fight
+    check(mode(page) == "play", f"still playing before the walk ({mode(page)})")
     page.keyboard.down("KeyW")
     try:
         # generous: on a software renderer (CI) the page runs at a few
@@ -77,7 +78,9 @@ def run(page, check, engine):
         moved = False
     page.keyboard.up("KeyW")
     node = page.inner_text("#h-node")
-    check(moved, f"walking north through the gate reaches the next arena ({node!r})")
+    check(moved, f"walking north through the gate reaches the next arena ({node!r}, mode {mode(page)})")
+    if mode(page) != "play":
+        click(page, "#resume")
 
     page.keyboard.press("Tab")
     page.wait_for_timeout(300)

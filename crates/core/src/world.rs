@@ -525,14 +525,18 @@ impl World {
                     Reward::Health => PickupKind::MaxHealth(HEALTH_PICKUP),
                     Reward::Speed => PickupKind::Speed(SPEED_PICKUP_PCT),
                 };
-                let at = self.player.pos.add(facing(self.player.yaw, 0).scale(int(4)));
-                let ground = self
+                // on the open floor nearest the spot ahead of the body: the
+                // spot itself could be inside a wall
+                let ahead = self.player.pos.add(facing(self.player.yaw, 0).scale(int(4)));
+                let at = self
                     .arena
-                    .level
-                    .floor_below(at.x, at.y + int(3), at.z)
-                    .unwrap_or(0);
+                    .ground_spawns
+                    .iter()
+                    .copied()
+                    .min_by_key(|p| p.dist(ahead))
+                    .unwrap_or(ahead);
                 self.pickups.push(Pickup {
-                    pos: v3(at.x, ground, at.z),
+                    pos: at,
                     kind,
                     taken: false,
                     age: 0,
