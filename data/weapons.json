@@ -1,5 +1,5 @@
 {
-  "_about": "The four guns. Units: damage in health points, rate_ms between shots, speed_cms in cm/s, spread_deg the half-angle of the cone a shot may stray in, size_cm the shot's radius, life_ms how long it flies, splash_cm the radius of the blast and splash its damage, pierce how many enemies a shot passes through. Every number the Codex and the HUD show for a gun is computed from these by crates/core/src/codex.rs. Levels 1 to 4: a run finds higher levels on side paths; level 4 only in the house. A saw gun (saws > 0) throws a blade on each press while it has one in hand: saws blades out at once, each dealing damage on impact and, while the trigger is held, rev_damage every rev_ms until it has dealt teeth in all; then it comes back in recall_ms. from_zone: the first zone (counted from 0) whose rewards offer the gun.",
+  "_about": "The four guns. Units: damage in health points, rate_ms between shots, speed_cms in cm/s, spread_deg the half-angle of the cone a shot may stray in, size_cm the shot's radius, life_ms how long it flies, splash_cm the radius of the blast and splash its damage, pierce how many enemies a shot passes through. Every number the Codex and the HUD show for a gun is computed from these by crates/core/src/codex.rs. Levels 1 to 4: a run finds higher levels on side paths; level 4 only in the house. A saw gun (saws > 0) throws a blade on each press while it has one in hand: saws blades out at once, each dealing damage on impact and, while the trigger is held, rev_damage every rev_ms until it has dealt teeth in all; then it comes back in recall_ms. from_zone: the first zone (counted from 0) whose rewards offer the gun. alt: the gun's second fire on the right mouse button: kind burst (count heavy rounds one behind another), slug (one heavy round that pierces), cluster (count bombs in a fan, spread_deg apart) or detonate (every lodged blade bursts for damage plus half its teeth left, splash_cm round it, and comes back); damage at level 1, 25% more each level above; cooldown_ms between uses.",
   "weapons": [
     {
       "id": "carbine",
@@ -55,7 +55,18 @@
           "splash": 0,
           "pierce": 1
         }
-      ]
+      ],
+      "alt": {
+        "kind": "burst",
+        "name": "Three-round burst",
+        "damage": 22,
+        "count": 3,
+        "speed_cms": 12000,
+        "size_cm": 12,
+        "life_ms": 1600,
+        "pierce": 1,
+        "cooldown_ms": 900
+      }
     },
     {
       "id": "scattergun",
@@ -64,7 +75,7 @@
       "colour": "shot_scatter",
       "levels": [
         {
-          "damage": 6,
+          "damage": 8,
           "rate_ms": 620,
           "pellets": 9,
           "spread_deg": 5,
@@ -76,7 +87,7 @@
           "pierce": 0
         },
         {
-          "damage": 7,
+          "damage": 9,
           "rate_ms": 560,
           "pellets": 11,
           "spread_deg": 5,
@@ -88,7 +99,7 @@
           "pierce": 0
         },
         {
-          "damage": 7,
+          "damage": 10,
           "rate_ms": 500,
           "pellets": 14,
           "spread_deg": 6,
@@ -100,7 +111,7 @@
           "pierce": 1
         },
         {
-          "damage": 8,
+          "damage": 11,
           "rate_ms": 460,
           "pellets": 16,
           "spread_deg": 6,
@@ -111,7 +122,18 @@
           "splash": 0,
           "pierce": 1
         }
-      ]
+      ],
+      "alt": {
+        "kind": "slug",
+        "name": "Slug",
+        "damage": 90,
+        "count": 1,
+        "speed_cms": 11000,
+        "size_cm": 16,
+        "life_ms": 1200,
+        "pierce": 3,
+        "cooldown_ms": 1100
+      }
     },
     {
       "id": "launcher",
@@ -120,7 +142,7 @@
       "colour": "shot_launcher",
       "levels": [
         {
-          "damage": 30,
+          "damage": 38,
           "rate_ms": 800,
           "pellets": 1,
           "spread_deg": 0,
@@ -128,11 +150,11 @@
           "size_cm": 26,
           "life_ms": 2200,
           "splash_cm": 350,
-          "splash": 26,
+          "splash": 34,
           "pierce": 0
         },
         {
-          "damage": 34,
+          "damage": 44,
           "rate_ms": 720,
           "pellets": 1,
           "spread_deg": 0,
@@ -140,11 +162,11 @@
           "size_cm": 28,
           "life_ms": 2200,
           "splash_cm": 430,
-          "splash": 30,
+          "splash": 40,
           "pierce": 0
         },
         {
-          "damage": 40,
+          "damage": 52,
           "rate_ms": 640,
           "pellets": 1,
           "spread_deg": 0,
@@ -152,11 +174,11 @@
           "size_cm": 30,
           "life_ms": 2400,
           "splash_cm": 520,
-          "splash": 36,
+          "splash": 48,
           "pierce": 0
         },
         {
-          "damage": 46,
+          "damage": 60,
           "rate_ms": 580,
           "pellets": 1,
           "spread_deg": 0,
@@ -164,10 +186,23 @@
           "size_cm": 32,
           "life_ms": 2400,
           "splash_cm": 600,
-          "splash": 42,
+          "splash": 56,
           "pierce": 0
         }
-      ]
+      ],
+      "alt": {
+        "kind": "cluster",
+        "name": "Cluster volley",
+        "damage": 26,
+        "count": 5,
+        "speed_cms": 5000,
+        "size_cm": 22,
+        "life_ms": 1400,
+        "splash_cm": 300,
+        "splash": 30,
+        "spread_deg": 12,
+        "cooldown_ms": 1800
+      }
     },
     {
       "id": "ripsaw",
@@ -177,7 +212,7 @@
       "from_zone": 2,
       "levels": [
         {
-          "damage": 18,
+          "damage": 24,
           "rate_ms": 260,
           "pellets": 1,
           "spread_deg": 0,
@@ -188,13 +223,13 @@
           "splash": 0,
           "pierce": 0,
           "saws": 1,
-          "rev_damage": 4,
+          "rev_damage": 5,
           "rev_ms": 50,
-          "teeth": 140,
+          "teeth": 180,
           "recall_ms": 600
         },
         {
-          "damage": 20,
+          "damage": 26,
           "rate_ms": 240,
           "pellets": 1,
           "spread_deg": 0,
@@ -205,13 +240,13 @@
           "splash": 0,
           "pierce": 0,
           "saws": 2,
-          "rev_damage": 5,
+          "rev_damage": 6,
           "rev_ms": 50,
-          "teeth": 170,
+          "teeth": 220,
           "recall_ms": 500
         },
         {
-          "damage": 22,
+          "damage": 29,
           "rate_ms": 220,
           "pellets": 1,
           "spread_deg": 0,
@@ -222,13 +257,13 @@
           "splash": 0,
           "pierce": 0,
           "saws": 3,
-          "rev_damage": 5,
+          "rev_damage": 7,
           "rev_ms": 50,
-          "teeth": 200,
+          "teeth": 260,
           "recall_ms": 420
         },
         {
-          "damage": 24,
+          "damage": 32,
           "rate_ms": 200,
           "pellets": 1,
           "spread_deg": 0,
@@ -239,12 +274,21 @@
           "splash": 0,
           "pierce": 0,
           "saws": 4,
-          "rev_damage": 6,
+          "rev_damage": 8,
           "rev_ms": 50,
-          "teeth": 240,
+          "teeth": 300,
           "recall_ms": 350
         }
-      ]
+      ],
+      "alt": {
+        "kind": "detonate",
+        "name": "Shatter the blades",
+        "damage": 60,
+        "count": 1,
+        "splash_cm": 250,
+        "splash": 30,
+        "cooldown_ms": 1500
+      }
     }
   ]
 }

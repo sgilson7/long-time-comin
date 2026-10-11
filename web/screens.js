@@ -150,6 +150,7 @@ export function makeScreens(game, copy, changed, startAt) {
         }),
       );
 
+      el("start-rush").hidden = !s.rush;
       // the shop as a tree: a column for each branch, each upgrade under
       // the one it needs
       const card = (u) => {

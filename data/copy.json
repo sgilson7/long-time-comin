@@ -71,7 +71,7 @@
   "hud_jumps": "Jumps",
   "hud_dash": "Dash",
   "hud_hook": "Hook (F)",
-  "hud_parry": "Parry (RMB)",
+  "hud_parry": "Parry (Q)",
   "hud_enemies": "{n} left",
   "hud_clemency": "{n} Clemency",
   "click_to_play": "Click to take control",
@@ -91,6 +91,10 @@
       "Fire the gun you carry. The Ripsaw throws a blade on each click and, held, revs the blades it has lodged."
     ],
     [
+      "Right mouse",
+      "The gun's second fire: the Carbine's burst, the Scattergun's slug, the Launcher's cluster, the Ripsaw's shatter. Each has its own cooldown."
+    ],
+    [
       "Space",
       "Jump. Press again in the air for each further jump you have, up to {max_jumps}."
     ],
@@ -107,7 +111,7 @@
       "Grappling hook, once the Writ of Reach is bought. Range {grapple_range} m."
     ],
     [
-      "Right mouse or Q",
+      "Q",
       "Parry, once Objection is bought. Lasts {parry_window} s and turns back gold orbs."
     ],
     [
@@ -229,5 +233,11 @@
       "writs",
       "Writs"
     ]
-  ]
+  ],
+  "rush_title": "THE BOSS RUSH IS OVER",
+  "rush_line": "The Bailiff, the Witness and the Executor, one after another. Boss rushes finished: {n}. The Clemency from this run has been added to your record.",
+  "hud_alt": "Alt (RMB): {name}",
+  "start_rush": "Boss rush",
+  "test_save": "Test save: everything unlocked",
+  "test_save_confirm": "Replace your record? Click again"
 }

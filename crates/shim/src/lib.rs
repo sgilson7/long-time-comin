@@ -125,6 +125,16 @@ impl Game {
         self.inner.start_run_at(zone as usize)
     }
 
+    /// A boss rush, once the game has been beaten.
+    pub fn start_rush(&mut self) {
+        self.inner.start_rush()
+    }
+
+    /// The test save: a record with everything.
+    pub fn test_save(&mut self) {
+        self.inner.test_save()
+    }
+
     /// From the interlude into the next zone.
     pub fn continue_run(&mut self) {
         self.inner.continue_run()

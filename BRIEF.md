@@ -18,6 +18,12 @@ Done means, for this round: a camera inside or behind an object sees through it;
 
 Done means, for this round: the Witness, beaten, tells the Defendant what they will do and cannot say more; an interlude of ten years in the house and its labs; zone three (the house, 2056) built as zones one and two are, with seven new humanoid enemies that take cover and coordinate (crossfire, flanking to your back, surrounding, walls that funnel you), new patterns, a tanky mini-boss who calls agents in numbers, and the tank (crashing in through the glass, weak points on its turret's back, cannons growing each phase, a fourth phase of eyes and cannons to survive); the ground pound; a saw gun that lodges and revs; many more upgrades in the Holding; deployed to Pages and the scholar site. Approval for the deploy is the standing one above.
 
+## The sixth request, word for word (2026-10-11)
+
+> now add the test save button that gives you all progress and unlocks all levels. then add a boss rush mode you get after beating the game. then add in an alt fire on right click for every weapon, then make all of the weapons except the carabine stronger
+
+Done means: a button in the Holding that loads a record with everything bought, every count read and every zone open; a boss rush, offered once the game has been beaten, through the three built bosses in turn; a second fire on the right mouse button for each of the four guns (the parry keeps Q); the Scattergun, the Launcher and the Ripsaw hit harder. Deployed under the standing approval.
+
 ## The tool
 
 A third-person bullet-hell shooter that runs in a desktop browser with a keyboard and mouse. Roguelike runs across a graph of arenas; meta-progression between runs; a story told by an indictment that is revealed one count at a time, on each death.

@@ -226,6 +226,8 @@ pub const REST_HEAL_PCT: i32 = 50;
 pub const FIRST_DEATH_GRANT: i32 = 8;
 /// every ten years of sentence add this many percent to Clemency earned
 pub const SENTENCE_BONUS_PCT: i32 = 5;
+/// the test save's Clemency, to buy what a later build adds
+pub const TEST_SAVE_CLEMENCY: i32 = 5000;
 /// the tier of the zone's hardest main fights: the first run to reach one
 /// hears a count of the indictment
 pub const FAR_TIER: i32 = 3;

@@ -54,6 +54,15 @@ A subagent played seven runs through the playtest harness (`cargo run --release 
 - **Harness**: `goto <node>|boss` and `break` (via `Game::go_to` and `Game::break_weak_points`); it reports who hurt you after each command.
 - **Fixed on the way**: an orb's hit never reached the page's notes, so the hurt sound and a Recess's callout played only for falls (M12).
 
+## Round 6 (2026-10-11): a test save, the boss rush, second fires
+
+`./scripts/check.sh` passed locally (154 core and 11 boundary tests, the browser check in three engines, now also driving the test save and the boss rush). `BRIEF.md` has the request, `PLAN.md` (Round 6) the design, `SECOND-ORDER.md` R6, N1 to N4 and B4 what was chosen.
+
+- **Test save**: `Meta::everything`, `Game::test_save`, the Holding's `#test-save` (asks twice).
+- **Boss rush**: `Route::rush`, `Game::start_rush`, `Run.rush`; the Holding's `#start-rush` once `Meta::rush_open`.
+- **Second fires**: `weapons.json` `alt`, `content::Alt`, `weapons::alt_trigger`, the Ripsaw's in `world.rs` `detonate`; action `alt` (1<<13) on the right mouse button; the parry is Q.
+- **Stronger guns**: the Scattergun, the Launcher and the Ripsaw, about 30% (N4).
+
 ## What remains
 
 - Sam's playtest (`TRIAGE.md`). Every feel and balance number is the agent's guess (SECOND-ORDER T1); the probe shows the curve (no wins with no upgrades, about half with 62 Clemency of upgrades), not whether it is fun (T2, P2).

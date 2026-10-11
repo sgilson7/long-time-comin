@@ -216,6 +216,28 @@ impl Route {
         }
     }
 
+    /// A boss rush's map for zone `zone`: its boss alone.
+    pub fn rush(zone: usize, seed: u64) -> Route {
+        Route {
+            nodes: vec![Node {
+                zone,
+                kind: NodeKind::Boss,
+                archetype: "boss".to_string(),
+                tier: 0,
+                detour: false,
+                reward: None,
+                next: Vec::new(),
+                step: 0,
+                lane: 0,
+                seed,
+                encounter: None,
+                cache: Vec::new(),
+                elite: None,
+            }],
+            steps: 1,
+        }
+    }
+
     /// The node every run starts on.
     pub fn start(&self) -> usize {
         0

@@ -62,6 +62,8 @@ export function makeHud(copy, play) {
       el("h-pound").classList.toggle("ready", h.pound_ready);
       el("h-pound").classList.toggle("active", h.pounding);
       text("h-saws", h.saws);
+      text("h-alt", h.alt);
+      el("h-alt").classList.toggle("ready", h.alt_ready);
       text("h-gun", h.gun);
       text("h-gun-level", h.gun_level);
       text("h-gun-trait", h.gun_trait);
