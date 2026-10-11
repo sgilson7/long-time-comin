@@ -1407,7 +1407,7 @@
       "id": "defendant",
       "name": "The Defendant",
       "kind": "double",
-      "hp": 3600,
+      "hp": 4000,
       "radius_cm": 55,
       "hover_cm": 95,
       "speed_cms": 760,
@@ -1427,6 +1427,12 @@
               "rest_ms": 800
             },
             {
+              "pattern": "hook_echo",
+              "windup_ms": 600,
+              "rest_ms": 900,
+              "move": "hook"
+            },
+            {
               "pattern": "scatter_echo",
               "windup_ms": 450,
               "rest_ms": 900
@@ -1435,17 +1441,24 @@
               "pattern": "the_world",
               "windup_ms": 700,
               "rest_ms": 900,
-              "stop_ms": 3000
+              "stop_ms": 2000,
+              "once_in": 4
+            },
+            {
+              "pattern": "pound_echo",
+              "windup_ms": 700,
+              "rest_ms": 1000,
+              "move": "pound"
+            },
+            {
+              "pattern": "injunction_echo",
+              "windup_ms": 500,
+              "rest_ms": 900
             },
             {
               "pattern": "launcher_echo",
               "windup_ms": 500,
               "rest_ms": 900
-            },
-            {
-              "pattern": "parry_bait",
-              "windup_ms": 400,
-              "rest_ms": 800
             },
             {
               "pattern": "dash_ring",
@@ -1467,6 +1480,12 @@
               "rest_ms": 800
             },
             {
+              "pattern": "hook_echo",
+              "windup_ms": 550,
+              "rest_ms": 800,
+              "move": "hook"
+            },
+            {
               "pattern": "dash_ring",
               "windup_ms": 450,
               "rest_ms": 800
@@ -1475,12 +1494,19 @@
               "pattern": "queued_knives",
               "windup_ms": 650,
               "rest_ms": 900,
-              "stop_ms": 3000
+              "stop_ms": 2200,
+              "once_in": 4
             },
             {
-              "pattern": "parry_bait",
-              "windup_ms": 400,
+              "pattern": "injunction_echo",
+              "windup_ms": 500,
               "rest_ms": 800
+            },
+            {
+              "pattern": "pound_echo",
+              "windup_ms": 650,
+              "rest_ms": 900,
+              "move": "pound"
             },
             {
               "pattern": "launcher_echo",
@@ -1506,6 +1532,12 @@
               "rest_ms": 1000
             },
             {
+              "pattern": "pound_echo",
+              "windup_ms": 600,
+              "rest_ms": 900,
+              "move": "pound"
+            },
+            {
               "pattern": "scatter_echo",
               "windup_ms": 400,
               "rest_ms": 1000
@@ -1514,12 +1546,24 @@
               "pattern": "the_world_2",
               "windup_ms": 700,
               "rest_ms": 1200,
-              "stop_ms": 3500
+              "stop_ms": 2600,
+              "once_in": 4
+            },
+            {
+              "pattern": "hook_echo",
+              "windup_ms": 500,
+              "rest_ms": 900,
+              "move": "hook"
             },
             {
               "pattern": "saw_echo",
               "windup_ms": 450,
               "rest_ms": 1000
+            },
+            {
+              "pattern": "injunction_echo",
+              "windup_ms": 450,
+              "rest_ms": 900
             },
             {
               "pattern": "parry_bait",

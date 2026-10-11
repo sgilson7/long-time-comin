@@ -13,7 +13,7 @@
 //! and surfaces to attack.
 
 use crate::balance::*;
-use crate::content::{Content, EnemyDef, Kind, Pattern, Role};
+use crate::content::{Content, EnemyDef, Kind, Lunge, Pattern, Role};
 use crate::fx::{self, int, ONE};
 use crate::geom::{facing, v3, yaw_pitch_of, V3};
 use crate::level::Level;
@@ -120,6 +120,13 @@ pub struct Enemy {
     pub air: i32,
     /// held in your hands, to be thrown
     pub held: bool,
+    /// the attacks taken once in so many, how many times they came up
+    pub passes: i32,
+    /// what its body does in this attack, and where to (on the floor)
+    pub lunge: Lunge,
+    pub anchor: V3,
+    /// ticks a hook has pulled it so far
+    pub pulled: i32,
 }
 
 /// What an enemy did this tick that the world must act on.
@@ -176,6 +183,10 @@ impl Enemy {
             lift: 0,
             air: 0,
             held: false,
+            passes: 0,
+            lunge: Lunge::None,
+            anchor: pos,
+            pulled: 0,
         }
     }
 
@@ -299,6 +310,9 @@ impl Enemy {
             return deeds;
         }
 
+        if d.kind != Kind::Agent && matches!(self.state, State::Rest(t) if t <= 1) {
+            self.pass_over(c);
+        }
         let Some(attack) = self.current_attack(c).cloned() else {
             return deeds;
         };
@@ -335,6 +349,11 @@ impl Enemy {
                     self.pos.y = ground + d.radius;
                     self.prev = self.pos;
                 }
+                self.lunge = attack.moves;
+                self.pulled = 0;
+                if attack.moves != Lunge::None {
+                    self.anchor = self.lunge_spot(level, target, attack.moves);
+                }
                 State::Windup(attack.windup.max(1))
             }
             State::Windup(t) if t > 1 => State::Windup(t - 1),
@@ -349,6 +368,11 @@ impl Enemy {
             State::Windup(_) => {
                 self.held_fire = false;
                 deeds.stop = attack.stop;
+                State::Casting(0)
+            }
+            // a hook's cast waits until the pull has brought it beside you
+            State::Casting(0) if self.hooking() => {
+                self.pulled += 1;
                 State::Casting(0)
             }
             State::Casting(t) => {
@@ -375,6 +399,7 @@ impl Enemy {
                 if t >= pattern.length() {
                     self.attack += 1;
                     self.linger = BURROW_LINGER;
+                    self.lunge = Lunge::None;
                     State::Rest(attack.rest)
                 } else {
                     State::Casting(t + 1)
@@ -510,6 +535,90 @@ impl Enemy {
         }
     }
 
+    /// Passes over the attacks taken once in so many that are not due:
+    /// each is taken the first time it comes up, then every `once_in`th.
+    fn pass_over(&mut self, c: &Content) {
+        let d = &c.enemies[self.def];
+        let n = d.phases[self.phase.min(d.phases.len() - 1)].attacks.len();
+        for _ in 0..n {
+            let Some(a) = self.current_attack(c) else {
+                return;
+            };
+            if a.once_in <= 1 {
+                return;
+            }
+            let due = self.passes % a.once_in == 0;
+            self.passes += 1;
+            if due {
+                return;
+            }
+            self.attack += 1;
+        }
+    }
+
+    /// Where a lunge goes, on the floor: a hook beside you, a pound where
+    /// you stand.
+    fn lunge_spot(&self, level: &Level, target: V3, lunge: Lunge) -> V3 {
+        let flat = v3(target.x - self.pos.x, 0, target.z - self.pos.z).norm();
+        let side = v3(-flat.z, 0, flat.x).scale(self.orbit * ONE);
+        let tries = match lunge {
+            Lunge::Hook => vec![
+                target.add(side.scale(LUNGE_HOOK_BESIDE)),
+                target.sub(side.scale(LUNGE_HOOK_BESIDE)),
+                target.sub(flat.scale(LUNGE_HOOK_BESIDE)),
+            ],
+            _ => vec![target],
+        };
+        tries
+            .into_iter()
+            .find_map(|p| {
+                let ground = level.floor_below(p.x, target.y + int(2), p.z)?;
+                let at = v3(p.x, ground, p.z);
+                (!level.sphere_hits(at.add(v3(0, ONE, 0)), ONE / 2)).then_some(at)
+            })
+            .unwrap_or(self.pos)
+    }
+
+    /// Still pulled along its hook toward the anchor.
+    fn hooking(&self) -> bool {
+        let to = v3(self.anchor.x - self.pos.x, 0, self.anchor.z - self.pos.z);
+        self.lunge == Lunge::Hook && to.len() > LUNGE_HOOK_ARRIVE && self.pulled < LUNGE_HOOK_MAX
+    }
+
+    /// A step of a lunge: true while the lunge moves the body, so its
+    /// skirmish waits.
+    fn lunge_step(&mut self, d: &EnemyDef, level: &Level) -> bool {
+        let to = v3(self.anchor.x - self.pos.x, 0, self.anchor.z - self.pos.z);
+        let (step, height, fall) = match (self.lunge, self.state) {
+            (Lunge::Hook, State::Windup(_)) => (V3::ZERO, 0, ONE / 4),
+            (Lunge::Hook, State::Casting(_)) if self.hooking() => {
+                (to.clamp_len(LUNGE_HOOK_SPEED), 0, ONE / 4)
+            }
+            // over where you were by the end of its windup
+            (Lunge::Pound, State::Windup(t)) => (
+                v3(to.x / t.max(1), 0, to.z / t.max(1)),
+                LUNGE_POUND_HEIGHT,
+                ONE / 4,
+            ),
+            (Lunge::Pound, State::Casting(_)) => (V3::ZERO, 0, LUNGE_POUND_DROP),
+            _ => return false,
+        };
+        // over what is in the way, never off the edge
+        let next = self.pos.add(step);
+        let clear = (0..8)
+            .map(|k| next.add(v3(0, ONE / 2 * k, 0)))
+            .find(|p| !level.sphere_hits(*p, d.radius));
+        if let Some(p) = clear.filter(|p| level.floor_below(p.x, p.y + ONE, p.z).is_some()) {
+            self.pos = p;
+        }
+        self.vel = step;
+        self.boost = 0;
+        self.lift = height;
+        let ground = self.floor(level);
+        self.pos.y = fx::approach(self.pos.y, ground + d.hover + height, fall);
+        true
+    }
+
     fn floor(&self, level: &Level) -> i32 {
         level.floor_below(self.pos.x, self.pos.y, self.pos.z).unwrap_or(0)
     }
@@ -522,6 +631,9 @@ impl Enemy {
         let dist = to.len_xz();
         let towards = to.norm();
         let side = v3(-towards.z, 0, towards.x).scale(self.orbit * ONE);
+        if self.lunge_step(d, level) {
+            return;
+        }
         let mech = d.kind == Kind::Mech;
         let (boost_every, boost_len, boost_speed) = if mech {
             (secs(3, 1), secs(1, 2), per_tick(22, 1))

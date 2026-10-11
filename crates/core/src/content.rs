@@ -406,6 +406,9 @@ pub enum Form {
     /// two walls of `count` orbs each, either side of the line to you,
     /// `radius` out from it and `length` long, open at both ends
     Lane,
+    /// a half sphere of `rows` rings round the anchor at `radius`, the
+    /// lowest of `count` orbs, each ring turned half a gap from the last
+    Dome,
 }
 
 /// Where a formation is placed.
@@ -430,6 +433,8 @@ pub enum Launch {
     Out,
     /// toward the formation's centre
     In,
+    /// toward the formation's centre, and spent there: a closing dome
+    Gather,
     /// at your chest as it is when the orb sets off
     Aim,
     /// at where your chest will be when it arrives, from how you are moving
@@ -517,7 +522,7 @@ impl Volley {
     /// How many orbs one repeat places.
     pub fn orbs(&self) -> i32 {
         match (self.shape, self.form) {
-            (Shape::Form, Form::Grid | Form::Star) => self.count * self.rows,
+            (Shape::Form, Form::Grid | Form::Star | Form::Dome) => self.count * self.rows,
             (Shape::Form, Form::Lane) => self.count * 2,
             _ => self.count,
         }
@@ -529,6 +534,7 @@ fn launch_of(s: &str, who: &str) -> Result<Launch, String> {
         "" | "keep" => Launch::Keep,
         "out" => Launch::Out,
         "in" => Launch::In,
+        "gather" => Launch::Gather,
         "aim" => Launch::Aim,
         "lead" => Launch::Lead,
         "down" => Launch::Down,
@@ -576,6 +582,12 @@ struct AttackFile {
     /// as its windup ends, time stops this long for all but its caster
     #[serde(default)]
     stop_ms: i32,
+    /// taken one time in this many it comes up, passed over the rest
+    #[serde(default)]
+    once_in: i32,
+    /// what the caster does with its body: "hook" or "pound"
+    #[serde(default, rename = "move")]
+    moves: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -706,6 +718,20 @@ pub struct Attack {
     pub indirect: bool,
     pub cannons: bool,
     pub stop: i32,
+    /// taken one time in this many (1: every time)
+    pub once_in: i32,
+    pub moves: Lunge,
+}
+
+/// What a skirmisher does with its body in an attack.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Lunge {
+    None,
+    /// throws a chain to beside you in its windup and pulls itself there
+    /// as it casts
+    Hook,
+    /// leaps over you in its windup and drops as it casts
+    Pound,
 }
 
 /// Which part of a tank a weak point or cannon is on.
@@ -1303,6 +1329,7 @@ fn parse_patterns(text: &str, pal: &Palette) -> Result<Vec<Pattern>, String> {
                 "arc" => Form::Arc,
                 "ribbon" => Form::Ribbon,
                 "lane" => Form::Lane,
+                "dome" => Form::Dome,
                 s => return Err(format!("patterns: {} has no form {s}", p.id)),
             };
             let anchor = match v.at.as_str() {
@@ -1424,6 +1451,13 @@ fn parse_enemies(text: &str, patterns: &[Pattern]) -> Result<Vec<EnemyDef>, Stri
             indirect: a.indirect,
             cannons: a.cannons,
             stop: ms(a.stop_ms),
+            once_in: a.once_in.max(1),
+            moves: match a.moves.as_str() {
+                "" => Lunge::None,
+                "hook" => Lunge::Hook,
+                "pound" => Lunge::Pound,
+                m => return Err(format!("enemies: {who} has no move {m}")),
+            },
         })
     };
     let part = |f: &PartFile, who: &str| -> Result<Part, String> {

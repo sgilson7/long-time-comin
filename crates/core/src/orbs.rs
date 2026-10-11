@@ -369,6 +369,25 @@ fn formation(v: &Volley, origin: V3, target: V3, repeat: i32, owner: usize, rgb:
                 }
             }
         }
+        Form::Dome => {
+            // ring j at a pitch j/rows of the way up, fewer orbs as it
+            // narrows, each turned half a gap from the one below
+            let rows = v.rows.max(1);
+            for j in 0..rows {
+                let pitch = fx::TURN / 4 * j / rows;
+                let ring = fx::mul(r, fx::cos(pitch));
+                let m = (fx::mul(n * ONE, fx::cos(pitch)) / ONE).max(3);
+                let turn = base + fx::TURN / m / 2 * (j % 2);
+                for i in 0..m {
+                    let a = turn + fx::TURN / m * i;
+                    spots.push(hub.add(v3(
+                        fx::mul(fx::cos(a), ring),
+                        fx::mul(fx::sin(pitch), r),
+                        fx::mul(fx::sin(a), ring),
+                    )));
+                }
+            }
+        }
         Form::Arc => {
             for i in 0..n {
                 let off = if n <= 1 {
@@ -434,7 +453,7 @@ impl Orb {
         let d = match self.launch {
             Launch::Keep | Launch::Along => self.dir,
             Launch::Out => from_hub,
-            Launch::In => from_hub.neg(),
+            Launch::In | Launch::Gather => from_hub.neg(),
             Launch::Aim => target.sub(self.pos).norm(),
             Launch::Lead => {
                 // where the target will be after the flight to where it is
@@ -511,7 +530,10 @@ impl Orb {
         }
         self.pos = self.pos.add(self.dir.scale(self.speed));
         let alive = self.age < ORB_LIFE && self.pos.y > -fx::int(4) && self.pos.len_xz() < fx::int(160);
-        if !alive {
+        // a gathering orb is spent as it reaches its centre
+        let gathered =
+            self.launch == Launch::Gather && self.speed > 0 && self.pos.sub(self.hub).dot(self.dir) >= 0;
+        if !alive || gathered {
             return false;
         }
         if level.sphere_hits(self.pos, self.radius / 2) {
@@ -619,6 +641,25 @@ mod tests {
     fn volley(id: &str) -> Volley {
         let c = content();
         c.patterns.iter().find(|p| p.id == id).unwrap().volleys[0].clone()
+    }
+
+    #[test]
+    fn a_dome_is_a_half_sphere_of_rings_round_you() {
+        let c = content();
+        let v = volley("the_world");
+        assert_eq!(v.form, Form::Dome);
+        let you = v3(0, int(2), 0);
+        let s = fire(&v, v3(0, int(2), -int(10)), you, 0, 0, &c.pal, &open_floor());
+        let mut heights: Vec<i32> = s.orbs.iter().map(|o| o.pos.y).collect();
+        for o in &s.orbs {
+            let d = o.pos.dist(you);
+            assert!((d - v.radius).abs() < ONE / 20, "{d} from you, not {}", v.radius);
+            assert!(o.pos.y >= you.y, "none below you");
+        }
+        heights.sort_unstable();
+        heights.dedup();
+        assert_eq!(heights.len(), v.rows as usize, "a ring to each row");
+        assert!(s.orbs.len() as i32 > v.count * 2 && s.orbs.len() as i32 <= v.orbs());
     }
 
     #[test]

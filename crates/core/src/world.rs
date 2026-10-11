@@ -3403,6 +3403,144 @@ mod ascent {
         assert!(flew, "and fly when it resumes");
     }
 
+    /// The Defendant, come and settled, about to take attack `pick` of
+    /// phase `phase`'s list as its rest ends.
+    fn defendant_at(phase: usize, pick: impl Fn(&crate::content::Attack) -> bool) -> (Content, World, usize) {
+        let (c, mut w) = world_in(3, NodeKind::Boss, None);
+        w.player.iframes = 1_000_000;
+        for _ in 0..90 {
+            step(&c, &mut w, &still());
+        }
+        let b = w.boss.expect("the Defendant came");
+        let d = &c.enemies[w.enemies[b].def];
+        w.enemies[b].phase = phase;
+        w.enemies[b].attack = d.phases[phase].attacks.iter().position(pick).unwrap();
+        w.enemies[b].state = State::Rest(1);
+        (c, w, b)
+    }
+
+    /// The moment its stop ends, with the Defendant held at rest after
+    /// it, so only the stop's shots are left to reach you.
+    fn after_the_stop(phase: usize) -> (Content, World) {
+        let (c, mut w, b) = defendant_at(phase, |a| a.stop > 0);
+        let mut seen = false;
+        for _ in 0..secs(8, 1) {
+            step(&c, &mut w, &still());
+            seen |= w.stop.is_some();
+            if seen && w.stop.is_none() {
+                break;
+            }
+        }
+        assert!(seen && w.stop.is_none(), "it stopped time and time resumed");
+        // the dome alone: its knives and the like are walked out of
+        w.orbs.retain(|o| o.launch == crate::content::Launch::Gather);
+        w.enemies[b].state = State::Rest(1_000_000);
+        w.player.iframes = 0;
+        (c, w)
+    }
+
+    /// Whether you come through untouched, dashing on the ticks `dashes`.
+    fn untouched(c: &Content, w: &World, dashes: &[i32]) -> bool {
+        let mut w = w.clone();
+        let full = w.player.health;
+        for t in 0..secs(3, 1) {
+            let ctl = Controls {
+                dash_pressed: dashes.contains(&t),
+                ..still()
+            };
+            step(c, &mut w, &ctl);
+        }
+        w.player.health == full
+    }
+
+    #[test]
+    fn the_defendants_stop_lays_a_dome_that_takes_two_dashes_back_to_back() {
+        for phase in [0, 2] {
+            let (c, w) = after_the_stop(phase);
+            assert!(
+                !untouched(&c, &w, &[]),
+                "phase {phase}: standing, its dome reaches you"
+            );
+            let one = (0..secs(2, 1)).find(|&t| untouched(&c, &w, &[t]));
+            assert_eq!(one, None, "phase {phase}: one dash is not enough");
+            let two = (0..secs(2, 1)).step_by(2).find_map(|a| {
+                (DASH_TICKS..=DASH_TICKS * 3)
+                    .step_by(2)
+                    .find(|g| untouched(&c, &w, &[a, a + g]))
+                    .map(|g| (a, g))
+            });
+            assert!(
+                two.is_some(),
+                "phase {phase}: two dashes back to back come through"
+            );
+        }
+    }
+
+    #[test]
+    fn the_defendant_stops_time_only_one_time_in_four_it_comes_up() {
+        let (c, mut w, b) = defendant_at(0, |_| true);
+        w.enemies[b].attack = 0;
+        let d = &c.enemies[w.enemies[b].def];
+        let n = d.phases[0].attacks.len();
+        let once = d.phases[0].attacks.iter().find(|a| a.stop > 0).unwrap().once_in;
+        assert_eq!(once, 4);
+        let mut stops = 0;
+        let mut was = false;
+        while w.enemies[b].attack < n * 8 {
+            step(&c, &mut w, &still());
+            w.player.health = w.player.build.max_health;
+            let now = w.stop.is_some();
+            stops += i32::from(now && !was);
+            was = now;
+        }
+        assert_eq!(stops, 2, "in eight turns of its list, the first and the fifth");
+    }
+
+    #[test]
+    fn the_defendant_hooks_to_beside_you_and_pounds_where_you_stood() {
+        use crate::content::Lunge;
+        let (c, mut w, b) = defendant_at(0, |a| a.moves == Lunge::Hook);
+        let you = w.player.pos;
+        step(&c, &mut w, &still());
+        let anchor = w.enemies[b].anchor;
+        assert_eq!(w.enemies[b].lunge, Lunge::Hook);
+        let beside = v3(anchor.x - you.x, 0, anchor.z - you.z).len();
+        assert!(
+            (beside - LUNGE_HOOK_BESIDE).abs() < ONE,
+            "the hook lands beside you: {beside}"
+        );
+        let far = w.enemies[b].pos.dist(anchor);
+        while !matches!(w.enemies[b].state, State::Rest(_)) {
+            step(&c, &mut w, &still());
+        }
+        let e = &w.enemies[b];
+        let left = v3(anchor.x - e.pos.x, 0, anchor.z - e.pos.z).len();
+        assert!(
+            far > int(5) && left <= LUNGE_HOOK_ARRIVE,
+            "it pulled itself there: {far} to {left}"
+        );
+
+        let (c, mut w, b) = defendant_at(0, |a| a.moves == Lunge::Pound);
+        let you = w.player.pos;
+        let hover = c.enemies[w.enemies[b].def].hover;
+        let floor = w.enemies[b].pos.y - hover;
+        let mut top = 0;
+        loop {
+            step(&c, &mut w, &still());
+            if let State::Windup(_) = w.enemies[b].state {
+                top = top.max(w.enemies[b].pos.y - floor - hover);
+            }
+            if matches!(w.enemies[b].state, State::Rest(_)) {
+                break;
+            }
+        }
+        let e = &w.enemies[b];
+        let off = v3(you.x - e.pos.x, 0, you.z - e.pos.z).len();
+        assert!(top > LUNGE_POUND_HEIGHT / 2, "it leapt: {top}");
+        assert!(off < ONE * 3 / 2, "and came down where you stood: {off}");
+        assert!(e.pos.y - floor - hover < ONE / 4, "on the floor again");
+    }
+
     #[test]
     fn when_the_defendant_falls_the_idiot_god_draws_you_into_its_maw() {
         let (c, mut w) = world_in(3, NodeKind::Boss, None);

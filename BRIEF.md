@@ -30,6 +30,12 @@ Done means: a button in the Holding that loads a record with everything bought, 
 
 Done means, for this round: two mini-bosses, a small tank and a mech after Iron Vector's, in zones two and three; zone four built (the climb, each arena visibly higher, seven assassins, the Defendant at a stone circle on top with every ability of yours and a time stop that freezes you while it places its shots); beating it gives you a time stop (3 s, up to 6 s with upgrades); after it falls, the Idiot God bursts into view, melts the summit and draws you into its maw, and the revelation is read; a grab and throw for injured enemies; the Big Iron, a six-shot hand cannon whose second fire fans the hammer; deployed. Zones five and six are later work: zone five is listed as sealed, zone six is not shown.
 
+## The eighth request, word for word (2026-10-11)
+
+> the defendent does feel hard which i like; he should use moves like the hook, the ground pound, the wall, and spam the golden parry less often cause he felt like he was invulnerable half the time. also he should use the stop time much less frequently, like 1/4 the time he does now, but when he does it should create a half sphere around you and it should be rather layered and intriciate, requiring two well timed dashes back to back to not take damage.
+
+Done means, for this round: the Defendant uses your hook, your ground pound and your wall; the gold that made it look invulnerable is cut back; it stops time a quarter as often; each stop lays a layered half sphere round you that two dashes, back to back and well timed, come through untouched; the fight stays hard. Deploying to Pages is the standing approval (Autonomy).
+
 ## The tool
 
 A third-person bullet-hell shooter that runs in a desktop browser with a keyboard and mouse. Roguelike runs across a graph of arenas; meta-progression between runs; a story told by an indictment that is revealed one count at a time, on each death.
