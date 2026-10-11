@@ -119,6 +119,37 @@ BREAKS = [
  ("fifteen at most", "crates/core/src/world.rs", "MAX_ALIVE.saturating_sub(self.alive_enemies())", "usize::MAX", "never_more_than_fifteen"),
  ("the big wave comes in as room is made", "crates/core/src/world.rs", "                let n = self.room().min(self.waves_left[0].len());\n                let more", "                let n = 0;\n                let more", "never_more_than_fifteen"),
 
+    # round eleven: the Idiot God
+ ("song: great and good", "crates/core/src/song.rs", "let j = if off <= l.great { Judge::Great } else { Judge::Good };", "let j = Judge::Great;", "a_note_is_judged"),
+ ("song: a verse played well", "crates/core/src/song.rs", "if hit * 100 >= l.pass_pct * n {", "if hit * 100 > l.pass_pct * n * 2 {", "the_dancers_pipe_a_verse"),
+ ("song: the god stirs", "crates/core/src/song.rs", "h.stirred = true;", "", "a_verse_played_badly"),
+ ("song: the finale", "crates/core/src/song.rs", "h.finale = true;", "", "every_verse_played_well"),
+ ("song: fired on the beat", "crates/core/src/song.rs", "h.fire.push(b.pattern);", "", "the_god_fires_on_the_beat"),
+ ("the god cannot be killed", "crates/core/src/enemy.rs", "self.hp = (self.hp - damage).max(self.floor_hp);", "self.hp -= damage;", "the_gods_last_bar_does_not_kill"),
+ ("the trumpet puts the gun away", "crates/core/src/world.rs", "fire: false,\n                fire_pressed: false,", "fire: ctl.fire,\n                fire_pressed: ctl.fire_pressed,", "the_gods_last_bar_does_not_kill"),
+ ("the song puts it to sleep", "crates/core/src/world.rs", "god.hp = 0;", "", "played_through_the_lullaby"),
+ ("falling comes round", "crates/core/src/world.rs", "if self.arena.wrap > 0 && p.pos.y < -WRAP_BELOW {", "if false {", "off_an_edge_inside_the_god"),
+ ("through a seam", "crates/core/src/world.rs", "if let Some(k) = seams.iter().position(|s| s.crossed(p.prev_pos, p.pos)) {", "if let Some(k) = seams.iter().position(|s| s.crossed(p.prev_pos, p.pos) && false) {", "through_a_seam_you_come_out"),
+ ("a seam turns you", "crates/core/src/arena.rs", "fx::wrap(other.yaw - self.yaw + fx::HALF)", "fx::wrap(fx::HALF)", "through_a_seam_you_come_out"),
+ ("orbs through seams", "crates/core/src/world.rs", "if let Some(k) = seams.iter().position(|s| s.crossed(o.prev, o.pos)) {", "if let Some(k) = seams.iter().position(|s| s.crossed(o.prev, o.pos) && false) {", "an_orb_through_a_seam"),
+ ("the Reprise's trail", "crates/core/src/world.rs", "e.trail = trail;", "e.trail = trail.map(|_| V3::ZERO);", "a_reprise_walks"),
+ ("the Etching, a statue", "crates/core/src/enemy.rs", "if self.seen || dist < d.radius {", "if dist < d.radius {", "an_etching_moves_and_fires"),
+ ("the Etching holds its fire", "crates/core/src/enemy.rs", "        if d.gait == Gait::Unseen && self.seen {\n            return deeds;", "        if d.gait == Gait::Unseen && self.seen && false {\n            return deeds;", "an_etching_moves_and_fires"),
+ ("the gaze", "crates/core/src/world.rs", "dir.dot(fwd) >= look", "dir.dot(fwd) >= ONE * 2", "an_etching_you_look_at"),
+ ("the Render charges straight", "crates/core/src/enemy.rs", "let next = self.pos.add(self.bite_dir.scale(d.speed));", "let next = self.pos.add(flat.norm().scale(d.speed));", "a_render_turns_on_the_spot"),
+ ("the Render turns on the spot", "crates/core/src/enemy.rs", "self.yaw = fx::wrap(self.yaw + off.clamp(-CHARGE_TURN, CHARGE_TURN));", "self.yaw = want;", "a_render_turns_on_the_spot"),
+ ("the Toons' shared beat", "crates/core/src/enemy.rs", "let t = self.beat % BOUNCE_TICKS;", "let t = (self.beat + self.age) % BOUNCE_TICKS;", "every_toon_bounces"),
+ ("the Glyph marches across", "crates/core/src/enemy.rs", "v3(-way.z * self.orbit, 0, way.x * self.orbit)", "way", "a_glyph_marches"),
+ ("the Recursion splits", "crates/core/src/world.rs", ".take(self.room())", ".take(0)", "a_recursion_splits"),
+ ("the Etching is an engraving", "crates/core/src/draw/god.rs", "    b.style = PASS_DITHER;", "    b.style = PASS_SOLID;", "each_of_zone_fives_enemies"),
+ ("the Render is a PlayStation's", "crates/core/src/draw/god.rs", "    b.style = PASS_PS1;", "    b.style = PASS_SOLID;", "each_of_zone_fives_enemies"),
+ ("the Reprise is a negative", "crates/core/src/draw/god.rs", "    b.style = PASS_NEGATIVE;", "    b.style = PASS_SOLID;", "each_of_zone_fives_enemies"),
+ ("the Glyph's two frames", "crates/core/src/draw/god.rs", "let frame = &GLYPH[(e.moves & 1) as usize];", "let frame = &GLYPH[0];", "the_glyph_has_two_frames"),
+ ("the god's eyes shut as it sleeps", "crates/core/src/draw/god.rs", "let open = fx::mul(base * ONE, awake) / ONE;", "let open = base;", "the_gods_eyes_open"),
+ ("the god's eyes by phase", "crates/core/src/draw/god.rs", "        0 => EYES / 3,", "        0 => EYES,", "the_gods_eyes_open"),
+ ("the trumpet's valves", "crates/core/src/draw/god.rs", "    for k in -1..=1 {\n        let p = valves", "    for k in 0..0 {\n        let p = valves", "the_trumpet_is_brass"),
+ ("a bar for each phase", "crates/core/src/game.rs", "\"bars_left\": bars - bar,", "\"bars_left\": bars,", "the_god_has_a_bar"),
+
 ]
 
 

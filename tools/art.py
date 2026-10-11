@@ -38,6 +38,10 @@ generator gets wrong), and where this file enforces each:
   white shirt, black tie and dark glasses (`agent`), as
   crates/core/src/draw/house.rs draws them; the Executor is a gunmetal
   tank with ember weak points on its turret's back (`executor`).
+- the lullaby (the ending): the god asleep in a bubble of stopped time,
+  drawn grey inside it as the game greys time stopped; its eyes are shut;
+  the Defendant plays a brass trumpet at the edge of the god's heart
+  (`lullaby`).
 - colour is never the only cue: every shape has the plum outline.
 - repeatable: every random choice comes from a seeded generator, so the
   same script draws the same pictures.
@@ -79,6 +83,10 @@ COLOURS = {
     "dusk": "E8A27A", "duskhi": "F6C9A0", "dusklow": "B07A8C", "astone": "B9A79A", "astonedark": "7D6C68",
     "arock": "8A7A80", "amoss": "7FA06A", "asnow": "F4EDF0", "doorlight": "FFE9A8",
     "flesh": "3E2A5C", "fleshdark": "1A1028", "eldglow": "B6FF6A", "void": "05030A", "violetdeep": "9B5DE5",
+    # zone five, inside the Idiot God: data/palette.json's god set
+    "godsky": "3A1458", "godfog": "2A0C40", "godflesh": "7A3A6E", "godfleshpale": "C27BA8", "godstone": "6E6A9A",
+    "godstonedark": "433F70", "dancer": "B98AE0", "stilled": "D8D2E8", "seam": "FFE27A", "trumpet": "E8B84A",
+    "trumpetdark": "9A6A1A",
 }
 WALLS = ["wallA", "wallB", "wallC", "wallD", "wallE", "wallF"]
 GREENS = ["greenA", "greenB", "greenC", "greenD"]
@@ -1042,6 +1050,83 @@ def door():
         s += f"\\draw[eldglow, line width=0.8pt, opacity=0.6] {P(8.8 + k * 0.1, 11.5 + k * 0.3)} -- {P(9.6 + k * 0.1, 13.2 + k * 0.1)};\n"
     return s, (W, H)
 
+def lullaby():
+    """The Lullaby: inside the Idiot God, its heart. The god asleep in a
+    bubble of stopped time, grey within it, every eye shut, the orbs it
+    last fired hanging still; its dancers circling outside, slow; the
+    Defendant at the edge of the heart's floor playing the trumpet toward
+    it, notes drifting from the bell. The right side is under the page's
+    sheet."""
+    W, H = 32.0, 18.0
+    rng = random.Random(9999)
+    s = f"\\fill[godfog] (0,0) rectangle {P(W, H)};\n"
+    s += f"\\fill[godsky] (0,{f(H * 0.4)}) rectangle {P(W, H)};\n"
+    # the god's insides, curving round: walls of flesh above and below, and
+    # its shut eyes far off
+    s += f"\\filldraw[inked,fill=godflesh] (-1,18.5) .. controls (6,14.5) and (22,14.2) .. (33,18.5) -- cycle;\n"
+    s += f"\\filldraw[inked,fill=flesh] (-1,-0.5) .. controls (8,4.2) and (24,4.0) .. (33,-0.5) -- cycle;\n"
+    for _ in range(26):
+        x, y = rng.uniform(0, W), rng.choice([rng.uniform(15.6, 17.8), rng.uniform(0.2, 2.2)])
+        r = rng.uniform(0.25, 0.6)
+        s += f"\\filldraw[inked,fill=godfleshpale,line width=0.6pt] {P(x, y)} ellipse ({f(r)} and {f(r * 0.45)});\n"
+        s += f"\\draw[ink, line width=0.7pt] {P(x - r * 0.8, y)} .. controls {P(x, y - r * 0.35)} .. {P(x + r * 0.8, y)};\n"
+    # the dancers, far round the god, slow, piping
+    for k in range(7):
+        a = 2 * math.pi * k / 7 + 0.4
+        x, y = 12.0 + math.cos(a) * 9.5, 10.0 + math.sin(a) * 4.6
+        if x > 21.5:
+            continue
+        b = 0.55 + 0.15 * math.sin(a)
+        s += f"\\filldraw[inked,fill=dancer] {P(x, y)} .. controls {P(x - b, y + b * 1.2)} and {P(x + b * 0.4, y + b * 2.2)} .. {P(x + b * 0.3, y + b * 1.1)} .. controls {P(x + b, y + b * 0.8)} and {P(x + b * 0.8, y - b * 0.4)} .. cycle;\n"
+        s += line((x + b * 0.2, y + b * 0.9), (x + b * 1.6, y + b * 0.4), lw=1.6, colour="godstonedark")
+    # the bubble of stopped time: grey inside, the god asleep in it
+    cx, cy, R = 14.0, 10.6, 5.6
+    s += f"\\fill[stilled, opacity=0.55] {P(cx, cy)} circle ({f(R)});\n"
+    for k in range(30):
+        a = rng.uniform(0, 2 * math.pi)
+        r = rng.uniform(0.0, 3.6)
+        x, y = cx + math.cos(a) * r, cy + math.sin(a) * r * 0.8
+        b = rng.uniform(0.7, 1.5)
+        s += circle(x, y, b, "godstone" if k % 3 else "godstonedark")
+        if k % 2 == 0:
+            # an eye, shut
+            s += f"\\filldraw[inked,fill=stilled,line width=0.7pt] {P(x, y)} ellipse ({f(b * 0.45)} and {f(b * 0.16)});\n"
+            s += f"\\draw[ink, line width=0.9pt] {P(x - b * 0.45, y)} .. controls {P(x, y - b * 0.2)} .. {P(x + b * 0.45, y)};\n"
+    # its maw, shut
+    s += f"\\draw[ink, line width=1.6pt] {P(cx - 1.6, cy - 1.2)} .. controls {P(cx, cy - 1.7)} .. {P(cx + 1.6, cy - 1.2)};\n"
+    # what it fired last, hanging where it was
+    for _ in range(14):
+        a = rng.uniform(0, 2 * math.pi)
+        r = rng.uniform(4.2, 5.4)
+        s += orb(cx + math.cos(a) * r, cy + math.sin(a) * r, 0.22, "stilled", glow=False)
+    s += f"\\draw[chalk, line width=2.4pt] {P(cx, cy)} circle ({f(R)});\n"
+    s += f"\\draw[ink, line width=1.1pt] {P(cx, cy)} circle ({f(R + 0.12)});\n"
+    s += f"\\fill[white, opacity=0.35] {P(cx - R * 0.45, cy + R * 0.55)} ellipse (1.4 and 0.5);\n"
+    # the heart's floor, a disc of dream-stone, and the Defendant at its edge
+    s += f"\\filldraw[inked,fill=godstone] (-0.5,3.6) .. controls (4,4.6) and (9,4.4) .. (12.5,3.2) -- (12.5,2.4) .. controls (9,3.4) and (4,3.6) .. (-0.5,2.6) -- cycle;\n"
+    x0, y0, sc = 4.4, 4.2, 1.6
+    s += defendant(x0, y0, sc, lean=-0.06, gun=False)
+    # the trumpet at the lips, its bell toward the god
+    mx, my = x0 + 0.22 * sc, y0 + 1.8 * sc
+    bx, by = mx + 2.4, my + 0.7
+    s += line((mx, my), (bx - 0.5, by - 0.12), lw=3.4, colour="trumpetdark")
+    s += line((mx, my), (bx - 0.5, by - 0.12), lw=2.0, colour="trumpet")
+    s += poly([(bx - 0.7, by - 0.06), (bx + 0.3, by + 0.55), (bx + 0.45, by - 0.5)], "trumpet")
+    for k in range(3):
+        vx = mx + 0.6 + k * 0.22
+        vy = my + 0.18 + k * 0.05
+        s += rect(vx - 0.05, vy, vx + 0.05, vy + 0.28, "trumpetdark", lw=0.6)
+    s += line((x0 + 0.25 * sc, y0 + 1.45 * sc), (mx + 0.7, my + 0.1), lw=3.0, colour="coat")
+    # the notes, drifting toward the bubble
+    for k in range(5):
+        nx = bx + 0.7 + k * 0.62
+        ny = by + 0.5 + math.sin(k * 1.3) * 0.5 + k * 0.35
+        s += f"\\filldraw[inked,fill=seam,line width=0.7pt,rotate around={{-20:{P(nx, ny)}}}] {P(nx, ny)} ellipse (0.2 and 0.14);\n"
+        s += line((nx + 0.18, ny + 0.02), (nx + 0.18, ny + 0.75), lw=1.0)
+        if k % 2 == 0:
+            s += line((nx + 0.18, ny + 0.75), (nx + 0.45, ny + 0.55), lw=1.0)
+    return s, (W, H)
+
 
 PICTURES = {
     "title": title,
@@ -1053,6 +1138,7 @@ PICTURES = {
     "interlude_house": interlude_house,
     "orders": orders,
     "door": door,
+    "lullaby": lullaby,
 }
 for g in ("carbine", "scattergun", "launcher", "ripsaw", "big_iron"):
     PICTURES[f"guns/{g}"] = (lambda g=g: gun_art(g))

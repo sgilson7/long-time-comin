@@ -4221,6 +4221,25 @@ mod god {
         assert_eq!(w.player.health, health, "unhurt");
     }
 
+    #[test]
+    fn an_etching_you_look_at_stands_still_and_one_behind_you_comes() {
+        let (c, mut w) = world_in(NodeKind::Fight);
+        w.player.iframes = 1_000_000;
+        w.player.yaw = 0;
+        w.player.pitch = 0;
+        let you = w.player.pos;
+        // one ahead of you, in the middle of the view; one behind
+        let ahead = put(&c, &mut w, "etching", you.add(v3(0, 0, -int(14))));
+        let behind = put(&c, &mut w, "etching", you.add(v3(0, 0, int(14))));
+        let (a0, b0) = (w.enemies[ahead].pos, w.enemies[behind].pos);
+        for _ in 0..secs(1, 6) {
+            step(&c, &mut w, &Controls::default());
+        }
+        assert!(w.enemies[ahead].seen && !w.enemies[behind].seen);
+        assert_eq!(w.enemies[ahead].pos, a0, "looked at, it is a statue");
+        assert_ne!(w.enemies[behind].pos, b0, "behind you, it comes");
+    }
+
     /// Two seams facing different ways, 20 m apart, each the other's.
     fn seams(w: &mut World) {
         w.arena.seams = vec![
