@@ -30,7 +30,7 @@ BREAKS = [
  ("cache of two", "crates/core/src/route.rs", "            for k in [a, b] {", "            for k in [a, a] {", "a_route_on_the_ice"),
  ("see-through flag", "crates/core/src/render.rs", "let see_through = (buffer == STATIC_BUFFER) as u32;", "let see_through = 1;", "scenery_may_be_cut"),
  ("zone scene", "crates/core/src/game.rs", "        &self.c.zones[self.run.as_ref().map_or(0, |r| r.zone)]", "        &self.c.zones[0]", "the_ice_is_lit"),
- ("crossing", "crates/core/src/game.rs", "                if next < self.c.built_zones() {", "                if next < 1 {", "felling_each_boss_crosses"),
+ ("crossing", "crates/core/src/game.rs", "                if next < self.c.built_zones() {\n                    // the next zone: the interlude first", "                if next < 1 {\n                    // the next zone: the interlude first", "felling_each_boss_crosses"),
  ("ice reach", "crates/core/src/arena/ice.rs", "            self.solids.push(Solid::new(v3(-o, -m(1), -o), v3(o, 0, o)));", "            self.solids.push(Solid::new(v3(-o, -m(1), -m(10)), v3(o, 0, o)));", "every_ice_gate"),
  ("vent headroom", "crates/core/src/arena/ice.rs", "        self.vent(0, 0, -m(7));", "        self.vent(0, 0, -m(10));", "every_ice_gate"),
  ("unique patterns", "data/enemies.json", '"pattern": "halo"', '"pattern": "ring_16"', "zone_two_has_as_many"),
