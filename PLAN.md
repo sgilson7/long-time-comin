@@ -131,3 +131,19 @@ The request is in `BRIEF.md`. Choices it leaves open (SECOND-ORDER rows Q13 on):
 - **The dome**: a held formation `dome` (rows of rings over a half sphere round you, each ring turned half a gap from the one below) and a launch `gather` (in to the centre, and spent there, so a dome closes on the spot it was laid round and does not come out the other side). Each stop lays an inner shell 4.2 to 4.5 m out and an outer one 8 to 9 m out, which reach you about half a second apart; the dash's 13 ticks of invulnerability cover one shell, not both, and two charges cover both. The middle phase adds knives laid in rings where it stood, which fly at you later; the last adds a doubled outer shell and a grid that falls from above.
 - **Kept hard**: its health goes from 3,600 to 4,000 (SECOND-ORDER Q16).
 
+## Round 9: the mountain's creatures, the wall's wards (2026-10-11)
+
+The request is in `BRIEF.md`. Choices it leaves open (SECOND-ORDER rows Q18 on):
+
+- **Seven creatures** (`enemies.json`, kind `beast` with a `gait`, and one walker), each with two patterns of its own:
+  - the Hart, a stag whose antlers end in clock hands: stands, then every 3 s bounds in a high arc to a place at its range further round you (`bound`); a fan of tines, and a hoofbeat wave on landing;
+  - the Rook, a crag bird with eyes along its wings: circles high over you and dives as it winds up (`wheel`); a fast diving burst, a ring that rains down;
+  - the Toad: short low hops toward its range (`hop`); a lobbed glob that bursts into a ring where it lands, a curling croak;
+  - the Gaper, a man-eating plant: rooted; it lunges on its stalk and bites when you come within 2.5 m of its reach (`root`, `bite_cm`); seeds and a bloom;
+  - the Freshet, a mountain stream risen as a body of water: rushes round you along the ground in sweeping curves (`surge`); two waves and a falling spray;
+  - the Sporecap, a great toadstool: rooted, breathes slow spores that linger, and bursts into spores when it dies;
+  - the Ursine, a bear of the high slopes: walks you down (kind `walker`); a close maul and a roar.
+- **Corruption grows with the climb**: each arena's creatures carry `corrupt` from 1/6 at the trailhead to full at the last main fight (`CORRUPT_*`). Drawn (`draw/fauna.rs`) as eyes opening over the body (the Idiot God), tendrils from the back, a gold ring of hours turning backward and, past half, an afterimage that lags behind it where time stutters (the ritual).
+- **The waves**: mostly creatures (more than two thirds), with enemies from below (the Auger, the Rime Kite, Shardlings, the Lantern, the Clerk, the Drifter) and the assassins in some waves.
+- **The wall's wards**: an orb's colour gives the ward the Injunction needs to break it (`palette.json` `wards`): blue and cyan with the Injunction; violet, magenta and lime with a Standing Order; scarlet, ember and chalk with a Permanent Injunction (`upgrades.json`, effect `wall_ward`, its amount the ward it opens). Gold stays the parry's. An orb your wall breaks has a pale rim.
+

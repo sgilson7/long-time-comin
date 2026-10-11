@@ -90,6 +90,17 @@ Live: PR #4 passed both workflows (check 38122273822, breaks 38122273789) and me
 
 Live: PR #5 passed both workflows (check 38152218054, breaks 38152218086) and merged as 3d295fe; the main run 38153832412 deployed it, and the live browser check passed in chromium, firefox and webkit. The website's page was left as it is: nothing on it describes what changed.
 
+## Round 9 (2026-10-11): the mountain's creatures, the wall's wards, the Escort fix
+
+`./scripts/check.sh` passed locally (176 core and 11 boundary tests, the browser check in three engines), and every break in `scripts/break_tests.py` fails its test. `BRIEF.md` has the request, `PLAN.md` (Round 9) the design, `SECOND-ORDER.md` R9, Q18 to Q25, B7 and T10 what was chosen and found.
+
+- **Creatures**: kind `beast` and its `Gait` (`content.rs`), moved by `Enemy::beast` (`enemy.rs`), the bite by `Enemy::head` and `contact`; numbers `BOUND_*`, `HOP_*`, `WHEEL_*`, `BITE_*`, `SURGE_*` in `balance.rs`; drawn in `draw/fauna.rs`.
+- **Corruption**: `World::corrupt` from the node's step (`CORRUPT_*`), given to each enemy as it spawns.
+- **Wards**: `palette.json` `wards`, `Volley::ward` and `Orb::ward`, `Build::wards`; the upgrades `standing_order` and `permanent_injunction`.
+- **The Escort fix**: an elite is never the arena's boss (`World::spawn`), so felling the Escort no longer ends zone three.
+- **Harness**: `hit_by` cleared each tick and set by waves; the autopilot avoids drops and leads moving targets.
+
+## What remains
 
 - Sam's playtest (`TRIAGE.md`). Every feel and balance number is the agent's guess (SECOND-ORDER T1); the probe shows the curve (no wins with no upgrades, about half with 62 Clemency of upgrades), not whether it is fun (T2, P2).
 - Sam's reading of the story's words (T3).

@@ -61,6 +61,8 @@ struct PaletteFile {
     walls: Vec<String>,
     greens: Vec<String>,
     signs: Vec<String>,
+    #[serde(default)]
+    wards: Vec<Vec<String>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -69,6 +71,9 @@ pub struct Palette {
     pub walls: Vec<Rgb>,
     pub greens: Vec<Rgb>,
     pub signs: Vec<Rgb>,
+    /// the orb colours the Injunction breaks at each of its wards, from
+    /// the first
+    pub wards: Vec<Vec<String>>,
 }
 
 impl Palette {
@@ -84,6 +89,7 @@ impl Palette {
             walls: list(&f.walls)?,
             greens: list(&f.greens)?,
             signs: list(&f.signs)?,
+            wards: f.wards.clone(),
         };
         if p.walls.is_empty() || p.greens.is_empty() || p.signs.is_empty() {
             return Err("palette: walls, greens and signs each need a colour".into());
@@ -100,6 +106,15 @@ impl Palette {
             .or_else(|| self.named.get("ink"))
             .copied()
             .unwrap_or([0, 0, 0])
+    }
+
+    /// The ward an Injunction needs to break orbs of this colour: 1 for
+    /// the first; 0 for colours no wall breaks.
+    pub fn ward(&self, name: &str) -> i32 {
+        self.wards
+            .iter()
+            .position(|w| w.iter().any(|n| n == name))
+            .map_or(0, |k| k as i32 + 1)
     }
 
     pub fn has(&self, name: &str) -> bool {
@@ -484,7 +499,8 @@ pub struct Volley {
     /// health a hit takes
     pub damage: i32,
     /// the Injunction breaks it
-    pub blue: bool,
+    /// the Injunction's ward that breaks it (0: none does)
+    pub ward: i32,
     pub form: Form,
     /// a grid's rows, a star's orbs to an arm, a spiral's turns, a
     /// ribbon's rises
@@ -664,6 +680,12 @@ struct EnemyFile {
     /// a bar of its own on the HUD
     #[serde(default)]
     elite: bool,
+    /// a beast's way of moving: bound, hop, wheel, root or surge
+    #[serde(default)]
+    gait: String,
+    /// a rooted beast bites this far when you come this close
+    #[serde(default)]
+    bite_cm: i32,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -685,6 +707,24 @@ pub enum Kind {
     Mech,
     /// the Defendant: moves as you do, and stops time
     Double,
+    /// the mountain's creatures: each moves by its gait
+    Beast,
+}
+
+/// How a beast moves.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Gait {
+    None,
+    /// stands, then leaps far in a high arc to a new place round you
+    Bound,
+    /// short low hops, often
+    Hop,
+    /// circles high over you, and dives as it winds up
+    Wheel,
+    /// never moves; with a bite, lunges at you when you come near
+    Root,
+    /// rushes along the ground in sweeping curves past you
+    Surge,
 }
 
 /// An agent's part in its squad.
@@ -788,6 +828,9 @@ pub struct EnemyDef {
     pub rally_pct: i32,
     pub rally: Vec<usize>,
     pub elite: bool,
+    pub gait: Gait,
+    /// how far a rooted beast's bite reaches (0: it does not bite)
+    pub bite: i32,
 }
 
 // ---- the zones and their routes ---------------------------------------------
@@ -932,9 +975,6 @@ pub const REWARDS: &[&str] = &[
     "weapon", "jump", "health", "speed", "pierce", "pulse", "mend", "trigger", "plating",
 ];
 
-/// The palette names whose orbs count as blue: the Injunction breaks them.
-pub const BLUE: &[&str] = &["cyan", "blue"];
-
 const EFFECTS: &[&str] = &[
     "max_health",
     "speed",
@@ -950,6 +990,7 @@ const EFFECTS: &[&str] = &[
     "grapple_plus",
     "parry_plus",
     "wall_plus",
+    "wall_ward",
     "appeal",
     "precedent",
     "conduct",
@@ -1380,7 +1421,7 @@ fn parse_patterns(text: &str, pal: &Palette) -> Result<Vec<Pattern>, String> {
                 curl: degs(v.curl_degs),
                 alternate: v.alternate,
                 size: cm(v.size_cm),
-                blue: BLUE.contains(&v.colour.as_str()),
+                ward: pal.ward(&v.colour),
                 colour: v.colour,
                 spin: fx::deg(v.spin_deg),
                 repeat: v.repeat.max(1),
@@ -1493,6 +1534,7 @@ fn parse_enemies(text: &str, patterns: &[Pattern]) -> Result<Vec<EnemyDef>, Stri
             "tank" => Kind::Tank,
             "mech" => Kind::Mech,
             "double" => Kind::Double,
+            "beast" => Kind::Beast,
             k => return Err(format!("enemies: {} has no kind {k}", e.id)),
         };
         let role = match e.role.as_str() {
@@ -1509,6 +1551,21 @@ fn parse_enemies(text: &str, patterns: &[Pattern]) -> Result<Vec<EnemyDef>, Stri
         };
         if kind == Kind::Agent && role == Role::None {
             return Err(format!("enemies: agent {} has no role", e.id));
+        }
+        let gait = match e.gait.as_str() {
+            "" => Gait::None,
+            "bound" => Gait::Bound,
+            "hop" => Gait::Hop,
+            "wheel" => Gait::Wheel,
+            "root" => Gait::Root,
+            "surge" => Gait::Surge,
+            g => return Err(format!("enemies: {} has no gait {g}", e.id)),
+        };
+        if (kind == Kind::Beast) != (gait != Gait::None) {
+            return Err(format!(
+                "enemies: {}: a beast, and only a beast, has a gait",
+                e.id
+            ));
         }
         let phases = if matches!(kind, Kind::Boss | Kind::Tank | Kind::Double) {
             if e.phases.is_empty() {
@@ -1604,6 +1661,8 @@ fn parse_enemies(text: &str, patterns: &[Pattern]) -> Result<Vec<EnemyDef>, Stri
             rally_pct: e.rally_pct,
             rally: list(&e.rally)?,
             elite: e.elite,
+            gait,
+            bite: cm(e.bite_cm),
         });
     }
     Ok(out)
@@ -1793,7 +1852,7 @@ pub mod tests {
     }
 
     #[test]
-    fn the_ascent_has_seven_assassins_none_of_whose_patterns_came_before() {
+    fn the_ascent_has_its_assassins_and_its_creatures_none_of_whose_patterns_came_before() {
         let c = content();
         let earlier: Vec<usize> = (0..3)
             .flat_map(|z| {
@@ -1802,9 +1861,43 @@ pub mod tests {
             })
             .chain(["chief", "pioneer", "escort"].iter().filter_map(|id| c.enemy(id)))
             .collect();
-        let (four, boss) = roster(&c, 3);
-        assert_eq!(four.len(), 7);
-        assert!(four.iter().all(|&e| c.enemies[e].kind == Kind::Agent));
+        let (met, boss) = roster(&c, 3);
+        let zone = &c.zones[3].id;
+        let own: Vec<usize> = (0..c.enemies.len())
+            .filter(|&e| c.zone_of_enemy(e) == Some(3) && e != boss)
+            .collect();
+        let agents = own.iter().filter(|&&e| c.enemies[e].kind == Kind::Agent).count();
+        let creatures: Vec<usize> = own
+            .iter()
+            .copied()
+            .filter(|&e| c.enemies[e].kind != Kind::Agent)
+            .collect();
+        assert_eq!(
+            (agents, creatures.len()),
+            (7, 7),
+            "seven assassins and seven creatures of {zone}"
+        );
+        assert!(
+            creatures.iter().all(|e| met.contains(e)),
+            "every creature is met on the climb"
+        );
+        assert!(
+            met.iter().any(|e| earlier.contains(e)),
+            "some enemies from the zones below"
+        );
+        // mostly the mountain's creatures
+        let all: Vec<usize> = c.zones[3]
+            .encounters
+            .iter()
+            .flat_map(|e| e.waves.iter().flatten().copied())
+            .collect();
+        let beasts = all.iter().filter(|e| creatures.contains(e)).count();
+        assert!(
+            beasts * 3 > all.len() * 2,
+            "{beasts} of {} are creatures",
+            all.len()
+        );
+        let four = own;
         assert_eq!(c.enemies[boss].kind, Kind::Double);
         let pats = |ids: &[usize]| -> Vec<usize> {
             ids.iter()

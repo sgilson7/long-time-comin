@@ -2429,6 +2429,260 @@
           "delay_ms": 1000
         }
       ]
+    },
+    {
+      "id": "antler_tines",
+      "volleys": [
+        {
+          "shape": "aimed",
+          "count": 5,
+          "spread_deg": 50,
+          "speed_cms": 1500,
+          "size_cm": 26,
+          "colour": "chalk",
+          "repeat": 3,
+          "every_ms": 220
+        }
+      ]
+    },
+    {
+      "id": "hoofbeat",
+      "volleys": [
+        {
+          "shape": "wave",
+          "speed_cms": 1100,
+          "size_cm": 2600,
+          "colour": "ember"
+        },
+        {
+          "shape": "ring",
+          "count": 14,
+          "speed_cms": 900,
+          "size_cm": 26,
+          "colour": "violet"
+        }
+      ]
+    },
+    {
+      "id": "carrion_dive",
+      "volleys": [
+        {
+          "shape": "aimed",
+          "count": 3,
+          "spread_deg": 18,
+          "speed_cms": 1400,
+          "size_cm": 20,
+          "colour": "scarlet",
+          "repeat": 3,
+          "every_ms": 160
+        }
+      ]
+    },
+    {
+      "id": "feather_fall",
+      "volleys": [
+        {
+          "shape": "ring",
+          "count": 12,
+          "pitch_deg": -40,
+          "speed_cms": 1000,
+          "size_cm": 22,
+          "colour": "violet",
+          "repeat": 2,
+          "every_ms": 300,
+          "spin_deg": 15
+        }
+      ]
+    },
+    {
+      "id": "toad_pool",
+      "volleys": [
+        {
+          "shape": "form",
+          "form": "ring",
+          "count": 10,
+          "radius_cm": 120,
+          "hold_ms": 600,
+          "launch": "out",
+          "speed_cms": 600,
+          "size_cm": 24,
+          "colour": "lime"
+        }
+      ]
+    },
+    {
+      "id": "toad_glob",
+      "volleys": [
+        {
+          "shape": "aimed",
+          "count": 1,
+          "fall_cms2": 1400,
+          "speed_cms": 1100,
+          "size_cm": 44,
+          "colour": "lime",
+          "plant": "toad_pool"
+        }
+      ]
+    },
+    {
+      "id": "croak",
+      "volleys": [
+        {
+          "shape": "ring",
+          "count": 18,
+          "speed_cms": 800,
+          "size_cm": 24,
+          "colour": "lime",
+          "curl_degs": 30,
+          "alternate": true,
+          "repeat": 2,
+          "every_ms": 400
+        }
+      ]
+    },
+    {
+      "id": "gaper_seeds",
+      "volleys": [
+        {
+          "shape": "aimed",
+          "count": 5,
+          "spread_deg": 60,
+          "speed_cms": 1300,
+          "size_cm": 24,
+          "colour": "scarlet",
+          "repeat": 2,
+          "every_ms": 500
+        }
+      ]
+    },
+    {
+      "id": "gaper_bloom",
+      "volleys": [
+        {
+          "shape": "ring",
+          "count": 16,
+          "speed_cms": 900,
+          "size_cm": 26,
+          "colour": "magenta",
+          "repeat": 2,
+          "every_ms": 250,
+          "spin_deg": 11
+        }
+      ]
+    },
+    {
+      "id": "freshet_surge",
+      "volleys": [
+        {
+          "shape": "wave",
+          "speed_cms": 1200,
+          "size_cm": 2400,
+          "colour": "blue"
+        },
+        {
+          "shape": "wave",
+          "speed_cms": 1200,
+          "size_cm": 2400,
+          "colour": "blue",
+          "delay_ms": 500
+        }
+      ]
+    },
+    {
+      "id": "freshet_spray",
+      "volleys": [
+        {
+          "shape": "aimed",
+          "count": 9,
+          "spread_deg": 80,
+          "speed_cms": 1200,
+          "fall_cms2": 900,
+          "size_cm": 26,
+          "colour": "blue",
+          "repeat": 3,
+          "every_ms": 300
+        }
+      ]
+    },
+    {
+      "id": "spore_haze",
+      "volleys": [
+        {
+          "shape": "ring",
+          "count": 14,
+          "speed_cms": 700,
+          "accel_cms2": -500,
+          "min_cms": 150,
+          "size_cm": 34,
+          "colour": "lime",
+          "repeat": 3,
+          "every_ms": 600,
+          "spin_deg": 13
+        }
+      ]
+    },
+    {
+      "id": "spore_drift",
+      "volleys": [
+        {
+          "shape": "aimed",
+          "count": 4,
+          "spread_deg": 40,
+          "speed_cms": 600,
+          "size_cm": 36,
+          "colour": "violet",
+          "curl_degs": 40,
+          "alternate": true,
+          "repeat": 2,
+          "every_ms": 500
+        }
+      ]
+    },
+    {
+      "id": "spore_burst",
+      "volleys": [
+        {
+          "shape": "ring",
+          "count": 20,
+          "speed_cms": 400,
+          "size_cm": 30,
+          "colour": "lime"
+        }
+      ]
+    },
+    {
+      "id": "maul",
+      "volleys": [
+        {
+          "shape": "aimed",
+          "count": 7,
+          "spread_deg": 100,
+          "speed_cms": 1200,
+          "size_cm": 30,
+          "colour": "scarlet",
+          "repeat": 2,
+          "every_ms": 250
+        }
+      ]
+    },
+    {
+      "id": "roar",
+      "volleys": [
+        {
+          "shape": "ring",
+          "count": 24,
+          "speed_cms": 1000,
+          "size_cm": 28,
+          "colour": "chalk"
+        },
+        {
+          "shape": "wave",
+          "speed_cms": 900,
+          "size_cm": 2000,
+          "colour": "ember",
+          "delay_ms": 200
+        }
+      ]
     }
   ]
 }

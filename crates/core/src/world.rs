@@ -175,7 +175,8 @@ pub struct World {
     pub broken: Vec<i32>,
     /// ticks the trigger has been held, for the saw's rev
     pub revving: i32,
-    /// the enemy whose orb or touch last hurt you, for the playtest harness
+    /// the enemy whose orb, wave or touch hurt you this tick, for the
+    /// playtest harness; none when nothing did, or a fall did
     pub hit_by: Option<usize>,
     /// time stopped: by you, or by an enemy (which alone goes on)
     pub stop: Option<TimeStop>,
@@ -184,6 +185,9 @@ pub struct World {
     pub grab_age: i32,
     /// ticks since the Idiot God began to come (0: it has not)
     pub ending: i32,
+    /// how far corruption has taken this arena's creatures (0 to ONE),
+    /// by how far along the map it is
+    pub corrupt: i32,
 }
 
 /// Time held still.
@@ -279,6 +283,7 @@ impl World {
             grabbed: None,
             grab_age: 0,
             ending: 0,
+            corrupt: (node.step * ONE / CORRUPT_FULL_STEP).clamp(CORRUPT_LEAST, ONE),
         };
         w.broken = vec![0; w.arena.panes.len()];
         if let Some(def) = node.elite {
@@ -391,7 +396,7 @@ impl World {
     fn spawn(&mut self, c: &Content, def: usize) {
         let d = &c.enemies[def];
         let feet = self.player.pos;
-        let air = flies(d.kind);
+        let air = flies(d);
         let pool = if air {
             &self.arena.air_spawns
         } else {
@@ -428,6 +433,7 @@ impl World {
         let orbit = if self.rng.chance(50) { 1 } else { -1 };
         let mut e = Enemy::new(def, d, at, orbit);
         e.home = self.arena.centre;
+        e.corrupt = self.corrupt;
         if entering {
             e.state = enemy::State::Rest(tank::ENTER_TICKS + secs(1, 1));
         } else if let Some(t) = e.tank.as_mut() {
@@ -435,7 +441,9 @@ impl World {
             t.drive = tank::Drive::Turn;
             t.timer = secs(1, 1);
         }
-        if matches!(d.kind, Kind::Boss | Kind::Tank | Kind::Double) {
+        // the zone's boss; a mini-boss (the Escort, a tank too) is not, and
+        // felling it only clears its arena (SECOND-ORDER Q25)
+        if matches!(d.kind, Kind::Boss | Kind::Tank | Kind::Double) && !d.elite {
             self.boss = Some(self.enemies.len());
         }
         if d.elite {
@@ -481,6 +489,7 @@ impl World {
             return;
         }
         self.tick += 1;
+        self.hit_by = None;
         self.aim(c, eye, fwd);
         if self.ending > 0 {
             self.ending_step(c);
@@ -916,13 +925,14 @@ impl World {
         let parrying = self.player.parry_window > 0;
         let moving = self.player.pos.sub(self.player.prev_pos);
         let wall = self.wall();
+        let wards = self.player.build.wards();
         let mut broken = 0;
         for mut o in std::mem::take(&mut self.orbs) {
             if !o.step(level, chest, moving) {
                 spent.push(o);
                 continue;
             }
-            if o.blue && wall.is_some_and(|w| w.breaks(&o)) {
+            if o.ward > 0 && o.ward <= wards && wall.is_some_and(|w| w.breaks(&o)) {
                 broken += 1;
                 spent.push(o);
                 continue;
@@ -992,18 +1002,19 @@ impl World {
                 self.player.heal(MEND_HEAL);
             }
         }
-        let mut wave_hit: Option<(i32, V3)> = None;
+        let mut wave_hit: Option<(i32, V3, usize)> = None;
         let feet = self.player.pos;
         let inv = self.player.invulnerable();
         self.waves.retain_mut(|w| {
             let alive = w.step();
             if !w.hit && !inv && w.touches(feet) {
                 w.hit = true;
-                wave_hit = Some((w.damage, w.centre));
+                wave_hit = Some((w.damage, w.centre, w.owner));
             }
             alive
         });
-        if let Some((damage, from)) = wave_hit {
+        if let Some((damage, from, owner)) = wave_hit {
+            self.hit_by = Some(owner);
             self.hurt_from(c, damage, from);
         }
     }
@@ -1307,7 +1318,7 @@ impl World {
     /// Brings enemy `i` back at a spawn point with a clear line to `chest`.
     fn relocate(&mut self, c: &Content, i: usize, chest: V3) {
         let d = &c.enemies[self.enemies[i].def];
-        let air = flies(d.kind);
+        let air = flies(d);
         let pool = if air {
             &self.arena.air_spawns
         } else {
@@ -2005,9 +2016,9 @@ impl World {
     }
 }
 
-/// Kinds that spawn in the air.
-fn flies(k: Kind) -> bool {
-    matches!(k, Kind::Floater | Kind::Moth | Kind::Blinker)
+/// Enemies that spawn in the air.
+fn flies(d: &crate::content::EnemyDef) -> bool {
+    matches!(d.kind, Kind::Floater | Kind::Moth | Kind::Blinker) || d.gait == crate::content::Gait::Wheel
 }
 
 /// How far over the floor a ground kind's centre stands.
@@ -2431,15 +2442,77 @@ mod tests {
 
     /// An orb flying at the chest from `ahead` metres in front.
     fn incoming(w: &World, ahead: i32, side: i32, blue: bool) -> Orb {
+        incoming_ward(w, ahead, side, i32::from(blue))
+    }
+
+    /// An orb of ward `ward` flying at the chest from `ahead` metres in front.
+    fn incoming_ward(w: &World, ahead: i32, side: i32, ward: i32) -> Orb {
         let chest = w.player.chest();
         let n = facing(w.player.yaw, 0);
         let at = chest
             .add(n.scale(int(ahead)))
             .add(right_of(w.player.yaw).scale(int(side)));
         Orb {
-            blue,
+            ward,
             ..Orb::new(at, n.neg(), ONE / 4, ONE * 3 / 10, [0; 3], ORB_DAMAGE)
         }
+    }
+
+    #[test]
+    fn each_ward_bought_lets_the_wall_break_a_further_family_of_orbs() {
+        let (c, mut w) = world_for(NodeKind::Fight);
+        w.waves_left.clear();
+        w.cleared = true;
+        w.enemies.clear();
+        w.player.build.wall = true;
+        w.player.iframes = 1_000_000;
+        // which of an orb of each ward, 0 (gold, never) to 4, survive
+        let survivors = |w: &World| -> Vec<i32> {
+            let mut w = w.clone();
+            w.orbs = (0..5).map(|k| incoming_ward(&w, 5, 0, k)).collect();
+            let wall = Controls {
+                wall_pressed: true,
+                ..Controls::default()
+            };
+            let (eye, fwd) = eye_of(&w);
+            w.tick(&c, &wall, eye, fwd);
+            // 15 m/s from 5 m: at the wall in 13 ticks, at you in 20
+            for _ in 0..14 {
+                w.tick(&c, &Controls::default(), eye, fwd);
+            }
+            let mut left: Vec<i32> = w.orbs.iter().map(|o| o.ward).collect();
+            left.sort_unstable();
+            left
+        };
+        assert_eq!(survivors(&w), vec![0, 2, 3, 4], "the Injunction: blue only");
+        w.player.build.wall_ward = 1;
+        assert_eq!(
+            survivors(&w),
+            vec![0, 3, 4],
+            "a Standing Order: the second ward too"
+        );
+        w.player.build.wall_ward = 2;
+        assert_eq!(survivors(&w), vec![0, 4], "a Permanent Injunction: the third");
+        let wards: Vec<i32> = c
+            .upgrades
+            .iter()
+            .filter(|u| u.effect == "wall_ward")
+            .map(|u| u.amount)
+            .collect();
+        assert_eq!(wards, vec![2, 3], "the second and third wards to buy");
+        // bought in the Holding
+        let mut m = crate::meta::Meta::default();
+        let mut got = Vec::new();
+        for id in [
+            "injunction",
+            "injunction_2",
+            "standing_order",
+            "permanent_injunction",
+        ] {
+            m.owned.push(id.to_string());
+            got.push(m.build(&c).0.wards());
+        }
+        assert_eq!(got, vec![1, 1, 2, 3], "each ward bought raises the wall's");
     }
 
     #[test]
@@ -2468,10 +2541,10 @@ mod tests {
         let chest = w.player.chest();
         let in_front = |o: &Orb| o.pos.sub(chest).dot(right).abs() < ONE;
         assert!(
-            !w.orbs.iter().any(|o| o.blue && in_front(o)),
+            !w.orbs.iter().any(|o| o.ward == 1 && in_front(o)),
             "the blue orb in front broke at the wall"
         );
-        assert!(w.orbs.iter().any(|o| !o.blue), "the other colour still flies");
+        assert!(w.orbs.iter().any(|o| o.ward != 1), "the other colour still flies");
         assert_eq!(
             w.player.health, w.player.build.max_health,
             "nothing has reached you yet"
@@ -2480,7 +2553,7 @@ mod tests {
             w.tick(&c, &Controls::default(), eye, fwd);
         }
         assert!(
-            w.orbs.iter().any(|o| o.blue),
+            w.orbs.iter().any(|o| o.ward == 1),
             "the blue orb wide of the wall did not break"
         );
         // the other colour came through and hit
@@ -2550,7 +2623,7 @@ mod tests {
         w.burst(&c, 0);
         let ring = c.patterns.iter().find(|p| p.id == "shatter").unwrap().volleys[0].count as usize;
         assert_eq!(w.orbs.len(), ring);
-        assert!(w.orbs.iter().all(|o| o.wait > 0 && o.blue && o.hub == at));
+        assert!(w.orbs.iter().all(|o| o.wait > 0 && o.ward == 1 && o.hub == at));
     }
 
     #[test]
@@ -3542,6 +3615,34 @@ mod ascent {
     }
 
     #[test]
+    fn the_mountains_creatures_are_more_corrupted_the_higher_you_climb() {
+        let c = content();
+        let r = Route::build_for(&c, 3, 1, 1);
+        let mut fights: Vec<&Node> = r.nodes.iter().filter(|n| n.kind == NodeKind::Fight).collect();
+        fights.sort_by_key(|n| n.step);
+        let hart = c.enemy("hart").unwrap();
+        let drawn = |n: &Node| {
+            let p = Player::new(V3::ZERO, 0, Build::default());
+            let mut w = World::new(&c, n, &[], p, Held::new(0, 1), 1);
+            w.spawn(&c, hart);
+            let e = w.enemies.last().unwrap().clone();
+            let mut b = crate::render::Batch::new([0; 3]);
+            crate::draw::enemy(&mut b, &c, &e, ONE, w.player.chest());
+            (e.corrupt, b.count())
+        };
+        let (low, low_parts) = drawn(fights[0]);
+        let (high, high_parts) = drawn(fights[fights.len() - 1]);
+        assert!(
+            low > 0 && low < high && high == ONE,
+            "corruption {low} low, {high} high"
+        );
+        assert!(
+            high_parts > low_parts + 6,
+            "more eyes, tendrils and hours: {low_parts} to {high_parts}"
+        );
+    }
+
+    #[test]
     fn when_the_defendant_falls_the_idiot_god_draws_you_into_its_maw() {
         let (c, mut w) = world_in(3, NodeKind::Boss, None);
         w.player.iframes = 1_000_000;
@@ -3617,6 +3718,12 @@ mod ascent {
         }
         assert!(!w.enemies[k].alive(), "it is down");
         assert!(w.earned >= earned + d.clemency);
+        // a mini-boss: its fall is not the zone's end
+        assert_eq!(w.boss, None, "not the zone's boss");
+        for _ in 0..WIN_TICKS * 2 {
+            step(&c, &mut w, &still());
+        }
+        assert_ne!(w.outcome, Outcome::Won, "felling it does not end the zone");
     }
 
     #[test]

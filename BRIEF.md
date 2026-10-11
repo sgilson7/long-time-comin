@@ -36,6 +36,16 @@ Done means, for this round: two mini-bosses, a small tank and a mech after Iron 
 
 Done means, for this round: the Defendant uses your hook, your ground pound and your wall; the gold that made it look invulnerable is cut back; it stops time a quarter as often; each stop lays a layered half sphere round you that two dashes, back to back and well timed, come through untouched; the fight stays hard. Deploying to Pages is the standing approval (Autonomy).
 
+## The ninth request, word for word (2026-10-11)
+
+> the 4th zone, does it have new enemies? there should be an entirely new type of enemy, that looks like the fauna of a mountain like deer, birds, frogs, etc but they've started to become corrupted by both the ritual that will break time, and azathoths nearing influence. there should also be some old enemies from the other zones, but mainly the mountain fauna / flora like man eating plants and river elementals and etc.
+
+And, while that was under way:
+
+> you should also be able to upgrade the wall to start destroying different types of bullets
+
+Done means, for this round: zone four's waves are mostly its own creatures, mountain fauna and flora (deer, birds, toads, a man-eating plant, a river elemental, and more), each moving in its own way and drawn corrupted by the ritual and by the Idiot God, more the higher the climb; some enemies from the earlier zones and some of the assassins with them; upgrades for the Injunction that let it break orbs of more colours. Deploying to Pages is the standing approval (Autonomy).
+
 ## The tool
 
 A third-person bullet-hell shooter that runs in a desktop browser with a keyboard and mouse. Roguelike runs across a graph of arenas; meta-progression between runs; a story told by an indictment that is revealed one count at a time, on each death.

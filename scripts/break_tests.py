@@ -19,8 +19,8 @@ BREAKS = [
  ("cage closes inward", "crates/core/src/orbs.rs", "Launch::In | Launch::Gather => from_hub.neg(),", "Launch::In | Launch::Gather => from_hub,", "a_cage_round_you"),
  ("stagger", "crates/core/src/orbs.rs", "let wait = (v.hold + v.stagger * k as i32).max(1);", "let wait = (v.hold + v.stagger).max(1);", "a_staggered_formation"),
  ("second hold", "crates/core/src/orbs.rs", "if self.flown > r.stop {", "if self.flown > r.stop * 1000 {", "a_refracted_shot"),
- ("blue colours", "crates/core/src/content.rs", 'pub const BLUE: &[&str] = &["cyan", "blue"];', 'pub const BLUE: &[&str] = &["blue"];', "blue_orbs_are"),
- ("the wall breaks blue", "crates/core/src/world.rs", "if o.blue && wall.is_some_and(|w| w.breaks(&o)) {", "if o.blue && wall.is_some_and(|w| w.breaks(&o)) && false {", "the_injunction_breaks"),
+ ("blue colours", "data/palette.json", '"wards": [\n    [\n      "cyan",', '"wards": [\n    [\n      "lime",', "blue_orbs_are"),
+ ("the wall breaks blue", "crates/core/src/world.rs", "if o.ward > 0 && o.ward <= wards && wall.is_some_and(|w| w.breaks(&o)) {", "if o.ward > 0 && o.ward <= wards && wall.is_some_and(|w| w.breaks(&o)) && false {", "the_injunction_breaks"),
  ("the wall's cooldown", "crates/core/src/player.rs", "            self.wall_cooldown = if plus { WALL_PLUS_COOLDOWN } else { WALL_COOLDOWN };", "            self.wall_cooldown = 0;", "the_wall_stands_half"),
  ("vents", "crates/core/src/world.rs", "            self.player.launch_up(VENT_SPEED);", "            self.player.launch_up(VENT_SPEED / 2);", "an_updraft_vent"),
  ("death burst", "crates/core/src/world.rs", "        let Some(p) = d.burst else {", "        let Some(p) = d.burst.filter(|_| false) else {", "a_shardling_leaves"),
@@ -90,7 +90,7 @@ BREAKS = [
  ("the time stop comes with the win", "crates/core/src/meta.rs", "            b.stop_ticks += STOP_BASE;", "            b.stop_ticks += 0;", "the_stopped_clocks_wait"),
  ("each step is higher", "crates/core/src/arena/ascent.rs", "        let depth = rise + m(80);", "        let depth = m(80);", "every_gate_on_the_mountain"),
  ("the mini-boss list", "crates/core/src/route.rs", "            let mb = r.minibosses.iter().find(|m| m.at == i);", "            let mb = r.minibosses.iter().find(|m| m.at == 99);", "the_house_route_has"),
- ("the ascent's own patterns", "data/enemies.json", '"pattern": "proxy_burst"', '"pattern": "burst_fire"', "the_ascent_has_seven"),
+ ("the ascent's own patterns", "data/enemies.json", '"pattern": "proxy_burst"', '"pattern": "burst_fire"', "the_ascent_has_its_assassins"),
  ("safe ground", "crates/core/src/player.rs", "            if self.safe_ground(level) {", "            if true {", "a_fall_returns_you"),
  # round eight: the Defendant's moves
  ("a dome rises in rows", "crates/core/src/orbs.rs", "                let pitch = fx::TURN / 4 * j / rows;", "                let pitch = 0;", "a_dome_is_a_half_sphere"),
@@ -99,6 +99,19 @@ BREAKS = [
  ("the stop one time in four", "crates/core/src/enemy.rs", "            let due = self.passes % a.once_in == 0;", "            let due = true;", "the_defendant_stops_time_only"),
  ("the hook's cast waits", "crates/core/src/enemy.rs", "            State::Casting(0) if self.hooking() => {", "            State::Casting(0) if false => {", "the_defendant_hooks"),
  ("the pound leaps", "crates/core/src/enemy.rs", "                LUNGE_POUND_HEIGHT,\n", "                0,\n", "the_defendant_hooks"),
+ # round nine: the mountain's creatures, the wall's wards
+ ("each ward breaks more", "crates/core/src/world.rs", "if o.ward > 0 && o.ward <= wards && wall", "if o.ward > 0 && o.ward <= 1 && wall", "each_ward_bought"),
+ ("a ward's amount is its ward", "crates/core/src/meta.rs", "b.wall_ward = b.wall_ward.max(u.amount - 1),", "b.wall_ward = b.wall_ward.max(u.amount - 2),", "each_ward_bought"),
+ ("a bound is high", "crates/core/src/enemy.rs", "BEAST_GRAVITY * ticks / 2 + fx::div(to.y - self.pos.y, t),", "fx::div(to.y - self.pos.y, t),", "a_hart_bounds"),
+ ("a bound goes round you", "crates/core/src/enemy.rs", "let a = yaw + fx::deg(BOUND_TURN_DEG) * self.orbit;", "let a = yaw;", "a_hart_bounds"),
+ ("a hop is short", "crates/core/src/enemy.rs", "self.pos.add(way.add(side).norm().scale(HOP_LENGTH))", "self.pos.add(way.add(side).norm().scale(HOP_LENGTH * 3))", "a_toad_hops"),
+ ("a rook dives", "crates/core/src/enemy.rs", "let y = if diving {\n                    target.y + WHEEL_DIVE_OVER", "let y = if false {\n                    target.y + WHEEL_DIVE_OVER", "a_rook_circles"),
+ ("a bite reaches you", "crates/core/src/enemy.rs", "|| (e.reach > 0 && orbs::within(e.head(), chest, reach))", "|| false", "a_gaper_stays_rooted"),
+ ("a freshet rushes round", "crates/core/src/enemy.rs", "let a = self.age * fx::TURN / SURGE_PERIOD * self.orbit;", "let a = 0;", "a_freshet_rushes"),
+ ("corruption by height", "crates/core/src/world.rs", "        e.corrupt = self.corrupt;", "        e.corrupt = CORRUPT_LEAST;", "more_corrupted_the_higher"),
+ ("a beast's body clears the floor", "crates/core/src/enemy.rs", "let body = d.radius.min(d.hover * 9 / 10).max(ONE / 10);", "let body = d.radius;", "a_toad_hops"),
+
+ ("a mini-boss is not the zone's boss", "crates/core/src/world.rs", "if matches!(d.kind, Kind::Boss | Kind::Tank | Kind::Double) && !d.elite {", "if matches!(d.kind, Kind::Boss | Kind::Tank | Kind::Double) {", "the_escort_is_a_smaller"),
 ]
 
 

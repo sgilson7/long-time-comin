@@ -59,6 +59,9 @@ pub struct Build {
     pub grapple_plus: bool,
     pub parry_plus: bool,
     pub wall_plus: bool,
+    /// wards past the first (Standing Order, Permanent Injunction): the
+    /// wall breaks more colours
+    pub wall_ward: i32,
     /// Appeal: a second Recess
     pub appeal: bool,
     /// Hair Trigger and Plating, picked up in the house
@@ -90,6 +93,7 @@ impl Default for Build {
             grapple_plus: false,
             parry_plus: false,
             wall_plus: false,
+            wall_ward: 0,
             appeal: false,
             trigger: 0,
             plating: 0,
@@ -101,6 +105,15 @@ impl Default for Build {
 }
 
 impl Build {
+    /// The highest ward of orb the Injunction breaks; 0 without it.
+    pub fn wards(&self) -> i32 {
+        if self.wall {
+            1 + self.wall_ward
+        } else {
+            0
+        }
+    }
+
     pub fn grapple_range(&self) -> i32 {
         GRAPPLE_RANGE + if self.grapple_plus { GRAPPLE_PLUS_RANGE } else { 0 }
     }

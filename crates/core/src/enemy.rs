@@ -13,7 +13,7 @@
 //! and surfaces to attack.
 
 use crate::balance::*;
-use crate::content::{Content, EnemyDef, Kind, Lunge, Pattern, Role};
+use crate::content::{Content, EnemyDef, Gait, Kind, Lunge, Pattern, Role};
 use crate::fx::{self, int, ONE};
 use crate::geom::{facing, v3, yaw_pitch_of, V3};
 use crate::level::Level;
@@ -127,6 +127,15 @@ pub struct Enemy {
     pub anchor: V3,
     /// ticks a hook has pulled it so far
     pub pulled: i32,
+    /// a beast: ticks left in a leap; a bite's reach out from its body,
+    /// its way, and its clock
+    pub leap: i32,
+    pub reach: i32,
+    pub bite_dir: V3,
+    pub bite_t: i32,
+    /// how far corruption has taken it, 0 to ONE: the ritual's clockwork
+    /// and the Idiot God's eyes, more the higher up the mountain
+    pub corrupt: i32,
 }
 
 /// What an enemy did this tick that the world must act on.
@@ -187,6 +196,11 @@ impl Enemy {
             lunge: Lunge::None,
             anchor: pos,
             pulled: 0,
+            leap: 0,
+            reach: 0,
+            bite_dir: V3::ZERO,
+            bite_t: 0,
+            corrupt: 0,
         }
     }
 
@@ -579,6 +593,155 @@ impl Enemy {
             .unwrap_or(self.pos)
     }
 
+    /// Where its bite is: its body, or its head when it lunges.
+    pub fn head(&self) -> V3 {
+        self.pos.add(self.bite_dir.scale(self.reach))
+    }
+
+    /// A beast moves by its gait.
+    fn beast(&mut self, d: &EnemyDef, level: &Level, target: V3) {
+        let flat = v3(target.x - self.pos.x, 0, target.z - self.pos.z);
+        let dist = flat.len();
+        let ground = |p: V3| level.floor_below(p.x, p.y + ONE, p.z);
+        // what it collides with: its body, kept clear of the floor it sits on
+        let body = d.radius.min(d.hover * 9 / 10).max(ONE / 10);
+        match d.gait {
+            Gait::Bound | Gait::Hop => {
+                let hop = d.gait == Gait::Hop;
+                if self.leap > 0 {
+                    // in the air: on along its arc
+                    self.leap -= 1;
+                    self.vel.y -= BEAST_GRAVITY;
+                    let next = self.pos.add(self.vel);
+                    if level.sphere_hits(next, body) {
+                        self.vel = v3(0, self.vel.y.min(0), 0);
+                    } else {
+                        self.pos = next;
+                    }
+                    let floor = ground(self.pos).unwrap_or(self.pos.y - d.hover);
+                    if self.leap == 0 || (self.vel.y < 0 && self.pos.y <= floor + d.hover) {
+                        self.leap = 0;
+                        self.pos.y = floor + d.hover;
+                        self.vel = V3::ZERO;
+                    }
+                    return;
+                }
+                let (every, ticks) = if hop {
+                    (HOP_EVERY, HOP_TICKS)
+                } else {
+                    (BOUND_EVERY, BOUND_TICKS)
+                };
+                if (self.age + self.def as i32 * 7) % every == 0 {
+                    // where to: a hop goes a short way, toward its range;
+                    // a bound goes round you to its range
+                    let spot = if hop {
+                        let way = if dist > d.range {
+                            flat.norm()
+                        } else {
+                            flat.norm().neg()
+                        };
+                        let side = v3(-way.z, 0, way.x).scale(self.orbit * ONE / 2);
+                        self.pos.add(way.add(side).norm().scale(HOP_LENGTH))
+                    } else {
+                        let (yaw, _) = yaw_pitch_of(self.pos.sub(target));
+                        let a = yaw + fx::deg(BOUND_TURN_DEG) * self.orbit;
+                        target.add(facing(a, 0).scale(d.range))
+                    };
+                    let fits = ground(v3(spot.x, self.pos.y + int(3), spot.z))
+                        .map(|f| v3(spot.x, f + d.hover, spot.z))
+                        .filter(|p| !level.sphere_hits(*p, body));
+                    match fits {
+                        Some(to) => {
+                            let t = ticks * ONE;
+                            self.vel = v3(
+                                fx::div(to.x - self.pos.x, t),
+                                BEAST_GRAVITY * ticks / 2 + fx::div(to.y - self.pos.y, t),
+                                fx::div(to.z - self.pos.z, t),
+                            );
+                            self.leap = ticks;
+                        }
+                        None => self.orbit = -self.orbit,
+                    }
+                }
+                if let Some(f) = ground(self.pos) {
+                    self.pos.y = fx::approach(self.pos.y, f + d.hover, ONE / 6);
+                }
+            }
+            Gait::Wheel => {
+                // round you at its range and height; closer and low as it
+                // winds up, a dive
+                let diving = matches!(self.state, State::Windup(_) | State::Casting(_));
+                let r = if diving {
+                    d.range * WHEEL_DIVE_PCT / 100
+                } else {
+                    d.range
+                };
+                let (yaw, _) = yaw_pitch_of(self.pos.sub(target));
+                let step = fx::div(d.speed, r.max(ONE)) * self.orbit;
+                let round = target.add(facing(yaw + step, 0).scale(r));
+                let floor = ground(round).unwrap_or(target.y - PLAYER_CHEST);
+                let y = if diving {
+                    target.y + WHEEL_DIVE_OVER
+                } else {
+                    floor.max(target.y - PLAYER_CHEST) + d.hover
+                };
+                let want = v3(round.x, y, round.z);
+                let wish = want.sub(self.pos).clamp_len(d.speed * 2);
+                self.vel = self.vel.lerp(wish, ONE / 8);
+                let next = self.pos.add(self.vel);
+                if level.sphere_hits(next, body) {
+                    self.orbit = -self.orbit;
+                    self.pos.y += d.speed;
+                } else {
+                    self.pos = next;
+                }
+            }
+            Gait::Root => {
+                self.vel = V3::ZERO;
+                if d.bite <= 0 {
+                    return;
+                }
+                if self.bite_t > 0 {
+                    self.bite_t -= 1;
+                }
+                let since = BITE_EVERY - self.bite_t;
+                // out over BITE_OUT ticks, held as long, and back
+                self.reach = if since < BITE_OUT {
+                    d.bite * since / BITE_OUT
+                } else if since < BITE_OUT * 2 {
+                    d.bite
+                } else if since < BITE_OUT * 3 {
+                    d.bite * (BITE_OUT * 3 - since) / BITE_OUT
+                } else {
+                    0
+                };
+                let chest = target.sub(self.pos);
+                if self.bite_t == 0 && chest.len() < d.bite + d.radius + BITE_MARGIN {
+                    self.bite_t = BITE_EVERY;
+                    self.bite_dir = chest.norm();
+                }
+            }
+            Gait::Surge => {
+                let a = self.age * fx::TURN / SURGE_PERIOD * self.orbit;
+                let round = target.add(v3(fx::mul(fx::cos(a), d.range), 0, fx::mul(fx::sin(a), d.range)));
+                let wish = v3(round.x - self.pos.x, 0, round.z - self.pos.z).clamp_len(d.speed);
+                self.vel = self.vel.lerp(wish, SURGE_TURN);
+                let v = self.vel;
+                let tries = [v, v3(v.x, 0, 0), v3(0, 0, v.z)];
+                match tries.iter().map(|t| self.pos.add(*t)).find(|p| {
+                    !level.sphere_hits(*p, body) && ground(*p).is_some_and(|f| f > self.pos.y - d.hover - ONE)
+                }) {
+                    Some(p) => self.pos = p,
+                    None => self.orbit = -self.orbit,
+                }
+                if let Some(f) = ground(self.pos) {
+                    self.pos.y = fx::approach(self.pos.y, f + d.hover, ONE / 6);
+                }
+            }
+            Gait::None => {}
+        }
+    }
+
     /// Still pulled along its hook toward the anchor.
     fn hooking(&self) -> bool {
         let to = v3(self.anchor.x - self.pos.x, 0, self.anchor.z - self.pos.z);
@@ -844,6 +1007,7 @@ impl Enemy {
             Kind::Turret | Kind::Tank => {}
             Kind::Mech | Kind::Double => self.skirmish(d, level, target),
             Kind::Agent => self.walk(d, level, target),
+            Kind::Beast => self.beast(d, level, target),
             Kind::Blinker => {
                 // a slow bob where it stands; it moves by blinking
                 let ground = level.floor_below(self.pos.x, self.pos.y, self.pos.z).unwrap_or(0);
@@ -964,7 +1128,9 @@ impl Enemy {
 /// The damage a body takes from touching an enemy, if it does.
 pub fn contact(e: &Enemy, d: &EnemyDef, feet: V3) -> bool {
     let chest = feet.add(v3(0, PLAYER_CHEST, 0));
-    e.hurtable() && orbs::within(e.pos, chest, d.radius + PLAYER_RADIUS + ONE / 4)
+    let reach = d.radius + PLAYER_RADIUS + ONE / 4;
+    e.hurtable()
+        && (orbs::within(e.pos, chest, reach) || (e.reach > 0 && orbs::within(e.head(), chest, reach)))
 }
 
 #[cfg(test)]
@@ -1096,5 +1262,153 @@ mod tests {
             fired += e.step(&c, &l, open_target, 0).salvo.orbs.len();
         }
         assert!(fired > 0);
+    }
+
+    /// A beast of `id` on the open floor, `range` metres from `you`, past
+    /// its spawning; `you` is the chest it moves round.
+    fn beast_at(c: &Content, id: &str, you: V3) -> Enemy {
+        let i = c.enemy(id).unwrap();
+        let d = &c.enemies[i];
+        let mut e = Enemy::new(i, d, v3(you.x + d.range, d.hover, you.z), 1);
+        e.state = State::Rest(1_000_000);
+        e
+    }
+
+    #[test]
+    fn a_hart_bounds_in_a_high_arc_round_you_and_lands_at_its_range() {
+        let c = content();
+        let l = floor();
+        let you = v3(0, int(1), 0);
+        let mut e = beast_at(&c, "hart", you);
+        let d = &c.enemies[e.def];
+        let (start, _) = yaw_pitch_of(e.pos.sub(you));
+        let mut top = 0;
+        let mut leapt = false;
+        for _ in 0..BOUND_EVERY + BOUND_TICKS + 5 {
+            e.step(&c, &l, you, 0);
+            leapt |= e.leap > 0;
+            top = top.max(e.pos.y - d.hover);
+        }
+        assert!(leapt && e.leap == 0, "it bounded and landed");
+        assert!(top > ONE * 3 / 2, "high: {top}");
+        let (now, _) = yaw_pitch_of(e.pos.sub(you));
+        assert!(
+            fx::wrap(now - start).abs() > fx::deg(BOUND_TURN_DEG) / 2,
+            "further round you"
+        );
+        let r = v3(e.pos.x - you.x, 0, e.pos.z - you.z).len();
+        assert!((r - d.range).abs() < ONE, "at its range: {r}");
+        assert!((e.pos.y - d.hover).abs() < ONE / 10, "on the floor");
+    }
+
+    #[test]
+    fn a_toad_hops_a_short_way_toward_its_range() {
+        let c = content();
+        let l = floor();
+        let you = v3(0, int(1), 0);
+        let mut e = beast_at(&c, "toad", you);
+        let d = &c.enemies[e.def];
+        e.pos.x = you.x + d.range + int(8);
+        let far = e.pos.x;
+        let mut hops = 0;
+        let mut top = 0;
+        let mut from = e.pos;
+        for _ in 0..HOP_EVERY * 3 {
+            let before = e.leap;
+            let at = e.pos;
+            e.step(&c, &l, you, 0);
+            if before == 0 && e.leap > 0 {
+                hops += 1;
+                from = at;
+            }
+            if before > 0 && e.leap == 0 {
+                let len = v3(e.pos.x - from.x, 0, e.pos.z - from.z).len();
+                assert!((len - HOP_LENGTH).abs() < ONE / 2, "each hop {HOP_LENGTH}: {len}");
+            }
+            top = top.max(e.pos.y - d.hover);
+        }
+        assert_eq!(hops, 3, "a hop a second");
+        assert!(top < ONE, "low hops: {top}");
+        let moved = far - e.pos.x;
+        assert!(
+            moved > HOP_LENGTH * 2 && moved < HOP_LENGTH * 4,
+            "toward you, a short way each: {moved}"
+        );
+    }
+
+    #[test]
+    fn a_rook_circles_high_over_you_and_dives_as_it_winds_up() {
+        let c = content();
+        let l = floor();
+        let you = v3(0, int(1), 0);
+        let mut e = beast_at(&c, "rook", you);
+        let d = &c.enemies[e.def];
+        let (start, _) = yaw_pitch_of(e.pos.sub(you));
+        for _ in 0..secs(3, 1) {
+            e.step(&c, &l, you, 0);
+        }
+        let (now, _) = yaw_pitch_of(e.pos.sub(you));
+        assert!(fx::wrap(now - start).abs() > fx::deg(20), "it wheels round you");
+        assert!(e.pos.y > d.hover - ONE, "high: {}", e.pos.y);
+        e.state = State::Windup(1_000_000);
+        for _ in 0..secs(2, 1) {
+            e.step(&c, &l, you, 0);
+        }
+        assert!(e.pos.y < you.y + WHEEL_DIVE_OVER + ONE, "it dives: {}", e.pos.y);
+        let r = v3(e.pos.x, 0, e.pos.z).len();
+        assert!(r < d.range * (WHEEL_DIVE_PCT + 15) / 100, "and closes: {r}");
+    }
+
+    #[test]
+    fn a_gaper_stays_rooted_and_bites_you_only_within_its_reach() {
+        let c = content();
+        let l = floor();
+        let i = c.enemy("gaper").unwrap();
+        let d = &c.enemies[i];
+        let mut e = Enemy::new(i, d, v3(0, d.hover, 0), 1);
+        e.state = State::Rest(1_000_000);
+        let root = e.pos;
+        // out of reach: nothing
+        let far = v3(d.bite + d.radius + int(3), 0, 0);
+        for _ in 0..secs(2, 1) {
+            e.step(&c, &l, far.add(v3(0, PLAYER_CHEST, 0)), 0);
+            assert!(!contact(&e, d, far));
+        }
+        assert_eq!(e.reach, 0);
+        // just within: it lunges and reaches you past its body
+        let near = v3(d.bite + d.radius, 0, 0);
+        let mut bit = false;
+        for _ in 0..BITE_OUT * 3 {
+            e.step(&c, &l, near.add(v3(0, PLAYER_CHEST, 0)), 0);
+            bit |= contact(&e, d, near);
+        }
+        assert!(bit, "it bit");
+        assert_eq!(e.pos, root, "and never moved");
+    }
+
+    #[test]
+    fn a_freshet_rushes_round_you_along_the_ground() {
+        let c = content();
+        let l = floor();
+        let you = v3(0, int(1), 0);
+        let mut e = beast_at(&c, "freshet", you);
+        let d = &c.enemies[e.def];
+        let mut path = 0;
+        let mut angles = Vec::new();
+        for t in 0..SURGE_PERIOD {
+            let before = e.pos;
+            e.step(&c, &l, you, 0);
+            path += e.pos.sub(before).len();
+            assert!((e.pos.y - d.hover).abs() < ONE / 4, "on the ground");
+            if t % (SURGE_PERIOD / 4) == 0 {
+                angles.push(yaw_pitch_of(e.pos.sub(you)).0);
+            }
+        }
+        assert!(path > d.range * 3, "it rushes: {path}");
+        let quarters = angles
+            .windows(2)
+            .filter(|w| fx::wrap(w[1] - w[0]).abs() > fx::deg(30))
+            .count();
+        assert!(quarters >= 2, "round you: {angles:?}");
     }
 }

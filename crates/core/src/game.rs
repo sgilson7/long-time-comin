@@ -1206,7 +1206,7 @@ impl Game {
                     "branch": u.branch,
                     "depth": depth,
                     "needs": c.upgrades.iter().find(|x| x.id == u.requires).map(|x| x.name.clone()).unwrap_or_default(),
-                    "text": crate::codex::upgrade_effect(u),
+                    "text": crate::codex::upgrade_effect(u, &c.pal),
                     "cost": u.cost,
                     "icon": u.icon,
                     "owned": m.owns(&u.id),

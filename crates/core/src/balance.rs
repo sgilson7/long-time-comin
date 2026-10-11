@@ -206,6 +206,37 @@ pub const LUNGE_HOOK_MAX: i32 = secs(1, 1);
 /// then drops at this speed
 pub const LUNGE_POUND_HEIGHT: i32 = int(6);
 pub const LUNGE_POUND_DROP: i32 = per_tick(40, 1);
+// ---- the mountain's beasts --------------------------------------------------
+/// a bounding beast (the hart) leaps this often, for this long, through
+/// this gravity: about 2 m high at the top of its arc
+pub const BOUND_EVERY: i32 = secs(3, 1);
+pub const BOUND_TICKS: i32 = secs(9, 10);
+pub const BEAST_GRAVITY: i32 = per_tick2(20, 1);
+/// how far round you each bound carries it
+pub const BOUND_TURN_DEG: i32 = 50;
+/// a hopping beast (the toad): short low hops, this often and this long,
+/// this far
+pub const HOP_EVERY: i32 = secs(1, 1);
+pub const HOP_TICKS: i32 = secs(4, 10);
+pub const HOP_LENGTH: i32 = ONE * 25 / 10;
+/// a wheeling beast (the rook) dives to this far over your chest as it
+/// winds up, and its circle closes to this share of its range
+pub const WHEEL_DIVE_OVER: i32 = int(4);
+pub const WHEEL_DIVE_PCT: i32 = 75;
+/// a rooted beast's bite (the gaper): it lunges when you are within its
+/// reach and this much more, takes this long to strike, and bites again
+/// after this long
+pub const BITE_MARGIN: i32 = ONE;
+pub const BITE_OUT: i32 = 8;
+pub const BITE_EVERY: i32 = secs(14, 10);
+/// a surging beast (the freshet) sweeps round a circle at its range from
+/// you once in this long, turning toward it this fast
+pub const SURGE_PERIOD: i32 = secs(5, 1);
+pub const SURGE_TURN: i32 = ONE / 14;
+/// creatures are fully corrupted by this step of the map (the last main
+/// fight's), and a little from the first
+pub const CORRUPT_FULL_STEP: i32 = 20;
+pub const CORRUPT_LEAST: i32 = ONE / 6;
 /// each step along the Ascent's map is this much higher up the mountain
 pub const ASCENT_PER_STEP: i32 = int(12);
 /// the Idiot God's coming lasts this long before the revelation

@@ -39,8 +39,8 @@ pub struct Orb {
     /// the enemy that fired it, so a parried orb knows where to go
     pub owner: usize,
     pub damage: i32,
-    /// the Injunction breaks it
-    pub blue: bool,
+    /// the Injunction's ward that breaks it (0: none does)
+    pub ward: i32,
     /// ticks it still hangs still before it sets off; 0 once moving
     pub wait: i32,
     /// the hold it was given, for the drawn tell
@@ -81,7 +81,7 @@ impl Orb {
             age: 0,
             owner: 0,
             damage,
-            blue: false,
+            ward: 0,
             wait: 0,
             held: 0,
             launch: Launch::Keep,
@@ -113,6 +113,8 @@ pub struct Wave {
     pub rgb: Rgb,
     pub hit: bool,
     pub damage: i32,
+    /// the enemy that sent it
+    pub owner: usize,
 }
 
 /// A ring tilts toward a target above or below it by at most this much.
@@ -160,7 +162,7 @@ pub fn fire(
             age: 0,
             owner,
             damage: v.damage,
-            blue: v.blue,
+            ward: v.ward,
             wait: 0,
             held: 0,
             launch: Launch::Keep,
@@ -258,6 +260,7 @@ pub fn fire(
                 rgb,
                 hit: false,
                 damage: v.damage,
+                owner,
             });
         }
     }
@@ -427,7 +430,7 @@ fn formation(v: &Volley, origin: V3, target: V3, repeat: i32, owner: usize, rgb:
                 age: 0,
                 owner,
                 damage: v.damage,
-                blue: v.blue,
+                ward: v.ward,
                 wait,
                 held: wait,
                 launch: v.launch,
@@ -929,16 +932,22 @@ mod tests {
     }
 
     #[test]
-    fn blue_orbs_are_the_cyan_and_cobalt_ones() {
+    fn blue_orbs_are_the_first_ward_and_gold_is_never_broken() {
         let c = content();
-        let blue: Vec<bool> = c
+        for v in c.patterns.iter().flat_map(|p| &p.volleys) {
+            let first = v.colour == "cyan" || v.colour == "blue";
+            assert_eq!(v.ward == 1, first, "{}", v.colour);
+            if v.gold || v.colour == "gold" {
+                assert_eq!(v.ward, 0, "gold is the parry's");
+            }
+        }
+        let wards: Vec<i32> = c
             .patterns
             .iter()
-            .flat_map(|p| p.volleys.iter().map(|v| v.blue))
+            .flat_map(|p| p.volleys.iter().map(|v| v.ward))
             .collect();
-        assert!(blue.iter().any(|b| *b) && blue.iter().any(|b| !*b));
-        for v in c.patterns.iter().flat_map(|p| &p.volleys) {
-            assert_eq!(v.blue, v.colour == "cyan" || v.colour == "blue", "{}", v.colour);
+        for k in 0..=3 {
+            assert!(wards.contains(&k), "some orbs at ward {k}");
         }
     }
 

@@ -1,5 +1,5 @@
 {
-  "_about": "What Clemency buys in the Holding, between runs. effect kinds: max_health (amount in health points), speed (amount in percent), jumps (added to the jumps a run starts with), dash (charges added), grapple, parry, recess, armory (the level the Carbine starts at), wall (the Injunction), pound (the ground pound) and pound_plus (its second level), grapple_plus, parry_plus and wall_plus (the second levels of the hook, the parry and the wall), appeal (a second Recess), precedent (shots pierce amount more enemies), conduct (amount percent more Clemency earned), bail (amount more health when an arena is cleared), lien (a Ripsaw waits at every arrival), stop_plus (a second more of the time stop). unlock: a boss that must have been beaten first (the time stop itself comes with beating the Defendant). requires: an upgrade that must be owned first. branch: the Holding's column (body, motion, arms, writs). What each does is written by crates/core/src/codex.rs from these numbers and balance.rs.",
+  "_about": "What Clemency buys in the Holding, between runs. effect kinds: max_health (amount in health points), speed (amount in percent), jumps (added to the jumps a run starts with), dash (charges added), grapple, parry, recess, armory (the level the Carbine starts at), wall (the Injunction), pound (the ground pound) and pound_plus (its second level), grapple_plus, parry_plus and wall_plus (the second levels of the hook, the parry and the wall), wall_ward (the wall breaks the orbs of ward amount too; palette.json lists each ward's colours), appeal (a second Recess), precedent (shots pierce amount more enemies), conduct (amount percent more Clemency earned), bail (amount more health when an arena is cleared), lien (a Ripsaw waits at every arrival), stop_plus (a second more of the time stop). unlock: a boss that must have been beaten first (the time stop itself comes with beating the Defendant). requires: an upgrade that must be owned first. branch: the Holding's column (body, motion, arms, writs). What each does is written by crates/core/src/codex.rs from these numbers and balance.rs.",
   "upgrades": [
     {
       "id": "constitution_1",
@@ -268,6 +268,26 @@
       "requires": "injunction",
       "effect": "wall_plus",
       "amount": 0,
+      "icon": "wall",
+      "branch": "writs"
+    },
+    {
+      "id": "standing_order",
+      "name": "Standing Order",
+      "cost": 45,
+      "requires": "injunction_2",
+      "effect": "wall_ward",
+      "amount": 2,
+      "icon": "wall",
+      "branch": "writs"
+    },
+    {
+      "id": "permanent_injunction",
+      "name": "Permanent Injunction",
+      "cost": 70,
+      "requires": "standing_order",
+      "effect": "wall_ward",
+      "amount": 3,
       "icon": "wall",
       "branch": "writs"
     },
