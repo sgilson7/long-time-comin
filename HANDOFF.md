@@ -88,6 +88,8 @@ Live: PR #4 passed both workflows (check 38122273822, breaks 38122273789) and me
 - **The dome**: `Form::Dome` and `Launch::Gather` (`orbs.rs`); the patterns `the_world`, `queued_knives`, `the_world_2`; the wall is `injunction_echo`.
 - The Defendant's health is 4,000.
 
+Live: PR #5 passed both workflows (check 38152218054, breaks 38152218086) and merged as 3d295fe; the main run 38153832412 deployed it, and the live browser check passed in chromium, firefox and webkit. The website's page was left as it is: nothing on it describes what changed.
+
 
 - Sam's playtest (`TRIAGE.md`). Every feel and balance number is the agent's guess (SECOND-ORDER T1); the probe shows the curve (no wins with no upgrades, about half with 62 Clemency of upgrades), not whether it is fun (T2, P2).
 - Sam's reading of the story's words (T3).
