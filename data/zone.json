@@ -1,5 +1,5 @@
 {
-  "_about": "The zones of the route, in order. A built zone has a scene (palette names for its sky, fog, light, unlit windows and ink, and where its fog starts and is full), a route, archetypes, names and encounters; a sealed zone only its name, year and boss. A run's graph is made from a zone's route by a seeded roll (crates/core/src/route.rs): the main path is arrival, main_fights fights, the rest and the boss; between main fights, detours of 1 to detour_max nodes rejoin the next main node, and a detour's last node holds a reward drawn from rewards. Encounters are listed by tier; a main fight's tier is in main_tiers, a detour's is one higher. clemency is what the court grants per node cleared. rest_rewards: the rest node offers one of these beside its fountain, and you take one or the other. cache_rewards: the arrival offers two of these, and you take one (none when empty).",
+  "_about": "The zones of the route, in order. A built zone has a scene (palette names for its sky, fog, light, unlit windows and ink, and where its fog starts and is full), a route, archetypes, names and encounters; a sealed zone only its name, year and boss. A run's graph is made from a zone's route by a seeded roll (crates/core/src/route.rs): the main path is arrival, main_fights fights, the rest and the boss; between main fights, detours of 1 to detour_max nodes rejoin the next main node, and a detour's last node holds a reward drawn from rewards. Encounters are listed by tier; a main fight's tier is in main_tiers, a detour's is one higher. clemency is what the court grants per node cleared. rest_rewards: the rest node offers one of these beside its fountain, and you take one or the other. cache_rewards: the arrival offers two of these, and you take one (none when empty). weapon_levels: the level of a gun on a near and on a deep side path (2 and 3 unless given). miniboss: an enemy fought alone, in the arena miniboss_arena, on main fight miniboss_at (counted from 0).",
   "zones": [
     {
       "id": "waiting_city",
@@ -667,11 +667,316 @@
       ]
     },
     {
-      "id": "glass_decade",
-      "name": "The Glass Decade",
-      "year": "2064",
-      "built": false,
-      "boss": "jury"
+      "id": "glass_house",
+      "name": "The Glass House",
+      "year": "2056",
+      "built": true,
+      "boss": "executor",
+      "scene": {
+        "sky": "house_sky",
+        "fog": "house_fog",
+        "light": "house_light",
+        "window_dark": "house_window_dark",
+        "ink": "house_ink",
+        "fog_near_m": 45,
+        "fog_far_m": 260
+      },
+      "route": {
+        "main_fights": 5,
+        "main_tiers": [
+          1,
+          2,
+          2,
+          3,
+          3
+        ],
+        "detours_min": 3,
+        "detours_max": 4,
+        "detour_max": 2,
+        "rewards": [
+          "weapon",
+          "trigger",
+          "health",
+          "weapon",
+          "plating",
+          "jump",
+          "pierce",
+          "pulse",
+          "speed",
+          "mend"
+        ],
+        "clemency_main": 4,
+        "clemency_detour": 8,
+        "clemency_boss": 55,
+        "rest_rewards": [
+          "trigger",
+          "plating",
+          "pierce",
+          "pulse",
+          "mend",
+          "health"
+        ],
+        "cache_rewards": [
+          "weapon",
+          "trigger",
+          "plating",
+          "health",
+          "jump"
+        ],
+        "weapon_levels": [
+          3,
+          4
+        ],
+        "miniboss": "chief",
+        "miniboss_at": 3,
+        "miniboss_arena": "ballroom"
+      },
+      "archetypes": [
+        "hall",
+        "dining",
+        "library",
+        "lab",
+        "gallery"
+      ],
+      "names": {
+        "arrival": "The Vestibule",
+        "rest": "The Safe Room",
+        "boss": "The Conservatory",
+        "ballroom": "The Ballroom",
+        "hall": "The Great Hall",
+        "dining": "The Dining Room",
+        "library": "The Library",
+        "lab": "The East Laboratory",
+        "gallery": "The Long Gallery"
+      },
+      "encounters": [
+        {
+          "tier": 1,
+          "waves": [
+            [
+              "greyman",
+              "greyman"
+            ],
+            [
+              "outrider",
+              "greyman",
+              "cleaner"
+            ]
+          ]
+        },
+        {
+          "tier": 1,
+          "waves": [
+            [
+              "greyman",
+              "sapper"
+            ],
+            [
+              "cleaner",
+              "cleaner",
+              "greyman"
+            ]
+          ]
+        },
+        {
+          "tier": 1,
+          "waves": [
+            [
+              "warder",
+              "greyman"
+            ],
+            [
+              "outrider",
+              "outrider"
+            ]
+          ]
+        },
+        {
+          "tier": 2,
+          "waves": [
+            [
+              "greyman",
+              "greyman",
+              "marksman"
+            ],
+            [
+              "warder",
+              "cleaner",
+              "cleaner"
+            ],
+            [
+              "outrider",
+              "sapper",
+              "greyman"
+            ]
+          ]
+        },
+        {
+          "tier": 2,
+          "waves": [
+            [
+              "handler",
+              "greyman",
+              "greyman"
+            ],
+            [
+              "sapper",
+              "outrider",
+              "cleaner"
+            ]
+          ]
+        },
+        {
+          "tier": 2,
+          "waves": [
+            [
+              "warder",
+              "warder"
+            ],
+            [
+              "marksman",
+              "greyman",
+              "outrider"
+            ],
+            [
+              "cleaner",
+              "cleaner",
+              "cleaner",
+              "greyman"
+            ]
+          ]
+        },
+        {
+          "tier": 2,
+          "waves": [
+            [
+              "sapper",
+              "sapper",
+              "greyman"
+            ],
+            [
+              "handler",
+              "outrider",
+              "outrider"
+            ]
+          ]
+        },
+        {
+          "tier": 3,
+          "waves": [
+            [
+              "handler",
+              "greyman",
+              "greyman",
+              "outrider"
+            ],
+            [
+              "warder",
+              "marksman",
+              "sapper"
+            ],
+            [
+              "cleaner",
+              "cleaner",
+              "cleaner",
+              "greyman",
+              "greyman"
+            ]
+          ]
+        },
+        {
+          "tier": 3,
+          "waves": [
+            [
+              "marksman",
+              "marksman",
+              "warder"
+            ],
+            [
+              "handler",
+              "greyman",
+              "greyman",
+              "sapper"
+            ],
+            [
+              "outrider",
+              "outrider",
+              "cleaner",
+              "cleaner"
+            ]
+          ]
+        },
+        {
+          "tier": 3,
+          "waves": [
+            [
+              "warder",
+              "warder",
+              "greyman"
+            ],
+            [
+              "sapper",
+              "sapper",
+              "handler"
+            ],
+            [
+              "outrider",
+              "outrider",
+              "outrider",
+              "marksman"
+            ]
+          ]
+        },
+        {
+          "tier": 4,
+          "waves": [
+            [
+              "handler",
+              "warder",
+              "greyman",
+              "greyman"
+            ],
+            [
+              "marksman",
+              "marksman",
+              "sapper",
+              "outrider"
+            ],
+            [
+              "cleaner",
+              "cleaner",
+              "cleaner",
+              "cleaner",
+              "handler",
+              "greyman"
+            ]
+          ]
+        },
+        {
+          "tier": 4,
+          "waves": [
+            [
+              "warder",
+              "warder",
+              "handler"
+            ],
+            [
+              "greyman",
+              "greyman",
+              "greyman",
+              "marksman",
+              "sapper"
+            ],
+            [
+              "outrider",
+              "outrider",
+              "cleaner",
+              "cleaner",
+              "handler"
+            ]
+          ]
+        }
+      ]
     },
     {
       "id": "stilling",

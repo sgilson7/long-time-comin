@@ -15,5 +15,6 @@
   "KeyQ": "parry",
   "KeyF": "grapple",
   "KeyE": "interact",
-  "KeyR": "wall"
+  "KeyR": "wall",
+  "KeyC": "pound"
 }

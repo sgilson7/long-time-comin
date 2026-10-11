@@ -20,6 +20,7 @@ use crate::mesh::Mesh;
 use crate::rng::Rng;
 use std::collections::BTreeSet;
 
+mod house;
 mod ice;
 
 /// Half the width of an arena's floor.
@@ -75,6 +76,17 @@ pub struct Arena {
     pub fountain: Option<V3>,
     /// updraft vents: stand on one and it throws you up
     pub vents: Vec<Vent>,
+    /// where the house's agents can walk (the house only)
+    pub nav: Option<crate::nav::Nav>,
+    /// panes of glass drawn apart from the scenery, so they can shatter
+    pub panes: Vec<Pane>,
+}
+
+/// A pane of glass: its centre and size (thin along z).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Pane {
+    pub centre: V3,
+    pub size: V3,
 }
 
 /// An updraft vent: its top's centre and how wide it is.
@@ -96,6 +108,9 @@ struct B<'a> {
     vents: Vec<Vent>,
     /// zone two: steps, decks and cover in ice instead of stone
     ice: bool,
+    /// zone three: in wood and marble
+    house: bool,
+    panes: Vec<Pane>,
 }
 
 /// The dry canal's channel runs north to south between these two x values.
@@ -319,7 +334,9 @@ impl<'a> B<'a> {
         let step_h = dm(4);
         let run = dm(6);
         let steps = (rise + step_h - 1) / step_h;
-        let (stone, dark) = if self.ice {
+        let (stone, dark) = if self.house {
+            (self.c("house_marble"), self.c("house_carpet"))
+        } else if self.ice {
             (self.c("ice_white"), self.c("ice_snow_dark"))
         } else {
             (self.c("stone"), self.c("paving_dark"))
@@ -337,7 +354,9 @@ impl<'a> B<'a> {
     /// A slab's body and its trim: stone and terracotta in the city, ice
     /// and the expedition's red on the ice.
     fn slab_colours(&self) -> (Rgb, Rgb) {
-        if self.ice {
+        if self.house {
+            (self.c("house_marble"), self.c("house_wood"))
+        } else if self.ice {
             (self.c("ice_blue"), self.c("ice_red"))
         } else {
             (self.c("stone"), self.c("trim"))
@@ -437,13 +456,28 @@ impl<'a> B<'a> {
             ) {
                 continue;
             }
-            let wall = if self.ice {
+            let wall = if self.house {
+                self.c("house_wood_dark")
+            } else if self.ice {
                 self.c("ice_deep")
             } else {
                 self.pick(&self.pal.walls.clone())
             };
             let h = dm(21);
             self.block(x, 0, z, w, h, d, wall);
+            if self.house {
+                // a cabinet pushed over as a barricade: panels and brass
+                let face = if along_x { v3(0, 0, d / 2 + dm(1) / 2) } else { v3(w / 2 + dm(1) / 2, 0, 0) };
+                for side in [-1, 1] {
+                    let size = if along_x { v3(w - dm(4), h - dm(6), dm(1)) } else { v3(dm(1), h - dm(6), d - dm(4)) };
+                    let c = self.c("house_wood");
+                    self.deco(Mesh::Cube, v3(x, h / 2, z).add(face.scale(side * ONE)), size, c);
+                }
+                let brass = self.c("house_brass");
+                self.deco(Mesh::Cube, v3(x, h + dm(1) / 2, z), v3(w + dm(2), dm(1), d + dm(2)), brass);
+                placed += 1;
+                continue;
+            }
             // a broken top: a notch and fallen bricks
             let notch = if along_x {
                 v3(x + w / 4, h, z)
@@ -1699,10 +1733,14 @@ pub fn build(zone: &str, kind: &str, seed: u64, exits: &[Side], pal: &Palette) -
         canal: kind == "canal",
         vents: Vec::new(),
         ice: zone == "white_waste",
+        house: zone == "glass_house",
+        panes: Vec::new(),
     };
     let is_court = kind == "boss";
     if zone == "white_waste" {
         b.ice(kind, exits);
+    } else if zone == "glass_house" {
+        b.house(kind, exits);
     } else if is_court {
         b.court();
         b.shape(
@@ -1825,7 +1863,6 @@ pub fn build(zone: &str, kind: &str, seed: u64, exits: &[Side], pal: &Palette) -
         (v3(0, 0, HALF - m(5)), gates)
     };
     Arena {
-        level,
         shapes: b.shapes,
         start,
         start_yaw: 0,
@@ -1839,6 +1876,9 @@ pub fn build(zone: &str, kind: &str, seed: u64, exits: &[Side], pal: &Palette) -
         },
         fountain: if kind == "rest" { Some(v3(0, 0, 0)) } else { None },
         vents: b.vents,
+        nav: (zone == "glass_house").then(|| crate::nav::Nav::build(&level, COURT_RADIUS + m(2))),
+        panes: b.panes,
+        level,
     }
 }
 
@@ -1922,6 +1962,13 @@ mod size {
             ("white_waste", "pylons"),
             ("white_waste", "hall"),
             ("white_waste", "boss"),
+            ("glass_house", "hall"),
+            ("glass_house", "dining"),
+            ("glass_house", "library"),
+            ("glass_house", "lab"),
+            ("glass_house", "gallery"),
+            ("glass_house", "ballroom"),
+            ("glass_house", "boss"),
         ];
         for (zone, kind) in kinds {
             let a = build(zone, kind, 9, &[Side::North, Side::East], &c.pal);
@@ -2030,6 +2077,74 @@ mod reach {
     }
 
     #[test]
+    fn every_house_gate_can_be_walked_to_and_every_room_has_heights_shelter_and_a_walk_for_agents() {
+        let c = content();
+        for kind in [
+            "arrival", "rest", "hall", "dining", "library", "lab", "gallery", "ballroom", "boss",
+        ] {
+            for seed in 1..=8 {
+                let a = build("glass_house", kind, seed, &[Side::North, Side::East], &c.pal);
+                let reached = walk(&a.level, a.start);
+                for (g, _) in a.gates.iter().skip(1) {
+                    let near = reached
+                        .iter()
+                        .any(|p| p.sub(*g).len_xz() < int(2) && p.y.abs() < ONE);
+                    assert!(near, "{kind} seed {seed}: the gate at {g:?} cannot be walked to");
+                }
+                assert!(
+                    a.ground_spawns.len() > 30,
+                    "{kind} seed {seed}: {} spawns",
+                    a.ground_spawns.len()
+                );
+                // the agents' grid reaches every ground spawn from the start
+                let nav = a.nav.as_ref().expect("the house has a walk grid");
+                let from = nav.nearest(a.start).unwrap();
+                let walked: BTreeSet<u32> = nav.reach(from).into_iter().collect();
+                let lost = a
+                    .ground_spawns
+                    .iter()
+                    .filter(|p| nav.nearest(**p).is_none_or(|n| !walked.contains(&n)))
+                    .count();
+                assert!(lost * 10 <= a.ground_spawns.len(), "{kind} seed {seed}: {lost} spawns off the grid");
+                assert!(nav.cover.len() > 40, "{kind}: {} cover places", nav.cover.len());
+                // no edge a body can walk off drops into nothing (the lab's
+                // basement once ran on under the floor, SECOND-ORDER G6)
+                for p in &reached {
+                    for (dx, dz) in [(ONE / 2, 0), (-ONE / 2, 0), (0, ONE / 2), (0, -ONE / 2)] {
+                        let n = v3(p.x + dx, p.y, p.z + dz);
+                        if !fits(&a.level, n) {
+                            continue;
+                        }
+                        let below = a.level.floor_below(n.x, p.y + ONE / 10, n.z);
+                        assert!(
+                            below.is_some_and(|y| y >= p.y - int(7)),
+                            "{kind} seed {seed}: off the edge at {n:?} is nothing"
+                        );
+                    }
+                }
+                if matches!(kind, "arrival" | "rest") {
+                    continue;
+                }
+                let high = reached.iter().map(|p| p.y).max().unwrap_or(0);
+                assert!(
+                    high >= int(3),
+                    "{kind} seed {seed}: nothing 3 m up can be climbed to ({high})"
+                );
+                let under = reached.iter().any(|p| {
+                    p.y <= ONE
+                        && a.level
+                            .ray(p.add(v3(0, PLAYER_HEIGHT + ONE / 10, 0)), V3::UP, int(5))
+                            .is_some()
+                });
+                assert!(under, "{kind} seed {seed}: nowhere to walk under");
+            }
+        }
+        // the Conservatory's north wall is glass that can break
+        let a = build("glass_house", "boss", 1, &[], &c.pal);
+        assert!(a.panes.len() >= 30, "{} panes", a.panes.len());
+    }
+
+    #[test]
     fn nothing_solid_stands_through_a_walkway() {
         // a pillar or a stair through a deck would block the walk along it
         // or the climb to it; the reachability walk cannot see that when
@@ -2050,6 +2165,13 @@ mod reach {
             ("white_waste", "pylons"),
             ("white_waste", "hall"),
             ("white_waste", "boss"),
+            ("glass_house", "hall"),
+            ("glass_house", "dining"),
+            ("glass_house", "library"),
+            ("glass_house", "lab"),
+            ("glass_house", "gallery"),
+            ("glass_house", "ballroom"),
+            ("glass_house", "boss"),
         ];
         for (zone, kind) in kinds {
             let a = build(zone, kind, 2, &[Side::North, Side::East], &c.pal);

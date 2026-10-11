@@ -116,6 +116,15 @@ impl Meta {
                 "parry" => b.parry = true,
                 "recess" => b.recess = true,
                 "wall" => b.wall = true,
+                "pound" => b.pound = b.pound.max(1),
+                "pound_plus" => b.pound = 2,
+                "grapple_plus" => b.grapple_plus = true,
+                "parry_plus" => b.parry_plus = true,
+                "wall_plus" => b.wall_plus = true,
+                "appeal" => b.appeal = true,
+                "precedent" => b.pierce += u.amount,
+                "bail" => b.bail += u.amount,
+                "lien" => b.lien = true,
                 "armory" => gun_level = gun_level.max(u.amount),
                 _ => {}
             }
@@ -147,14 +156,23 @@ impl Meta {
         SENTENCE_BONUS_PCT * (self.years / 10)
     }
 
+    /// Percent added by Good Conduct.
+    pub fn conduct_pct(&self, c: &Content) -> i32 {
+        c.upgrades
+            .iter()
+            .filter(|u| u.effect == "conduct" && self.owns(&u.id))
+            .map(|u| u.amount)
+            .sum()
+    }
+
     /// A run ended in death: bank its Clemency (with the sentence bonus,
     /// and the clerk's grant on a first death), add the years, read the next
     /// line of the indictment.
     pub fn record_death(&mut self, c: &Content, earned: i32, nodes: i32, year: &str) -> Reading {
         self.runs += 1;
         let grant = if self.deaths == 0 { FIRST_DEATH_GRANT } else { 0 };
-        let bonus_pct = self.sentence_bonus_pct();
-        let banked = self.bank(earned, nodes) + grant;
+        let bonus_pct = self.sentence_bonus_pct() + self.conduct_pct(c);
+        let banked = self.bank(c, earned, nodes) + grant;
         self.clemency += grant;
         self.clemency_earned += grant;
         self.deaths += 1;
@@ -177,7 +195,7 @@ impl Meta {
         self.runs += 1;
         self.wins += 1;
         self.bosses_beaten += 1;
-        let banked = self.bank(earned, nodes);
+        let banked = self.bank(c, earned, nodes);
         let newest = if self.wins == 1 {
             Some(self.read_next(c, year))
         } else {
@@ -196,8 +214,8 @@ impl Meta {
     }
 
     /// Adds a run's Clemency with the sentence bonus; returns what was added.
-    fn bank(&mut self, earned: i32, nodes: i32) -> i32 {
-        let banked = earned * (100 + self.sentence_bonus_pct()) / 100;
+    fn bank(&mut self, c: &Content, earned: i32, nodes: i32) -> i32 {
+        let banked = earned * (100 + self.sentence_bonus_pct() + self.conduct_pct(c)) / 100;
         self.clemency += banked;
         self.clemency_earned += banked;
         self.best_nodes = self.best_nodes.max(nodes);
@@ -213,6 +231,7 @@ impl Meta {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::balance::GRAPPLE_RANGE as GRAPPLE_RANGE_BASE;
     use crate::content::tests::content;
 
     #[test]
@@ -305,5 +324,30 @@ mod tests {
         assert_eq!(Meta::load("not json", &c), Meta::default());
         let back = Meta::load(&m.save(), &c);
         assert_eq!(back, m);
+    }
+
+    #[test]
+    fn the_houses_upgrades_make_the_body_and_good_conduct_earns_more() {
+        let c = content();
+        let mut m = Meta {
+            clemency: 10_000,
+            ..Meta::default()
+        };
+        for id in ["constitution_1", "recess", "appeal", "gavel", "gavel_2", "armory", "precedent", "bail", "lien", "writ", "writ_2"] {
+            m.buy(&c, id).unwrap_or_else(|e| panic!("{id}: {e:?}"));
+        }
+        let (b, _) = m.build(&c);
+        assert_eq!(b.pound, 2);
+        assert_eq!(b.recesses(), 2, "Appeal is a second Recess");
+        assert_eq!(b.pierce, 1, "Precedent");
+        assert_eq!(b.bail, 15);
+        assert!(b.lien && b.grapple && b.grapple_plus);
+        assert!(b.grapple_range() > GRAPPLE_RANGE_BASE);
+        let before = m.clemency;
+        m.buy(&c, "conduct").unwrap();
+        let spent = before - m.clemency;
+        m.record_death(&c, 100, 3, "2056");
+        // 15% more, no sentence bonus yet, and the first offence's grant
+        assert_eq!(m.clemency - (before - spent), 115 + FIRST_DEATH_GRANT);
     }
 }

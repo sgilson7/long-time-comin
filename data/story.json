@@ -1,5 +1,5 @@
 {
-  "_about": "The story's words. The indictment is read one count per death, in order; after the last count, a death adds one of the addenda. {years}, {total} and {year} are filled in by the core. death_titles head the indictment by the zone you died in. interludes are read between a zone's boss and the next zone, by the zone just left. The verdict follows the last built zone's boss; its last line is mechanical and says what the build holds.",
+  "_about": "The story's words. The indictment is read one count per death, in order; after the last count, a death adds one of the addenda. {years}, {total} and {year} are filled in by the core. death_titles head the indictment by the zone you died in. interludes are read between a zone's boss and the next zone, by the zone just left. The verdict follows the last built zone's boss (the Executor, in this build); its last line is mechanical and says what the build holds.",
   "case": "IN THE TRIBUNAL OF THE LAST HOUR, WHICH SITS AFTER EVERYTHING ELSE HAS RISEN · Case 2081-1 · The City of Meridian, and its nine million mornings, against the Defendant",
   "sentencing": [
     "There is a court that sits after the last hour has been struck. It keeps no calendar, because it has no further use for one. It tried you there. You do not remember the trial. The clerk says nobody does, and that this is a mercy the court extends to everyone, whether they want it or not.",
@@ -27,12 +27,13 @@
     "ADDENDUM. A juror asked how many times a person may be sent back before they become someone else. The question was struck from the record. The years were not."
   ],
   "time_served": "The court adds {years}. Your sentence now runs to {total}.",
-  "victory_title": "THE WITNESS STEPS DOWN",
+  "victory_title": "THE EXECUTOR'S ORDERS",
   "victory": [
-    "The Witness lowers its arms. The ice it grew into goes clear, the way a window does when the frost on it gives up, and inside it is a woman in an old red coat, asleep, with a key on a string round her neck.",
-    "You take the key. She does not wake. The Witness watches you do it, which is all it has ever done, and the court will hear about this from it, in detail, in time.",
-    "In 2081 someone will stand at the door of the Meridian Observatory and reach into a pocket and find nothing there. It will be you, reaching. You have decided not to think yet about what you will do instead.",
-    "The Glass Decade and the night of the fourteenth of March are sealed in this build. The Clemency from this run has been added to your record."
+    "The Executor settles onto its treads in the wreck of the conservatory, and its eyes close, one wheel at a time, until the house is dark and quiet and full of rain.",
+    "In the turret, behind the last of its cannons, is a steel case, and in the case are its orders. They are typed on the house's own typewriter, the one in the safe room with the sticking e. They are dated the fourteenth of March, 2081. They are signed in your hand.",
+    "Raid the house on Calder Hill. End the work. Kill whoever you must, the scientists first. And under the signature, in ink, in the handwriting you have used your whole life: Time must break. If it does not, everything else will, which will be much worse.",
+    "You read it twice. You were sent back to stop yourself. At the far end of twenty-five years, you are already stopping you.",
+    "The night of the fourteenth of March is sealed in this build. The Clemency from this run has been added to your record."
   ],
   "bosses": {
     "bailiff": {
@@ -43,18 +44,23 @@
       "name": "THE WITNESS",
       "title": "Every court needs one who saw. This one has watched the ice since before there was ice, and it has already seen what you will do."
     },
-    "jury": {
-      "name": "THE JURY OF GLASS",
-      "title": "Sealed in this build."
-    },
     "defendant": {
       "name": "THE DEFENDANT",
       "title": "Sealed in this build."
+    },
+    "executor": {
+      "name": "THE EXECUTOR",
+      "title": "It carries out its orders to the letter. It has never once asked who signed them."
+    },
+    "chief": {
+      "name": "THE SECTION CHIEF",
+      "title": "He has a list of names. Yours is on it, and so is everyone you hired."
     }
   },
   "death_titles": {
     "waiting_city": "THE BAILIFF COLLECTS YOU",
-    "white_waste": "THE ICE GIVES YOU BACK TO THE COURT"
+    "white_waste": "THE ICE GIVES YOU BACK TO THE COURT",
+    "glass_house": "THE GREY MEN RETURN YOU TO THE COURT"
   },
   "interludes": {
     "waiting_city": {
@@ -67,8 +73,22 @@
         "Count the first says the key was given to someone else, a long time before, for a different reason. It was given to Ines Calder, the Observatory's first keeper. In 2039 she took it north on the Long Patience, to measure the weather at the top of the world, and the ice kept her, and the key, until someone went to fetch it. You know who. You have seen that face in mirrors.",
         "So in the spring of 2046 you pay for a ship of your own and sail north to fetch it first. Behind you the city is busy and bright and has thirty-five years left. Ahead is the White Waste, where the year turns so slowly that the court keeps someone there to watch it."
       ],
-      "art": "interlude"
+      "art": "interlude",
+      "go": "Sail north"
+    },
+    "white_waste": {
+      "title": "WHAT THE WITNESS SAW",
+      "art": "interlude_house",
+      "lines": [
+        "The Witness lowers its arms. The ice it grew into goes clear, the way a window does when the frost on it gives up, and inside it is a woman in an old red coat, asleep, with a key on a string round her neck. You take the key. She does not wake.",
+        "Then the Witness speaks, which the court's records say it has never done. It has watched you, it says, the whole way down the years, and it has seen what you will do with the key. You will do a thing so terrible that time itself will stop rather than go on past it.",
+        "You ask what the thing is. The Witness opens its mouth and nothing comes. It is not refusing. Whatever it saw has no words yet, and the Witness falls silent in the middle of a breath, as if the sentence it was about to say had been taken from it.",
+        "You sail home with the key in a lead box. By then the company is worth more than some countries, and in 2047 you buy the old house on Calder Hill above Meridian and fill its wings with laboratories. For ten years you spend the money on one question: how a person keeps time from breaking.",
+        "Physicists, clockmakers, two theologians, a woman who mends church bells. They work through the nights and find nothing that holds, and the money goes, and you sign for more. Somewhere in the house you are always listening for a clock to stop.",
+        "In the autumn of 2056 it is not a clock. Men in grey coats come up the lawn in the rain, all of them with the same face, and the first of your scientists dies at the conservatory door before anyone hears a shot. It is your house. You know every room of it. Go."
+      ],
+      "go": "Go home"
     }
   },
-  "verdict_art": "testimony"
+  "verdict_art": "orders"
 }

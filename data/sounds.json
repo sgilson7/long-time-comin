@@ -11,7 +11,11 @@
     "fire_carbine": 0.07,
     "boom": 0.06,
     "kill": 0.05,
-    "shatter": 0.05
+    "shatter": 0.05,
+    "rev": 0.08,
+    "clank": 0.05,
+    "plant": 0.05,
+    "withdraw": 0.08
   },
   "recipes": {
     "fire_carbine": [
@@ -633,6 +637,194 @@
         "at": 0,
         "attack": 0.003,
         "dur": 0.3,
+        "gain": 0.06
+      }
+    ],
+    "pound": [
+      {
+        "type": "osc",
+        "wave": "sine",
+        "from": 160,
+        "to": 38,
+        "at": 0,
+        "attack": 0.003,
+        "dur": 0.45,
+        "gain": 0.42
+      },
+      {
+        "type": "noise",
+        "filter": "lowpass",
+        "freq": 420,
+        "q": 0.8,
+        "at": 0,
+        "attack": 0.003,
+        "dur": 0.5,
+        "gain": 0.6
+      }
+    ],
+    "saw_throw": [
+      {
+        "type": "osc",
+        "wave": "sawtooth",
+        "from": 900,
+        "to": 1400,
+        "at": 0,
+        "attack": 0.003,
+        "dur": 0.12,
+        "gain": 0.06
+      },
+      {
+        "type": "noise",
+        "filter": "highpass",
+        "freq": 3500,
+        "q": 0.7,
+        "at": 0,
+        "attack": 0.002,
+        "dur": 0.1,
+        "gain": 0.12
+      }
+    ],
+    "rev": [
+      {
+        "type": "osc",
+        "wave": "sawtooth",
+        "from": 320,
+        "to": 380,
+        "at": 0,
+        "attack": 0.002,
+        "dur": 0.1,
+        "gain": 0.07
+      },
+      {
+        "type": "noise",
+        "filter": "bandpass",
+        "freq": 2600,
+        "q": 2,
+        "at": 0,
+        "attack": 0.002,
+        "dur": 0.09,
+        "gain": 0.12
+      }
+    ],
+    "clank": [
+      {
+        "type": "osc",
+        "wave": "square",
+        "from": 1300,
+        "to": 700,
+        "at": 0,
+        "attack": 0.001,
+        "dur": 0.06,
+        "gain": 0.07
+      },
+      {
+        "type": "noise",
+        "filter": "bandpass",
+        "freq": 4200,
+        "q": 4,
+        "at": 0,
+        "attack": 0.001,
+        "dur": 0.05,
+        "gain": 0.12
+      }
+    ],
+    "weak_break": [
+      {
+        "type": "noise",
+        "filter": "lowpass",
+        "freq": 700,
+        "q": 0.8,
+        "at": 0,
+        "attack": 0.003,
+        "dur": 0.6,
+        "gain": 0.7
+      },
+      {
+        "type": "osc",
+        "wave": "sawtooth",
+        "from": 300,
+        "to": 60,
+        "at": 0,
+        "attack": 0.003,
+        "dur": 0.5,
+        "gain": 0.18
+      }
+    ],
+    "crash": [
+      {
+        "type": "noise",
+        "filter": "highpass",
+        "freq": 2600,
+        "q": 0.6,
+        "at": 0,
+        "attack": 0.002,
+        "dur": 1.4,
+        "gain": 0.55
+      },
+      {
+        "type": "noise",
+        "filter": "lowpass",
+        "freq": 380,
+        "q": 0.8,
+        "at": 0,
+        "attack": 0.005,
+        "dur": 1.2,
+        "gain": 0.7
+      },
+      {
+        "type": "osc",
+        "wave": "sine",
+        "from": 90,
+        "to": 30,
+        "at": 0,
+        "attack": 0.01,
+        "dur": 1.2,
+        "gain": 0.35
+      }
+    ],
+    "call": [
+      {
+        "type": "osc",
+        "wave": "square",
+        "from": 660,
+        "to": 660,
+        "at": 0,
+        "attack": 0.005,
+        "dur": 0.12,
+        "gain": 0.06
+      },
+      {
+        "type": "osc",
+        "wave": "square",
+        "from": 880,
+        "to": 880,
+        "at": 0.14,
+        "attack": 0.005,
+        "dur": 0.12,
+        "gain": 0.06
+      }
+    ],
+    "withdraw": [
+      {
+        "type": "osc",
+        "wave": "triangle",
+        "from": 900,
+        "to": 300,
+        "at": 0,
+        "attack": 0.005,
+        "dur": 0.3,
+        "gain": 0.06
+      }
+    ],
+    "plant": [
+      {
+        "type": "osc",
+        "wave": "triangle",
+        "from": 500,
+        "to": 700,
+        "at": 0,
+        "attack": 0.002,
+        "dur": 0.08,
         "gain": 0.06
       }
     ]

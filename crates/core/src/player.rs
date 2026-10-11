@@ -1,5 +1,5 @@
 //! How the Defendant moves: running, up to four jumps, dashing through
-//! orbs, the grappling hook, the parry window, and health. Iron Vector's
+//! orbs, the grappling hook, the parry window, the ground pound, and health. Iron Vector's
 //! habit is kept: move one axis at a time and stop at whatever is met, with a
 //! step up onto anything low enough to walk onto.
 
@@ -25,6 +25,10 @@ pub struct Controls {
     pub interact_pressed: bool,
     /// the Injunction's key went down
     pub wall_pressed: bool,
+    /// the ground pound's key went down
+    pub pound_pressed: bool,
+    /// the trigger went down this tick (a saw is thrown on the press)
+    pub fire_pressed: bool,
 }
 
 /// What a run has made of the body: the upgrades bought and the pickups found.
@@ -44,6 +48,21 @@ pub struct Build {
     pub pierce: i32,
     pub pulse: bool,
     pub mend: bool,
+    /// the ground pound: 0 without it, 1 (Gavel Drop), 2 (Gavel II)
+    pub pound: i32,
+    /// the second levels of the hook, the parry and the wall
+    pub grapple_plus: bool,
+    pub parry_plus: bool,
+    pub wall_plus: bool,
+    /// Appeal: a second Recess
+    pub appeal: bool,
+    /// Hair Trigger and Plating, picked up in the house
+    pub trigger: i32,
+    pub plating: i32,
+    /// Bail: more health when an arena is cleared
+    pub bail: i32,
+    /// the Lien: a Ripsaw waits at every arrival
+    pub lien: bool,
 }
 
 impl Default for Build {
@@ -60,7 +79,27 @@ impl Default for Build {
             pierce: 0,
             pulse: false,
             mend: false,
+            pound: 0,
+            grapple_plus: false,
+            parry_plus: false,
+            wall_plus: false,
+            appeal: false,
+            trigger: 0,
+            plating: 0,
+            bail: 0,
+            lien: false,
         }
+    }
+}
+
+impl Build {
+    pub fn grapple_range(&self) -> i32 {
+        GRAPPLE_RANGE + if self.grapple_plus { GRAPPLE_PLUS_RANGE } else { 0 }
+    }
+
+    /// Recesses a run starts with.
+    pub fn recesses(&self) -> i32 {
+        self.recess as i32 + (self.recess && self.appeal) as i32
     }
 }
 
@@ -96,7 +135,12 @@ pub struct Player {
     /// ticks the Injunction's wall still stands, and until it can again
     pub wall_left: i32,
     pub wall_cooldown: i32,
-    pub recess_left: bool,
+    /// Recesses still to come this run
+    pub recess_left: i32,
+    /// dropping in a ground pound, from this height; its cooldown
+    pub pounding: bool,
+    pub pound_from: i32,
+    pub pound_cooldown: i32,
     pub last_ground: V3,
     /// ticks since a hit landed, for the screen's red flash
     pub hurt_age: i32,
@@ -123,6 +167,8 @@ pub enum Event {
     Wall,
     /// an updraft threw you up
     Vent,
+    /// a ground pound landed
+    Pound,
 }
 
 impl Player {
@@ -149,7 +195,10 @@ impl Player {
             parry_cooldown: 0,
             wall_left: 0,
             wall_cooldown: 0,
-            recess_left: build.recess,
+            recess_left: build.recesses(),
+            pounding: false,
+            pound_from: 0,
+            pound_cooldown: 0,
             last_ground: pos,
             hurt_age: 1000,
             stride: 0,
@@ -196,11 +245,13 @@ impl Player {
         if self.invulnerable() || !self.alive() {
             return false;
         }
+        let plating = self.build.plating.min(PLATING_MAX);
+        let damage = (damage * (100 - PLATING_PCT * plating) / 100).max(1);
         self.health -= damage;
         self.iframes = HURT_IFRAMES;
         self.hurt_age = 0;
-        if self.health <= 0 && self.recess_left {
-            self.recess_left = false;
+        if self.health <= 0 && self.recess_left > 0 {
+            self.recess_left -= 1;
             self.health = self.build.max_health * RECESS_HEALTH_PCT / 100;
             self.events.push(Event::Recess);
         }
@@ -244,7 +295,11 @@ impl Player {
 
     pub fn release_grapple(&mut self) {
         if self.grapple.take().is_some() {
-            self.grapple_cooldown = GRAPPLE_COOLDOWN;
+            self.grapple_cooldown = if self.build.grapple_plus {
+                GRAPPLE_PLUS_COOLDOWN
+            } else {
+                GRAPPLE_COOLDOWN
+            };
             self.events.push(Event::GrappleOff);
         }
     }
@@ -270,15 +325,26 @@ impl Player {
         self.wall_left = (self.wall_left - 1).max(0);
         self.wall_cooldown = (self.wall_cooldown - 1).max(0);
         if c.wall_pressed && self.build.wall && self.wall_cooldown == 0 {
-            self.wall_left = WALL_TICKS;
-            self.wall_cooldown = WALL_COOLDOWN;
+            let plus = self.build.wall_plus;
+            self.wall_left = if plus { WALL_PLUS_TICKS } else { WALL_TICKS };
+            self.wall_cooldown = if plus { WALL_PLUS_COOLDOWN } else { WALL_COOLDOWN };
             self.events.push(Event::Wall);
         }
 
         if c.parry_pressed && self.build.parry && self.parry_cooldown == 0 {
-            self.parry_window = PARRY_WINDOW;
-            self.parry_cooldown = PARRY_COOLDOWN;
+            let plus = self.build.parry_plus;
+            self.parry_window = if plus { PARRY_PLUS_WINDOW } else { PARRY_WINDOW };
+            self.parry_cooldown = if plus { PARRY_PLUS_COOLDOWN } else { PARRY_COOLDOWN };
             self.events.push(Event::Parry);
+        }
+
+        // the ground pound: in the air, straight down
+        self.pound_cooldown = (self.pound_cooldown - 1).max(0);
+        if c.pound_pressed && self.build.pound > 0 && !self.grounded && !self.pounding && self.pound_cooldown == 0 {
+            self.release_grapple();
+            self.dash_ticks = 0;
+            self.pounding = true;
+            self.pound_from = self.pos.y;
         }
 
         let wish = self.wish(c);
@@ -323,7 +389,10 @@ impl Player {
             }
         }
 
-        if self.dashing() {
+        if self.pounding {
+            self.vel = v3(0, -POUND_SPEED, 0);
+            self.iframes = self.iframes.max(2);
+        } else if self.dashing() {
             self.dash_ticks -= 1;
             let d = self.dash_dir.scale(DASH_SPEED);
             self.vel = v3(d.x, 0, d.z);
@@ -350,7 +419,20 @@ impl Player {
 
         let was_grounded = self.grounded;
         self.collide_move(level);
-        if self.grounded {
+        if self.grounded && self.pounding {
+            // the landing: a shockwave (the world's), and a bounce to a
+            // little over where the drop began, with the air jumps back
+            self.pounding = false;
+            self.pound_cooldown = POUND_COOLDOWN;
+            self.iframes = self.iframes.max(POUND_IFRAMES);
+            let h = (self.pound_from - self.pos.y + POUND_OVER).max(POUND_MIN_BOUNCE);
+            self.vel.y = bounce_speed(h);
+            self.grounded = false;
+            self.coyote = 0;
+            self.jumps_used = 1;
+            self.last_ground = self.pos;
+            self.events.push(Event::Pound);
+        } else if self.grounded {
             if !was_grounded {
                 self.events.push(Event::Land);
             }
@@ -375,6 +457,7 @@ impl Player {
             self.stride = (self.stride + fx::mul(moved, fx::TURN / 3)) & (fx::TURN - 1);
         }
         if self.pos.y < KILL_FLOOR {
+            self.pounding = false;
             self.pos = self.last_ground.add(v3(0, ONE, 0));
             self.prev_pos = self.pos;
             self.vel = V3::ZERO;
@@ -505,6 +588,14 @@ impl Player {
             }
         }
     }
+}
+
+/// The speed up that rises `h` under gravity, as the simulation steps it
+/// (speed first, then place): the sum of v, v − g, v − 2g … reaches `h`.
+pub fn bounce_speed(h: i32) -> i32 {
+    // in Q16, V² = 2GH holds as it does in metres; half a tick's gravity
+    // more for the step order
+    fx::isqrt((2 * GRAVITY as i64 * h.max(0) as i64) as u64) as i32 + GRAVITY / 2
 }
 
 #[cfg(test)]

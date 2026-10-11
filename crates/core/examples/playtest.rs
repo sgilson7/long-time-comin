@@ -114,6 +114,7 @@ struct Harness {
     seq: u32,
     t: i32,
     last_hp: i32,
+    hits: BTreeMap<String, (i32, i32)>,
 }
 
 fn deg(a: i32) -> i32 {
@@ -148,6 +149,7 @@ impl Harness {
             seq: 0,
             t: 0,
             last_hp: 0,
+            hits: BTreeMap::new(),
         }
     }
 
@@ -279,8 +281,27 @@ impl Harness {
             return false;
         }
         let before = self.g.route().map(|(_, at)| at);
+        let h0 = self.g.world().map_or(0, |w| w.player.health);
+        let p0 = self.g.world().map(|w| (w.player.pos, w.player.vel, w.player.grounded, w.player.pounding));
         self.g.tick(c);
+        if let (Some(w), Some(p0)) = (self.g.world(), p0) {
+            if w.player.pos.y < -int(6) && p0.0.y >= -int(6) {
+                eprintln!("BELOW from {:?} to {:?} ground {}", p0, w.player.pos, w.player.grounded);
+            }
+        }
         self.t += 1;
+        if let Some(w) = self.g.world() {
+            let lost = h0 - w.player.health;
+            if lost > 0 {
+                let who = w
+                    .hit_by
+                    .and_then(|i| w.enemies.get(i))
+                    .map_or("a fall".to_string(), |e| self.g.content().enemies[e.def].name.clone());
+                let e = self.hits.entry(who).or_insert((0, 0));
+                e.0 += 1;
+                e.1 += lost;
+            }
+        }
         self.drain_notes(true);
         self.g.mode() == Mode::Play && self.g.route().map(|(_, at)| at) == before
     }
@@ -374,7 +395,7 @@ impl Harness {
                 was = w.player.pos;
             }
             stuck -= 1;
-            let (mut c, yaw, pitch) = bot(w, self.t, stuck > 0);
+            let (mut c, yaw, pitch) = bot(self.g.content(), w, self.t, stuck > 0);
             // no line of sight to the target: walk the grid round toward it
             if let Some(e) = w
                 .enemies
@@ -412,6 +433,7 @@ impl Harness {
                 break;
             }
         }
+        self.flush_hits();
         Ok(())
     }
 
@@ -484,6 +506,17 @@ impl Harness {
         Ok(())
     }
 
+    /// Who hurt you since the last report, and how much.
+    fn flush_hits(&mut self) {
+        let list: Vec<String> = std::mem::take(&mut self.hits)
+            .into_iter()
+            .map(|(who, (n, d))| format!("{who} {n}x −{d}"))
+            .collect();
+        if !list.is_empty() {
+            self.out.push(format!("  (hurt by: {})", list.join(", ")));
+        }
+    }
+
     fn drain_notes(&mut self, keep: bool) {
         let Some(w) = self.g.world() else { return };
         let mut lines = Vec::new();
@@ -504,8 +537,9 @@ impl Harness {
             }
         }
         if keep {
-            if hits > 0 {
-                lines.push(format!("  (hit {hits}x)"));
+            let _ = hits;
+            if !self.hits.is_empty() && self.g.mode() != Mode::Play {
+                self.flush_hits();
             }
             if kills > 0 {
                 lines.push(format!("  (killed {kills})"));
@@ -656,6 +690,7 @@ impl Harness {
                 ltc_core::enemy::State::Casting(_) => "FIRING",
                 ltc_core::enemy::State::Rest(_) => "resting",
                 ltc_core::enemy::State::Changing(_) => "changing phase",
+                ltc_core::enemy::State::Ready(_) => "READY (waiting for its partner)",
             };
             lines.push(format!(
                 "   {n}: {} {}hp/{} {} m away, bearing {}° ({}), {} m {} you, {}{}",
@@ -732,6 +767,8 @@ impl Harness {
                 PickupKind::Pierce => "Piercing Rounds".to_string(),
                 PickupKind::Pulse => "Dash Pulse".to_string(),
                 PickupKind::Mend => "Mending Parry".to_string(),
+                PickupKind::Trigger => "Hair Trigger".to_string(),
+                PickupKind::Plating => "Plating".to_string(),
             };
             let what = if k.group != 0 {
                 format!("{what} [a choice: 'take' it with E; the other is lost]")
@@ -851,7 +888,7 @@ fn closest_on_segment(a: V3, b: V3, p: V3) -> i32 {
 }
 
 /// The run probe's bot (crates/core/tests/run_probe.rs).
-fn bot(w: &World, t: i32, stuck: bool) -> (Controls, i32, i32) {
+fn bot(c: &ltc_core::content::Content, w: &World, t: i32, stuck: bool) -> (Controls, i32, i32) {
     let p = &w.player;
     let chest = p.chest();
     let mut ctl = Controls::default();
@@ -862,7 +899,18 @@ fn bot(w: &World, t: i32, stuck: bool) -> (Controls, i32, i32) {
         .filter(|e| e.hurtable())
         .min_by_key(|e| e.pos.sub(chest).len());
     if let Some(e) = target {
-        let (y, pt) = cam_aim(w, e.pos);
+        // a tank: its nearest weak point, else round behind its turret
+        let mut aim_at = e.pos;
+        let mut behind: Option<V3> = None;
+        if let Some(tk) = e.tank.as_ref() {
+            let d = &c.enemies[e.def];
+            let weak = ltc_core::tank::weak_points(e, d);
+            if let Some((at, _, _)) = weak.iter().min_by_key(|(at, _, _)| at.sub(chest).len()) {
+                aim_at = *at;
+            }
+            behind = Some(e.pos.add(ltc_core::geom::facing(tk.turret, 0).scale(-int(14))));
+        }
+        let (y, pt) = cam_aim(w, aim_at);
         yaw = y;
         pitch = pt;
         ctl.fire = true;
@@ -877,6 +925,21 @@ fn bot(w: &World, t: i32, stuck: bool) -> (Controls, i32, i32) {
         } else {
             0
         };
+        // round behind the tank's turret: strafe toward that side
+        if let Some(b) = behind {
+            let r = ltc_core::geom::right_of(yaw);
+            let side = b.sub(p.pos).dot(r);
+            ctl.move_x = if side > 0 { ONE } else { -ONE };
+            ctl.move_z = if d < int(10) { -ONE } else if d > int(18) { ONE } else { 0 };
+        }
+        // a saw gun throws on a press and revs while held
+        if c.guns[w.held.gun].level(w.held.level).saw.is_some() {
+            ctl.fire_pressed = t % 12 == 0;
+        }
+        // a ground pound onto what is near below
+        if p.build.pound > 0 && !p.grounded && p.vel.y < 0 && p.pos.y > int(2) && d < int(6) {
+            ctl.pound_pressed = true;
+        }
     }
     for o in &w.orbs {
         let soon = o.pos.add(o.dir.scale(o.speed * 8));
