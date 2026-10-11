@@ -2077,6 +2077,14 @@ mod size {
             ("the_ascent", "chapel"),
             ("the_ascent", "ledge"),
             ("the_ascent", "boss"),
+            ("idiot_god", "arrival"),
+            ("idiot_god", "rest"),
+            ("idiot_god", "fold"),
+            ("idiot_god", "stair"),
+            ("idiot_god", "doors"),
+            ("idiot_god", "lattice"),
+            ("idiot_god", "orrery"),
+            ("idiot_god", "boss"),
         ];
         for (zone, kind) in kinds {
             let a = build_at(zone, kind, 9, &[Side::North, Side::East], &c.pal, int(200));
@@ -2398,6 +2406,151 @@ mod reach {
                         "{kind}: {o:?} rises through the deck {d:?}"
                     );
                 }
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod in_the_god {
+    use super::*;
+    use crate::content::tests::content;
+
+    const KINDS: [&str; 8] = [
+        "arrival", "rest", "fold", "stair", "doors", "lattice", "orrery", "boss",
+    ];
+
+    #[test]
+    fn every_gate_in_the_god_can_be_walked_to_and_every_fight_there_has_heights_and_shelter() {
+        let c = content();
+        for kind in KINDS {
+            for seed in 1..=6 {
+                let a = build(
+                    "idiot_god",
+                    kind,
+                    seed,
+                    &[Side::North, Side::East, Side::West],
+                    &c.pal,
+                );
+                // off any edge you fall, and come down again
+                assert!(a.wrap > 0, "{kind}: no wrap");
+                let reached = walk(&a.level, a.start);
+                for (g, _) in a.gates.iter().skip(1) {
+                    let near = reached
+                        .iter()
+                        .any(|p| p.sub(*g).len_xz() < int(2) && p.y.abs() < ONE);
+                    assert!(near, "{kind} seed {seed}: the gate at {g:?} cannot be walked to");
+                }
+                assert!(
+                    a.ground_spawns.len() > 30,
+                    "{kind} seed {seed}: {} spawns",
+                    a.ground_spawns.len()
+                );
+                if matches!(kind, "arrival" | "rest") {
+                    continue;
+                }
+                let high = reached.iter().map(|p| p.y).max().unwrap_or(0);
+                assert!(
+                    high >= int(3),
+                    "{kind} seed {seed}: nothing 3 m up can be climbed to ({high})"
+                );
+                let under = reached.iter().any(|p| {
+                    p.y <= ONE
+                        && a.level
+                            .ray(p.add(v3(0, PLAYER_HEIGHT + ONE / 10, 0)), V3::UP, int(5))
+                            .is_some()
+                });
+                assert!(under, "{kind} seed {seed}: nowhere to walk under");
+            }
+        }
+    }
+
+    #[test]
+    fn the_heart_leaves_the_god_room_to_the_north() {
+        let c = content();
+        let a = build("idiot_god", "boss", 3, &[], &c.pal);
+        let home = crate::world::GOD_HOME;
+        assert!(
+            !a.level.blocked(
+                v3(home.x - int(8), 0, home.z - int(8)),
+                v3(home.x + int(8), home.y + int(8), home.z + int(8))
+            ),
+            "something solid stands where the god heaves"
+        );
+    }
+
+    #[test]
+    fn the_doors_seams_come_in_pairs_each_leading_to_the_other_through_an_open_frame() {
+        let c = content();
+        let a = build("idiot_god", "doors", 4, &[Side::North], &c.pal);
+        assert_eq!(a.seams.len(), 6);
+        for (k, s) in a.seams.iter().enumerate() {
+            assert_ne!(s.to, k);
+            assert_eq!(a.seams[s.to].to, k, "seam {k} and its partner disagree");
+            // the opening is clear, and stands on floor
+            let open = a.level.blocked(
+                v3(s.at.x - ONE / 2, s.at.y + ONE / 10, s.at.z - ONE / 2),
+                v3(s.at.x + ONE / 2, s.at.y + PLAYER_HEIGHT, s.at.z + ONE / 2),
+            );
+            assert!(!open, "seam {k}'s opening is blocked");
+            assert_eq!(a.level.floor_below(s.at.x, s.at.y + ONE, s.at.z), Some(s.at.y));
+            // through it, a step carries you out of its partner
+            let n = crate::geom::facing(s.yaw, 0);
+            let (from, to) = (s.at.add(n.scale(ONE / 4)), s.at.sub(n.scale(ONE / 4)));
+            assert!(s.crossed(from, to));
+            let out = s.carry(&a.seams[s.to], to);
+            assert!(out.dist(a.seams[s.to].at) < ONE / 2, "{out:?}");
+        }
+    }
+
+    #[test]
+    fn the_penrose_stairs_top_is_its_foot_twelve_metres_down_and_it_climbs_on() {
+        let c = content();
+        let a = build("idiot_god", "stair", 5, &[Side::North], &c.pal);
+        assert_eq!(a.seams.len(), 2);
+        let (top, foot) = if a.seams[0].at.y > a.seams[1].at.y {
+            (a.seams[0], a.seams[1])
+        } else {
+            (a.seams[1], a.seams[0])
+        };
+        assert_eq!(top.turn(&foot), 0, "no turn: straight down");
+        let p = top.at.add(v3(ONE / 3, ONE, ONE / 5));
+        assert_eq!(top.carry(&foot, p), p.sub(v3(0, int(12), 0)));
+        // climbing flight four to the seam: the last tread is 12 m up
+        let n = crate::geom::facing(top.yaw, 0);
+        let before = top.at.add(n.scale(ONE / 2));
+        assert_eq!(
+            a.level.floor_below(before.x, before.y + ONE / 2, before.z),
+            Some(int(12))
+        );
+        // a step through, and the body is on the stub at the floor
+        let after = top.at.sub(n.scale(ONE / 2));
+        assert!(top.crossed(before, after));
+        let landed = top.carry(&foot, after);
+        assert_eq!(
+            a.level.floor_below(landed.x, landed.y + ONE / 2, landed.z),
+            Some(0)
+        );
+        // and from there it climbs on, up flight one
+        let reached = walk(&a.level, landed);
+        let high = reached.iter().map(|p| p.y).max().unwrap_or(0);
+        assert!(
+            high >= int(12),
+            "the stair climbs from its foot to its top: {high}"
+        );
+    }
+
+    #[test]
+    fn the_world_is_drawn_again_above_and_below() {
+        let c = content();
+        for kind in KINDS {
+            let a = build("idiot_god", kind, 2, &[Side::North], &c.pal);
+            assert_eq!(a.shapes.len() % 3, 0);
+            let own = a.shapes.len() / 3;
+            for k in 0..own {
+                let s = &a.shapes[k];
+                assert_eq!(a.shapes[own + k].at.t.y, s.at.t.y + a.wrap);
+                assert_eq!(a.shapes[own * 2 + k].at.t.y, s.at.t.y - a.wrap);
             }
         }
     }
