@@ -77,6 +77,8 @@ A subagent played seven runs through the playtest harness (`cargo run --release 
 - **Art**: `door.png` (the verdict), `guns/big_iron.png`, `icons/stop.png`.
 - **Harness**: `fell` (via `Game::fell_boss`).
 
+Live: PR #4 passed both workflows (check 38122273822, breaks 38122273789) and merged as 04f7cb3; the main run 38123497839 deployed it, and the live browser check against https://sgilson7.github.io/long-time-comin passed in chromium, firefox and webkit. The website was deployed as build 853fa91c; `make gate-live` passed.
+
 ## What remains
 
 - Sam's playtest (`TRIAGE.md`). Every feel and balance number is the agent's guess (SECOND-ORDER T1); the probe shows the curve (no wins with no upgrades, about half with 62 Clemency of upgrades), not whether it is fun (T2, P2).
