@@ -179,8 +179,8 @@ def run(page, check, engine):
     page.evaluate("(r) => localStorage.setItem('long-time-comin.record', r)", json.dumps(opened))
     page.reload()
     page.wait_for_selector("body[data-ready='true']", state="attached", timeout=20000)
-    if mode(page) == "title":
-        click(page, "#begin")
+    click(page, "#begin")
+    page.wait_for_selector("#start-later button", timeout=10000)
     later = page.query_selector_all("#start-later button")
     check(len(later) == 2, f"two more starts, on the ice and in the house ({len(later)})")
     click(page, "#start-later button:nth-child(2)")
