@@ -7,7 +7,7 @@
 //! the trigger revs every lodged blade (the world deals that damage); a
 //! blade whose teeth are spent comes back after its recall.
 
-use crate::content::{Gun, Rgb};
+use crate::content::{AltKind, Gun, Rgb};
 use crate::fx;
 use crate::geom::{facing, yaw_pitch_of, V3};
 use crate::rng::Rng;
@@ -20,6 +20,8 @@ pub struct Held {
     /// a saw gun's blades out of hand, and the recall clocks of those spent
     pub saws_out: i32,
     pub recall: [i32; 4],
+    /// ticks until the second fire is ready
+    pub alt_cooldown: i32,
 }
 
 impl Held {
@@ -30,6 +32,7 @@ impl Held {
             cooldown: 0,
             saws_out: 0,
             recall: [0; 4],
+            alt_cooldown: 0,
         }
     }
 
@@ -196,6 +199,78 @@ pub fn trigger(
         .collect()
 }
 
+/// What the second fire did this tick.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct AltFire {
+    pub shots: Vec<Shot>,
+    /// a Ripsaw's: the world bursts every lodged blade
+    pub detonate: bool,
+}
+
+/// Counts the second fire's cooldown down, and fires it on a press when
+/// ready. A detonation is only asked for while a blade is out (`lodged`);
+/// with none it waits, its cooldown unspent.
+#[allow(clippy::too_many_arguments)]
+pub fn alt_trigger(
+    held: &mut Held,
+    gun: &Gun,
+    rgb: Rgb,
+    pressed: bool,
+    muzzle: V3,
+    aim_point: V3,
+    pierce: i32,
+    lodged: bool,
+) -> AltFire {
+    held.alt_cooldown = (held.alt_cooldown - 1).max(0);
+    let a = &gun.alt;
+    if !pressed || held.alt_cooldown > 0 || (a.kind == AltKind::Detonate && !lodged) {
+        return AltFire::default();
+    }
+    held.alt_cooldown = a.cooldown;
+    let damage = a.damage_at(held.level);
+    let dir = aim_point.sub(muzzle).norm();
+    let (yaw, pitch) = yaw_pitch_of(dir);
+    let shot = |pos: V3, d: V3, kind: ShotKind| Shot {
+        pos,
+        prev: pos,
+        vel: d.scale(a.speed),
+        damage,
+        radius: a.size,
+        life: a.life,
+        splash_radius: a.splash_radius,
+        splash: a.splash,
+        pierce: a.pierce + pierce,
+        passed: Vec::new(),
+        rgb,
+        kind,
+        erases: false,
+        lodged: None,
+        teeth: 0,
+    };
+    let shots = match a.kind {
+        // a little slower each, so they land one after another
+        AltKind::Burst => (0..a.count)
+            .map(|k| {
+                let mut s = shot(muzzle, dir, ShotKind::Bullet);
+                s.vel = dir.scale(a.speed * (10 - k) / 10);
+                s
+            })
+            .collect(),
+        AltKind::Slug => vec![shot(muzzle, dir, ShotKind::Bullet)],
+        AltKind::Cluster => (0..a.count)
+            .map(|k| {
+                let off = a.spread * (2 * k - (a.count - 1)) / 2;
+                shot(muzzle, facing(yaw + off, pitch), ShotKind::Bomb)
+            })
+            .collect(),
+        AltKind::Detonate => Vec::new(),
+    };
+    AltFire {
+        shots,
+        detonate: a.kind == AltKind::Detonate,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -232,6 +307,42 @@ mod tests {
         }
         // every 6 ticks (105 ms rounded) for 60 ticks: 10 shots
         assert_eq!(shots, 10);
+    }
+
+    #[test]
+    fn every_gun_has_a_second_fire_on_its_own_cooldown() {
+        let c = content();
+        for (g, gun) in c.guns.iter().enumerate() {
+            let mut h = Held::new(g, 2);
+            let lodged = gun.alt.kind == AltKind::Detonate;
+            let mut used = 0;
+            for t in 0..gun.alt.cooldown * 2 {
+                let a = alt_trigger(&mut h, gun, [0; 3], true, V3::ZERO, v3(0, 0, -int(10)), 0, lodged);
+                if !a.shots.is_empty() || a.detonate {
+                    used += 1;
+                    if let Some(s) = a.shots.first() {
+                        // level 2: a quarter more than level 1
+                        assert_eq!(s.damage, gun.alt.damage * 125 / 100, "{}", gun.id);
+                    }
+                    let _ = t;
+                }
+            }
+            assert_eq!(used, 2, "{}: twice in two cooldowns", gun.id);
+        }
+        // a Ripsaw with no blade out does not spend its detonation
+        let saw = c.gun("ripsaw");
+        let mut h = Held::new(saw, 1);
+        let a = alt_trigger(
+            &mut h,
+            &c.guns[saw],
+            [0; 3],
+            true,
+            V3::ZERO,
+            v3(0, 0, -int(10)),
+            0,
+            false,
+        );
+        assert!(!a.detonate && h.alt_cooldown == 0);
     }
 
     #[test]

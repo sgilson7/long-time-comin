@@ -42,6 +42,7 @@ pub const ACTIONS: &[(&str, u32)] = &[
     ("focus", 1 << 10),
     ("wall", 1 << 11),
     ("pound", 1 << 12),
+    ("alt", 1 << 13),
 ];
 
 fn bit(name: &str) -> u32 {
@@ -80,6 +81,8 @@ struct Run {
     earned: i32,
     cleared: i32,
     counted: bool,
+    /// a boss rush: each zone's boss in turn, nothing between
+    rush: bool,
 }
 
 impl Run {
@@ -298,10 +301,48 @@ impl Game {
             earned: 0,
             cleared: 0,
             counted: false,
+            rush: false,
         });
         self.reading = None;
         self.mode = Mode::Play;
         self.enter();
+    }
+
+    /// A boss rush, once the game has been beaten: the first zone's boss,
+    /// then each later zone's, the body healed between.
+    pub fn start_rush(&mut self) {
+        if !matches!(self.mode, Mode::Holding | Mode::Dead | Mode::Won) || !self.meta.rush_open() {
+            return;
+        }
+        let (build, gun_level) = self.meta.build(&self.c);
+        let route = Route::rush(0, self.meta.run_seed());
+        let player = Player::new(V3::ZERO, 0, build);
+        let held = Held::new(self.c.gun("carbine"), gun_level);
+        let world = self.world_for(&route, 0, player, held, 0);
+        self.run = Some(Run {
+            zone: 0,
+            route,
+            at: 0,
+            visited: vec![0],
+            world,
+            earned: 0,
+            cleared: 0,
+            counted: false,
+            rush: true,
+        });
+        self.reading = None;
+        self.mode = Mode::Play;
+        self.enter();
+    }
+
+    /// The test save: a record with everything, in the Holding.
+    pub fn test_save(&mut self) {
+        if matches!(self.mode, Mode::Title | Mode::Intro | Mode::Holding) {
+            self.meta = Meta::everything(&self.c);
+            self.run = None;
+            self.mode = Mode::Holding;
+            self.build_scene();
+        }
     }
 
     fn world_for(&self, route: &Route, at: usize, player: Player, held: Held, seq: u32) -> World {
@@ -514,6 +555,31 @@ impl Game {
                 run.earned += self.c.zones[run.zone].route.clemency_boss;
                 run.cleared += 1;
                 let next = run.zone + 1;
+                if run.rush {
+                    if next < self.c.built_zones() {
+                        // straight on to the next boss, healed
+                        run.earned += run.world.earned;
+                        let mut player = run.world.player.clone();
+                        player.health = player.build.max_health;
+                        let held = run.world.held;
+                        let seq = run.world.seq;
+                        let route = Route::rush(next, self.meta.run_seed() ^ next as u64);
+                        let w = self.world_for(&route, 0, player, held, seq);
+                        let run = self.run.as_mut().unwrap();
+                        run.world = w;
+                        run.route = route;
+                        run.zone = next;
+                        run.visited = vec![0];
+                        self.enter();
+                        return;
+                    }
+                    let (total, cleared) = (run.total(), run.cleared);
+                    let banked = self.meta.record_rush(&self.c, total, cleared);
+                    self.last = (banked, cleared);
+                    self.win_count = None;
+                    self.mode = Mode::Won;
+                    return;
+                }
                 if next < self.c.built_zones() {
                     // the next zone: the interlude first
                     let year = self.c.zones[next].year.clone();
@@ -921,6 +987,8 @@ impl Game {
             "gun_level": roman(w.held.level),
             "gun_trait": crate::codex::gun_summary(gl),
             "gun_colour": hex(c.pal.c(&gun.colour)),
+            "alt": c.say("hud_alt").replace("{name}", &gun.alt.name),
+            "alt_ready": w.held.alt_cooldown == 0,
             "grapple": p.build.grapple,
             "grapple_ready": p.build.grapple && p.grapple_cooldown == 0,
             "parry": p.build.parry,
@@ -1144,6 +1212,7 @@ impl Game {
                 "label": c.say("start_later").replace("{year}", &c.zones[z].year).replace("{zone}", &c.zones[z].name),
             })).collect::<Vec<_>>(),
             "guns": c.guns.iter().map(|g| json!({ "id": g.id, "name": g.name, "blurb": g.blurb })).collect::<Vec<_>>(),
+            "rush": m.rush_open(),
         });
         if let Some(run) = &self.run {
             let r = &run.route;
@@ -1217,7 +1286,17 @@ impl Game {
                 "bonus": if rd.bonus_pct > 0 { c.say("sentence_bonus_applied").replace("{n}", &rd.bonus_pct.to_string()) } else { String::new() },
             });
         }
-        if self.mode == Mode::Won {
+        let rushed = self.run.as_ref().is_some_and(|r| r.rush);
+        if self.mode == Mode::Won && rushed {
+            s["verdict"] = json!({
+                "art": c.story.verdict_art,
+                "title": c.say("rush_title"),
+                "lines": [c.say("rush_line").replace("{n}", &self.meta.rush_wins.to_string())],
+                "newest": "",
+                "clemency": self.last.0,
+                "cleared": self.last.1,
+            });
+        } else if self.mode == Mode::Won {
             s["verdict"] = json!({
                 "art": c.story.verdict_art,
                 "title": c.story.victory_title,
@@ -1249,6 +1328,7 @@ pub fn controls(held: u32, pressed: u32) -> Controls {
         wall_pressed: hit("wall"),
         pound_pressed: hit("pound"),
         fire_pressed: hit("fire"),
+        alt_pressed: hit("alt"),
     }
 }
 
@@ -1498,6 +1578,57 @@ pub(crate) mod tests {
         assert_eq!(s["starts"][1]["zone"], 2);
         g.start_run_at(2);
         assert_eq!(g.run.as_ref().unwrap().zone, 2);
+    }
+
+    #[test]
+    fn a_boss_rush_runs_each_zones_boss_in_turn_and_only_once_the_game_is_beaten() {
+        let mut g = game_with(r#"{"seen_intro": true}"#);
+        g.begin();
+        g.start_rush();
+        assert_eq!(g.mode, Mode::Holding, "not before the game is beaten");
+        g.test_save();
+        let s: Value = serde_json::from_str(&g.screen_json()).unwrap();
+        assert_eq!(s["rush"], true);
+        g.start_rush();
+        assert_eq!(g.mode, Mode::Play);
+        let mut bosses = Vec::new();
+        for zone in 0..g.c.built_zones() {
+            let run = g.run.as_ref().unwrap();
+            assert_eq!(run.zone, zone);
+            assert_eq!(run.world.kind, NodeKind::Boss, "a boss's arena from the start");
+            bosses.push(run_down_the_boss(&mut g));
+            if zone + 1 < g.c.built_zones() {
+                assert_eq!(g.mode, Mode::Play, "no interlude between");
+                let w = &g.run.as_ref().unwrap().world;
+                assert_eq!(w.player.health, w.player.build.max_health, "healed");
+            }
+        }
+        assert_eq!(bosses, ["bailiff", "witness", "executor"]);
+        assert_eq!(g.mode, Mode::Won);
+        assert_eq!(g.meta.rush_wins, 1);
+        let s: Value = serde_json::from_str(&g.screen_json()).unwrap();
+        assert_eq!(s["verdict"]["title"], g.c.say("rush_title").as_str());
+    }
+
+    /// The boss in the arena, brought down at once; its id.
+    fn run_down_the_boss(g: &mut Game) -> String {
+        frames(g, 120, 0);
+        let run = g.run.as_mut().unwrap();
+        let b = run.world.boss.expect("the boss came");
+        let id = g.c.enemies[run.world.enemies[b].def].id.clone();
+        let last = g.c.enemies[run.world.enemies[b].def].phases.len() - 1;
+        run.world.player.iframes = 100_000;
+        let e = &mut run.world.enemies[b];
+        e.phase = last;
+        e.state = crate::enemy::State::Rest(1000);
+        if let Some(t) = e.tank.as_mut() {
+            t.survive = 2;
+        } else {
+            e.hp = 1;
+            e.hurt(5);
+        }
+        frames(g, 400, 0);
+        id
     }
 
     #[test]

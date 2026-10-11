@@ -67,6 +67,12 @@ BREAKS = [
  ("a tank phase needs weak points", "crates/core/src/content.rs", "                    if k < last && (p.weak.is_empty() || p.weak.iter().any(|w| w.hp <= 0 || w.radius <= 0)) {", "                    if false {", "a_tank_phase_with_nothing"),
  ("the lab's walls", "crates/core/src/arena/house.rs", "            let deep = -LAB_DEPTH - m(1);", "            let deep = -m(1);", "every_house_gate"),
  ("a hit is heard", "crates/core/src/world.rs", "            self.note(\"hurt\", String::new());\n            if self.player.recess_left < recess {", "            if self.player.recess_left < recess {", "an_orbs_hit_is_heard"),
+ # round six
+ ("the second fire's cooldown", "crates/core/src/weapons.rs", "    held.alt_cooldown = a.cooldown;", "    held.alt_cooldown = 0;", "every_gun_has_a_second_fire"),
+ ("the blades shatter", "crates/core/src/world.rs", "                blasts.push((s.pos, enemy, weak, base + s.teeth / 2));", "", "the_ripsaws_second_fire"),
+ ("the rush goes on", "crates/core/src/game.rs", "                if run.rush {", "                if false && run.rush {", "a_boss_rush_runs"),
+ ("the rush waits for a win", "crates/core/src/game.rs", " || !self.meta.rush_open()", "", "a_boss_rush_runs"),
+ ("the test save owns it all", "crates/core/src/meta.rs", "            owned: c.upgrades.iter().map(|u| u.id.clone()).collect(),", "            owned: Vec::new(),", "the_test_save_holds"),
 ]
 
 

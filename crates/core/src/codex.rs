@@ -491,7 +491,7 @@ pub fn upgrade_effect(u: &Upgrade) -> String {
             s(GRAPPLE_COOLDOWN)
         ),
         "parry" => format!(
-            "Right mouse or Q: a parry lasting {} s. A gold orb that comes within {} m of your chest during it flies back at the enemy that fired it (or where you aim, if that enemy is gone) at {} m/s for {PARRY_DAMAGE} damage. Orbs of other colours still hit you. {} s cooldown.",
+            "Q: a parry lasting {} s. A gold orb that comes within {} m of your chest during it flies back at the enemy that fired it (or where you aim, if that enemy is gone) at {} m/s for {PARRY_DAMAGE} damage. Orbs of other colours still hit you. {} s cooldown.",
             s(PARRY_WINDOW),
             m(PARRY_REACH),
             mps(PARRY_SPEED),
@@ -543,6 +543,35 @@ pub fn upgrade_effect(u: &Upgrade) -> String {
     }
 }
 
+/// A gun's second fire in words.
+pub fn alt_words(a: &crate::content::Alt) -> String {
+    use crate::content::AltKind;
+    let what = match a.kind {
+        AltKind::Burst => format!("{} rounds of {} damage, one after another, each passing through {} enemy", a.count, a.damage, a.pierce),
+        AltKind::Slug => format!("one slug of {} damage that passes through {} enemies", a.damage, a.pierce),
+        AltKind::Cluster => format!(
+            "{} bombs in a fan, {}° apart, each {} damage and bursting for {} within {} m",
+            a.count,
+            deg(a.spread),
+            a.damage,
+            a.splash,
+            m(a.splash_radius)
+        ),
+        AltKind::Detonate => format!(
+            "every blade lodged in an enemy bursts for {} damage and half the damage it had left to deal, and {} to others within {} m; the blades come back (nothing happens while none is lodged)",
+            a.damage,
+            a.splash,
+            m(a.splash_radius)
+        ),
+    };
+    format!(
+        "Right mouse, {}: {what}. {} s cooldown. Each level above I adds {}% to its damage.",
+        a.name,
+        s(a.cooldown),
+        crate::content::ALT_LEVEL_PCT
+    )
+}
+
 /// The rules not tied to one gun or enemy.
 fn rules(c: &Content) -> Vec<String> {
     let clemency: Vec<String> = c
@@ -584,6 +613,7 @@ fn rules(c: &Content) -> Vec<String> {
             deg(CROSSFIRE_APART),
             s(SYNC_WAIT)
         ),
+        "Beating the game opens the boss rush in the Holding: each zone's boss in turn, from the Bailiff on, your health restored between them, with what the Holding gives you to start a run.".to_string(),
         format!("Rewards found in the house: guns of level III or IV, Hair Trigger (guns fire {TRIGGER_PCT}% faster; they stack) and Plating (hits do {PLATING_PCT}% less, up to {PLATING_MAX})."),
         format!("Updraft vents (glowing grates on the ice) throw you about {} m up when you stand on them. You keep your air jumps.", m(fx::div(fx::mul(VENT_SPEED, VENT_SPEED) / 2, GRAVITY))),
         "Some attacks place their orbs in a shape and hold them still before they fly: a held orb is smaller, with a ring round it, and swells to full size just before it moves. Held orbs hurt to touch.".to_string(),
@@ -617,7 +647,19 @@ pub fn codex_json(c: &Content) -> String {
                     a.retain(|n| !shared.contains(n));
                 }
             }
-            json!({ "id": g.id, "name": g.name, "role": g.blurb, "notes": shared, "levels": levels })
+            let mut notes = shared;
+            notes.push(json!(alt_words(&g.alt)));
+            if let Some(w) = g.level(1).saw {
+                notes.push(json!(format!(
+                    "Each click throws a blade, while one is in hand ({} at level I, one more each level). A blade lodges in what it hits; holding the trigger revs every lodged blade for {} damage every {} s at level I, until it has dealt {} in all; then it comes back after {} s.",
+                    w.saws,
+                    w.rev_damage,
+                    s(w.rev_every),
+                    w.teeth,
+                    s(w.recall)
+                )));
+            }
+            json!({ "id": g.id, "name": g.name, "role": g.blurb, "notes": notes, "levels": levels })
         })
         .collect();
     let enemies: Vec<Value> = c.enemies.iter().map(|d| enemy(d, c)).collect();

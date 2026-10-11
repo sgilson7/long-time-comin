@@ -119,6 +119,13 @@ async function start() {
       engage();
     }),
   );
+  el("start-rush").addEventListener(
+    "click",
+    act(() => {
+      game.start_rush();
+      engage();
+    }),
+  );
   el("engage-btn").addEventListener("click", act(engage));
   el("resume").addEventListener(
     "click",
@@ -178,6 +185,19 @@ async function start() {
     reset.classList.remove("armed");
     reset.textContent = copy.reset;
     act(() => game.reset())();
+  });
+  // the test save asks twice, as the reset does: it replaces the record
+  const testSave = el("test-save");
+  testSave.addEventListener("click", () => {
+    if (!testSave.classList.contains("armed")) {
+      testSave.classList.add("armed");
+      testSave.textContent = copy.test_save_confirm;
+      return;
+    }
+    testSave.classList.remove("armed");
+    testSave.textContent = copy.test_save;
+    act(() => game.test_save())();
+    showMode(JSON.parse(game.hud()).mode, true);
   });
 
   // losing the pointer in play pauses; Tab or M opens the map

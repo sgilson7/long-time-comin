@@ -29,6 +29,8 @@ pub struct Controls {
     pub pound_pressed: bool,
     /// the trigger went down this tick (a saw is thrown on the press)
     pub fire_pressed: bool,
+    /// the second fire's button went down
+    pub alt_pressed: bool,
 }
 
 /// What a run has made of the body: the upgrades bought and the pickups found.

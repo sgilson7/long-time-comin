@@ -124,6 +124,71 @@ struct WeaponFile {
     /// the first zone (by index) whose side paths offer it
     #[serde(default)]
     from_zone: usize,
+    /// its second fire, on the right mouse button
+    alt: AltFile,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct AltFile {
+    kind: String,
+    name: String,
+    damage: i32,
+    #[serde(default = "one")]
+    count: i32,
+    #[serde(default)]
+    speed_cms: i32,
+    #[serde(default)]
+    size_cm: i32,
+    #[serde(default)]
+    life_ms: i32,
+    #[serde(default)]
+    pierce: i32,
+    #[serde(default)]
+    splash_cm: i32,
+    #[serde(default)]
+    splash: i32,
+    #[serde(default)]
+    spread_deg: i32,
+    cooldown_ms: i32,
+}
+
+/// What a gun's second fire does.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AltKind {
+    /// `count` heavy rounds one behind another along the aim
+    Burst,
+    /// one heavy round that passes through enemies
+    Slug,
+    /// `count` bombs in a fan
+    Cluster,
+    /// every lodged blade bursts and comes back
+    Detonate,
+}
+
+/// A gun's second fire, at level 1; each level above adds `ALT_LEVEL_PCT`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Alt {
+    pub kind: AltKind,
+    pub name: String,
+    pub damage: i32,
+    pub count: i32,
+    pub speed: i32,
+    pub size: i32,
+    pub life: i32,
+    pub pierce: i32,
+    pub splash_radius: i32,
+    pub splash: i32,
+    pub spread: i32,
+    pub cooldown: i32,
+}
+
+/// each gun level above the first adds this much to its second fire's damage
+pub const ALT_LEVEL_PCT: i32 = 25;
+
+impl Alt {
+    pub fn damage_at(&self, level: i32) -> i32 {
+        self.damage * (100 + ALT_LEVEL_PCT * (level.clamp(1, 4) - 1)) / 100
+    }
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -191,6 +256,7 @@ pub struct Gun {
     pub colour: String,
     pub levels: Vec<GunLevel>,
     pub from_zone: usize,
+    pub alt: Alt,
 }
 
 impl Gun {
@@ -1153,6 +1219,26 @@ fn parse_guns(text: &str, pal: &Palette) -> Result<Vec<Gun>, String> {
             colour: w.colour,
             levels,
             from_zone: w.from_zone,
+            alt: Alt {
+                kind: match w.alt.kind.as_str() {
+                    "burst" => AltKind::Burst,
+                    "slug" => AltKind::Slug,
+                    "cluster" => AltKind::Cluster,
+                    "detonate" => AltKind::Detonate,
+                    k => return Err(format!("weapons: a gun has no alt fire {k}")),
+                },
+                name: w.alt.name.clone(),
+                damage: w.alt.damage,
+                count: w.alt.count.max(1),
+                speed: cms(w.alt.speed_cms),
+                size: cm(w.alt.size_cm),
+                life: ms(w.alt.life_ms),
+                pierce: w.alt.pierce,
+                splash_radius: cm(w.alt.splash_cm),
+                splash: w.alt.splash,
+                spread: fx::deg(w.alt.spread_deg),
+                cooldown: ms(w.alt.cooldown_ms).max(1),
+            },
         });
     }
     Ok(out)

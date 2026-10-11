@@ -28,6 +28,8 @@ pub struct Meta {
     pub unlocked: i32,
     /// zone bosses beaten, over every run
     pub bosses_beaten: i32,
+    /// boss rushes finished
+    pub rush_wins: i32,
 }
 
 /// What a death adds to the record, for the indictment screen.
@@ -190,6 +192,39 @@ impl Meta {
         }
     }
 
+    /// A finished boss rush: bank its Clemency.
+    pub fn record_rush(&mut self, c: &Content, earned: i32, nodes: i32) -> i32 {
+        self.runs += 1;
+        self.rush_wins += 1;
+        self.bank(c, earned, nodes)
+    }
+
+    /// The boss rush opens once the game has been beaten.
+    pub fn rush_open(&self) -> bool {
+        self.wins > 0
+    }
+
+    /// A record with everything: every upgrade bought, every count read,
+    /// every zone open and the game beaten, for trying the game out.
+    pub fn everything(c: &Content) -> Meta {
+        Meta {
+            clemency: crate::balance::TEST_SAVE_CLEMENCY,
+            owned: c.upgrades.iter().map(|u| u.id.clone()).collect(),
+            runs: 1,
+            deaths: 1,
+            wins: 1,
+            years: 1,
+            counts_read: c.story.counts.len() as i32,
+            seen_intro: true,
+            best_nodes: 0,
+            clemency_earned: 0,
+            reached_far: true,
+            unlocked: c.built_zones() as i32 - 1,
+            bosses_beaten: c.built_zones() as i32,
+            rush_wins: 0,
+        }
+    }
+
     /// A won run: bank its Clemency; the first win reads a count.
     pub fn record_win(&mut self, c: &Content, earned: i32, nodes: i32, year: &str) -> (i32, Option<String>) {
         self.runs += 1;
@@ -324,6 +359,19 @@ mod tests {
         assert_eq!(Meta::load("not json", &c), Meta::default());
         let back = Meta::load(&m.save(), &c);
         assert_eq!(back, m);
+    }
+
+    #[test]
+    fn the_test_save_holds_everything_and_opens_the_boss_rush() {
+        let c = content();
+        let m = Meta::everything(&c);
+        assert!(c.upgrades.iter().all(|u| m.owns(&u.id)));
+        assert_eq!(m.unlocked, c.built_zones() as i32 - 1);
+        assert_eq!(m.counts_read, c.story.counts.len() as i32);
+        assert!(m.rush_open());
+        assert!(!Meta::default().rush_open());
+        // and it survives a save and a load
+        assert_eq!(Meta::load(&m.save(), &c), m);
     }
 
     #[test]

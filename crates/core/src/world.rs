@@ -554,6 +554,29 @@ impl World {
             &mut self.rng,
         );
         self.revving = if ctl.fire { self.revving + 1 } else { 0 };
+        // the second fire
+        let lodged = self
+            .shots
+            .iter()
+            .any(|s| s.kind == ShotKind::Saw && matches!(s.lodged, Some(Lodge::Enemy { .. })));
+        let alt = weapons::alt_trigger(
+            &mut self.held,
+            gun,
+            rgb,
+            ctl.alt_pressed,
+            muzzle,
+            self.aim_point,
+            self.player.build.pierce,
+            lodged,
+        );
+        if !alt.shots.is_empty() || alt.detonate {
+            self.note("alt_fire", String::new());
+            self.effect(FxKind::Flash, muzzle, V3::ZERO, 6, rgb, ONE * 6 / 10);
+        }
+        self.shots.extend(alt.shots);
+        if alt.detonate {
+            self.detonate(c);
+        }
         if !shots.is_empty() {
             let sound = match gun.id.as_str() {
                 "carbine" => "fire_carbine",
@@ -1549,6 +1572,55 @@ impl World {
         }
         if any && self.revving % REV_NOTE == 0 {
             self.note("rev", String::new());
+        }
+        self.fell(c, killed);
+    }
+
+    /// The Ripsaw's second fire: every blade lodged in an enemy bursts, for
+    /// its alt damage and half the teeth it had left, round where it was,
+    /// and comes back.
+    fn detonate(&mut self, c: &Content) {
+        let gun = &c.guns[self.held.gun];
+        let a = gun.alt.clone();
+        let base = a.damage_at(self.held.level);
+        let mut blasts: Vec<(V3, usize, Option<usize>, i32)> = Vec::new();
+        for s in self.shots.iter_mut() {
+            if let (ShotKind::Saw, Some(Lodge::Enemy { enemy, weak, .. })) = (s.kind, s.lodged) {
+                blasts.push((s.pos, enemy, weak, base + s.teeth / 2));
+                s.lodged = None;
+                s.life = 0;
+            }
+        }
+        self.shots
+            .retain(|s| !(s.kind == ShotKind::Saw && s.lodged.is_none() && s.life <= 0));
+        let rgb = c.pal.c(&gun.colour);
+        let mut killed = Vec::new();
+        for (at, i, weak, dmg) in blasts {
+            self.held.recall_blade(saw_recall(c, &self.held));
+            match weak {
+                Some(k) => self.hurt_weak(c, i, k, dmg, at),
+                None => {
+                    if self.enemies[i].hurt(dmg) {
+                        killed.push(i);
+                    }
+                }
+            }
+            for j in 0..self.enemies.len() {
+                if j != i
+                    && self.enemies[j].hurtable()
+                    && orbs::within(
+                        self.enemies[j].pos,
+                        at,
+                        a.splash_radius + c.enemies[self.enemies[j].def].radius,
+                    )
+                    && self.enemies[j].hurt(a.splash)
+                {
+                    killed.push(j);
+                }
+            }
+            self.effect(FxKind::Burst, at, V3::ZERO, 18, rgb, a.splash_radius * 2);
+            self.sparks(at, rgb, 20, ONE / 3);
+            self.note("boom", String::new());
         }
         self.fell(c, killed);
     }
@@ -2797,6 +2869,60 @@ mod house {
             "and the Recess called"
         );
         assert!(w.player.alive());
+    }
+
+    #[test]
+    fn the_ripsaws_second_fire_bursts_its_lodged_blades_and_brings_them_back() {
+        let (c, mut w) = house_world(NodeKind::Fight, false);
+        let saw = c.gun("ripsaw");
+        w.held = Held::new(saw, 1);
+        let d = c.enemy("greyman").unwrap();
+        let mut e = Enemy::new(d, &c.enemies[d], w.player.chest().add(v3(0, 0, -int(8))), 1);
+        e.state = State::Rest(10_000);
+        w.enemies.push(e);
+        let aim = |w: &World| {
+            let eye = w.player.chest().add(v3(0, 0, int(3)));
+            (eye, w.enemies[0].pos.sub(eye).norm())
+        };
+        let (eye, fwd) = aim(&w);
+        w.tick(
+            &c,
+            &Controls {
+                fire: true,
+                fire_pressed: true,
+                ..still()
+            },
+            eye,
+            fwd,
+        );
+        for _ in 0..20 {
+            w.enemies[0].state = State::Rest(10_000);
+            let (eye, fwd) = aim(&w);
+            w.tick(&c, &still(), eye, fwd);
+        }
+        assert!(w.shots.iter().any(|s| s.lodged.is_some()), "a blade is in it");
+        let hp = w.enemies[0].hp;
+        let (eye, fwd) = aim(&w);
+        w.tick(
+            &c,
+            &Controls {
+                alt_pressed: true,
+                ..still()
+            },
+            eye,
+            fwd,
+        );
+        assert!(
+            w.shots.iter().all(|s| s.kind != ShotKind::Saw),
+            "the blade is spent"
+        );
+        assert!(
+            hp - w.enemies[0].hp >= c.guns[saw].alt.damage,
+            "{} to {}",
+            hp,
+            w.enemies[0].hp
+        );
+        assert_eq!(w.held.saws_out, 1, "and on its way back");
     }
 
     #[test]

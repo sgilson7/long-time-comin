@@ -11,7 +11,7 @@
   "ShiftLeft": "dash",
   "ShiftRight": "dash",
   "Mouse0": "fire",
-  "Mouse2": "parry",
+  "Mouse2": "alt",
   "KeyQ": "parry",
   "KeyF": "grapple",
   "KeyE": "interact",
