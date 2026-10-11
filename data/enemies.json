@@ -1935,6 +1935,518 @@
           ]
         }
       ]
+    },
+    {
+      "id": "glyph",
+      "name": "Glyph",
+      "kind": "beast",
+      "gait": "march",
+      "hp": 70,
+      "radius_cm": 60,
+      "hover_cm": 350,
+      "speed_cms": 0,
+      "range_cm": 1200,
+      "contact": 10,
+      "clemency": 1,
+      "attacks": [
+        {
+          "pattern": "invader_column",
+          "windup_ms": 400,
+          "rest_ms": 1200
+        },
+        {
+          "pattern": "pixel_block",
+          "windup_ms": 500,
+          "rest_ms": 1400
+        }
+      ],
+      "zone": "idiot_god"
+    },
+    {
+      "id": "tesseract",
+      "name": "Tesseract",
+      "kind": "blinker",
+      "hp": 110,
+      "radius_cm": 70,
+      "hover_cm": 260,
+      "speed_cms": 0,
+      "range_cm": 1300,
+      "contact": 10,
+      "clemency": 2,
+      "attacks": [
+        {
+          "pattern": "hypercube",
+          "windup_ms": 500,
+          "rest_ms": 1100
+        },
+        {
+          "pattern": "fold",
+          "windup_ms": 550,
+          "rest_ms": 1200
+        }
+      ],
+      "zone": "idiot_god"
+    },
+    {
+      "id": "etching",
+      "name": "Etching",
+      "kind": "beast",
+      "gait": "unseen",
+      "hp": 130,
+      "radius_cm": 50,
+      "hover_cm": 110,
+      "speed_cms": 900,
+      "range_cm": 0,
+      "contact": 28,
+      "clemency": 2,
+      "attacks": [
+        {
+          "pattern": "engraving",
+          "windup_ms": 300,
+          "rest_ms": 1300
+        },
+        {
+          "pattern": "crosshatch",
+          "windup_ms": 350,
+          "rest_ms": 1500
+        }
+      ],
+      "zone": "idiot_god"
+    },
+    {
+      "id": "render",
+      "name": "Render",
+      "kind": "beast",
+      "gait": "charge",
+      "hp": 140,
+      "radius_cm": 80,
+      "hover_cm": 80,
+      "speed_cms": 1600,
+      "range_cm": 0,
+      "contact": 22,
+      "clemency": 2,
+      "attacks": [
+        {
+          "pattern": "polygon_burst",
+          "windup_ms": 450,
+          "rest_ms": 1500
+        },
+        {
+          "pattern": "lowpoly_fan",
+          "windup_ms": 400,
+          "rest_ms": 1500
+        }
+      ],
+      "zone": "idiot_god"
+    },
+    {
+      "id": "toon",
+      "name": "Toon",
+      "kind": "beast",
+      "gait": "bounce",
+      "hp": 90,
+      "radius_cm": 60,
+      "hover_cm": 60,
+      "speed_cms": 300,
+      "range_cm": 1000,
+      "contact": 10,
+      "clemency": 1,
+      "attacks": [
+        {
+          "pattern": "rubber_ring",
+          "windup_ms": 300,
+          "rest_ms": 1300
+        },
+        {
+          "pattern": "pie_eyes",
+          "windup_ms": 300,
+          "rest_ms": 1300
+        }
+      ],
+      "zone": "idiot_god"
+    },
+    {
+      "id": "reprise",
+      "name": "Reprise",
+      "kind": "beast",
+      "gait": "echo",
+      "hp": 100,
+      "radius_cm": 45,
+      "hover_cm": 0,
+      "speed_cms": 900,
+      "range_cm": 0,
+      "contact": 15,
+      "clemency": 2,
+      "attacks": [
+        {
+          "pattern": "carbine_reprise",
+          "windup_ms": 450,
+          "rest_ms": 1300
+        },
+        {
+          "pattern": "scatter_reprise",
+          "windup_ms": 450,
+          "rest_ms": 1500
+        }
+      ],
+      "zone": "idiot_god"
+    },
+    {
+      "id": "recursion",
+      "name": "Recursion",
+      "kind": "floater",
+      "hp": 180,
+      "radius_cm": 130,
+      "hover_cm": 400,
+      "speed_cms": 300,
+      "range_cm": 1400,
+      "contact": 10,
+      "clemency": 2,
+      "attacks": [
+        {
+          "pattern": "sierpinski",
+          "windup_ms": 550,
+          "rest_ms": 1500
+        }
+      ],
+      "splits": [
+        "recursion_minor",
+        "recursion_minor",
+        "recursion_minor"
+      ],
+      "zone": "idiot_god"
+    },
+    {
+      "id": "recursion_minor",
+      "name": "Recursion, Second Order",
+      "kind": "floater",
+      "hp": 60,
+      "radius_cm": 80,
+      "hover_cm": 300,
+      "speed_cms": 400,
+      "range_cm": 1100,
+      "contact": 8,
+      "clemency": 0,
+      "attacks": [
+        {
+          "pattern": "sierpinski_minor",
+          "windup_ms": 450,
+          "rest_ms": 1500
+        }
+      ],
+      "splits": [
+        "recursion_least",
+        "recursion_least",
+        "recursion_least"
+      ],
+      "zone": "idiot_god"
+    },
+    {
+      "id": "recursion_least",
+      "name": "Recursion, Third Order",
+      "kind": "floater",
+      "hp": 25,
+      "radius_cm": 50,
+      "hover_cm": 250,
+      "speed_cms": 500,
+      "range_cm": 900,
+      "contact": 6,
+      "clemency": 0,
+      "attacks": [
+        {
+          "pattern": "sierpinski_least",
+          "windup_ms": 350,
+          "rest_ms": 1500
+        }
+      ],
+      "zone": "idiot_god"
+    },
+    {
+      "id": "azathoth",
+      "name": "The Idiot God",
+      "kind": "god",
+      "hp": 6000,
+      "radius_cm": 1200,
+      "hover_cm": 0,
+      "speed_cms": 0,
+      "range_cm": 2400,
+      "contact": 20,
+      "clemency": 150,
+      "attacks": [],
+      "zone": "idiot_god",
+      "phases": [
+        {
+          "from_pct": 100,
+          "summons": [],
+          "attacks": [
+            {
+              "pattern": "god_froth",
+              "windup_ms": 700,
+              "rest_ms": 900
+            },
+            {
+              "pattern": "god_eyes",
+              "windup_ms": 600,
+              "rest_ms": 900
+            },
+            {
+              "pattern": "god_rain",
+              "windup_ms": 700,
+              "rest_ms": 1000
+            }
+          ]
+        },
+        {
+          "from_pct": 66,
+          "summons": [
+            "toon",
+            "toon",
+            "tesseract"
+          ],
+          "attacks": [
+            {
+              "pattern": "dancers_reel",
+              "windup_ms": 600,
+              "rest_ms": 900
+            },
+            {
+              "pattern": "flute_lanes",
+              "windup_ms": 700,
+              "rest_ms": 900
+            },
+            {
+              "pattern": "dancers_dome",
+              "windup_ms": 800,
+              "rest_ms": 1100
+            },
+            {
+              "pattern": "god_froth",
+              "windup_ms": 500,
+              "rest_ms": 800
+            }
+          ]
+        },
+        {
+          "from_pct": 33,
+          "summons": [
+            "reprise",
+            "etching"
+          ],
+          "attacks": [
+            {
+              "pattern": "dream_rewind",
+              "windup_ms": 600,
+              "rest_ms": 1100
+            },
+            {
+              "pattern": "dream_bloom",
+              "windup_ms": 500,
+              "rest_ms": 900
+            },
+            {
+              "pattern": "dream_dome",
+              "windup_ms": 800,
+              "rest_ms": 1300
+            },
+            {
+              "pattern": "god_eyes",
+              "windup_ms": 500,
+              "rest_ms": 900
+            }
+          ]
+        }
+      ],
+      "lullaby": {
+        "beat_ms": 600,
+        "count_in": 4,
+        "pass_pct": 75,
+        "great_ms": 70,
+        "good_ms": 150,
+        "intro_ms": 3000,
+        "finale_beats": 16,
+        "verses": [
+          {
+            "notes": [
+              [
+                0,
+                2
+              ],
+              [
+                2,
+                1
+              ],
+              [
+                4,
+                0
+              ],
+              [
+                8,
+                2
+              ],
+              [
+                10,
+                1
+              ],
+              [
+                12,
+                0
+              ]
+            ],
+            "length": 16
+          },
+          {
+            "notes": [
+              [
+                0,
+                0
+              ],
+              [
+                2,
+                1
+              ],
+              [
+                4,
+                2
+              ],
+              [
+                6,
+                3
+              ],
+              [
+                8,
+                2
+              ],
+              [
+                12,
+                1
+              ]
+            ],
+            "length": 16
+          },
+          {
+            "notes": [
+              [
+                0,
+                4
+              ],
+              [
+                2,
+                3
+              ],
+              [
+                4,
+                2
+              ],
+              [
+                6,
+                1
+              ],
+              [
+                8,
+                2
+              ],
+              [
+                12,
+                4
+              ],
+              [
+                14,
+                3
+              ],
+              [
+                16,
+                2
+              ],
+              [
+                20,
+                0
+              ]
+            ],
+            "length": 24
+          },
+          {
+            "notes": [
+              [
+                0,
+                2
+              ],
+              [
+                2,
+                1
+              ],
+              [
+                4,
+                0
+              ],
+              [
+                8,
+                2
+              ],
+              [
+                10,
+                1
+              ],
+              [
+                12,
+                0
+              ],
+              [
+                16,
+                0
+              ],
+              [
+                17,
+                1
+              ],
+              [
+                18,
+                2
+              ],
+              [
+                20,
+                3
+              ],
+              [
+                22,
+                4
+              ],
+              [
+                26,
+                2
+              ],
+              [
+                28,
+                0
+              ]
+            ],
+            "length": 32
+          }
+        ],
+        "beats": [
+          {
+            "pattern": "lull_ring",
+            "every": 2
+          },
+          {
+            "pattern": "lull_wave",
+            "every": 8,
+            "at": 4
+          },
+          {
+            "pattern": "lull_spiral",
+            "every": 4,
+            "at": 1,
+            "from_verse": 1
+          },
+          {
+            "pattern": "lull_rain",
+            "every": 8,
+            "at": 6,
+            "from_verse": 2
+          }
+        ],
+        "stir": "lull_stir"
+      }
     }
   ]
 }

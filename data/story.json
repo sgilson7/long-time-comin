@@ -1,5 +1,5 @@
 {
-  "_about": "The story's words. The indictment is read one count per death, in order; after the last count, a death adds one of the addenda. {years}, {total} and {year} are filled in by the core. death_titles head the indictment by the zone you died in. interludes are read between a zone's boss and the next zone, by the zone just left. The verdict follows the last built zone's boss (the Executor, in this build); its last line is mechanical and says what the build holds.",
+  "_about": "The story's words. The indictment is read one count per death, in order; after the last count, a death adds one of the addenda. {years}, {total} and {year} are filled in by the core. death_titles head the indictment by the zone you died in. interludes are read between a zone's boss and the next zone, by the zone just left. The verdict follows the last built zone's boss (the Idiot God, sung to sleep); its last line is mechanical and says what the build holds. A boss's bars, when it has them, name each phase's bar on the HUD; the last is the lullaby's.",
   "case": "IN THE TRIBUNAL OF THE LAST HOUR, WHICH SITS AFTER EVERYTHING ELSE HAS RISEN · Case 2081-1 · The City of Meridian, and its nine million mornings, against the Defendant",
   "sentencing": [
     "There is a court that sits after the last hour has been struck. It keeps no calendar, because it has no further use for one. It tried you there. You do not remember the trial. The clerk says nobody does, and that this is a mercy the court extends to everyone, whether they want it or not.",
@@ -27,14 +27,14 @@
     "ADDENDUM. A juror asked how many times a person may be sent back before they become someone else. The question was struck from the record. The years were not."
   ],
   "time_served": "The court adds {years}. Your sentence now runs to {total}.",
-  "victory_title": "THE DOOR",
+  "victory_title": "THE LULLABY",
   "victory": [
-    "You stand over yourself in the circle, and your older face looks up at you without fear. They say: I would do it again. Then the sky above the summit tears like wet paper.",
-    "It comes through all at once: a mass larger than the mountain, bubbling, blind and covered in eyes, piping to itself in a voice like a choir of flutes. The stones melt. The summit runs like wax. You are drawn up toward a mouth the size of the night.",
-    "Now you understand what the court never did. The Long Door was a ritual, not a clock. You built it to hold one evening open for one person, and it opened onto the outside instead, and the thing outside heard it, and came. You led it here. Your older self stopped time because a stopped moment was the only lock strong enough to hold it at the threshold.",
-    "The Tribunal knew only that time had stopped and that something had to be fixed. No one in your own timeline could get near the Defendant, so they reached into another timeline for a version of you more amenable to their cause. You. Nobody knew what stopping your older self would let in, except your older self, who learned to stop time to keep this reality from being eaten.",
-    "Your sin was never the stopping of time. It was the door.",
-    "The heart of the Idiot God is sealed in this build. You can now stop time yourself: press T, for 3 seconds, and up to 6 with the Stopped Clocks in the Holding. The Clemency from this run has been added to your record."
+    "The last note leaves the bell and does not fade. It hangs over the god, and the air round it stops: a bubble of still time with the oldest and hungriest thing there is asleep inside it.",
+    "The dancers slow and settle, and pipe on as they always have, softly now, in your key. The eyes close one by one. Very far away, a clock on a mountain moves from 21:14 to 21:15.",
+    "You understand that the bubble holds only while someone plays. Your older self understood it too. It is why they stopped the whole world instead, and why that was never enough.",
+    "So you sit down at the edge of the god's heart with the trumpet across your knees and begin the song again from the first verse. Outside the bubble, time goes on without you. The court adjourns. Somewhere a younger you grows up, and never builds a door.",
+    "You have all the time there is. You play.",
+    "The game is beaten. The boss rush is open in the Holding, and the Clemency from this run has been added to your record."
   ],
   "bosses": {
     "bailiff": {
@@ -59,7 +59,13 @@
     },
     "azathoth": {
       "name": "THE IDIOT GOD",
-      "title": "Sealed in this build."
+      "title": "Blind and mindless at the centre of everything, piped to by its dancers. It is not angry. It is hungry, and it is awake.",
+      "bars": [
+        "THE BLIND MASS",
+        "THE DANCERS",
+        "THE DREAMER",
+        "THE LULLABY"
+      ]
     },
     "pioneer": {
       "name": "THE PIONEER",
@@ -74,7 +80,8 @@
     "waiting_city": "THE BAILIFF COLLECTS YOU",
     "white_waste": "THE ICE GIVES YOU BACK TO THE COURT",
     "glass_house": "THE GREY MEN RETURN YOU TO THE COURT",
-    "the_ascent": "YOU FALL FROM THE MOUNTAIN, AND THE COURT CATCHES YOU"
+    "the_ascent": "YOU FALL FROM THE MOUNTAIN, AND THE COURT CATCHES YOU",
+    "idiot_god": "THE GOD DREAMS YOU BACK TO THE COURT"
   },
   "interludes": {
     "waiting_city": {
@@ -115,7 +122,20 @@
         "You have thought about letting yourself die. More than once, on the long nights in the house, it seemed the cleanest way: no Defendant, no door, no evening that never ends. But the court does not allow it. Every time you fall, the Bailiff collects you and sets you on your feet again, and the years are added, and you go on.",
         "So it seems that this version of you must kill that version of you. Fifty years have come down to one evening. On the fourteenth of March, 2081, you climb Mount Meridian toward the Observatory on its summit, where the Long Door stands in a circle of old stones, and the evening light does not move, because it is always twenty-one fourteen. Someone you trained is waiting on every terrace. They all wear your coat."
       ]
+    },
+    "the_ascent": {
+      "title": "THE DOOR",
+      "lines": [
+        "You stand over yourself in the circle, and your older face looks up at you without fear. They say: I would do it again. Then the sky above the summit tears like wet paper.",
+        "It comes through all at once: a mass larger than the mountain, bubbling, blind and covered in eyes, piping to itself in a voice like a choir of flutes. The stones melt. The summit runs like wax. You are drawn up toward a mouth the size of the night.",
+        "Now you understand what the court never did. The Long Door was a ritual, not a clock. You built it to hold one evening open for one person, and it opened onto the outside instead, and the thing outside heard it, and came. You led it here. Your older self stopped time because a stopped moment was the only lock strong enough to hold it at the threshold.",
+        "The Tribunal knew only that time had stopped and that something had to be fixed. No one in your own timeline could get near the Defendant, so they reached into another timeline for a version of you more amenable to their cause. You. Nobody knew what stopping your older self would let in, except your older self, who learned to stop time to keep this reality from being eaten.",
+        "Your sin was never the stopping of time. It was the door.",
+        "The maw closes over you. Inside there is no up, and the floor you fall from is the floor you land on. Somewhere at its centre the god is piping to itself, and its dancers pipe with it. In your pack is the battered trumpet you took from the Hermitage on the way up, your older self's, its mouthpiece worn to the shape of your own mouth. You do not yet know why you brought it."
+      ],
+      "art": "door",
+      "go": "Fall"
     }
   },
-  "verdict_art": "door"
+  "verdict_art": "lullaby"
 }

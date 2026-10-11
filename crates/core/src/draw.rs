@@ -15,7 +15,9 @@ use crate::world::{FxKind, PickupKind, World};
 
 mod beasts;
 mod fauna;
+mod god;
 mod house;
+pub use god::{azathoth_at_heart, trumpet};
 pub use house::azathoth;
 
 fn dm(x: i32) -> i32 {
@@ -57,14 +59,25 @@ pub fn world(
     cam: &crate::render::Camera,
 ) {
     if body {
-        player(b, c, &w.player, w.held.gun, alpha);
+        player_with(b, c, &w.player, w.held.gun, alpha, w.song.is_some());
     }
     // enemies in a heavy black line, so their shapes stand out from the
     // warm city behind them
     b.bold = true;
     let chest = w.player.chest();
     for e in w.enemies.iter().filter(|e| e.alive()) {
-        enemy(b, c, e, alpha, chest);
+        let d = &c.enemies[e.def];
+        if d.kind == Kind::God {
+            // how far the lullaby has put it down
+            let verses = d.lullaby.as_ref().map_or(1, |l| l.verses.len().max(1)) as i32;
+            let sleep = w
+                .song
+                .as_ref()
+                .map_or(0, |s| fx::div(s.asleep as i32 * ONE, verses * ONE));
+            azathoth_at_heart(b, c, e, alpha, chest, sleep);
+        } else {
+            enemy(b, c, e, alpha, chest);
+        }
     }
     b.bold = false;
     // the Conservatory's glass, until it breaks
@@ -81,7 +94,7 @@ pub fn world(
     }
     // a revolver loading: the cylinder swung out, a shell going in
     let gl = c.guns[w.held.gun].level(w.held.level);
-    if body && w.held.reloading(gl.mag) {
+    if body && w.song.is_none() && w.held.reloading(gl.mag) {
         let hand = hand_of(&w.player, alpha);
         let side = right_of(w.player.yaw).scale(-cm(12));
         let cyl = hand.add(side).add(v3(0, cm(4), 0));
@@ -291,6 +304,12 @@ fn hand_of(p: &Player, alpha: i32) -> V3 {
 /// The Defendant: a long coat, a scarf that trails, legs that stride, and
 /// the gun held out along the aim.
 pub fn player(b: &mut Batch, c: &Content, p: &Player, gun: usize, alpha: i32) {
+    player_with(b, c, p, gun, alpha, false);
+}
+
+/// The Defendant, holding the trumpet to their mouth instead of the gun
+/// when `trumpet` is set (the lullaby).
+pub fn player_with(b: &mut Batch, c: &Content, p: &Player, gun: usize, alpha: i32, trumpet: bool) {
     let feet = p.prev_pos.lerp(p.pos, alpha);
     let coat = c.pal.c("player_coat");
     let trim = c.pal.c("player_trim");
@@ -369,7 +388,11 @@ pub fn player(b: &mut Batch, c: &Content, p: &Player, gun: usize, alpha: i32) {
     let aim = facing(p.yaw, p.pitch);
     let shoulder_r = feet.add(v3(0, dm(15), 0)).add(right_of(p.yaw).scale(dm(3)));
     let shoulder_l = feet.add(v3(0, dm(15), 0)).add(right_of(p.yaw).scale(-dm(3)));
-    let hand = hand_of(p, alpha);
+    let mut hand = hand_of(p, alpha);
+    if trumpet {
+        let mouth = feet.add(v3(0, dm(17) + cm(2), 0)).add(aim.scale(cm(16)));
+        hand = god::trumpet(b, c, mouth, aim);
+    }
     rod(b, shoulder_r, hand, cm(11), tint(coat), 0, true);
     rod(
         b,
@@ -380,7 +403,9 @@ pub fn player(b: &mut Batch, c: &Content, p: &Player, gun: usize, alpha: i32) {
         0,
         true,
     );
-    gun_model(b, c, gun, hand, p.yaw, p.pitch, ONE);
+    if !trumpet {
+        gun_model(b, c, gun, hand, p.yaw, p.pitch, ONE);
+    }
     // a dash leaves ghosts
     if p.dashing() {
         for k in 1..4 {
@@ -863,7 +888,14 @@ pub fn enemy(b: &mut Batch, c: &Content, e: &Enemy, alpha: i32, target: V3) {
         house::draw(b, c, e, d, at, alpha, target, &paint);
         return;
     }
-    if fauna::draw(b, c, e, d, at, s, &paint) || beasts::draw(b, c, e, d, at, s, &paint) {
+    if d.kind == Kind::God {
+        // drawn at the Heart by `world`, with how far it sleeps
+        return;
+    }
+    if god::draw(b, c, e, d, at, s, &paint)
+        || fauna::draw(b, c, e, d, at, s, &paint)
+        || beasts::draw(b, c, e, d, at, s, &paint)
+    {
         if charge > 0 && d.kind != Kind::Boss && !e.buried {
             let h = fx::mul(s, ONE + charge);
             b.glow(Mesh::Sphere, &boxed(at, v3(h, h, h)), core, charge / 2);
@@ -1016,7 +1048,7 @@ pub fn enemy(b: &mut Batch, c: &Content, e: &Enemy, alpha: i32, target: V3) {
             );
         }
         Kind::Boss => bailiff(b, c, e, at, s, paint),
-        Kind::Agent | Kind::Tank | Kind::Mech | Kind::Double | Kind::Beast => {}
+        Kind::Agent | Kind::Tank | Kind::Mech | Kind::Double | Kind::Beast | Kind::God => {}
     }
     // the windup: a halo that grows as the attack comes
     if charge > 0 && d.kind != Kind::Boss {

@@ -1051,6 +1051,33 @@ fn bot(c: &ltc_core::content::Content, w: &World, t: i32, stuck: bool) -> (Contr
         ctl.jump_pressed = false;
         ctl.dash_pressed = false;
     }
+    // the lullaby: play each note, a little early or late as a person
+    // would (within the good window), and keep dodging
+    if let (Some(s), Some(b)) = (&w.song, w.boss) {
+        ctl.fire = false;
+        ctl.fire_pressed = false;
+        ctl.parry_pressed = false;
+        ctl.interact_pressed = false;
+        ctl.wall_pressed = false;
+        ctl.grapple_pressed = false;
+        if s.part == ltc_core::song::Part::Play {
+            if let Some(l) = c.enemies[w.enemies[b].def].lullaby.as_ref() {
+                let first = ltc_core::song::Song::start(l);
+                for (k, &(at, key)) in l.verses[s.verse].notes.iter().enumerate() {
+                    let off = ((k as i32 * 7 + s.verse as i32 * 3 + t / 997) % 9) - 4;
+                    if first + at + off == s.clock + 1 {
+                        match key {
+                            0 => ctl.fire_pressed = true,
+                            1 => ctl.parry_pressed = true,
+                            2 => ctl.interact_pressed = true,
+                            3 => ctl.wall_pressed = true,
+                            _ => ctl.grapple_pressed = true,
+                        }
+                    }
+                }
+            }
+        }
+    }
     (ctl, yaw, pitch)
 }
 

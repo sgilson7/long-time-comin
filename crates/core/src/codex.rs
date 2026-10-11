@@ -344,8 +344,55 @@ fn movement(d: &EnemyDef, c: &Content) -> String {
                 m(SWOOP_PAST),
                 d.contact
             ),
+            Gait::March => format!(
+                "Hangs {} m over the floor and marches: a step of {} m sideways every {} s; every {}th step is toward you (or away, nearer than {} m), and then it marches back the other way.",
+                m(d.hover),
+                m(MARCH_STEP),
+                s(MARCH_EVERY),
+                MARCH_ACROSS,
+                m(d.range)
+            ),
+            Gait::Unseen => format!(
+                "While you look at it (within {}° of the middle of your view, nothing between) it does not move or fire, and can be shot. While you look away it comes straight at you at {} m/s, and fires.",
+                deg(UNSEEN_LOOK),
+                mps(d.speed)
+            ),
+            Gait::Charge => format!(
+                "Turns on the spot at {}°/s until it faces you, then charges straight ahead at {} m/s for {} s, whatever you do; it stops at a wall or an edge and stands {} s.",
+                deg(CHARGE_TURN * TICKS_PER_SECOND),
+                mps(d.speed),
+                s(CHARGE_TICKS),
+                s(CHARGE_REST)
+            ),
+            Gait::Bounce => format!(
+                "Bounces {} m high on a beat of {} s that every Toon shares, drifting to about {} m from you, and fires as it lands.",
+                m(BOUNCE_HEIGHT),
+                s(BOUNCE_TICKS),
+                m(d.range)
+            ),
+            Gait::Echo => format!(
+                "Walks the path you walked {} s ago, at up to {} m/s: stand still and it reaches you.",
+                s(ECHO_DELAY),
+                mps(d.speed)
+            ),
             Gait::None => String::new(),
         },
+        Kind::God => {
+            let bars: Vec<String> = d
+                .phases
+                .iter()
+                .enumerate()
+                .map(|(k, p)| format!("bar {} from {}% health", k + 1, p.from_pct))
+                .collect();
+            let verses = d.lullaby.as_ref().map_or(0, |l| l.verses.len());
+            format!(
+                "Vast, over the north of the Heart, heaving. Its health is {} bars ({}); at each it calls help, clears every orb and cannot be hurt for {} s. When the last bar empties it does not die: you take out the trumpet, and play it {} verses to sleep while it fires on the beat.",
+                d.phases.len(),
+                bars.join("; "),
+                s(PHASE_TICKS),
+                verses
+            )
+        }
         Kind::Turret => format!(
             "Does not move. Sits {} m above the floor and turns to face you.",
             m(d.hover)
@@ -547,7 +594,7 @@ fn enemy(d: &EnemyDef, c: &Content) -> Value {
                 })
                 .collect();
             json!({
-                "from": if d.kind == Kind::Boss { format!("Phase {} (from {}% health)", k + 1, p.from_pct) } else { String::new() },
+                "from": if matches!(d.kind, Kind::Boss | Kind::God) { format!("Phase {} (from {}% health)", k + 1, p.from_pct) } else { String::new() },
                 "attacks": attacks,
             })
         })
@@ -560,6 +607,38 @@ fn enemy(d: &EnemyDef, c: &Content) -> Value {
     if let Some(p) = d.burst {
         let words: Vec<String> = c.patterns[p].volleys.iter().map(volley).collect();
         moves += &format!(" When it dies it leaves this behind: {}", words.join(" "));
+    }
+    if let Some(&first) = d.splits.first() {
+        moves += &format!(
+            " When it dies it splits into {} × {}.",
+            d.splits.len(),
+            c.enemies[first].name
+        );
+    }
+    if let Some(l) = d.lullaby.as_ref() {
+        let notes: usize = l.verses.iter().map(|v| v.notes.len()).sum();
+        let beats: Vec<String> = l
+            .beats
+            .iter()
+            .map(|b| {
+                let from = if b.from_verse > 0 {
+                    format!(", from verse {}", b.from_verse + 1)
+                } else {
+                    String::new()
+                };
+                format!("{} every {} beats{from}", c.patterns[b.pattern].id, b.every)
+            })
+            .collect();
+        moves += &format!(
+            " The lullaby: {} verses ({notes} notes) at a beat of {} s, each piped by the dancers and then played back by you on five keys (left mouse, Q, E, R, F). A note within {} s of its time is great, within {} s good; {}% of a verse's notes good or better and it sleeps a verse deeper, fewer and it stirs ({}) and the verse comes again. On the beat it fires: {}.",
+            l.verses.len(),
+            s(l.beat),
+            s(l.great),
+            s(l.good),
+            l.pass_pct,
+            c.patterns[l.stir].id,
+            beats.join("; ")
+        );
     }
     json!({
         "name": d.name,

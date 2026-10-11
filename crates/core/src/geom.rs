@@ -93,6 +93,12 @@ pub fn facing(yaw: i32, pitch: i32) -> V3 {
     )
 }
 
+/// `p` turned by `a` about the vertical, as a heading turns: what faced
+/// `yaw` faces `yaw + a`.
+pub fn rotate_y(p: V3, a: i32) -> V3 {
+    Affine::rot_y(a).apply_dir(p)
+}
+
 /// The flat unit vector to the right of a heading.
 pub fn right_of(yaw: i32) -> V3 {
     v3(fx::cos(yaw), 0, -fx::sin(yaw))

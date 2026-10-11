@@ -1,0 +1,338 @@
+\documentclass[tikz,border=0pt]{standalone}
+\usepackage{xcolor}
+\usetikzlibrary{calc}
+% Palette: Sam_Comm_final.png by eye, and data/palette.json.
+\definecolor{ink}{HTML}{3B2340}
+\definecolor{sky}{HTML}{EFC46A}
+\definecolor{skyhi}{HTML}{F5DA92}
+\definecolor{skylow}{HTML}{E9B060}
+\definecolor{cloud}{HTML}{F2D58A}
+\definecolor{wallA}{HTML}{E88A73}
+\definecolor{wallB}{HTML}{EE9F7E}
+\definecolor{wallC}{HTML}{E47A7E}
+\definecolor{wallD}{HTML}{F0B07E}
+\definecolor{wallE}{HTML}{D9765F}
+\definecolor{wallF}{HTML}{E99A8A}
+\definecolor{greenA}{HTML}{8DBB7E}
+\definecolor{greenB}{HTML}{6FA77A}
+\definecolor{greenC}{HTML}{A9C97F}
+\definecolor{greenD}{HTML}{5E9C6A}
+\definecolor{window}{HTML}{F6E7A0}
+\definecolor{windark}{HTML}{8C5A64}
+\definecolor{metal}{HTML}{8D9A93}
+\definecolor{metaldark}{HTML}{5E6B66}
+\definecolor{wood}{HTML}{B9835A}
+\definecolor{paving}{HTML}{E2BD8C}
+\definecolor{ground}{HTML}{D3A77D}
+\definecolor{stone}{HTML}{E7C9A0}
+\definecolor{clock}{HTML}{F8EBC8}
+\definecolor{court}{HTML}{9E4F55}
+\definecolor{courtdark}{HTML}{6E3542}
+\definecolor{goldtrim}{HTML}{F2B53A}
+\definecolor{paper}{HTML}{F6E7C4}
+\definecolor{paperdark}{HTML}{E3CC98}
+\definecolor{violet}{HTML}{7B2FF7}
+\definecolor{magenta}{HTML}{FF2E88}
+\definecolor{cyan}{HTML}{13CFE3}
+\definecolor{gold}{HTML}{FFB000}
+\definecolor{coat}{HTML}{2F4858}
+\definecolor{coatdark}{HTML}{22323F}
+\definecolor{trim}{HTML}{F26B38}
+\definecolor{skin}{HTML}{E0AC69}
+\definecolor{hair}{HTML}{3B2340}
+\definecolor{gun}{HTML}{3E3A46}
+\definecolor{robe}{HTML}{2D2240}
+\definecolor{bossface}{HTML}{F8EBC8}
+\definecolor{eye}{HTML}{FF2E88}
+\definecolor{red}{HTML}{B3262E}
+\definecolor{heart}{HTML}{FF4F6D}
+\definecolor{jump}{HTML}{8DE36B}
+\definecolor{lamp}{HTML}{FFE6A3}
+\definecolor{night}{HTML}{4A3357}
+\definecolor{nightsky}{HTML}{6B4A6E}
+\definecolor{icesky}{HTML}{A7C4E2}
+\definecolor{icefog}{HTML}{8FAFD2}
+\definecolor{icesnow}{HTML}{EEF5F9}
+\definecolor{icesnowdark}{HTML}{CFDDE7}
+\definecolor{icewhite}{HTML}{E4F1F8}
+\definecolor{iceblue}{HTML}{A9D3EA}
+\definecolor{icedeep}{HTML}{6FA9D2}
+\definecolor{iceglow}{HTML}{8FE3FF}
+\definecolor{icerock}{HTML}{5E6E82}
+\definecolor{icerockdark}{HTML}{3F4C5F}
+\definecolor{icered}{HTML}{D94A3A}
+\definecolor{hull}{HTML}{A8392F}
+\definecolor{hulldark}{HTML}{6C2A27}
+\definecolor{icemetal}{HTML}{8A97A6}
+\definecolor{canvas}{HTML}{E9C47C}
+\definecolor{auroragreen}{HTML}{5CF2B0}
+\definecolor{aurorapink}{HTML}{F27AD0}
+\definecolor{cobalt}{HTML}{1F4FFF}
+\definecolor{ember}{HTML}{FF6A1A}
+\definecolor{witnessrobe}{HTML}{1E2742}
+\definecolor{witnessice}{HTML}{CDEBFA}
+\definecolor{navy}{HTML}{1C2A44}
+\definecolor{water}{HTML}{2C6690}
+\definecolor{dawn}{HTML}{F7C89A}
+\definecolor{housesky}{HTML}{1C2440}
+\definecolor{housenight}{HTML}{2A3358}
+\definecolor{paperwall}{HTML}{7A2E3A}
+\definecolor{paperwall2}{HTML}{2F5A4A}
+\definecolor{panel}{HTML}{5A3424}
+\definecolor{hwood}{HTML}{8A4F2E}
+\definecolor{hwooddark}{HTML}{4E2A1C}
+\definecolor{marble}{HTML}{E9DFC9}
+\definecolor{marbledark}{HTML}{3D3436}
+\definecolor{brass}{HTML}{E0A93E}
+\definecolor{candle}{HTML}{FFD27A}
+\definecolor{moon}{HTML}{9FC6FF}
+\definecolor{carpet}{HTML}{9C2F3C}
+\definecolor{cream}{HTML}{F1E6CC}
+\definecolor{labwhite}{HTML}{DCE7E6}
+\definecolor{labfluid}{HTML}{7CFFB2}
+\definecolor{grassnight}{HTML}{2E4A3A}
+\definecolor{hedge}{HTML}{1F3A2C}
+\definecolor{glass}{HTML}{BFEFFF}
+\definecolor{suit}{HTML}{33363D}
+\definecolor{suitdark}{HTML}{1E2026}
+\definecolor{shirt}{HTML}{EDEDE6}
+\definecolor{agentskin}{HTML}{D8C3A8}
+\definecolor{shades}{HTML}{0E0F12}
+\definecolor{tankhull}{HTML}{3B4249}
+\definecolor{tankplate}{HTML}{5A646F}
+\definecolor{tanktread}{HTML}{22262B}
+\definecolor{tankweak}{HTML}{FF7A1A}
+\definecolor{tankeye}{HTML}{FFF3B0}
+\definecolor{tankiris}{HTML}{FF4A3A}
+\definecolor{halo}{HTML}{FFC94A}
+\definecolor{scarlet}{HTML}{FF2E3A}
+\definecolor{chalk}{HTML}{FFF6DA}
+\definecolor{lime}{HTML}{B6FF3A}
+\definecolor{sawsteel}{HTML}{E8F0F5}
+\definecolor{dusk}{HTML}{E8A27A}
+\definecolor{duskhi}{HTML}{F6C9A0}
+\definecolor{dusklow}{HTML}{B07A8C}
+\definecolor{astone}{HTML}{B9A79A}
+\definecolor{astonedark}{HTML}{7D6C68}
+\definecolor{arock}{HTML}{8A7A80}
+\definecolor{amoss}{HTML}{7FA06A}
+\definecolor{asnow}{HTML}{F4EDF0}
+\definecolor{doorlight}{HTML}{FFE9A8}
+\definecolor{flesh}{HTML}{3E2A5C}
+\definecolor{fleshdark}{HTML}{1A1028}
+\definecolor{eldglow}{HTML}{B6FF6A}
+\definecolor{void}{HTML}{05030A}
+\definecolor{violetdeep}{HTML}{9B5DE5}
+\definecolor{godsky}{HTML}{3A1458}
+\definecolor{godfog}{HTML}{2A0C40}
+\definecolor{godflesh}{HTML}{7A3A6E}
+\definecolor{godfleshpale}{HTML}{C27BA8}
+\definecolor{godstone}{HTML}{6E6A9A}
+\definecolor{godstonedark}{HTML}{433F70}
+\definecolor{dancer}{HTML}{B98AE0}
+\definecolor{stilled}{HTML}{D8D2E8}
+\definecolor{seam}{HTML}{FFE27A}
+\definecolor{trumpet}{HTML}{E8B84A}
+\definecolor{trumpetdark}{HTML}{9A6A1A}
+% One ink for every outline (the TikZ house style and the game's ink pass).
+\newcommand{\Ink}{1.1pt}
+\tikzset{inked/.style={draw=ink, line width=\Ink, line join=round, line cap=round}}
+\begin{document}
+\begin{tikzpicture}
+\clip (0,0) rectangle (32,18);
+\fill[godfog] (0,0) rectangle (32,18);
+\fill[godsky] (0,7.2) rectangle (32,18);
+\filldraw[inked,fill=godflesh] (-1,18.5) .. controls (6,14.5) and (22,14.2) .. (33,18.5) -- cycle;
+\filldraw[inked,fill=flesh] (-1,-0.5) .. controls (8,4.2) and (24,4.0) .. (33,-0.5) -- cycle;
+\filldraw[inked,fill=godfleshpale,line width=0.6pt] (26.712,15.947) ellipse (0.35 and 0.157);
+\draw[ink, line width=0.7pt] (26.432,15.947) .. controls (26.712,15.824) .. (26.992,15.947);
+\filldraw[inked,fill=godfleshpale,line width=0.6pt] (6.064,1.977) ellipse (0.47 and 0.211);
+\draw[ink, line width=0.7pt] (5.688,1.977) .. controls (6.064,1.813) .. (6.439,1.977);
+\filldraw[inked,fill=godfleshpale,line width=0.6pt] (7.21,0.368) ellipse (0.405 and 0.182);
+\draw[ink, line width=0.7pt] (6.886,0.368) .. controls (7.21,0.227) .. (7.534,0.368);
+\filldraw[inked,fill=godfleshpale,line width=0.6pt] (25.926,16.854) ellipse (0.582 and 0.262);
+\draw[ink, line width=0.7pt] (25.461,16.854) .. controls (25.926,16.65) .. (26.391,16.854);
+\filldraw[inked,fill=godfleshpale,line width=0.6pt] (29.659,16.909) ellipse (0.42 and 0.189);
+\draw[ink, line width=0.7pt] (29.323,16.909) .. controls (29.659,16.762) .. (29.995,16.909);
+\filldraw[inked,fill=godfleshpale,line width=0.6pt] (18.695,16.837) ellipse (0.496 and 0.223);
+\draw[ink, line width=0.7pt] (18.298,16.837) .. controls (18.695,16.663) .. (19.092,16.837);
+\filldraw[inked,fill=godfleshpale,line width=0.6pt] (18.188,16.179) ellipse (0.504 and 0.227);
+\draw[ink, line width=0.7pt] (17.785,16.179) .. controls (18.188,16.002) .. (18.592,16.179);
+\filldraw[inked,fill=godfleshpale,line width=0.6pt] (3.678,1.89) ellipse (0.294 and 0.132);
+\draw[ink, line width=0.7pt] (3.443,1.89) .. controls (3.678,1.787) .. (3.913,1.89);
+\filldraw[inked,fill=godfleshpale,line width=0.6pt] (5.897,16.752) ellipse (0.524 and 0.236);
+\draw[ink, line width=0.7pt] (5.478,16.752) .. controls (5.897,16.569) .. (6.315,16.752);
+\filldraw[inked,fill=godfleshpale,line width=0.6pt] (26.884,1.581) ellipse (0.359 and 0.162);
+\draw[ink, line width=0.7pt] (26.597,1.581) .. controls (26.884,1.455) .. (27.172,1.581);
+\filldraw[inked,fill=godfleshpale,line width=0.6pt] (22.839,0.602) ellipse (0.35 and 0.158);
+\draw[ink, line width=0.7pt] (22.559,0.602) .. controls (22.839,0.479) .. (23.119,0.602);
+\filldraw[inked,fill=godfleshpale,line width=0.6pt] (5.402,16.242) ellipse (0.391 and 0.176);
+\draw[ink, line width=0.7pt] (5.089,16.242) .. controls (5.402,16.105) .. (5.715,16.242);
+\filldraw[inked,fill=godfleshpale,line width=0.6pt] (3.59,1.867) ellipse (0.418 and 0.188);
+\draw[ink, line width=0.7pt] (3.256,1.867) .. controls (3.59,1.721) .. (3.924,1.867);
+\filldraw[inked,fill=godfleshpale,line width=0.6pt] (3.711,15.915) ellipse (0.487 and 0.219);
+\draw[ink, line width=0.7pt] (3.322,15.915) .. controls (3.711,15.745) .. (4.1,15.915);
+\filldraw[inked,fill=godfleshpale,line width=0.6pt] (11.647,2.054) ellipse (0.267 and 0.12);
+\draw[ink, line width=0.7pt] (11.433,2.054) .. controls (11.647,1.96) .. (11.86,2.054);
+\filldraw[inked,fill=godfleshpale,line width=0.6pt] (3.473,0.29) ellipse (0.548 and 0.246);
+\draw[ink, line width=0.7pt] (3.035,0.29) .. controls (3.473,0.098) .. (3.911,0.29);
+\filldraw[inked,fill=godfleshpale,line width=0.6pt] (29.082,15.926) ellipse (0.578 and 0.26);
+\draw[ink, line width=0.7pt] (28.62,15.926) .. controls (29.082,15.723) .. (29.544,15.926);
+\filldraw[inked,fill=godfleshpale,line width=0.6pt] (23.434,0.479) ellipse (0.468 and 0.211);
+\draw[ink, line width=0.7pt] (23.06,0.479) .. controls (23.434,0.316) .. (23.808,0.479);
+\filldraw[inked,fill=godfleshpale,line width=0.6pt] (7.148,1.992) ellipse (0.595 and 0.268);
+\draw[ink, line width=0.7pt] (6.672,1.992) .. controls (7.148,1.783) .. (7.624,1.992);
+\filldraw[inked,fill=godfleshpale,line width=0.6pt] (5.765,2.002) ellipse (0.427 and 0.192);
+\draw[ink, line width=0.7pt] (5.423,2.002) .. controls (5.765,1.852) .. (6.107,2.002);
+\filldraw[inked,fill=godfleshpale,line width=0.6pt] (12.634,17.284) ellipse (0.572 and 0.257);
+\draw[ink, line width=0.7pt] (12.176,17.284) .. controls (12.634,17.084) .. (13.091,17.284);
+\filldraw[inked,fill=godfleshpale,line width=0.6pt] (12.052,15.662) ellipse (0.536 and 0.241);
+\draw[ink, line width=0.7pt] (11.623,15.662) .. controls (12.052,15.475) .. (12.48,15.662);
+\filldraw[inked,fill=godfleshpale,line width=0.6pt] (24.499,0.545) ellipse (0.294 and 0.132);
+\draw[ink, line width=0.7pt] (24.264,0.545) .. controls (24.499,0.442) .. (24.734,0.545);
+\filldraw[inked,fill=godfleshpale,line width=0.6pt] (28.934,1.931) ellipse (0.475 and 0.214);
+\draw[ink, line width=0.7pt] (28.554,1.931) .. controls (28.934,1.765) .. (29.313,1.931);
+\filldraw[inked,fill=godfleshpale,line width=0.6pt] (3.124,1.57) ellipse (0.281 and 0.126);
+\draw[ink, line width=0.7pt] (2.9,1.57) .. controls (3.124,1.472) .. (3.349,1.57);
+\filldraw[inked,fill=godfleshpale,line width=0.6pt] (26.159,16.742) ellipse (0.294 and 0.132);
+\draw[ink, line width=0.7pt] (25.924,16.742) .. controls (26.159,16.639) .. (26.394,16.742);
+\filldraw[inked,fill=dancer] (20.75,11.791) .. controls (20.142,12.521) and (20.993,13.13) .. (20.933,12.461) .. controls (21.358,12.278) and (21.237,11.548) .. cycle;
+\draw[godstonedark, line width=1.6pt, line cap=round] (20.872,12.339) -- (21.724,12.035);
+\filldraw[inked,fill=dancer] (14.563,14.429) .. controls (13.869,15.263) and (14.841,15.957) .. (14.772,15.193) .. controls (15.258,14.985) and (15.119,14.152) .. cycle;
+\draw[godstonedark, line width=1.6pt, line cap=round] (14.702,15.054) -- (15.674,14.707);
+\filldraw[inked,fill=dancer] (6.446,13.732) .. controls (5.775,14.538) and (6.715,15.21) .. (6.648,14.471) .. controls (7.118,14.269) and (6.984,13.463) .. cycle;
+\draw[godstonedark, line width=1.6pt, line cap=round] (6.581,14.337) -- (7.521,14.001);
+\filldraw[inked,fill=dancer] (2.511,10.224) .. controls (1.954,10.893) and (2.734,11.45) .. (2.679,10.837) .. controls (3.069,10.67) and (2.957,10.001) .. cycle;
+\draw[godstonedark, line width=1.6pt, line cap=round] (2.623,10.726) -- (3.403,10.447);
+\filldraw[inked,fill=dancer] (5.722,6.548) .. controls (5.284,7.073) and (5.897,7.51) .. (5.853,7.029) .. controls (6.159,6.898) and (6.072,6.373) .. cycle;
+\draw[godstonedark, line width=1.6pt, line cap=round] (5.809,6.941) -- (6.421,6.723);
+\filldraw[inked,fill=dancer] (13.66,5.471) .. controls (13.257,5.954) and (13.821,6.356) .. (13.78,5.913) .. controls (14.062,5.793) and (13.981,5.31) .. cycle;
+\draw[godstonedark, line width=1.6pt, line cap=round] (13.74,5.833) -- (14.303,5.632);
+\filldraw[inked,fill=dancer] (20.348,7.804) .. controls (19.87,8.378) and (20.539,8.857) .. (20.491,8.331) .. controls (20.826,8.187) and (20.731,7.613) .. cycle;
+\draw[godstonedark, line width=1.6pt, line cap=round] (20.444,8.235) -- (21.113,7.996);
+\fill[stilled, opacity=0.55] (14,10.6) circle (5.6);
+\filldraw[inked,fill=godstonedark] (14.253,10.992) circle (1.277);
+\filldraw[inked,fill=stilled,line width=0.7pt] (14.253,10.992) ellipse (0.575 and 0.204);
+\draw[ink, line width=0.9pt] (13.678,10.992) .. controls (14.253,10.737) .. (14.827,10.992);
+\filldraw[inked,fill=godstone] (16.138,12.482) circle (1.3);
+\filldraw[inked,fill=godstone] (15.288,11.999) circle (0.956);
+\filldraw[inked,fill=stilled,line width=0.7pt] (15.288,11.999) ellipse (0.43 and 0.153);
+\draw[ink, line width=0.9pt] (14.857,11.999) .. controls (15.288,11.807) .. (15.718,11.999);
+\filldraw[inked,fill=godstonedark] (12.13,12.477) circle (1.355);
+\filldraw[inked,fill=godstone] (13.94,10.602) circle (1.346);
+\filldraw[inked,fill=stilled,line width=0.7pt] (13.94,10.602) ellipse (0.606 and 0.215);
+\draw[ink, line width=0.9pt] (13.334,10.602) .. controls (13.94,10.333) .. (14.545,10.602);
+\filldraw[inked,fill=godstone] (16.959,9.174) circle (1.057);
+\filldraw[inked,fill=godstonedark] (13.164,10.354) circle (1.229);
+\filldraw[inked,fill=stilled,line width=0.7pt] (13.164,10.354) ellipse (0.553 and 0.197);
+\draw[ink, line width=0.9pt] (12.611,10.354) .. controls (13.164,10.108) .. (13.717,10.354);
+\filldraw[inked,fill=godstone] (12.518,8.404) circle (1.381);
+\filldraw[inked,fill=godstone] (15.017,10.348) circle (1.188);
+\filldraw[inked,fill=stilled,line width=0.7pt] (15.017,10.348) ellipse (0.534 and 0.19);
+\draw[ink, line width=0.9pt] (14.483,10.348) .. controls (15.017,10.111) .. (15.552,10.348);
+\filldraw[inked,fill=godstonedark] (15.247,10.015) circle (1.256);
+\filldraw[inked,fill=godstone] (14.145,13.059) circle (0.994);
+\filldraw[inked,fill=stilled,line width=0.7pt] (14.145,13.059) ellipse (0.448 and 0.159);
+\draw[ink, line width=0.9pt] (13.697,13.059) .. controls (14.145,12.86) .. (14.592,13.059);
+\filldraw[inked,fill=godstone] (12.477,10.026) circle (0.709);
+\filldraw[inked,fill=godstonedark] (12.925,10.21) circle (0.966);
+\filldraw[inked,fill=stilled,line width=0.7pt] (12.925,10.21) ellipse (0.435 and 0.155);
+\draw[ink, line width=0.9pt] (12.49,10.21) .. controls (12.925,10.017) .. (13.359,10.21);
+\filldraw[inked,fill=godstone] (14.644,10.111) circle (1.323);
+\filldraw[inked,fill=godstone] (13.412,11.809) circle (1.47);
+\filldraw[inked,fill=stilled,line width=0.7pt] (13.412,11.809) ellipse (0.661 and 0.235);
+\draw[ink, line width=0.9pt] (12.751,11.809) .. controls (13.412,11.515) .. (14.074,11.809);
+\filldraw[inked,fill=godstonedark] (15.277,12.693) circle (1.345);
+\filldraw[inked,fill=godstone] (13.417,11.046) circle (1.378);
+\filldraw[inked,fill=stilled,line width=0.7pt] (13.417,11.046) ellipse (0.62 and 0.22);
+\draw[ink, line width=0.9pt] (12.797,11.046) .. controls (13.417,10.771) .. (14.037,11.046);
+\filldraw[inked,fill=godstone] (16.446,11.34) circle (1.29);
+\filldraw[inked,fill=godstonedark] (14.828,9.092) circle (1.432);
+\filldraw[inked,fill=stilled,line width=0.7pt] (14.828,9.092) ellipse (0.644 and 0.229);
+\draw[ink, line width=0.9pt] (14.184,9.092) .. controls (14.828,8.805) .. (15.473,9.092);
+\filldraw[inked,fill=godstone] (13.815,10.605) circle (0.898);
+\filldraw[inked,fill=godstone] (11.573,11.573) circle (0.868);
+\filldraw[inked,fill=stilled,line width=0.7pt] (11.573,11.573) ellipse (0.391 and 0.139);
+\draw[ink, line width=0.9pt] (11.183,11.573) .. controls (11.573,11.399) .. (11.964,11.573);
+\filldraw[inked,fill=godstonedark] (16.896,11.692) circle (1.258);
+\filldraw[inked,fill=godstone] (12.042,9.204) circle (1.452);
+\filldraw[inked,fill=stilled,line width=0.7pt] (12.042,9.204) ellipse (0.653 and 0.232);
+\draw[ink, line width=0.9pt] (11.389,9.204) .. controls (12.042,8.914) .. (12.695,9.204);
+\filldraw[inked,fill=godstone] (13.403,9.944) circle (0.768);
+\filldraw[inked,fill=godstonedark] (13.471,10.587) circle (1.287);
+\filldraw[inked,fill=stilled,line width=0.7pt] (13.471,10.587) ellipse (0.579 and 0.206);
+\draw[ink, line width=0.9pt] (12.892,10.587) .. controls (13.471,10.329) .. (14.05,10.587);
+\filldraw[inked,fill=godstone] (14.908,11.36) circle (0.868);
+\filldraw[inked,fill=godstone] (13.081,12.053) circle (1.006);
+\filldraw[inked,fill=stilled,line width=0.7pt] (13.081,12.053) ellipse (0.453 and 0.161);
+\draw[ink, line width=0.9pt] (12.629,12.053) .. controls (13.081,11.852) .. (13.534,12.053);
+\filldraw[inked,fill=godstonedark] (14.197,9.807) circle (1.159);
+\filldraw[inked,fill=godstone] (13.823,10.543) circle (0.909);
+\filldraw[inked,fill=stilled,line width=0.7pt] (13.823,10.543) ellipse (0.409 and 0.145);
+\draw[ink, line width=0.9pt] (13.414,10.543) .. controls (13.823,10.362) .. (14.232,10.543);
+\filldraw[inked,fill=godstone] (15.305,10.03) circle (1.227);
+\draw[ink, line width=1.6pt] (12.4,9.4) .. controls (14,8.9) .. (15.6,9.4);
+\filldraw[inked,fill=stilled] (11.841,6.729) circle (0.22);
+\fill[white, opacity=0.75] (11.764,6.806) circle (0.062);
+\filldraw[inked,fill=stilled] (15.851,15.334) circle (0.22);
+\fill[white, opacity=0.75] (15.774,15.411) circle (0.062);
+\filldraw[inked,fill=stilled] (15.94,15.48) circle (0.22);
+\fill[white, opacity=0.75] (15.863,15.557) circle (0.062);
+\filldraw[inked,fill=stilled] (13.003,15.69) circle (0.22);
+\fill[white, opacity=0.75] (12.926,15.767) circle (0.062);
+\filldraw[inked,fill=stilled] (11.663,14.836) circle (0.22);
+\fill[white, opacity=0.75] (11.586,14.913) circle (0.062);
+\filldraw[inked,fill=stilled] (18.171,8.924) circle (0.22);
+\fill[white, opacity=0.75] (18.094,9.001) circle (0.062);
+\filldraw[inked,fill=stilled] (18.411,7.852) circle (0.22);
+\fill[white, opacity=0.75] (18.334,7.929) circle (0.062);
+\filldraw[inked,fill=stilled] (18.426,9.803) circle (0.22);
+\fill[white, opacity=0.75] (18.349,9.88) circle (0.062);
+\filldraw[inked,fill=stilled] (18.488,12.811) circle (0.22);
+\fill[white, opacity=0.75] (18.411,12.888) circle (0.062);
+\filldraw[inked,fill=stilled] (10.581,13.194) circle (0.22);
+\fill[white, opacity=0.75] (10.504,13.271) circle (0.062);
+\filldraw[inked,fill=stilled] (15.203,6.164) circle (0.22);
+\fill[white, opacity=0.75] (15.126,6.241) circle (0.062);
+\filldraw[inked,fill=stilled] (18.639,11.039) circle (0.22);
+\fill[white, opacity=0.75] (18.562,11.116) circle (0.062);
+\filldraw[inked,fill=stilled] (11.547,6.891) circle (0.22);
+\fill[white, opacity=0.75] (11.47,6.968) circle (0.062);
+\filldraw[inked,fill=stilled] (14.004,15.639) circle (0.22);
+\fill[white, opacity=0.75] (13.927,15.716) circle (0.062);
+\draw[chalk, line width=2.4pt] (14,10.6) circle (5.6);
+\draw[ink, line width=1.1pt] (14,10.6) circle (5.72);
+\fill[white, opacity=0.35] (11.48,13.68) ellipse (1.4 and 0.5);
+\filldraw[inked,fill=godstone] (-0.5,3.6) .. controls (4,4.6) and (9,4.4) .. (12.5,3.2) -- (12.5,2.4) .. controls (9,3.4) and (4,3.6) .. (-0.5,2.6) -- cycle;
+\filldraw[inked,fill=coatdark] (3.968,4.2) -- (4.256,4.2) -- (4.326,5.64) -- (4.07,5.64) -- cycle;
+\filldraw[inked,fill=hair] (3.922,4.168) -- (4.37,4.168) -- (4.359,4.344) -- (3.911,4.344) -- cycle;
+\filldraw[inked,fill=coatdark] (4.544,4.2) -- (4.832,4.2) -- (4.557,5.64) -- (4.301,5.64) -- cycle;
+\filldraw[inked,fill=hair] (4.498,4.168) -- (4.946,4.168) -- (4.935,4.344) -- (4.487,4.344) -- cycle;
+\filldraw[inked,fill=coat] (3.685,4.92) -- (5.029,4.92) -- (4.731,5.88) -- (3.867,5.88) -- cycle;
+\filldraw[inked,fill=coat] (3.872,5.8) -- (4.736,5.8) -- (4.724,6.792) -- (3.764,6.792) -- cycle;
+\filldraw[inked,fill=trim] (3.856,5.8) -- (4.752,5.8) -- (4.744,5.928) -- (3.848,5.928) -- cycle;
+\filldraw[inked,fill=trim] (4.054,6.76) .. controls (3.272,7) and (2.821,6.52) .. (2.084,6.792) -- (2.176,6.6) .. controls (2.913,6.312) and (3.371,6.68) .. (4.416,6.6) -- cycle;
+\filldraw[inked,fill=skin] (4.224,7.128) circle (0.32);
+\filldraw[inked,fill=hair] (3.888,7.128) arc (180:0:0.336) -- (4.416,7.16) -- (4.144,7.288) -- cycle;
+\draw[trumpetdark, line width=3.4pt, line cap=round] (4.752,7.08) -- (6.652,7.66);
+\draw[trumpet, line width=2.0pt, line cap=round] (4.752,7.08) -- (6.652,7.66);
+\filldraw[inked,fill=trumpet] (6.452,7.72) -- (7.452,8.33) -- (7.602,7.28) -- cycle;
+\filldraw[inked,line width=0.6pt,fill=trumpetdark] (5.302,7.26) rectangle (5.402,7.54);
+\filldraw[inked,line width=0.6pt,fill=trumpetdark] (5.522,7.31) rectangle (5.622,7.59);
+\filldraw[inked,line width=0.6pt,fill=trumpetdark] (5.742,7.36) rectangle (5.842,7.64);
+\draw[coat, line width=3.0pt, line cap=round] (4.8,6.52) -- (5.452,7.18);
+\filldraw[inked,fill=seam,line width=0.7pt,rotate around={-20:(7.852,8.28)}] (7.852,8.28) ellipse (0.2 and 0.14);
+\draw[ink, line width=1.0pt, line cap=round] (8.032,8.3) -- (8.032,9.03);
+\draw[ink, line width=1.0pt, line cap=round] (8.032,9.03) -- (8.302,8.83);
+\filldraw[inked,fill=seam,line width=0.7pt,rotate around={-20:(8.472,9.112)}] (8.472,9.112) ellipse (0.2 and 0.14);
+\draw[ink, line width=1.0pt, line cap=round] (8.652,9.132) -- (8.652,9.862);
+\filldraw[inked,fill=seam,line width=0.7pt,rotate around={-20:(9.092,9.238)}] (9.092,9.238) ellipse (0.2 and 0.14);
+\draw[ink, line width=1.0pt, line cap=round] (9.272,9.258) -- (9.272,9.988);
+\draw[ink, line width=1.0pt, line cap=round] (9.272,9.988) -- (9.542,9.788);
+\filldraw[inked,fill=seam,line width=0.7pt,rotate around={-20:(9.712,8.986)}] (9.712,8.986) ellipse (0.2 and 0.14);
+\draw[ink, line width=1.0pt, line cap=round] (9.892,9.006) -- (9.892,9.736);
+\filldraw[inked,fill=seam,line width=0.7pt,rotate around={-20:(10.332,9.238)}] (10.332,9.238) ellipse (0.2 and 0.14);
+\draw[ink, line width=1.0pt, line cap=round] (10.512,9.258) -- (10.512,9.988);
+\draw[ink, line width=1.0pt, line cap=round] (10.512,9.988) -- (10.782,9.788);
+\end{tikzpicture}
+\end{document}

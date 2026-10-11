@@ -256,6 +256,43 @@ pub const ASCENT_PER_STEP: i32 = int(12);
 /// the Idiot God's coming lasts this long before the revelation
 pub const ENDING_TICKS: i32 = secs(14, 1);
 
+// ---- zone five: inside the Idiot God -------------------------------------
+
+/// The Glyph marches a step this long, every this often, and after this
+/// many steps across steps toward you (or away) and turns back
+pub const MARCH_EVERY: i32 = secs(7, 10);
+pub const MARCH_STEP: i32 = int(2);
+pub const MARCH_GLIDE: i32 = 8;
+pub const MARCH_ACROSS: i32 = 5;
+/// the Etching counts as looked at within this angle of the camera's
+/// line, with nothing between
+pub const UNSEEN_LOOK: i32 = deg(30);
+/// the Render turns this fast on the spot, charges once it faces within
+/// this angle of you, for this long, and stands this long after
+pub const CHARGE_TURN: i32 = deg(150) / TICKS_PER_SECOND;
+pub const CHARGE_AIM: i32 = deg(6);
+pub const CHARGE_TICKS: i32 = secs(1, 1);
+pub const CHARGE_REST: i32 = secs(9, 10);
+/// every Toon bounces on one beat, this long, this high
+pub const BOUNCE_TICKS: i32 = secs(4, 5);
+pub const BOUNCE_HEIGHT: i32 = int(3);
+/// the Reprise walks where you were this long before
+pub const ECHO_DELAY: i32 = secs(3, 1);
+/// off an edge of the god's floors you fall, and come down again from
+/// this high over the floor you fell from (the arena's `wrap`)
+pub const WRAP_BELOW: i32 = int(24);
+/// the lullaby: how far ahead the staff shows a note
+pub const STAFF_AHEAD: i32 = secs(3, 1);
+/// where on the staff the line is, and how much is left past the last
+/// note shown, in percent of its width
+pub const STAFF_LINE_PCT: i32 = 12;
+pub const STAFF_END_PCT: i32 = 4;
+/// a bubble of stopped time round the god, grown a share each verse
+pub const BUBBLE_RADIUS: i32 = int(22);
+/// the trumpet's last note rings this long over the stopped god before
+/// the ending
+pub const ASLEEP_TICKS: i32 = secs(4, 1);
+
 // ---- zone two's ground ------------------------------------------------------
 
 /// an updraft vent throws a body up at this speed (about 6 m)

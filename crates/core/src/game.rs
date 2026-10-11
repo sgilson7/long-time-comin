@@ -256,8 +256,27 @@ impl Game {
             if let Some(t) = e.tank.as_mut() {
                 t.survive = 1;
             } else {
+                e.floor_hp = 0;
                 e.hp = 1;
                 e.hurt(10);
+            }
+        }
+    }
+
+    /// Empties the god's last bar at once, so the lullaby begins, for
+    /// tools that drive the game (to see or measure the song).
+    pub fn lull(&mut self) {
+        let Some(run) = self.run.as_mut() else {
+            return;
+        };
+        let w = &mut run.world;
+        if let Some(b) = w.boss {
+            let last = self.c.enemies[w.enemies[b].def].phases.len().max(1) - 1;
+            let e = &mut w.enemies[b];
+            if e.floor_hp > 0 && w.song.is_none() {
+                e.phase = last;
+                e.state = crate::enemy::State::Rest(10);
+                e.hp = e.floor_hp;
             }
         }
     }
@@ -759,9 +778,9 @@ impl Game {
         }
         let (values, dyn_draws) = b.finish(render::DYNAMIC_BUFFER);
         let mut draws = Vec::new();
-        for pass in 0..render::PASSES {
-            draws.extend_from_slice(&self.static_draws[pass]);
-            draws.extend_from_slice(&dyn_draws[pass]);
+        for pass in render::PASS_ORDER {
+            draws.extend_from_slice(&self.static_draws[pass as usize]);
+            draws.extend_from_slice(&dyn_draws[pass as usize]);
         }
         self.values = values;
         self.draws = draws;
@@ -770,12 +789,21 @@ impl Game {
         // (nothing is cut) in the menus
         let (at, floor) = focus.unwrap_or((self.camera.eye, self.camera.eye.y));
         self.view.extend([at.x, at.y, at.z, floor]);
-        // the summit's melt and stopped time, for the shader
-        let (melt, stopped) = match (&self.run, in_run) {
-            (Some(r), true) => (r.world.melt(), if r.world.stop.is_some() { ONE } else { 0 }),
-            _ => (0, 0),
+        // the summit's melt, stopped time, how far space is bent and the
+        // clock (seconds, wrapped), and a bubble of stopped time, for the
+        // shader
+        let (melt, stopped, bubble) = match (&self.run, in_run) {
+            (Some(r), true) => (
+                r.world.melt(),
+                if r.world.stop.is_some() { ONE } else { 0 },
+                r.world.bubble(),
+            ),
+            _ => (0, 0, [0; 4]),
         };
-        self.view.extend([melt, stopped]);
+        let warp = self.scene_zone().scene.warp_pct * ONE / 100;
+        let seconds = ((self.menu_us % 1_000_000_000) * ONE as i64 / 1_000_000) as i32;
+        self.view.extend([melt, stopped, warp, seconds]);
+        self.view.extend(bubble);
         let _ = self.hub_seed;
     }
 
@@ -849,6 +877,38 @@ impl Game {
                 let e = &w.enemies[b];
                 let d = &c.enemies[e.def];
                 let words = c.story.bosses.get(&d.id);
+                // a boss with a bar for each phase: its phase's share of
+                // its health; the lullaby's bar is the sleep
+                if let Some(w) = words.filter(|w| !w.bars.is_empty()) {
+                    let n = d.phases.len();
+                    let (bar, pct, title) = match (&run.world.song, d.lullaby.as_ref()) {
+                        (Some(song), Some(l)) => (
+                            n,
+                            song.sleep(l) * 100 / ONE,
+                            c.say("song_verse")
+                                .replace("{n}", &(song.verse + 1).min(l.verses.len()).to_string())
+                                .replace("{max}", &l.verses.len().to_string()),
+                        ),
+                        _ => {
+                            let k = e.phase.min(n - 1);
+                            let top = d.phases[k].from_pct;
+                            let floor = d.phases.get(k + 1).map_or(0, |p| p.from_pct);
+                            let pct = (e.health_pct() - floor).max(0) * 100 / (top - floor).max(1);
+                            (k, pct, w.title.clone())
+                        }
+                    };
+                    let bars = n + d.lullaby.is_some() as usize;
+                    return json!({
+                        "name": w.name,
+                        "title": title,
+                        "pct": pct,
+                        "phase": bar + 1,
+                        "timer": w.bars.get(bar).cloned().unwrap_or_default(),
+                        "bars": bars,
+                        "bars_left": bars - bar,
+                        "sleep": run.world.song.is_some(),
+                    });
+                }
                 let (pct, timer) = match e.tank.as_ref() {
                     Some(t) if t.survive > 0 => {
                         let total = d.phases[e.phase].survive.max(1);
@@ -871,6 +931,9 @@ impl Game {
                     "pct": pct,
                     "phase": e.phase + 1,
                     "timer": timer,
+                    "bars": 0,
+                    "bars_left": 0,
+                    "sleep": false,
                 })
             });
         let gates: Vec<Value> = w
@@ -912,7 +975,13 @@ impl Game {
         // hints show for a few seconds, then get out of the way
         let fresh = |since: i32| w.tick - since < HINT_TICKS;
         let house = c.zones[run.zone].id == "glass_house";
+        let god = c.zones[run.zone].id == "idiot_god";
+        let learning = w.song.as_ref().is_some_and(|s| {
+            s.asleep == 0 && matches!(s.part, crate::song::Part::Intro | crate::song::Part::Listen)
+        });
         let hint = match node.kind {
+            NodeKind::Boss if learning => c.say("hint_song"),
+            NodeKind::Arrival if god && fresh(0) => c.say("hint_gullet"),
             NodeKind::Arrival if house => c.say("hint_vestibule"),
             NodeKind::Boss if house && w.tick > secs(4, 1) && fresh(secs(4, 1)) => c.say("hint_tank"),
             NodeKind::Arrival if !node.cache.is_empty() => c.say("hint_landing"),
@@ -1067,8 +1136,93 @@ impl Game {
             "perks": perks,
             "pulse_ready": p.build.pulse && w.pulse_cooldown == 0,
             "story": story,
+            "song": self.song_hud(w),
         });
         h.to_string()
+    }
+
+    /// The lullaby's staff: the verse's notes scrolling toward the line,
+    /// each with its key and how it was played, and what part the song is in.
+    fn song_hud(&self, w: &World) -> Value {
+        let c = &self.c;
+        let (Some(song), Some(b)) = (&w.song, w.boss) else {
+            return Value::Null;
+        };
+        let Some(l) = c.enemies[w.enemies[b].def].lullaby.as_ref() else {
+            return Value::Null;
+        };
+        use crate::song::{Judge, Part};
+        let part = match song.part {
+            Part::Intro => "intro",
+            Part::Listen => "listen",
+            Part::Play => "play",
+            Part::Finale => "finale",
+            Part::Asleep => "asleep",
+        };
+        let label = c.say(&format!("song_{part}"));
+        let verse = &l.verses[song.verse.min(l.verses.len() - 1)];
+        let first = crate::song::Song::start(l);
+        let span = 100 - STAFF_LINE_PCT - STAFF_END_PCT;
+        let notes: Vec<Value> = if matches!(song.part, Part::Listen | Part::Play) {
+            verse
+                .notes
+                .iter()
+                .enumerate()
+                .filter_map(|(k, &(at, key))| {
+                    let ahead = first + at - song.clock;
+                    // gone well past the line, or not yet on the staff
+                    if ahead < -l.good * 2 || ahead > STAFF_AHEAD {
+                        return None;
+                    }
+                    let state = if song.part == Part::Listen {
+                        "ghost"
+                    } else {
+                        match song.judged.get(k) {
+                            Some(Judge::Great) => "great",
+                            Some(Judge::Good) => "good",
+                            Some(Judge::Miss) => "miss",
+                            _ => "wait",
+                        }
+                    };
+                    Some(json!({
+                        "x": STAFF_LINE_PCT + ahead * span / STAFF_AHEAD,
+                        "lane": key,
+                        "key": c.say(&format!("song_key_{key}")),
+                        "state": state,
+                    }))
+                })
+                .collect()
+        } else if song.part == Part::Finale {
+            // the last verse once more, played for you
+            let mut out = Vec::new();
+            if let Some(v) = l.verses.last() {
+                for &(n, key) in &v.notes {
+                    let ahead = n - (song.clock - 1);
+                    if (-l.good * 2..=STAFF_AHEAD).contains(&ahead) {
+                        out.push(json!({
+                            "x": STAFF_LINE_PCT + ahead * span / STAFF_AHEAD,
+                            "lane": key,
+                            "key": c.say(&format!("song_key_{key}")),
+                            "state": if ahead <= 0 { "great" } else { "ghost" },
+                        }));
+                    }
+                }
+            }
+            out
+        } else {
+            Vec::new()
+        };
+        let keys: Vec<String> = (0..crate::content::NOTE_KEYS.len())
+            .map(|k| c.say(&format!("song_key_{k}")))
+            .collect();
+        json!({
+            "part": part,
+            "label": label,
+            "line": STAFF_LINE_PCT,
+            "notes": notes,
+            "keys": keys,
+            "words": { "great": c.say("song_great"), "good": c.say("song_good"), "miss": c.say("song_miss") },
+        })
     }
 
     /// Where to mark an enemy on screen: over it, or at the screen's edge
@@ -1445,7 +1599,7 @@ pub fn numbers() -> String {
         "uniforms": [["uLightDir", 3], ["uSky", 3], ["uFog", 3], ["uFogRange", 2], ["uLight", 3], ["uWindowDark", 3], ["uInk", 3], ["uSee", 4], ["uSeeSolid", 1]],
         // the view values: the matrix, the eye, then the see-through focus
         // (the head, and the floor under it)
-        "view": { "matrix": [0, 16], "eye": [16, 19], "focus": [19, 23], "fx": [23, 25] },
+        "view": { "matrix": [0, 16], "eye": [16, 19], "focus": [19, 23], "fx": [23, 27], "bubble": [27, 31] },
         "percent": 100,
     })
     .to_string()
@@ -1641,23 +1795,47 @@ pub(crate) mod tests {
         assert_eq!(g.mode, Mode::Play, "the Idiot God comes first");
         assert!(g.run.as_ref().unwrap().world.melt() > 0);
         frames(&mut g, ENDING_TICKS + 60, 0);
+        // the revelation, and the fall into it
+        assert_eq!(g.mode, Mode::Interlude, "the Defendant does not end the run");
+        let s: Value = serde_json::from_str(&g.screen_json()).unwrap();
+        assert_eq!(s["interlude"]["title"], "THE DOOR");
+        g.continue_run();
+        let h: Value = serde_json::from_str(&g.hud_json()).unwrap();
+        assert_eq!(h["zone"], "The Idiot God");
+        assert_eq!(h["node"], "The Gullet");
+        // the god, sung to sleep (here, at once)
+        let boss = g.run.as_ref().unwrap().route.boss();
+        g.go(boss);
+        frames(&mut g, 120, 0);
+        let run = g.run.as_mut().unwrap();
+        let b = run.world.boss.expect("the god came");
+        assert_eq!(g.c.enemies[run.world.enemies[b].def].id, "azathoth");
+        run.world.player.iframes = 100_000;
+        let e = &mut run.world.enemies[b];
+        e.state = crate::enemy::State::Rest(1000);
+        e.floor_hp = 0;
+        e.hp = 1;
+        e.hurt(5);
+        frames(&mut g, 400, 0);
         assert_eq!(g.mode, Mode::Won);
         assert_eq!(g.meta.wins, 1);
-        // all four bosses' Clemency banked: 25, 40, 55 and 80 in zone.json
-        assert!(g.meta.clemency >= 200, "{}", g.meta.clemency);
+        // all five bosses' Clemency banked: 25, 40, 55, 80 and 150 in zone.json
+        assert!(g.meta.clemency >= 350, "{}", g.meta.clemency);
         let s: Value = serde_json::from_str(&g.screen_json()).unwrap();
         assert_eq!(s["verdict"]["title"], g.c.story.victory_title.as_str());
         g.to_holding();
         assert_eq!(g.mode, Mode::Holding);
         // the time stop is yours now
         assert_eq!(g.meta.build(&g.c).0.stop_ticks, STOP_BASE);
-        // and a run may now start on the ice, in the house or on the mountain
+        // and a run may now start on the ice, in the house, on the
+        // mountain or in the god
         let s: Value = serde_json::from_str(&g.screen_json()).unwrap();
         assert_eq!(s["starts"][0]["zone"], 1);
         assert_eq!(s["starts"][1]["zone"], 2);
         assert_eq!(s["starts"][2]["zone"], 3);
-        g.start_run_at(3);
-        assert_eq!(g.run.as_ref().unwrap().zone, 3);
+        assert_eq!(s["starts"][3]["zone"], 4);
+        g.start_run_at(4);
+        assert_eq!(g.run.as_ref().unwrap().zone, 4);
     }
 
     #[test]
@@ -1683,7 +1861,10 @@ pub(crate) mod tests {
                 assert_eq!(w.player.health, w.player.build.max_health, "healed");
             }
         }
-        assert_eq!(bosses, ["bailiff", "witness", "executor", "defendant"]);
+        assert_eq!(
+            bosses,
+            ["bailiff", "witness", "executor", "defendant", "azathoth"]
+        );
         assert_eq!(g.mode, Mode::Won);
         assert_eq!(g.meta.rush_wins, 1);
         let s: Value = serde_json::from_str(&g.screen_json()).unwrap();
@@ -1704,6 +1885,8 @@ pub(crate) mod tests {
         if let Some(t) = e.tank.as_mut() {
             t.survive = 2;
         } else {
+            // the god is put to sleep at once, its song skipped
+            e.floor_hp = 0;
             e.hp = 1;
             e.hurt(5);
         }
@@ -1715,6 +1898,49 @@ pub(crate) mod tests {
             }
         }
         id
+    }
+
+    #[test]
+    fn the_god_has_a_bar_for_each_phase_and_then_the_lullabys_staff() {
+        let mut g = game_with(r#"{"seen_intro": true}"#);
+        g.begin();
+        g.test_save();
+        g.start_run_at(4);
+        let boss = g.run.as_ref().unwrap().route.boss();
+        g.go(boss);
+        frames(&mut g, 120, 0);
+        let h: Value = serde_json::from_str(&g.hud_json()).unwrap();
+        assert_eq!(h["boss"]["bars"], 4, "three phases and the lullaby");
+        assert_eq!(h["boss"]["bars_left"], 4);
+        assert_eq!(h["boss"]["timer"], "THE BLIND MASS");
+        assert_eq!(h["boss"]["pct"], 100);
+        assert!(h["song"].is_null());
+        // half way through the second bar
+        let run = g.run.as_mut().unwrap();
+        let b = run.world.boss.unwrap();
+        run.world.player.iframes = 1_000_000;
+        let e = &mut run.world.enemies[b];
+        e.phase = 1;
+        e.hp = e.max_hp / 2;
+        let h: Value = serde_json::from_str(&g.hud_json()).unwrap();
+        assert_eq!(h["boss"]["bars_left"], 3);
+        assert_eq!(h["boss"]["timer"], "THE DANCERS");
+        let pct = h["boss"]["pct"].as_i64().unwrap();
+        assert!((45..=55).contains(&pct), "{pct}");
+        // its last bar empty: the staff
+        g.lull();
+        frames(&mut g, 2, 0);
+        let h: Value = serde_json::from_str(&g.hud_json()).unwrap();
+        assert_eq!(h["boss"]["sleep"], true);
+        assert_eq!(h["boss"]["timer"], "THE LULLABY");
+        assert_eq!(h["song"]["keys"].as_array().unwrap().len(), 5);
+        frames(&mut g, 300, 0);
+        let h: Value = serde_json::from_str(&g.hud_json()).unwrap();
+        assert_eq!(h["song"]["part"], "listen");
+        assert!(
+            !h["song"]["notes"].as_array().unwrap().is_empty(),
+            "notes on the staff"
+        );
     }
 
     #[test]
@@ -1896,7 +2122,7 @@ pub(crate) mod tests {
         }
         // in play the view carries the head and the floor under it
         let v = &g.view;
-        assert_eq!(v.len(), 25);
+        assert_eq!(v.len(), 31);
         let p = g.run.as_ref().unwrap().world.player.pos;
         assert_eq!((v[19], v[21], v[22]), (p.x, p.z, p.y));
         assert!(v[20] > p.y + int(1));

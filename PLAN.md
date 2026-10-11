@@ -155,3 +155,29 @@ The request is in `BRIEF.md`. Choices it leaves open (SECOND-ORDER rows Q26 on):
 - **Big fights**: zone four's waves are 8 creatures at the first tier, 10 to 14 after (`zone.json`), most of them light: the Toad, Rook, Sporecap and Hart lost health and shots to suit coming ten at a time, the Hart's hoofbeat lost its ground wave, and the creatures' Clemency was halved.
 - **Fifteen at most** (`MAX_ALIVE`): a wave larger than the room left comes in as room is made, and calls and a boss's summons are cut to the room left.
 
+
+## Round 11: the Idiot God (2026-10-11)
+
+The request is in `BRIEF.md`. Choices it leaves open (SECOND-ORDER rows R11 and Q30 on):
+
+- **What "the latest Ultrakill chapters" lends.** Layer 8, *Fraud* (February 2026), is described as trick art: rooms that are not what they look like. With it, the games of impossible space: *Manifold Garden* (fall off the world and come down on it again from above; the world repeating above and below you), *Antichamber* and *Portal* (a doorway leads somewhere it cannot), the Penrose stair of Escher's *Relativity* (a stair that climbs forever), *Hyperbolica* (space that curves away from you), and Half-Life's Xen (islands in a void).
+- **The story.** Beating the Defendant no longer ends the run. THE DOOR (the revelation) becomes the summit's interlude, and its button falls into the maw. Zone five is *The Idiot God*, its year "Outside". At its heart the Defendant understands what the older self did and chooses to do it better: to stop time in a bubble round the god alone, and keep it asleep. The ending (the verdict) is the Defendant playing the trumpet for ever.
+- **The spaces** (`crates/core/src/arena/god.rs`), each a floor in a void, the same square and gates as the other zones so the route, spawn and reach rules apply:
+  - **Falling comes round.** Off any edge you fall, and come down again from the sky over the same arena, unhurt, keeping your speed; enemies too. The arena is drawn again above and below you, fading into the dark, so you see the floor you will land on overhead.
+  - **Space curves.** Far off, the scene bends up and round you as if you stood in a bowl, and breathes; near you it is flat, so aiming is unchanged (`scene.vert`, `uFx`).
+  - **Seams.** A doorframe's two faces lead elsewhere: through one, you come out of its partner turned as it is turned, keeping your speed. Orbs go through seams too.
+  - Archetypes: the **Fold** (islands, and the Waiting City hanging upside down overhead), the **Penrose Stair** (four flights round a well, each climbing; the top landing's seam is the bottom landing, so it climbs for ever), the **Doors** (free-standing frames paired as seams), the **Lattice** (Xen: rocks in the void, crystals, updrafts), the **Orrery** (rings of floor round a sun, the rings' gaps fallen through); the **Gullet** (arrival), the **Still Point** (rest: a stopped clock, the trumpet's case), the **Heart** (the boss).
+- **Seven enemies, each from another art style or game** (drawn in `draw/god.rs`; the renderer gains three passes for styles a flat shape cannot give):
+  - the **Glyph**, an eight-bit invader of cubes, flat to you, two frames: marches sideways in steps, steps nearer, reverses; fires columns;
+  - the **Tesseract**, a vector-display hypercube in glowing lines, turning through four dimensions: folds away and unfolds elsewhere (a blinker); fires from its corners;
+  - the **Etching**, an engraved figure in one-bit dither (Return of the Obra Dinn): moves only while you are not looking at it, and then fast;
+  - the **Render**, a PlayStation-era hound whose corners snap to a coarse grid: turns on the spot, then charges straight, like tank controls;
+  - the **Toon**, a rubber-hose cartoon with pie-cut eyes and white gloves, its ink boiling: every Toon bounces on one shared beat, and fires on landing;
+  - the **Reprise**, you in photographic negative: walks the path you walked three seconds ago, firing your Carbine's bursts; stand still and it reaches you;
+  - the **Recursion**, a Sierpinski pyramid in gold: killed, it splits into three smaller, and those into three smaller again.
+- **The Idiot God** (kind `god`): a blind mass the size of the room over the Heart's north side, in three phases with a bar each (named, coloured), then the lullaby:
+  - THE BLIND MASS: froth (rings that curl into flowers), eyes opening (aimed fans from everywhere above), Glyphs called;
+  - THE DANCERS: the mindless dancers ring the god and pipe (lanes, turning stars, domes that close), Toons and Tesseracts called;
+  - THE DREAMER: its eyes all open, the picture's colours turn over; orbs that fly out and come back along their path (time folding), Reprises and Etchings called.
+- **The lullaby.** When the last bar empties the god does not die. The Defendant takes out a trumpet. A staff of five lines crosses the screen, and five notes after the ocarina's (the left mouse button, Q, E, R and F, which the trumpet frees from your gun and abilities). The dancers pipe a phrase (listen); then the same phrase scrolls again and you play it in time (play). A phrase played well (three in four of its notes on time) puts the god a verse deeper asleep; played badly, it stirs and the phrase comes again. Four verses, longer each time. Through all of it the god fires on the beat (rings every other beat, a ground wave to jump every eighth), so you dodge while you play: move, jump and dash stay yours. A bubble of stopped time grows round the god with each verse. After the fourth, the bubble closes, time stops round it, and the last verse plays once more over the stopped god; then the ending.
+- **Bars.** A boss's HUD bar shows its phase's share of its health, with a pip for each bar left, and the phase's name. The lullaby's bar is the sleep.

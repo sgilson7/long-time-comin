@@ -127,6 +127,10 @@
       "Stop time, once the Defendant is beaten: {stop} s at first. Enemies, orbs and your own shots hold still until it resumes."
     ],
     [
+      "Left mouse, Q, E, R, F",
+      "With the trumpet out, at the Idiot God's heart: its five notes, low to high. Play each as it reaches the line."
+    ],
+    [
       "C (in the air)",
       "Ground pound, once Gavel Drop is bought: straight down at {pound_speed} m/s, a shockwave of {pound_damage} damage within {pound_radius} m where you land, and a bounce back up."
     ],
@@ -256,5 +260,26 @@
   "hud_stopped": "TIME STOPPED: {n} s",
   "hud_rounds": "Rounds {n} of {max}",
   "hud_loading": "loading",
-  "why_locked": "Beat {boss} first"
+  "why_locked": "Beat {boss} first",
+  "callout_trumpet": "YOU TAKE OUT THE TRUMPET",
+  "callout_stir": "IT STIRS. AGAIN.",
+  "callout_verse": "IT SLEEPS DEEPER",
+  "callout_bubble": "TIME STOPS ROUND IT",
+  "callout_asleep": "THE IDIOT GOD SLEEPS",
+  "hint_gullet": "Off any edge you fall, and come down again from above, unhurt. A gold frame is a seam: walk through it and you come out of its partner. Shoot through it too.",
+  "hint_song": "The trumpet: five notes, on left click, Q, E, R and F. The dancers pipe a verse: listen. Then play it back as each note reaches the line. Keep moving: it fires on the beat.",
+  "song_intro": "THE TRUMPET",
+  "song_listen": "LISTEN",
+  "song_play": "PLAY",
+  "song_finale": "THE LAST VERSE, ONCE MORE",
+  "song_asleep": "ASLEEP",
+  "song_verse": "Verse {n} of {max}",
+  "song_key_0": "LMB",
+  "song_key_1": "Q",
+  "song_key_2": "E",
+  "song_key_3": "R",
+  "song_key_4": "F",
+  "song_great": "GREAT",
+  "song_good": "GOOD",
+  "song_miss": "MISS"
 }

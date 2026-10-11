@@ -65,6 +65,7 @@ export function makeRenderer(canvas, N, shaders, meshData) {
   const uPass = uniform("uPass");
   const uCut = uniform("uCut");
   const uFx = uniform("uFx");
+  const uBubble = uniform("uBubble");
   const V = N.view;
 
   const instanceBuffers = [gl.createBuffer(), gl.createBuffer()];
@@ -114,7 +115,8 @@ export function makeRenderer(canvas, N, shaders, meshData) {
       gl.uniformMatrix4fv(uVP, false, view.subarray(...V.matrix));
       gl.uniform3fv(uEye, view.subarray(...V.eye));
       gl.uniform4fv(uFocus, view.subarray(...V.focus));
-      gl.uniform2fv(uFx, view.subarray(...V.fx));
+      gl.uniform4fv(uFx, view.subarray(...V.fx));
+      gl.uniform4fv(uBubble, view.subarray(...V.bubble));
       let current = -1;
       let cut = -1;
       for (let i = 0; i < draws.length; i += N.draw_values) {

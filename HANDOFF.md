@@ -112,11 +112,23 @@ Live: PR #6 passed both workflows (check 38158683100, breaks 38158683105) and me
 
 Live: PR #7 passed both workflows (check 38163993223, breaks 38163993270) and merged as c053414; the main run 38165969745 deployed it, and the live browser check passed in chromium, firefox and webkit. The website's page was updated and deployed as build f93857c1; `make gate-live` passed.
 
+## Round 11 (2026-10-11): the Idiot God
+
+`./scripts/check.sh` passed locally (207 core and 11 boundary tests, the browser check in chromium, firefox and webkit), and each of the round's 36 new breaks fails its test. `BRIEF.md` has the request, `PLAN.md` (Round 11) the design, `SECOND-ORDER.md` R11, Q30 to Q43, B9 and T12 what was chosen and found. Two parts were built by agents in their own worktrees and merged: the arenas (`arena/god.rs`) and the drawing (`draw/god.rs`).
+
+- **The song**: `song.rs` (the lullaby's parts, judging, the beat, the finale), `World::lullaby`, the god's `floor_hp`; the data is the god's `lullaby` in `enemies.json`.
+- **Impossible space**: `Arena::wrap` and `repeated`, `Seam` (`arena.rs`), `World::wrap_and_seams`, orbs and shots through seams; the bend in `scene.vert` (`uFx.z`, by each shape's centre).
+- **Styles**: `PASS_DITHER`, `PASS_PS1`, `PASS_NEGATIVE` and `PASS_ORDER` (`render.rs`), `Batch::style`; the shaders.
+- **The seven**: gaits `march`, `unseen`, `charge`, `bounce`, `echo` (`enemy.rs`); `splits`; the world tells each enemy the clock (`beat`), whether you look at it (`seen`) and where you were (`trail`).
+- **HUD**: a bar per phase (`story.json` `bars`), the staff (`Game::song_hud`, `#staff`).
+- **The ending**: `story.json` `interludes.the_ascent` (THE DOOR), the verdict THE LULLABY, `web/art/lullaby.png`.
+
 ## What remains
 
 - Sam's playtest (`TRIAGE.md`). Every feel and balance number is the agent's guess (SECOND-ORDER T1); the probe shows the curve (no wins with no upgrades, about half with 62 Clemency of upgrades), not whether it is fun (T2, P2).
 - Sam's reading of the story's words (T3).
-- Zone five (the Idiot God, the heart of it, the trumpet) is sealed, and the hidden zone six (a harder new game and the cat) is not listed; both are described in `BRIEF.md`'s seventh request. Zone five needs its entry in `zone.json`, a builder in `arena.rs`'s style, its enemies and an interlude in `story.json` keyed `the_ascent`.
+- The hidden zone six (a harder new game and the cat) is not listed; it is described in `BRIEF.md`'s seventh request.
+- Sam's playtest of zone five (T12): the lullaby's keys and timing, the god's length, whether the spaces are trippy enough.
 - Sam's playtest of zone three (T7), and whether the Executor moves as the Atlas of Tyr does (M2).
 - Not built: music, a sensitivity setting, pathfinding for zones one and two's walkers (they walk straight and turn at walls; the house's agents walk a grid).
 

@@ -1,5 +1,5 @@
 {
-  "_about": "Every number the page's sound needs (the page holds none of its own). Each recipe is a list of layers: an oscillator sweeping `from` to `to` Hz, or the core's white noise through a filter. Times are in seconds after the sound starts. `gaps` is the least time between two plays of the same sound.",
+  "_about": "Every number the page's sound needs (the page holds none of its own). Each recipe is a list of layers: an oscillator sweeping `from` to `to` Hz, or the core's white noise through a filter. Times are in seconds after the sound starts. `gaps` is the least time between two plays of the same sound. The lullaby's notes (trumpet_* and pipe_*) are the ocarina's five pitches, D4, F4, A4, B4 and D5, in hertz; the pipes sound an octave up.",
   "master": 0.5,
   "floor": 0.0001,
   "tail": 0.05,
@@ -15,7 +15,11 @@
     "rev": 0.08,
     "clank": 0.05,
     "plant": 0.05,
-    "withdraw": 0.08
+    "withdraw": 0.08,
+    "drum": 0.1,
+    "tick": 0.1,
+    "wrap": 0.5,
+    "seam": 0.2
   },
   "recipes": {
     "fire_carbine": [
@@ -950,6 +954,554 @@
         "attack": 0.002,
         "dur": 0.3,
         "gain": 0.4
+      }
+    ],
+    "trumpet_d": [
+      {
+        "type": "osc",
+        "wave": "sawtooth",
+        "from": 289.2551,
+        "to": 293.66,
+        "at": 0,
+        "attack": 0.03,
+        "dur": 0.42,
+        "gain": 0.16
+      },
+      {
+        "type": "osc",
+        "wave": "square",
+        "from": 587.32,
+        "to": 587.32,
+        "at": 0,
+        "attack": 0.04,
+        "dur": 0.36,
+        "gain": 0.04
+      },
+      {
+        "type": "noise",
+        "filter": "bandpass",
+        "freq": 880.98,
+        "q": 2,
+        "at": 0,
+        "attack": 0.003,
+        "dur": 0.08,
+        "gain": 0.05
+      }
+    ],
+    "pipe_d": [
+      {
+        "type": "osc",
+        "wave": "sine",
+        "from": 581.4468,
+        "to": 587.32,
+        "at": 0,
+        "attack": 0.05,
+        "dur": 0.38,
+        "gain": 0.14
+      },
+      {
+        "type": "osc",
+        "wave": "triangle",
+        "from": 1174.64,
+        "to": 1174.64,
+        "at": 0,
+        "attack": 0.06,
+        "dur": 0.3,
+        "gain": 0.03
+      },
+      {
+        "type": "noise",
+        "filter": "highpass",
+        "freq": 4000,
+        "q": 0.7,
+        "at": 0,
+        "attack": 0.003,
+        "dur": 0.2,
+        "gain": 0.03
+      }
+    ],
+    "trumpet_f": [
+      {
+        "type": "osc",
+        "wave": "sawtooth",
+        "from": 343.99155,
+        "to": 349.23,
+        "at": 0,
+        "attack": 0.03,
+        "dur": 0.42,
+        "gain": 0.16
+      },
+      {
+        "type": "osc",
+        "wave": "square",
+        "from": 698.46,
+        "to": 698.46,
+        "at": 0,
+        "attack": 0.04,
+        "dur": 0.36,
+        "gain": 0.04
+      },
+      {
+        "type": "noise",
+        "filter": "bandpass",
+        "freq": 1047.69,
+        "q": 2,
+        "at": 0,
+        "attack": 0.003,
+        "dur": 0.08,
+        "gain": 0.05
+      }
+    ],
+    "pipe_f": [
+      {
+        "type": "osc",
+        "wave": "sine",
+        "from": 691.4754,
+        "to": 698.46,
+        "at": 0,
+        "attack": 0.05,
+        "dur": 0.38,
+        "gain": 0.14
+      },
+      {
+        "type": "osc",
+        "wave": "triangle",
+        "from": 1396.92,
+        "to": 1396.92,
+        "at": 0,
+        "attack": 0.06,
+        "dur": 0.3,
+        "gain": 0.03
+      },
+      {
+        "type": "noise",
+        "filter": "highpass",
+        "freq": 4000,
+        "q": 0.7,
+        "at": 0,
+        "attack": 0.003,
+        "dur": 0.2,
+        "gain": 0.03
+      }
+    ],
+    "trumpet_a": [
+      {
+        "type": "osc",
+        "wave": "sawtooth",
+        "from": 433.4,
+        "to": 440.0,
+        "at": 0,
+        "attack": 0.03,
+        "dur": 0.42,
+        "gain": 0.16
+      },
+      {
+        "type": "osc",
+        "wave": "square",
+        "from": 880.0,
+        "to": 880.0,
+        "at": 0,
+        "attack": 0.04,
+        "dur": 0.36,
+        "gain": 0.04
+      },
+      {
+        "type": "noise",
+        "filter": "bandpass",
+        "freq": 1320.0,
+        "q": 2,
+        "at": 0,
+        "attack": 0.003,
+        "dur": 0.08,
+        "gain": 0.05
+      }
+    ],
+    "pipe_a": [
+      {
+        "type": "osc",
+        "wave": "sine",
+        "from": 871.2,
+        "to": 880.0,
+        "at": 0,
+        "attack": 0.05,
+        "dur": 0.38,
+        "gain": 0.14
+      },
+      {
+        "type": "osc",
+        "wave": "triangle",
+        "from": 1760.0,
+        "to": 1760.0,
+        "at": 0,
+        "attack": 0.06,
+        "dur": 0.3,
+        "gain": 0.03
+      },
+      {
+        "type": "noise",
+        "filter": "highpass",
+        "freq": 4000,
+        "q": 0.7,
+        "at": 0,
+        "attack": 0.003,
+        "dur": 0.2,
+        "gain": 0.03
+      }
+    ],
+    "trumpet_b": [
+      {
+        "type": "osc",
+        "wave": "sawtooth",
+        "from": 486.4718,
+        "to": 493.88,
+        "at": 0,
+        "attack": 0.03,
+        "dur": 0.42,
+        "gain": 0.16
+      },
+      {
+        "type": "osc",
+        "wave": "square",
+        "from": 987.76,
+        "to": 987.76,
+        "at": 0,
+        "attack": 0.04,
+        "dur": 0.36,
+        "gain": 0.04
+      },
+      {
+        "type": "noise",
+        "filter": "bandpass",
+        "freq": 1481.6399999999999,
+        "q": 2,
+        "at": 0,
+        "attack": 0.003,
+        "dur": 0.08,
+        "gain": 0.05
+      }
+    ],
+    "pipe_b": [
+      {
+        "type": "osc",
+        "wave": "sine",
+        "from": 977.8824,
+        "to": 987.76,
+        "at": 0,
+        "attack": 0.05,
+        "dur": 0.38,
+        "gain": 0.14
+      },
+      {
+        "type": "osc",
+        "wave": "triangle",
+        "from": 1975.52,
+        "to": 1975.52,
+        "at": 0,
+        "attack": 0.06,
+        "dur": 0.3,
+        "gain": 0.03
+      },
+      {
+        "type": "noise",
+        "filter": "highpass",
+        "freq": 4000,
+        "q": 0.7,
+        "at": 0,
+        "attack": 0.003,
+        "dur": 0.2,
+        "gain": 0.03
+      }
+    ],
+    "trumpet_d2": [
+      {
+        "type": "osc",
+        "wave": "sawtooth",
+        "from": 578.5200500000001,
+        "to": 587.33,
+        "at": 0,
+        "attack": 0.03,
+        "dur": 0.42,
+        "gain": 0.16
+      },
+      {
+        "type": "osc",
+        "wave": "square",
+        "from": 1174.66,
+        "to": 1174.66,
+        "at": 0,
+        "attack": 0.04,
+        "dur": 0.36,
+        "gain": 0.04
+      },
+      {
+        "type": "noise",
+        "filter": "bandpass",
+        "freq": 1761.9900000000002,
+        "q": 2,
+        "at": 0,
+        "attack": 0.003,
+        "dur": 0.08,
+        "gain": 0.05
+      }
+    ],
+    "pipe_d2": [
+      {
+        "type": "osc",
+        "wave": "sine",
+        "from": 1162.9134000000001,
+        "to": 1174.66,
+        "at": 0,
+        "attack": 0.05,
+        "dur": 0.38,
+        "gain": 0.14
+      },
+      {
+        "type": "osc",
+        "wave": "triangle",
+        "from": 2349.32,
+        "to": 2349.32,
+        "at": 0,
+        "attack": 0.06,
+        "dur": 0.3,
+        "gain": 0.03
+      },
+      {
+        "type": "noise",
+        "filter": "highpass",
+        "freq": 4000,
+        "q": 0.7,
+        "at": 0,
+        "attack": 0.003,
+        "dur": 0.2,
+        "gain": 0.03
+      }
+    ],
+    "drum": [
+      {
+        "type": "osc",
+        "wave": "sine",
+        "from": 90,
+        "to": 45,
+        "at": 0,
+        "attack": 0.003,
+        "dur": 0.3,
+        "gain": 0.32
+      },
+      {
+        "type": "noise",
+        "filter": "lowpass",
+        "freq": 300,
+        "q": 0.8,
+        "at": 0,
+        "attack": 0.003,
+        "dur": 0.2,
+        "gain": 0.25
+      }
+    ],
+    "tick": [
+      {
+        "type": "osc",
+        "wave": "sine",
+        "from": 70,
+        "to": 50,
+        "at": 0,
+        "attack": 0.003,
+        "dur": 0.18,
+        "gain": 0.16
+      },
+      {
+        "type": "noise",
+        "filter": "lowpass",
+        "freq": 220,
+        "q": 0.8,
+        "at": 0,
+        "attack": 0.003,
+        "dur": 0.1,
+        "gain": 0.1
+      }
+    ],
+    "sour": [
+      {
+        "type": "osc",
+        "wave": "sawtooth",
+        "from": 300,
+        "to": 240,
+        "at": 0,
+        "attack": 0.01,
+        "dur": 0.3,
+        "gain": 0.1
+      },
+      {
+        "type": "osc",
+        "wave": "sawtooth",
+        "from": 318,
+        "to": 250,
+        "at": 0,
+        "attack": 0.01,
+        "dur": 0.3,
+        "gain": 0.1
+      }
+    ],
+    "stir": [
+      {
+        "type": "osc",
+        "wave": "sawtooth",
+        "from": 70,
+        "to": 45,
+        "at": 0,
+        "attack": 0.1,
+        "dur": 1.2,
+        "gain": 0.22
+      },
+      {
+        "type": "noise",
+        "filter": "lowpass",
+        "freq": 200,
+        "q": 1.2,
+        "at": 0,
+        "attack": 0.08,
+        "dur": 1.0,
+        "gain": 0.3
+      }
+    ],
+    "verse": [
+      {
+        "type": "osc",
+        "wave": "sine",
+        "from": 587.33,
+        "to": 587.33,
+        "at": 0,
+        "attack": 0.02,
+        "dur": 1.2,
+        "gain": 0.12
+      },
+      {
+        "type": "osc",
+        "wave": "sine",
+        "from": 880,
+        "to": 880,
+        "at": 0.08,
+        "attack": 0.02,
+        "dur": 1.2,
+        "gain": 0.08
+      },
+      {
+        "type": "osc",
+        "wave": "sine",
+        "from": 1174.66,
+        "to": 1174.66,
+        "at": 0.16,
+        "attack": 0.02,
+        "dur": 1.4,
+        "gain": 0.06
+      }
+    ],
+    "trumpet": [
+      {
+        "type": "osc",
+        "wave": "sawtooth",
+        "from": 293.66,
+        "to": 293.66,
+        "at": 0,
+        "attack": 0.04,
+        "dur": 0.5,
+        "gain": 0.14
+      },
+      {
+        "type": "osc",
+        "wave": "sawtooth",
+        "from": 440,
+        "to": 440,
+        "at": 0.25,
+        "attack": 0.04,
+        "dur": 0.5,
+        "gain": 0.12
+      },
+      {
+        "type": "osc",
+        "wave": "sawtooth",
+        "from": 587.33,
+        "to": 587.33,
+        "at": 0.5,
+        "attack": 0.04,
+        "dur": 0.9,
+        "gain": 0.14
+      }
+    ],
+    "asleep": [
+      {
+        "type": "osc",
+        "wave": "sine",
+        "from": 146.83,
+        "to": 146.83,
+        "at": 0,
+        "attack": 0.5,
+        "dur": 4.0,
+        "gain": 0.16
+      },
+      {
+        "type": "osc",
+        "wave": "sine",
+        "from": 220,
+        "to": 220,
+        "at": 0,
+        "attack": 0.6,
+        "dur": 4.0,
+        "gain": 0.1
+      },
+      {
+        "type": "osc",
+        "wave": "sine",
+        "from": 293.66,
+        "to": 293.66,
+        "at": 0,
+        "attack": 0.7,
+        "dur": 4.0,
+        "gain": 0.08
+      }
+    ],
+    "wrap": [
+      {
+        "type": "noise",
+        "filter": "bandpass",
+        "freq": 900,
+        "q": 0.6,
+        "at": 0,
+        "attack": 0.1,
+        "dur": 0.6,
+        "gain": 0.18
+      },
+      {
+        "type": "osc",
+        "wave": "sine",
+        "from": 600,
+        "to": 200,
+        "at": 0,
+        "attack": 0.05,
+        "dur": 0.6,
+        "gain": 0.06
+      }
+    ],
+    "seam": [
+      {
+        "type": "osc",
+        "wave": "triangle",
+        "from": 1200,
+        "to": 2400,
+        "at": 0,
+        "attack": 0.01,
+        "dur": 0.25,
+        "gain": 0.06
+      },
+      {
+        "type": "noise",
+        "filter": "highpass",
+        "freq": 5000,
+        "q": 0.7,
+        "at": 0,
+        "attack": 0.003,
+        "dur": 0.2,
+        "gain": 0.05
       }
     ]
   }

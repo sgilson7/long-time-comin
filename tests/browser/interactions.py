@@ -6,15 +6,16 @@ shows. Expected values are worked out by hand from the data files, never
 copied from the game's own output:
 
 - story.json's sentencing has 5 lines; its indictment has 10 counts.
-- the Codex has 5 tabs (copy.json codex_tabs), 16 control rows
-  (copy.json controls), 5 guns (weapons.json) and 43 enemies (enemies.json:
-  seven and a boss in each of the four built zones, and three mini-bosses).
+- the Codex has 5 tabs (copy.json codex_tabs), 17 control rows
+  (copy.json controls), 5 guns (weapons.json) and 53 enemies (enemies.json:
+  the 43 of the first four zones, then zone five's seven, the Recursion's
+  two smaller orders and the Idiot God).
 - the crater's gate is open, so its label shows; the first fight's gates
   stay dark and unlabelled until its enemies are defeated.
 - upgrades.json lists 32 upgrades in 4 branches (copy.json holding_branches);
   the cheapest (Constitution I) costs 8, so a new record with 0 Clemency can
   buy none of them.
-- zone.json lists 5 zones, 4 built: 1 is sealed.
+- zone.json lists 5 zones, all built: none is sealed.
 - a run starts in the arrival node, named "The Crater" in zone.json; with
   no upgrades the body has 100 health (balance.rs BASE_HEALTH), 1 jump
   (BASE_JUMPS) and 2 dashes (DASH_CHARGES).
@@ -69,7 +70,7 @@ def run(page, check, engine):
     check(len(branches) == 4, f"in four branches ({len(branches)})")
     check(page.inner_text("#m-counts") == "0 / 10", f"no count read yet ({page.inner_text('#m-counts')!r})")
     sealed = page.query_selector_all("#m-route li.sealed")
-    check(len(sealed) == 1, f"one zone sealed in this build ({len(sealed)})")
+    check(len(sealed) == 0, f"no zone sealed in this build ({len(sealed)})")
     later = page.query_selector_all("#start-later button")
     check(len(later) == 0, f"a new record can start only in 2031 ({len(later)})")
 
@@ -77,13 +78,13 @@ def run(page, check, engine):
     check(page.is_visible("#codex"), "the Codex opens from the Holding")
     tabs = page.query_selector_all("#codex-tabs .tab")
     rows = page.query_selector_all("#codex-body table.stats tr")
-    check(len(tabs) == 5 and len(rows) == 16, f"5 tabs, 16 control rows ({len(tabs)}, {len(rows)})")
+    check(len(tabs) == 5 and len(rows) == 17, f"5 tabs, 17 control rows ({len(tabs)}, {len(rows)})")
     click(page, "#codex-tabs .tab:nth-child(2)")
     guns = page.query_selector_all("#codex-body .codex-card")
     check(len(guns) == 5, f"five guns ({len(guns)})")
     click(page, "#codex-tabs .tab:nth-child(3)")
     foes = page.query_selector_all("#codex-body .codex-card")
-    check(len(foes) == 43, f"forty-three enemies ({len(foes)})")
+    check(len(foes) == 53, f"fifty-three enemies ({len(foes)})")
     body = page.inner_text("#codex-body")
     check("{" not in body, "no unfilled placeholder in the Codex")
     click(page, "#codex-close")

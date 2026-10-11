@@ -26,6 +26,7 @@ pub mod player;
 pub mod render;
 pub mod rng;
 pub mod route;
+pub mod song;
 pub mod squad;
 pub mod tank;
 pub mod weapons;
