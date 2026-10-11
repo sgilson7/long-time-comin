@@ -16,7 +16,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 BREAKS = [
  ("held formation", "crates/core/src/orbs.rs", "let wait = (v.hold + v.stagger * k as i32).max(1);", "let wait = 1;", "a_halo_hangs_still"),
- ("cage closes inward", "crates/core/src/orbs.rs", "Launch::In => from_hub.neg(),", "Launch::In => from_hub,", "a_cage_round_you"),
+ ("cage closes inward", "crates/core/src/orbs.rs", "Launch::In | Launch::Gather => from_hub.neg(),", "Launch::In | Launch::Gather => from_hub,", "a_cage_round_you"),
  ("stagger", "crates/core/src/orbs.rs", "let wait = (v.hold + v.stagger * k as i32).max(1);", "let wait = (v.hold + v.stagger).max(1);", "a_staggered_formation"),
  ("second hold", "crates/core/src/orbs.rs", "if self.flown > r.stop {", "if self.flown > r.stop * 1000 {", "a_refracted_shot"),
  ("blue colours", "crates/core/src/content.rs", 'pub const BLUE: &[&str] = &["cyan", "blue"];', 'pub const BLUE: &[&str] = &["blue"];', "blue_orbs_are"),
@@ -92,6 +92,13 @@ BREAKS = [
  ("the mini-boss list", "crates/core/src/route.rs", "            let mb = r.minibosses.iter().find(|m| m.at == i);", "            let mb = r.minibosses.iter().find(|m| m.at == 99);", "the_house_route_has"),
  ("the ascent's own patterns", "data/enemies.json", '"pattern": "proxy_burst"', '"pattern": "burst_fire"', "the_ascent_has_seven"),
  ("safe ground", "crates/core/src/player.rs", "            if self.safe_ground(level) {", "            if true {", "a_fall_returns_you"),
+ # round eight: the Defendant's moves
+ ("a dome rises in rows", "crates/core/src/orbs.rs", "                let pitch = fx::TURN / 4 * j / rows;", "                let pitch = 0;", "a_dome_is_a_half_sphere"),
+ ("a gathering orb is spent", "crates/core/src/orbs.rs", "        if !alive || gathered {", "        if !alive || (gathered && false) {", "the_defendants_stop_lays_a_dome"),
+ ("the dome's shells come apart", "data/patterns.json", '"hold_ms": 650,\n          "launch": "gather"', '"hold_ms": 500,\n          "launch": "gather"', "the_defendants_stop_lays_a_dome"),
+ ("the stop one time in four", "crates/core/src/enemy.rs", "            let due = self.passes % a.once_in == 0;", "            let due = true;", "the_defendant_stops_time_only"),
+ ("the hook's cast waits", "crates/core/src/enemy.rs", "            State::Casting(0) if self.hooking() => {", "            State::Casting(0) if false => {", "the_defendant_hooks"),
+ ("the pound leaps", "crates/core/src/enemy.rs", "                LUNGE_POUND_HEIGHT,\n", "                0,\n", "the_defendant_hooks"),
 ]
 
 

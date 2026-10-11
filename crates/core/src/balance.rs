@@ -195,6 +195,17 @@ pub const THROW_RADIUS: i32 = int(4);
 pub const STOP_BASE: i32 = secs(3, 1);
 pub const STOP_PLUS: i32 = secs(1, 1);
 pub const STOP_COOLDOWN: i32 = secs(30, 1);
+/// the Defendant's hook: it lands this far beside you, and it pulls the
+/// Defendant along at this speed until it is this close
+pub const LUNGE_HOOK_BESIDE: i32 = int(4);
+pub const LUNGE_HOOK_SPEED: i32 = per_tick(36, 1);
+pub const LUNGE_HOOK_ARRIVE: i32 = ONE * 15 / 10;
+/// its cast waits on the pull at most this long
+pub const LUNGE_HOOK_MAX: i32 = secs(1, 1);
+/// the Defendant's ground pound: it leaps this high over where you were,
+/// then drops at this speed
+pub const LUNGE_POUND_HEIGHT: i32 = int(6);
+pub const LUNGE_POUND_DROP: i32 = per_tick(40, 1);
 /// each step along the Ascent's map is this much higher up the mountain
 pub const ASCENT_PER_STEP: i32 = int(12);
 /// the Idiot God's coming lasts this long before the revelation

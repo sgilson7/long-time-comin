@@ -6,7 +6,9 @@
 //! Units shown: metres, seconds, metres a second, degrees, health points.
 
 use crate::balance::*;
-use crate::content::{Anchor, Content, EnemyDef, Form, GunLevel, Kind, Launch, Role, Shape, Upgrade, Volley};
+use crate::content::{
+    Anchor, Content, EnemyDef, Form, GunLevel, Kind, Launch, Lunge, Role, Shape, Upgrade, Volley,
+};
 use crate::enemy::PHASE_TICKS;
 use crate::fx::{self, ONE};
 use serde_json::{json, Value};
@@ -235,6 +237,7 @@ fn launch_words(l: Launch) -> &'static str {
         Launch::Keep => "on the way it was going",
         Launch::Out => "outward from the shape's centre",
         Launch::In => "inward to the shape's centre",
+        Launch::Gather => "inward to the shape's centre, where it is spent",
         Launch::Aim => "at where you are at that moment",
         Launch::Lead => "at where you will be if you keep moving as you are",
         Launch::Down => "straight down",
@@ -255,6 +258,10 @@ fn formation(v: &Volley, size: &str, speed: &str) -> String {
         Form::Star => format!("a star of {} arms of {} {size}, {r} m long", v.count, v.rows),
         Form::Spiral => format!("a spiral of {} {size}, {} turns out to {r} m", v.count, v.rows),
         Form::Arc => format!("an arc of {} {size} across {}° at {r} m", v.count, deg(v.spread)),
+        Form::Dome => format!(
+            "a half sphere of {} rings of {size} round you, {r} m out, the lowest of {}",
+            v.rows, v.count
+        ),
         Form::Ribbon => format!("a wavy line of {} {size} {} m long", v.count, m(v.radius * 2)),
         Form::Lane => format!(
             "two walls of {} {size}, {} m long, {r} m either side of the line to you",
@@ -367,6 +374,30 @@ fn movement(d: &EnemyDef, c: &Content) -> String {
                 .filter(|a| a.stop > 0)
                 .map(|a| s(a.stop))
                 .collect();
+            let rare = d
+                .phases
+                .iter()
+                .flat_map(|p| p.attacks.iter())
+                .filter(|a| a.stop > 0)
+                .map(|a| a.once_in)
+                .max()
+                .unwrap_or(1);
+            let lunges: Vec<&str> = d
+                .phases
+                .iter()
+                .flat_map(|p| p.attacks.iter())
+                .map(|a| match a.moves {
+                    Lunge::Hook => "throws a hook to beside you and pulls itself there",
+                    Lunge::Pound => "leaps over you and drops in a ground pound",
+                    Lunge::None => "",
+                })
+                .filter(|w| !w.is_empty())
+                .fold(Vec::new(), |mut v, w| {
+                    if !v.contains(&w) {
+                        v.push(w);
+                    }
+                    v
+                });
             let calls: Vec<String> = d
                 .phases
                 .iter()
@@ -375,9 +406,11 @@ fn movement(d: &EnemyDef, c: &Content) -> String {
                 .map(|(k, p)| format!("phase {} from {}% health", k + 1, p.from_pct))
                 .collect();
             format!(
-                "Moves as you do: it runs round you at about {} m, dashes, and jumps. Some of its attacks stop time ({} s): everything but it holds still, you included, while it steps round you and lays its shots; they fly when time resumes. It has {} phases ({}); at each change it calls help, clears every orb and cannot be hurt for {} s.",
+                "Moves as you do: it runs round you at about {} m, dashes, and jumps; in its attacks it {}. Some of its attacks stop time ({} s), taken one time in {} they come up: everything but it holds still, you included, while it steps round you and lays its shots; they fly when time resumes. It has {} phases ({}); at each change it calls help, clears every orb and cannot be hurt for {} s.",
                 m(d.range),
+                lunges.join(" and "),
                 stops.join(", "),
+                rare,
                 d.phases.len(),
                 calls.join("; "),
                 s(PHASE_TICKS)

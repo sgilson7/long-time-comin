@@ -118,3 +118,16 @@ The request is in `BRIEF.md`. Choices it leaves open (SECOND-ORDER rows Q1 on):
 - **The time stop, yours** (bought from the Holding once the Defendant is beaten: the Stopped Hour, then three Stopped Clocks): T stops time for 3 s, 4, 5 or 6; enemies, orbs and waves hold still, and your shots hang where they are until time resumes. 30 s cooldown.
 - **Grab and throw** (G, every zone): within 3.5 m in front of you, an enemy at half health or less (not a boss, a mini-boss or a tank) is lifted; G again throws it along your aim, and what it hits takes heavy damage, with a burst round it. The thrown enemy dies.
 - **The Big Iron** (from zone four's side paths, levels I to IV): six rounds, very heavy and slow shots (70 to 110 damage, 55 m/s, a fat round), reloaded one shell at a time whenever you are not firing (0.4 s a shell, so 2.4 s for six), the cylinder swung out while it loads. Its second fire fans the hammer: every round left, one every 80 ms, a little wild.
+
+## Round 8: the Defendant's moves (2026-10-11)
+
+The request is in `BRIEF.md`. Choices it leaves open (SECOND-ORDER rows Q13 on):
+
+- **The golden parry.** The Defendant had no real guard: what read as one was a gold glow 5 m across drawn round it through every cast, and the gold `parry_bait` volley in every phase. The glow now shows only in the windup and is a third the size, and `parry_bait` is in the last phase only.
+- **The hook** (`"move": "hook"` on an attack, `Lunge::Hook`): in its windup a chain flies from its hand to a spot on the floor 4 m beside you; as it casts, the chain pulls it there at 36 m/s, over anything in the way, and its cast waits until it arrives (at most a second), then fires a ring and a short fan.
+- **The ground pound** (`Lunge::Pound`): in its windup it leaps 6 m and comes over where you stood, which is marked on the floor; as it casts it drops at 40 m/s, and two shockwaves (jump them) and a ring go out from where it lands.
+- **The wall** (data only, `injunction_echo`): two standing walls of blue orbs, nine by three, a second apart, flying along the line to you. Your Injunction breaks them; otherwise step round the ends.
+- **The stop, a quarter as often**: an attack's `once_in` (4 for each stop) takes it the first time it comes up and every fourth time after.
+- **The dome**: a held formation `dome` (rows of rings over a half sphere round you, each ring turned half a gap from the one below) and a launch `gather` (in to the centre, and spent there, so a dome closes on the spot it was laid round and does not come out the other side). Each stop lays an inner shell 4.2 to 4.5 m out and an outer one 8 to 9 m out, which reach you about half a second apart; the dash's 13 ticks of invulnerability cover one shell, not both, and two charges cover both. The middle phase adds knives laid in rings where it stood, which fly at you later; the last adds a doubled outer shell and a grid that falls from above.
+- **Kept hard**: its health goes from 3,600 to 4,000 (SECOND-ORDER Q16).
+

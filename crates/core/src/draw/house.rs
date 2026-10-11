@@ -14,7 +14,7 @@
 //! wheels turning round it, every surface opening eyes.
 
 use super::rod;
-use crate::content::{Content, EnemyDef, Kind, On, Rgb, Role};
+use crate::content::{Content, EnemyDef, Kind, Lunge, On, Rgb, Role};
 use crate::enemy::{Enemy, Order, State, PHASE_TICKS, SPAWN_TICKS};
 use crate::fx::{self, deg, int, ONE};
 use crate::geom::{facing, right_of, v3, Affine, V3};
@@ -669,15 +669,67 @@ fn double(b: &mut Batch, c: &Content, e: &Enemy, d: &EnemyDef, at: V3, target: V
             ONE / 3,
         );
     }
-    let charge = e.glow(c);
-    if charge > 0 {
-        let h = fx::mul(cm(260), ONE + charge);
+    // a tell in its windup only, kept close: a glow that hung round it
+    // through every cast read as a shield (SECOND-ORDER Q13)
+    if let State::Windup(_) = e.state {
+        let charge = e.glow(c);
+        let h = fx::mul(cm(90), ONE + charge);
         b.glow(
             Mesh::Sphere,
             &boxed(feet.add(v3(0, cm(100), 0)), v3(h, h, h)),
             gold,
-            charge / 3,
+            charge / 4,
         );
+    }
+    let hand = feet.add(v3(0, cm(120), 0));
+    match (e.lunge, e.state) {
+        // the chain flies out through its windup, then pulls it along
+        (Lunge::Hook, State::Windup(_)) => {
+            let tip = hand.lerp(e.anchor.add(v3(0, ONE, 0)), e.glow(c));
+            rod(b, hand, tip, cm(5), c.pal.c("hook"), ONE / 2, false);
+            b.inked(
+                Mesh::Octa,
+                &boxed(tip, v3(cm(40), cm(40), cm(40))),
+                c.pal.c("hook"),
+                ONE / 2,
+            );
+        }
+        (Lunge::Hook, State::Casting(_)) if e.anchor.dist(feet) > crate::balance::LUNGE_HOOK_ARRIVE => {
+            let tip = e.anchor.add(v3(0, ONE, 0));
+            rod(b, hand, tip, cm(5), c.pal.c("hook"), ONE / 2, false);
+            b.inked(
+                Mesh::Octa,
+                &boxed(tip, v3(cm(40), cm(40), cm(40))),
+                c.pal.c("hook"),
+                ONE / 2,
+            );
+        }
+        // where it will land, marked on the floor as it leaps
+        (Lunge::Pound, State::Windup(_)) => {
+            let r = crate::balance::LUNGE_POUND_HEIGHT * 2 / 3;
+            for k in 0..16 {
+                let a = fx::TURN / 16 * k + e.age * deg(3);
+                let p = e
+                    .anchor
+                    .add(v3(fx::mul(fx::cos(a), r), cm(10), fx::mul(fx::sin(a), r)));
+                b.glow(
+                    Mesh::Cube,
+                    &boxed(p, v3(cm(20), cm(6), cm(20))),
+                    c.pal.c("pound"),
+                    ONE / 2,
+                );
+            }
+            for k in 1..4 {
+                let g = feet.add(v3(0, -cm(60) * k, 0));
+                b.glow(
+                    Mesh::Sphere,
+                    &boxed(g, v3(cm(50), cm(90), cm(50))),
+                    c.pal.c("pound"),
+                    ONE / (k + 1),
+                );
+            }
+        }
+        _ => {}
     }
     if e.boost > 0 {
         for k in 1..4 {

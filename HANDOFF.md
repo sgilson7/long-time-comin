@@ -79,7 +79,15 @@ A subagent played seven runs through the playtest harness (`cargo run --release 
 
 Live: PR #4 passed both workflows (check 38122273822, breaks 38122273789) and merged as 04f7cb3; the main run 38123497839 deployed it, and the live browser check against https://sgilson7.github.io/long-time-comin passed in chromium, firefox and webkit. The website was deployed as build 853fa91c; `make gate-live` passed.
 
-## What remains
+## Round 8 (2026-10-11): the Defendant's moves
+
+`./scripts/check.sh` passed locally (169 core and 11 boundary tests, the browser check in three engines), and every break in `scripts/break_tests.py` fails its test. `BRIEF.md` has the request, `PLAN.md` (Round 8) the design, `SECOND-ORDER.md` R8, Q13 to Q17, B6 and T9 what was chosen and found.
+
+- **Hook and pound**: an attack's `move` (`content.rs` `Lunge`); `enemy.rs` `lunge_spot`, `lunge_step`, `hooking`; numbers `LUNGE_*` in `balance.rs`; drawn in `draw/house.rs` `double`.
+- **The stop a quarter as often**: an attack's `once_in`; `enemy.rs` `pass_over`.
+- **The dome**: `Form::Dome` and `Launch::Gather` (`orbs.rs`); the patterns `the_world`, `queued_knives`, `the_world_2`; the wall is `injunction_echo`.
+- The Defendant's health is 4,000.
+
 
 - Sam's playtest (`TRIAGE.md`). Every feel and balance number is the agent's guess (SECOND-ORDER T1); the probe shows the curve (no wins with no upgrades, about half with 62 Clemency of upgrades), not whether it is fun (T2, P2).
 - Sam's reading of the story's words (T3).
