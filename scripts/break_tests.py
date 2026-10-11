@@ -148,6 +148,12 @@ BREAKS = [
  ("the god's eyes shut as it sleeps", "crates/core/src/draw/god.rs", "let open = fx::mul(base * ONE, awake) / ONE;", "let open = base;", "the_gods_eyes_open"),
  ("the god's eyes by phase", "crates/core/src/draw/god.rs", "        0 => EYES / 3,", "        0 => EYES,", "the_gods_eyes_open"),
  ("the trumpet's valves", "crates/core/src/draw/god.rs", "    for k in -1..=1 {\n        let p = valves", "    for k in 0..0 {\n        let p = valves", "the_trumpet_is_brass"),
+ ("the Penrose foot faces back", "crates/core/src/arena/god.rs", "let foot = self.frame(v3(-mid, 0, SEAM_Z), fx::HALF,", "let foot = self.frame(v3(-mid, 0, SEAM_Z), 0,", "the_penrose_stairs_top"),
+ ("seams in pairs", "crates/core/src/arena/god.rs", "let sa = self.frame(a.0, a.1, half, height, film, k + 1);", "let sa = self.frame(a.0, a.1, half, height, film, k);", "the_doors_seams_come_in_pairs"),
+ ("the god's arenas come round", "crates/core/src/arena/god.rs", "        self.wrap = WRAP;\n", "        self.wrap = 0;\n", "the_world_is_drawn_again"),
+ ("a floor under the Penrose seam", "crates/core/src/arena/god.rs", "        self.slab(-LANE, SEAM_Z, -WELL, LANE, 0, stone);\n", "        self.slab(-LANE, WELL, -WELL, LANE, 0, stone);\n", "the_penrose_stairs_top"),
+ ("room for the god", "crates/core/src/arena/god.rs", "        self.arch(0, m(12), true, m(6), m(4), bone);\n", "        self.post(0, 0, -m(40), m(3), m(10), bone);\n        self.arch(0, m(12), true, m(6), m(4), bone);\n", "the_heart_leaves_the_god_room"),
+ ("the god's stairs", "crates/core/src/arena/god.rs", "        let n = ((to - from).abs() + RISE - 1) / RISE;", "        if to > from {\n            return;\n        }\n        let n = ((to - from).abs() + RISE - 1) / RISE;", "every_gate_in_the_god"),
  ("a bar for each phase", "crates/core/src/game.rs", "\"bars_left\": bars - bar,", "\"bars_left\": bars,", "the_god_has_a_bar"),
 
 ]
