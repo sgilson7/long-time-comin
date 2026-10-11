@@ -127,6 +127,10 @@
       "Stop time, once the Defendant is beaten: {stop} s at first. Enemies, orbs and your own shots hold still until it resumes."
     ],
     [
+      "Left mouse, Q, E, R, F",
+      "With the trumpet out, at the Idiot God's heart: its five notes, low to high. Play each as it reaches the line."
+    ],
+    [
       "C (in the air)",
       "Ground pound, once Gavel Drop is bought: straight down at {pound_speed} m/s, a shockwave of {pound_damage} damage within {pound_radius} m where you land, and a bounce back up."
     ],

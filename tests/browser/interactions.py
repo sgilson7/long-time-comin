@@ -6,7 +6,7 @@ shows. Expected values are worked out by hand from the data files, never
 copied from the game's own output:
 
 - story.json's sentencing has 5 lines; its indictment has 10 counts.
-- the Codex has 5 tabs (copy.json codex_tabs), 16 control rows
+- the Codex has 5 tabs (copy.json codex_tabs), 17 control rows
   (copy.json controls), 5 guns (weapons.json) and 53 enemies (enemies.json:
   the 43 of the first four zones, then zone five's seven, the Recursion's
   two smaller orders and the Idiot God).
@@ -78,7 +78,7 @@ def run(page, check, engine):
     check(page.is_visible("#codex"), "the Codex opens from the Holding")
     tabs = page.query_selector_all("#codex-tabs .tab")
     rows = page.query_selector_all("#codex-body table.stats tr")
-    check(len(tabs) == 5 and len(rows) == 16, f"5 tabs, 16 control rows ({len(tabs)}, {len(rows)})")
+    check(len(tabs) == 5 and len(rows) == 17, f"5 tabs, 17 control rows ({len(tabs)}, {len(rows)})")
     click(page, "#codex-tabs .tab:nth-child(2)")
     guns = page.query_selector_all("#codex-body .codex-card")
     check(len(guns) == 5, f"five guns ({len(guns)})")
