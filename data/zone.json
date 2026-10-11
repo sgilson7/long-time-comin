@@ -1,5 +1,5 @@
 {
-  "_about": "The zones of the route, in order. A built zone has a scene (palette names for its sky, fog, light, unlit windows and ink, and where its fog starts and is full), a route, archetypes, names and encounters; a sealed zone only its name, year and boss. A run's graph is made from a zone's route by a seeded roll (crates/core/src/route.rs): the main path is arrival, main_fights fights, the rest and the boss; between main fights, detours of 1 to detour_max nodes rejoin the next main node, and a detour's last node holds a reward drawn from rewards. Encounters are listed by tier; a main fight's tier is in main_tiers, a detour's is one higher. clemency is what the court grants per node cleared. rest_rewards: the rest node offers one of these beside its fountain, and you take one or the other. cache_rewards: the arrival offers two of these, and you take one (none when empty). weapon_levels: the level of a gun on a near and on a deep side path (2 and 3 unless given). miniboss: an enemy fought alone, in the arena miniboss_arena, on main fight miniboss_at (counted from 0).",
+  "_about": "The zones of the route, in order. A built zone has a scene (palette names for its sky, fog, light, unlit windows and ink, and where its fog starts and is full), a route, archetypes, names and encounters; a sealed zone only its name, year and boss. A run's graph is made from a zone's route by a seeded roll (crates/core/src/route.rs): the main path is arrival, main_fights fights, the rest and the boss; between main fights, detours of 1 to detour_max nodes rejoin the next main node, and a detour's last node holds a reward drawn from rewards. Encounters are listed by tier; a main fight's tier is in main_tiers, a detour's is one higher. clemency is what the court grants per node cleared. rest_rewards: the rest node offers one of these beside its fountain, and you take one or the other. cache_rewards: the arrival offers two of these, and you take one (none when empty). weapon_levels: the level of a gun on a near and on a deep side path (2 and 3 unless given). minibosses: enemies each fought alone, in its arena, on main fight at (counted from 0).",
   "zones": [
     {
       "id": "waiting_city",
@@ -427,6 +427,13 @@
           "pierce",
           "pulse",
           "mend"
+        ],
+        "minibosses": [
+          {
+            "enemy": "pioneer",
+            "at": 3,
+            "arena": "pylons"
+          }
         ]
       },
       "archetypes": [
@@ -727,9 +734,18 @@
           3,
           4
         ],
-        "miniboss": "chief",
-        "miniboss_at": 3,
-        "miniboss_arena": "ballroom"
+        "minibosses": [
+          {
+            "enemy": "chief",
+            "at": 3,
+            "arena": "ballroom"
+          },
+          {
+            "enemy": "escort",
+            "at": 1,
+            "arena": "hall"
+          }
+        ]
       },
       "archetypes": [
         "hall",
@@ -979,11 +995,318 @@
       ]
     },
     {
-      "id": "stilling",
-      "name": "The Night of the Stilling",
+      "id": "the_ascent",
+      "name": "The Ascent",
       "year": "2081",
+      "built": true,
+      "boss": "defendant",
+      "scene": {
+        "sky": "ascent_sky",
+        "fog": "ascent_fog",
+        "light": "ascent_light",
+        "window_dark": "ascent_window_dark",
+        "ink": "ascent_ink",
+        "fog_near_m": 200,
+        "fog_far_m": 1800
+      },
+      "route": {
+        "main_fights": 5,
+        "main_tiers": [
+          1,
+          2,
+          2,
+          3,
+          3
+        ],
+        "detours_min": 3,
+        "detours_max": 4,
+        "detour_max": 2,
+        "rewards": [
+          "weapon",
+          "trigger",
+          "health",
+          "weapon",
+          "plating",
+          "jump",
+          "pierce",
+          "pulse",
+          "speed",
+          "mend"
+        ],
+        "clemency_main": 5,
+        "clemency_detour": 10,
+        "clemency_boss": 80,
+        "rest_rewards": [
+          "trigger",
+          "plating",
+          "pierce",
+          "pulse",
+          "mend",
+          "health"
+        ],
+        "cache_rewards": [
+          "weapon",
+          "trigger",
+          "plating",
+          "health",
+          "jump"
+        ],
+        "weapon_levels": [
+          3,
+          4
+        ]
+      },
+      "archetypes": [
+        "switchback",
+        "span",
+        "spire",
+        "chapel",
+        "ledge"
+      ],
+      "names": {
+        "arrival": "The Trailhead",
+        "rest": "The Hermitage",
+        "boss": "The Circle",
+        "switchback": "The Switchback",
+        "span": "The Span",
+        "spire": "The Spire",
+        "chapel": "The Ruined Chapel",
+        "ledge": "The Ledge"
+      },
+      "encounters": [
+        {
+          "tier": 1,
+          "waves": [
+            [
+              "proxy",
+              "proxy"
+            ],
+            [
+              "shade",
+              "knife"
+            ]
+          ]
+        },
+        {
+          "tier": 1,
+          "waves": [
+            [
+              "proxy",
+              "sower"
+            ],
+            [
+              "knife",
+              "knife",
+              "proxy"
+            ]
+          ]
+        },
+        {
+          "tier": 1,
+          "waves": [
+            [
+              "bellringer",
+              "proxy"
+            ],
+            [
+              "shade",
+              "shade"
+            ]
+          ]
+        },
+        {
+          "tier": 2,
+          "waves": [
+            [
+              "proxy",
+              "proxy",
+              "watcher"
+            ],
+            [
+              "bellringer",
+              "knife",
+              "knife"
+            ],
+            [
+              "shade",
+              "sower",
+              "proxy"
+            ]
+          ]
+        },
+        {
+          "tier": 2,
+          "waves": [
+            [
+              "second",
+              "proxy",
+              "proxy"
+            ],
+            [
+              "sower",
+              "shade",
+              "knife"
+            ]
+          ]
+        },
+        {
+          "tier": 2,
+          "waves": [
+            [
+              "bellringer",
+              "bellringer"
+            ],
+            [
+              "watcher",
+              "proxy",
+              "shade"
+            ],
+            [
+              "knife",
+              "knife",
+              "knife",
+              "proxy"
+            ]
+          ]
+        },
+        {
+          "tier": 2,
+          "waves": [
+            [
+              "sower",
+              "sower",
+              "proxy"
+            ],
+            [
+              "second",
+              "shade",
+              "shade"
+            ]
+          ]
+        },
+        {
+          "tier": 3,
+          "waves": [
+            [
+              "second",
+              "proxy",
+              "proxy",
+              "shade"
+            ],
+            [
+              "bellringer",
+              "watcher",
+              "sower"
+            ],
+            [
+              "knife",
+              "knife",
+              "knife",
+              "proxy",
+              "proxy"
+            ]
+          ]
+        },
+        {
+          "tier": 3,
+          "waves": [
+            [
+              "watcher",
+              "watcher",
+              "bellringer"
+            ],
+            [
+              "second",
+              "proxy",
+              "proxy",
+              "sower"
+            ],
+            [
+              "shade",
+              "shade",
+              "knife",
+              "knife"
+            ]
+          ]
+        },
+        {
+          "tier": 3,
+          "waves": [
+            [
+              "bellringer",
+              "bellringer",
+              "proxy"
+            ],
+            [
+              "sower",
+              "sower",
+              "second"
+            ],
+            [
+              "shade",
+              "shade",
+              "shade",
+              "watcher"
+            ]
+          ]
+        },
+        {
+          "tier": 4,
+          "waves": [
+            [
+              "second",
+              "bellringer",
+              "proxy",
+              "proxy"
+            ],
+            [
+              "watcher",
+              "watcher",
+              "sower",
+              "shade"
+            ],
+            [
+              "knife",
+              "knife",
+              "knife",
+              "knife",
+              "second",
+              "proxy"
+            ]
+          ]
+        },
+        {
+          "tier": 4,
+          "waves": [
+            [
+              "bellringer",
+              "bellringer",
+              "second"
+            ],
+            [
+              "proxy",
+              "proxy",
+              "proxy",
+              "watcher",
+              "sower"
+            ],
+            [
+              "shade",
+              "shade",
+              "knife",
+              "knife",
+              "second"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "idiot_god",
+      "name": "The Idiot God",
+      "year": "After",
       "built": false,
-      "boss": "defendant"
+      "boss": "azathoth"
     }
   ]
 }

@@ -1717,6 +1717,588 @@
           "relaunch_cms": 1200
         }
       ]
+    },
+    {
+      "id": "proxy_burst",
+      "volleys": [
+        {
+          "shape": "aimed",
+          "count": 1,
+          "repeat": 5,
+          "every_ms": 70,
+          "sweep_deg": 30,
+          "speed_cms": 2200,
+          "size_cm": 22,
+          "colour": "scarlet"
+        }
+      ]
+    },
+    {
+      "id": "proxy_cross",
+      "volleys": [
+        {
+          "shape": "form",
+          "form": "star",
+          "count": 4,
+          "rows": 3,
+          "radius_cm": 300,
+          "at": "front",
+          "at_cm": 300,
+          "plane": "face",
+          "hold_ms": 400,
+          "launch": "aim",
+          "speed_cms": 1500,
+          "size_cm": 24,
+          "colour": "chalk"
+        }
+      ]
+    },
+    {
+      "id": "shade_arc",
+      "volleys": [
+        {
+          "shape": "form",
+          "form": "arc",
+          "count": 11,
+          "spread_deg": 140,
+          "radius_cm": 600,
+          "at": "target",
+          "hold_ms": 600,
+          "launch": "in",
+          "speed_cms": 1000,
+          "size_cm": 26,
+          "colour": "violet"
+        }
+      ]
+    },
+    {
+      "id": "shade_cut",
+      "volleys": [
+        {
+          "shape": "aimed",
+          "count": 3,
+          "spread_deg": 12,
+          "repeat": 3,
+          "every_ms": 120,
+          "speed_cms": 1900,
+          "size_cm": 22,
+          "colour": "chalk"
+        }
+      ]
+    },
+    {
+      "id": "watcher_line",
+      "volleys": [
+        {
+          "shape": "aimed",
+          "count": 1,
+          "speed_cms": 4600,
+          "size_cm": 36,
+          "damage": 22,
+          "colour": "scarlet"
+        }
+      ]
+    },
+    {
+      "id": "watcher_rain",
+      "volleys": [
+        {
+          "shape": "form",
+          "form": "grid",
+          "count": 4,
+          "rows": 3,
+          "radius_cm": 250,
+          "at": "above",
+          "at_cm": 700,
+          "hold_ms": 800,
+          "stagger_ms": 40,
+          "launch": "down",
+          "speed_cms": 1400,
+          "size_cm": 26,
+          "colour": "blue"
+        }
+      ]
+    },
+    {
+      "id": "toll",
+      "volleys": [
+        {
+          "shape": "ring",
+          "count": 14,
+          "speed_cms": 900,
+          "size_cm": 30,
+          "colour": "chalk",
+          "bounce": 1,
+          "repeat": 2,
+          "every_ms": 450,
+          "spin_deg": 10
+        }
+      ]
+    },
+    {
+      "id": "peal",
+      "volleys": [
+        {
+          "shape": "form",
+          "form": "lane",
+          "count": 8,
+          "length_cm": 1400,
+          "radius_cm": 320,
+          "at": "target",
+          "hold_ms": 900,
+          "launch": "close",
+          "speed_cms": 700,
+          "size_cm": 32,
+          "colour": "blue"
+        }
+      ]
+    },
+    {
+      "id": "sow_bloom",
+      "volleys": [
+        {
+          "shape": "form",
+          "form": "spiral",
+          "count": 10,
+          "rows": 1,
+          "radius_cm": 200,
+          "hold_ms": 700,
+          "launch": "out",
+          "speed_cms": 800,
+          "size_cm": 28,
+          "colour": "lime"
+        }
+      ]
+    },
+    {
+      "id": "sow",
+      "volleys": [
+        {
+          "shape": "aimed",
+          "count": 4,
+          "spread_deg": 30,
+          "fall_cms2": 1800,
+          "speed_cms": 1200,
+          "size_cm": 36,
+          "colour": "lime",
+          "plant": "sow_bloom"
+        }
+      ]
+    },
+    {
+      "id": "knife_fan",
+      "volleys": [
+        {
+          "shape": "aimed",
+          "count": 7,
+          "spread_deg": 70,
+          "speed_cms": 1600,
+          "size_cm": 22,
+          "colour": "scarlet",
+          "repeat": 2,
+          "every_ms": 150
+        }
+      ]
+    },
+    {
+      "id": "knife_ring",
+      "volleys": [
+        {
+          "shape": "ring",
+          "count": 10,
+          "speed_cms": 1100,
+          "size_cm": 26,
+          "colour": "chalk",
+          "stop_ms": 300,
+          "rehold_ms": 300,
+          "relaunch": "aim",
+          "relaunch_cms": 1500
+        }
+      ]
+    },
+    {
+      "id": "second_hand",
+      "volleys": [
+        {
+          "shape": "form",
+          "form": "ring",
+          "count": 12,
+          "radius_cm": 500,
+          "at": "target",
+          "hold_ms": 900,
+          "launch": "spin",
+          "speed_cms": 900,
+          "size_cm": 28,
+          "colour": "violet",
+          "stop_ms": 600,
+          "rehold_ms": 200,
+          "relaunch": "in",
+          "relaunch_cms": 1200
+        }
+      ]
+    },
+    {
+      "id": "minute",
+      "volleys": [
+        {
+          "shape": "form",
+          "form": "column",
+          "count": 6,
+          "radius_cm": 400,
+          "at": "front",
+          "at_cm": 400,
+          "hold_ms": 500,
+          "stagger_ms": 80,
+          "launch": "aim",
+          "speed_cms": 1600,
+          "size_cm": 26,
+          "colour": "gold",
+          "gold": true
+        }
+      ]
+    },
+    {
+      "id": "carbine_echo",
+      "volleys": [
+        {
+          "shape": "aimed",
+          "count": 1,
+          "repeat": 10,
+          "every_ms": 70,
+          "sweep_deg": 40,
+          "speed_cms": 2400,
+          "size_cm": 22,
+          "colour": "shot_carbine"
+        }
+      ]
+    },
+    {
+      "id": "scatter_echo",
+      "volleys": [
+        {
+          "shape": "aimed",
+          "count": 9,
+          "spread_deg": 44,
+          "speed_cms": 1700,
+          "size_cm": 24,
+          "colour": "shot_scatter",
+          "repeat": 3,
+          "every_ms": 300
+        }
+      ]
+    },
+    {
+      "id": "launcher_bloom",
+      "volleys": [
+        {
+          "shape": "form",
+          "form": "ring",
+          "count": 12,
+          "radius_cm": 150,
+          "hold_ms": 500,
+          "launch": "out",
+          "speed_cms": 900,
+          "size_cm": 30,
+          "colour": "cyan"
+        }
+      ]
+    },
+    {
+      "id": "launcher_echo",
+      "volleys": [
+        {
+          "shape": "aimed",
+          "count": 3,
+          "spread_deg": 30,
+          "fall_cms2": 1600,
+          "speed_cms": 1300,
+          "size_cm": 40,
+          "colour": "cyan",
+          "plant": "launcher_bloom"
+        }
+      ]
+    },
+    {
+      "id": "saw_echo",
+      "volleys": [
+        {
+          "shape": "aimed",
+          "count": 3,
+          "spread_deg": 24,
+          "bounce": 2,
+          "speed_cms": 1500,
+          "size_cm": 40,
+          "colour": "shot_saw",
+          "repeat": 2,
+          "every_ms": 400
+        }
+      ]
+    },
+    {
+      "id": "dash_ring",
+      "volleys": [
+        {
+          "shape": "ring",
+          "count": 20,
+          "speed_cms": 1000,
+          "size_cm": 28,
+          "colour": "violet",
+          "repeat": 2,
+          "every_ms": 300,
+          "spin_deg": 9
+        }
+      ]
+    },
+    {
+      "id": "parry_bait",
+      "volleys": [
+        {
+          "shape": "aimed",
+          "count": 3,
+          "spread_deg": 20,
+          "speed_cms": 1200,
+          "size_cm": 46,
+          "colour": "gold",
+          "gold": true,
+          "repeat": 3,
+          "every_ms": 350
+        }
+      ]
+    },
+    {
+      "id": "the_world",
+      "volleys": [
+        {
+          "shape": "form",
+          "form": "ring",
+          "count": 14,
+          "radius_cm": 350,
+          "at": "target",
+          "hold_ms": 350,
+          "launch": "in",
+          "speed_cms": 1200,
+          "size_cm": 30,
+          "colour": "chalk"
+        },
+        {
+          "shape": "form",
+          "form": "ring",
+          "count": 18,
+          "radius_cm": 600,
+          "at": "target",
+          "hold_ms": 650,
+          "launch": "in",
+          "speed_cms": 1200,
+          "size_cm": 30,
+          "colour": "gold",
+          "gold": true,
+          "delay_ms": 500
+        },
+        {
+          "shape": "aimed",
+          "count": 3,
+          "spread_deg": 16,
+          "speed_cms": 1500,
+          "size_cm": 26,
+          "colour": "scarlet",
+          "repeat": 5,
+          "every_ms": 400,
+          "delay_ms": 200
+        }
+      ]
+    },
+    {
+      "id": "queued_knives",
+      "volleys": [
+        {
+          "shape": "aimed",
+          "count": 5,
+          "spread_deg": 30,
+          "speed_cms": 1700,
+          "size_cm": 24,
+          "colour": "chalk",
+          "repeat": 6,
+          "every_ms": 380
+        },
+        {
+          "shape": "form",
+          "form": "ring",
+          "count": 10,
+          "radius_cm": 250,
+          "at": "target",
+          "hold_ms": 900,
+          "launch": "out",
+          "speed_cms": 900,
+          "size_cm": 28,
+          "colour": "violet",
+          "delay_ms": 2000
+        }
+      ]
+    },
+    {
+      "id": "the_world_2",
+      "volleys": [
+        {
+          "shape": "form",
+          "form": "ring",
+          "count": 16,
+          "radius_cm": 400,
+          "at": "target",
+          "hold_ms": 350,
+          "launch": "in",
+          "speed_cms": 1300,
+          "size_cm": 30,
+          "colour": "chalk",
+          "repeat": 3,
+          "every_ms": 700,
+          "spin_deg": 11
+        },
+        {
+          "shape": "form",
+          "form": "grid",
+          "count": 4,
+          "rows": 4,
+          "radius_cm": 220,
+          "at": "above",
+          "at_cm": 600,
+          "hold_ms": 900,
+          "stagger_ms": 30,
+          "launch": "down",
+          "speed_cms": 1300,
+          "size_cm": 28,
+          "colour": "blue",
+          "delay_ms": 1400
+        },
+        {
+          "shape": "aimed",
+          "count": 5,
+          "spread_deg": 40,
+          "speed_cms": 1600,
+          "size_cm": 24,
+          "colour": "scarlet",
+          "repeat": 6,
+          "every_ms": 450,
+          "delay_ms": 100
+        }
+      ]
+    },
+    {
+      "id": "pioneer_lattice",
+      "volleys": [
+        {
+          "shape": "form",
+          "form": "grid",
+          "count": 5,
+          "rows": 3,
+          "radius_cm": 260,
+          "at": "front",
+          "at_cm": 600,
+          "plane": "face",
+          "hold_ms": 600,
+          "launch": "along",
+          "speed_cms": 1400,
+          "size_cm": 30,
+          "colour": "blue"
+        }
+      ]
+    },
+    {
+      "id": "pioneer_salvo",
+      "volleys": [
+        {
+          "shape": "form",
+          "form": "arc",
+          "count": 8,
+          "spread_deg": 60,
+          "radius_cm": 300,
+          "at": "self",
+          "hold_ms": 400,
+          "stagger_ms": 60,
+          "launch": "lead",
+          "speed_cms": 1500,
+          "size_cm": 28,
+          "colour": "ember"
+        }
+      ]
+    },
+    {
+      "id": "pioneer_crown",
+      "volleys": [
+        {
+          "shape": "form",
+          "form": "ring",
+          "count": 16,
+          "radius_cm": 300,
+          "at": "self",
+          "hold_ms": 500,
+          "launch": "out",
+          "speed_cms": 900,
+          "size_cm": 30,
+          "colour": "ember",
+          "stop_ms": 500,
+          "rehold_ms": 300,
+          "relaunch": "aim",
+          "relaunch_cms": 1400
+        }
+      ]
+    },
+    {
+      "id": "escort_burst",
+      "volleys": [
+        {
+          "shape": "form",
+          "form": "ring",
+          "count": 10,
+          "radius_cm": 100,
+          "hold_ms": 300,
+          "launch": "out",
+          "speed_cms": 1000,
+          "size_cm": 28,
+          "colour": "scarlet"
+        }
+      ]
+    },
+    {
+      "id": "escort_shell",
+      "volleys": [
+        {
+          "shape": "aimed",
+          "count": 1,
+          "speed_cms": 2000,
+          "size_cm": 50,
+          "colour": "scarlet",
+          "damage": 20,
+          "plant": "escort_burst"
+        }
+      ]
+    },
+    {
+      "id": "escort_coax",
+      "volleys": [
+        {
+          "shape": "aimed",
+          "count": 1,
+          "repeat": 6,
+          "every_ms": 100,
+          "sweep_deg": 40,
+          "speed_cms": 1800,
+          "size_cm": 24,
+          "colour": "chalk"
+        }
+      ]
+    },
+    {
+      "id": "escort_ricochet",
+      "volleys": [
+        {
+          "shape": "ring",
+          "count": 10,
+          "bounce": 1,
+          "speed_cms": 1000,
+          "size_cm": 28,
+          "colour": "blue"
+        }
+      ]
     }
   ]
 }

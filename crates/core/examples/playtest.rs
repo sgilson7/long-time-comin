@@ -51,7 +51,8 @@ Commands (several per call, run in order; time is in seconds of game time):
   reset                     wipe the session (a fresh record)
   record <json>             start over from a saved record, e.g. record {\"seen_intro\":true,\"unlocked\":1}
   goto <node name>|boss     straight to a node of this run's map (a measuring shortcut, not play)
-  break                     break every weak point the boss has open (to reach a later phase)";
+  break                     break every weak point the boss has open (to reach a later phase)
+  fell                      bring the boss down at once (to see what follows)";
 
 fn main() {
     let mut args = std::env::args().skip(1);
@@ -214,6 +215,10 @@ impl Harness {
             "break" => {
                 self.need_play()?;
                 self.g.break_weak_points();
+            }
+            "fell" => {
+                self.need_play()?;
+                self.g.fell_boss();
             }
             "north" => {
                 if mode != Mode::Interlude {
@@ -449,6 +454,16 @@ impl Harness {
             }
         }
         self.flush_hits();
+        if let Some(w) = self.g.world() {
+            if let Some(b) = w.boss {
+                let e = &w.enemies[b];
+                self.out.push(format!(
+                    "  (the boss: {}% health, phase {})",
+                    e.health_pct(),
+                    e.phase + 1
+                ));
+            }
+        }
         Ok(())
     }
 

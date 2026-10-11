@@ -63,11 +63,25 @@ A subagent played seven runs through the playtest harness (`cargo run --release 
 - **Second fires**: `weapons.json` `alt`, `content::Alt`, `weapons::alt_trigger`, the Ripsaw's in `world.rs` `detonate`; action `alt` (1<<13) on the right mouse button; the parry is Q.
 - **Stronger guns**: the Scattergun, the Launcher and the Ripsaw, about 30% (N4).
 
+## Round 7 (2026-10-11): the Ascent
+
+`./scripts/check.sh` passed locally (165 core and 11 boundary tests, the browser check in three engines). `BRIEF.md` has the request, `PLAN.md` (Round 7) the design, `SECOND-ORDER.md` R7, Q1 to Q12, B5 and T8 what was chosen and found.
+
+- **Zone four** (`zone.json` `the_ascent`): arenas in `crates/core/src/arena/ascent.rs`, built at a height (`arena::build_at`, `ASCENT_PER_STEP`), walked by agents on the nav grid; seven assassins and the Defendant (`enemies.json`), patterns in `patterns.json`.
+- **The Defendant**: kind `double` (`enemy.rs` `skirmish`, `reposition`), attacks with `stop_ms`; the world's `stop` (`world.rs` `TimeStop`) freezes all but its caster.
+- **The ending**: `World::ending`, `ending_step`, `melt`; `draw::azathoth`; the shaders' `uFx` (melt, grey), sent in the view values (`fx`, indices 23 and 24).
+- **Your time stop**: `Build::stop_ticks`, from `Meta::beaten` and the Stopped Clocks (`unlock` in `upgrades.json`).
+- **Grab and throw**: `World::grab_step`, `throw`, `ShotKind::Thrown`.
+- **The Big Iron**: `GunLevel::mag`/`shell`, `Held::reload_step`, the fan (`AltKind::Fan`).
+- **Mini-bosses**: the Pioneer (kind `mech`, zone two) and the Escort (an elite tank, zone three); `zone.json` `minibosses`.
+- **Art**: `door.png` (the verdict), `guns/big_iron.png`, `icons/stop.png`.
+- **Harness**: `fell` (via `Game::fell_boss`).
+
 ## What remains
 
 - Sam's playtest (`TRIAGE.md`). Every feel and balance number is the agent's guess (SECOND-ORDER T1); the probe shows the curve (no wins with no upgrades, about half with 62 Clemency of upgrades), not whether it is fun (T2, P2).
 - Sam's reading of the story's words (T3).
-- Zone four (2081) and the final boss are sealed. `zone.json` lists it; it needs its entry in `zone.json` (scene, route, archetypes, names, encounters), a builder in `arena.rs`'s style, its enemies and an interlude in `story.json` (the house's, keyed `glass_house`).
+- Zone five (the Idiot God, the heart of it, the trumpet) is sealed, and the hidden zone six (a harder new game and the cat) is not listed; both are described in `BRIEF.md`'s seventh request. Zone five needs its entry in `zone.json`, a builder in `arena.rs`'s style, its enemies and an interlude in `story.json` keyed `the_ascent`.
 - Sam's playtest of zone three (T7), and whether the Executor moves as the Atlas of Tyr does (M2).
 - Not built: music, a sensitivity setting, pathfinding for zones one and two's walkers (they walk straight and turn at walls; the house's agents walk a grid).
 

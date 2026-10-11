@@ -22,6 +22,15 @@ pub struct Held {
     pub recall: [i32; 4],
     /// ticks until the second fire is ready
     pub alt_cooldown: i32,
+    /// a revolver's rounds in the cylinder, the shell being loaded (ticks
+    /// in), the ticks since the trigger was last held, and rounds still to
+    /// fan off
+    pub rounds: i32,
+    pub loading: i32,
+    pub idle: i32,
+    pub fan: i32,
+    /// emptied: it fires again only once all six are back in
+    pub dry: bool,
 }
 
 impl Held {
@@ -33,7 +42,42 @@ impl Held {
             saws_out: 0,
             recall: [0; 4],
             alt_cooldown: 0,
+            rounds: FULL,
+            loading: 0,
+            idle: 0,
+            fan: 0,
+            dry: false,
         }
+    }
+
+    /// A revolver loads one shell at a time while the trigger is let be
+    /// (at once when it is empty), and its cylinder is full past `mag`.
+    pub fn reload_step(&mut self, mag: i32, shell: i32, holding: bool) {
+        if mag == 0 {
+            return;
+        }
+        self.rounds = self.rounds.min(mag);
+        self.idle = if holding { 0 } else { self.idle + 1 };
+        let may = self.fan == 0 && (self.rounds == 0 || self.idle > crate::balance::RELOAD_WAIT);
+        if self.rounds < mag && may {
+            self.loading += 1;
+            if self.loading >= shell {
+                self.loading = 0;
+                self.rounds += 1;
+            }
+        } else if self.rounds >= mag {
+            self.loading = 0;
+        }
+        if self.rounds == 0 {
+            self.dry = true;
+        } else if self.rounds >= mag {
+            self.dry = false;
+        }
+    }
+
+    /// Reloading, for the drawn cylinder.
+    pub fn reloading(&self, mag: i32) -> bool {
+        mag > 0 && self.rounds < mag && self.loading > 0
     }
 
     /// A spent blade starts back to hand.
@@ -58,6 +102,9 @@ impl Held {
     }
 }
 
+/// A cylinder not yet counted: full.
+const FULL: i32 = 99;
+
 /// Where a lodged blade sits: in an enemy (or one of its weak points), off
 /// its centre; or in a wall, for a moment.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -78,6 +125,15 @@ pub enum ShotKind {
     Reflect,
     /// a Ripsaw's blade
     Saw,
+    /// an enemy you threw, by definition
+    Thrown(usize),
+}
+
+impl ShotKind {
+    /// Bursts where it meets something: a bomb, a thrown body.
+    pub fn bursts(self) -> bool {
+        matches!(self, ShotKind::Bomb | ShotKind::Thrown(_))
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -159,10 +215,15 @@ pub fn trigger(
             teeth: saw.teeth,
         }];
     }
-    if !pull.held || held.cooldown > 0 {
+    held.reload_step(l.mag, l.shell, pull.held);
+    if !pull.held || held.cooldown > 0 || held.fan > 0 || (l.mag > 0 && (held.rounds == 0 || held.dry)) {
         return Vec::new();
     }
     held.cooldown = rate(l.rate, pull.trigger);
+    if l.mag > 0 {
+        held.rounds -= 1;
+        held.loading = 0;
+    }
     let (yaw, pitch) = yaw_pitch_of(aim_point.sub(muzzle));
     let kind = if l.splash_radius > 0 {
         ShotKind::Bomb
@@ -199,6 +260,9 @@ pub fn trigger(
         .collect()
 }
 
+/// a fanned hammer fires one round each this many ticks
+pub const FAN_EVERY: i32 = 5;
+
 /// What the second fire did this tick.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct AltFire {
@@ -223,6 +287,49 @@ pub fn alt_trigger(
 ) -> AltFire {
     held.alt_cooldown = (held.alt_cooldown - 1).max(0);
     let a = &gun.alt;
+    let mag = gun.level(held.level).mag;
+    // fanning the hammer: one round every few ticks until the cylinder is empty
+    if held.fan > 0 {
+        let mut out = AltFire::default();
+        if held.alt_cooldown % FAN_EVERY == 0 && held.rounds > 0 {
+            let damage = a.damage_at(held.level);
+            let k = held.fan;
+            let (yaw, pitch) = yaw_pitch_of(aim_point.sub(muzzle));
+            let wild = |n: i32| a.spread * ((n * 7) % 5 - 2) / 2;
+            let dir = facing(yaw + wild(k), fx::wrap(pitch + wild(k + 2) / 2));
+            out.shots.push(Shot {
+                pos: muzzle,
+                prev: muzzle,
+                vel: dir.scale(a.speed),
+                damage,
+                radius: a.size,
+                life: a.life,
+                splash_radius: 0,
+                splash: 0,
+                pierce: a.pierce + pierce,
+                passed: Vec::new(),
+                rgb,
+                kind: ShotKind::Bullet,
+                erases: false,
+                lodged: None,
+                teeth: 0,
+            });
+            held.rounds -= 1;
+            held.fan -= 1;
+        }
+        if held.rounds == 0 {
+            held.fan = 0;
+        }
+        return out;
+    }
+    if a.kind == AltKind::Fan {
+        if pressed && held.alt_cooldown == 0 && held.rounds.min(mag) > 0 && !held.dry {
+            held.rounds = held.rounds.min(mag);
+            held.fan = held.rounds;
+            held.alt_cooldown = a.cooldown;
+        }
+        return AltFire::default();
+    }
     if !pressed || held.alt_cooldown > 0 || (a.kind == AltKind::Detonate && !lodged) {
         return AltFire::default();
     }
@@ -263,7 +370,7 @@ pub fn alt_trigger(
                 shot(muzzle, facing(yaw + off, pitch), ShotKind::Bomb)
             })
             .collect(),
-        AltKind::Detonate => Vec::new(),
+        AltKind::Detonate | AltKind::Fan => Vec::new(),
     };
     AltFire {
         shots,
@@ -313,6 +420,9 @@ mod tests {
     fn every_gun_has_a_second_fire_on_its_own_cooldown() {
         let c = content();
         for (g, gun) in c.guns.iter().enumerate() {
+            if gun.alt.kind == AltKind::Fan {
+                continue;
+            }
             let mut h = Held::new(g, 2);
             let lodged = gun.alt.kind == AltKind::Detonate;
             let mut used = 0;
@@ -329,6 +439,44 @@ mod tests {
             }
             assert_eq!(used, 2, "{}: twice in two cooldowns", gun.id);
         }
+        // the Big Iron fans every round it has, one every few ticks, and then
+        // the cylinder is empty
+        let iron = c.gun("big_iron");
+        let gun = &c.guns[iron];
+        let mut h = Held::new(iron, 1);
+        let mut shots = 0;
+        let mut first_tick = None;
+        let mut last_tick = 0;
+        for t in 0..60 {
+            let a = alt_trigger(
+                &mut h,
+                gun,
+                [0; 3],
+                t == 0,
+                V3::ZERO,
+                v3(0, 0, -int(10)),
+                0,
+                false,
+            );
+            if !a.shots.is_empty() {
+                first_tick.get_or_insert(t);
+                last_tick = t;
+            }
+            shots += a.shots.len();
+        }
+        assert_eq!(shots, 6, "the whole cylinder");
+        assert_eq!(h.rounds, 0);
+        assert!(last_tick - first_tick.unwrap() <= FAN_EVERY * 6, "quickly");
+        // and a revolver loads one shell at a time once let be
+        let l = gun.level(1);
+        let mut rounds = Vec::new();
+        for _ in 0..l.shell * 7 {
+            h.reload_step(l.mag, l.shell, false);
+            rounds.push(h.rounds);
+        }
+        assert_eq!(*rounds.last().unwrap(), 6);
+        assert!(rounds.windows(2).all(|w| w[1] - w[0] <= 1), "one at a time");
+        assert!(rounds[(l.shell * 3) as usize] <= 3, "and it takes a while");
         // a Ripsaw with no blade out does not spend its detonation
         let saw = c.gun("ripsaw");
         let mut h = Held::new(saw, 1);

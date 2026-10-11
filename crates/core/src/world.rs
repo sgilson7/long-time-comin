@@ -114,6 +114,8 @@ const MAX_EFFECTS: usize = 600;
 const WIN_TICKS: i32 = secs(5, 2);
 /// the first wave comes this long after you arrive
 const FIRST_WAVE: i32 = secs(1, 1);
+/// where the Idiot God's maw opens over the summit
+pub const MAW: V3 = v3(0, fx::int(70), -fx::int(160));
 /// the level of the Ripsaw the Lien leaves at an arrival
 pub const LIEN_LEVEL: i32 = 2;
 /// a pane of glass this far from where the Executor breaks through breaks
@@ -175,6 +177,22 @@ pub struct World {
     pub revving: i32,
     /// the enemy whose orb or touch last hurt you, for the playtest harness
     pub hit_by: Option<usize>,
+    /// time stopped: by you, or by an enemy (which alone goes on)
+    pub stop: Option<TimeStop>,
+    /// the enemy in your hands, and how long it has been there
+    pub grabbed: Option<usize>,
+    pub grab_age: i32,
+    /// ticks since the Idiot God began to come (0: it has not)
+    pub ending: i32,
+}
+
+/// Time held still.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TimeStop {
+    pub left: i32,
+    pub total: i32,
+    /// the enemy that stopped it, which alone goes on; none when you did
+    pub caster: Option<usize>,
 }
 
 /// Where a side's exit leads.
@@ -193,7 +211,14 @@ impl World {
             .map(|e| if e.main { Side::North } else { Side::East })
             .collect();
         let z = &c.zones[node.zone];
-        let arena = arena::build(&z.id, &node.archetype, node.seed, &sides, &c.pal);
+        let arena = arena::build_at(
+            &z.id,
+            &node.archetype,
+            node.seed,
+            &sides,
+            &c.pal,
+            node.step * ASCENT_PER_STEP,
+        );
         player.arrive(arena.start, arena.start_yaw);
         let mut gates = Vec::new();
         for (k, (pos, yaw)) in arena.gates.iter().enumerate() {
@@ -250,6 +275,10 @@ impl World {
             broken: Vec::new(),
             revving: 0,
             hit_by: None,
+            stop: None,
+            grabbed: None,
+            grab_age: 0,
+            ending: 0,
         };
         w.broken = vec![0; w.arena.panes.len()];
         if let Some(def) = node.elite {
@@ -344,7 +373,7 @@ impl World {
             .map_or(max, |h| h.t + skip);
         let mut who = None;
         for (i, e) in self.enemies.iter().enumerate() {
-            if !e.alive() || e.buried {
+            if !e.alive() || e.buried || e.held {
                 continue;
             }
             for (at, r) in body_spheres(c, e) {
@@ -377,7 +406,11 @@ impl World {
             })
             .collect();
         let list = if fits.is_empty() { pool.clone() } else { fits };
-        let mut at = if d.kind == Kind::Boss || list.is_empty() {
+        let mut at = if d.kind == Kind::Double {
+            // the Defendant waits before the Long Door
+            let f = self.arena.level.floor_below(0, int(3), -int(4)).unwrap_or(0);
+            v3(0, f, -int(4))
+        } else if d.kind == Kind::Boss || list.is_empty() {
             self.arena.centre
         } else {
             list[self.rng.range(0, list.len() as i32 - 1) as usize]
@@ -385,17 +418,24 @@ impl World {
         if !air && d.kind != Kind::Boss {
             at.y += standing_lift(d);
         }
-        if d.kind == Kind::Tank {
+        let entering = d.kind == Kind::Tank && !d.elite;
+        if entering {
             // outside, beyond the glass, coming in
             at = v3(0, tank::HULL_Y, -crate::arena::COURT_RADIUS - int(14));
+        } else if d.kind == Kind::Tank {
+            at.y = tank::HULL_Y;
         }
         let orbit = if self.rng.chance(50) { 1 } else { -1 };
         let mut e = Enemy::new(def, d, at, orbit);
         e.home = self.arena.centre;
-        if d.kind == Kind::Tank {
+        if entering {
             e.state = enemy::State::Rest(tank::ENTER_TICKS + secs(1, 1));
+        } else if let Some(t) = e.tank.as_mut() {
+            // a mini-tank is already in the room
+            t.drive = tank::Drive::Turn;
+            t.timer = secs(1, 1);
         }
-        if matches!(d.kind, Kind::Boss | Kind::Tank) {
+        if matches!(d.kind, Kind::Boss | Kind::Tank | Kind::Double) {
             self.boss = Some(self.enemies.len());
         }
         if d.elite {
@@ -442,9 +482,17 @@ impl World {
         }
         self.tick += 1;
         self.aim(c, eye, fwd);
+        if self.ending > 0 {
+            self.ending_step(c);
+            return;
+        }
+        let stopped = self.stop.is_some();
+        // stopped by an enemy, you are as still as everything else
+        let frozen = self.stop.is_some_and(|s| s.caster.is_some());
 
         // the hook
-        if ctl.grapple_pressed
+        if !frozen
+            && ctl.grapple_pressed
             && self.player.build.grapple
             && self.player.grapple.is_none()
             && self.player.grapple_cooldown == 0
@@ -472,7 +520,12 @@ impl World {
         }
 
         // the body
-        self.player.step(ctl, &self.arena.level);
+        if frozen {
+            self.player.prev_pos = self.player.pos;
+            self.player.events.clear();
+        } else {
+            self.player.step(ctl, &self.arena.level);
+        }
         for ev in self.player.events.clone() {
             let sound = match ev {
                 Event::Jump(n) if n > 1 => "air_jump",
@@ -489,6 +542,7 @@ impl World {
                 Event::Wall => "wall",
                 Event::Vent => "vent",
                 Event::Pound => "pound",
+                Event::Stop => "time_stop",
             };
             let text = match ev {
                 Event::Recess => c.say("callout_recess"),
@@ -499,6 +553,14 @@ impl World {
             self.note(sound, text);
             if ev == Event::Pound {
                 self.pound(c);
+            }
+            if ev == Event::Stop && self.stop.is_none() {
+                let n = self.player.build.stop_ticks;
+                self.stop = Some(TimeStop {
+                    left: n,
+                    total: n,
+                    caster: None,
+                });
             }
             if ev == Event::Dash && self.player.build.pulse && self.pulse_cooldown == 0 {
                 // Dash Pulse: the orbs round you are gone
@@ -538,9 +600,12 @@ impl World {
             .add(facing(self.player.yaw, 0).scale(ONE / 2));
         let gun = &c.guns[self.held.gun];
         let rgb = c.pal.c(&gun.colour);
+        if !frozen {
+            self.grab_step(c, ctl);
+        }
         let pull = Pull {
-            held: ctl.fire,
-            pressed: ctl.fire_pressed,
+            held: ctl.fire && !frozen,
+            pressed: ctl.fire_pressed && !frozen,
             pierce: self.player.build.pierce,
             trigger: self.player.build.trigger,
         };
@@ -563,14 +628,19 @@ impl World {
             &mut self.held,
             gun,
             rgb,
-            ctl.alt_pressed,
+            ctl.alt_pressed && !frozen,
             muzzle,
             self.aim_point,
             self.player.build.pierce,
             lodged,
         );
         if !alt.shots.is_empty() || alt.detonate {
-            self.note("alt_fire", String::new());
+            let sound = if gun.id == "big_iron" {
+                "fire_iron"
+            } else {
+                "alt_fire"
+            };
+            self.note(sound, String::new());
             self.effect(FxKind::Flash, muzzle, V3::ZERO, 6, rgb, ONE * 6 / 10);
         }
         self.shots.extend(alt.shots);
@@ -582,6 +652,7 @@ impl World {
                 "carbine" => "fire_carbine",
                 "scattergun" => "fire_scatter",
                 "ripsaw" => "saw_throw",
+                "big_iron" => "fire_iron",
                 _ => "fire_launcher",
             };
             self.note(sound, String::new());
@@ -590,11 +661,13 @@ impl World {
         self.shots.extend(shots);
 
         // the waves of enemies, and those a caller calls
-        self.waves_step(c);
-        self.calls_step(c);
+        if !stopped {
+            self.waves_step(c);
+            self.calls_step(c);
+        }
 
         // the house's agents work as a squad
-        if let Some(nav) = self.arena.nav.as_ref() {
+        if let Some(nav) = self.arena.nav.as_ref().filter(|_| !stopped) {
             let mark = crate::squad::Mark {
                 feet: self.player.pos,
                 chest,
@@ -608,17 +681,34 @@ impl World {
         for i in 0..self.enemies.len() {
             let e = &self.enemies[i];
             let walks = matches!(c.enemies[e.def].kind, Kind::Agent | Kind::Tank);
-            if e.alive() && e.hurtable() && e.unseen > LOST_TICKS && Some(i) != self.boss && !walks {
+            if !stopped
+                && e.alive()
+                && e.hurtable()
+                && e.unseen > LOST_TICKS
+                && Some(i) != self.boss
+                && !walks
+            {
                 self.relocate(c, i, chest);
             }
         }
 
         // the enemies and what they fire
         for i in 0..self.enemies.len() {
-            if !self.enemies[i].alive() {
+            if !self.enemies[i].alive() || self.enemies[i].held {
+                continue;
+            }
+            if stopped && self.stop.is_none_or(|s| s.caster != Some(i)) {
                 continue;
             }
             let deeds = self.enemies[i].step(c, &self.arena.level, chest, i);
+            if deeds.stop > 0 && self.stop.is_none() {
+                self.stop = Some(TimeStop {
+                    left: deeds.stop,
+                    total: deeds.stop,
+                    caster: Some(i),
+                });
+                self.note("time_stop", c.say("callout_time_stop"));
+            }
             let d = &c.enemies[self.enemies[i].def];
             if let Some((from, to)) = deeds.blink {
                 let rgb = c.pal.c("enemy_core");
@@ -655,13 +745,25 @@ impl World {
         self.glass_step(c);
         self.shake = (self.shake - 1).max(0);
 
-        self.orbs_step(c, chest);
-        self.shots_step(c);
-        self.saws_step(c);
+        if !stopped {
+            self.orbs_step(c, chest);
+            self.shots_step(c);
+            self.saws_step(c);
+        }
+        if let Some(s) = self.stop.as_mut() {
+            s.left -= 1;
+            if s.left <= 0 {
+                self.stop = None;
+                self.note("time_resume", String::new());
+            }
+        }
 
         // touching an enemy hurts; a moth bursts on you
         let feet = self.player.pos;
         for i in 0..self.enemies.len() {
+            if stopped || self.enemies[i].held {
+                continue;
+            }
             let d = &c.enemies[self.enemies[i].def];
             if self.enemies[i].alive() && enemy::contact(&self.enemies[i], d, feet) {
                 let dmg = d.contact;
@@ -693,6 +795,22 @@ impl World {
         self.effects_step();
 
         if let Some(b) = self.boss {
+            if !self.enemies[b].alive() && c.enemies[self.enemies[b].def].kind == Kind::Double {
+                // the Defendant falls, and what it held back comes
+                self.ending = 1;
+                self.stop = None;
+                self.grabbed = None;
+                for o in std::mem::take(&mut self.orbs) {
+                    self.effect(FxKind::Burst, o.pos, V3::ZERO, 16, o.rgb, o.radius * 2);
+                }
+                self.waves.clear();
+                for e in self.enemies.iter_mut() {
+                    e.hp = 0;
+                }
+                self.shake = SHAKE_TICKS * 2;
+                self.note("eldritch", c.say("callout_eldritch"));
+                return;
+            }
             if !self.enemies[b].alive() {
                 if self.win_timer == 0 {
                     let name = c
@@ -924,7 +1042,7 @@ impl World {
                         if s.kind == ShotKind::Saw {
                             self.held.recall_blade(saw_recall(c, &self.held));
                         }
-                        if s.kind == ShotKind::Bomb {
+                        if s.kind.bursts() {
                             blasts.push((at, s.splash_radius, s.splash, s.erases, s.rgb, None));
                         }
                         continue;
@@ -943,7 +1061,7 @@ impl World {
                             kept.push(s);
                             continue;
                         }
-                        if s.kind == ShotKind::Bomb {
+                        if s.kind.bursts() {
                             blasts.push((at, s.splash_radius, s.splash, s.erases, s.rgb, None));
                         }
                         continue;
@@ -967,7 +1085,7 @@ impl World {
                             }
                             continue;
                         }
-                        if s.kind == ShotKind::Bomb {
+                        if s.kind.bursts() {
                             blasts.push((at, s.splash_radius, s.splash, s.erases, s.rgb, Some(i)));
                             continue;
                         }
@@ -981,7 +1099,7 @@ impl World {
                 }
             } else if let Some(t) = wall {
                 let at = s.pos.add(dir.scale(t));
-                if s.kind == ShotKind::Bomb {
+                if s.kind.bursts() {
                     blasts.push((at, s.splash_radius, s.splash, s.erases, s.rgb, None));
                 } else if s.kind == ShotKind::Saw {
                     // it bites into the wall for a moment
@@ -996,7 +1114,7 @@ impl World {
             }
             s.pos = s.pos.add(s.vel);
             if s.life <= 0 {
-                if s.kind == ShotKind::Bomb {
+                if s.kind.bursts() {
                     blasts.push((s.pos, s.splash_radius, s.splash, s.erases, s.rgb, None));
                 }
                 if s.kind == ShotKind::Saw {
@@ -1472,6 +1590,9 @@ impl World {
         // every weak point of the phase broken: the next phase grows
         let next = self.enemies[i].phase + 1;
         let Some(phase) = d.phases.get(next) else {
+            // its last weak point broken: it is done
+            self.enemies[i].hp = 0;
+            self.fell(c, vec![i]);
             return;
         };
         let e = &mut self.enemies[i];
@@ -1623,6 +1744,132 @@ impl World {
             self.note("boom", String::new());
         }
         self.fell(c, killed);
+    }
+
+    /// Grab and throw: G lifts an enemy hurt to half its health or less
+    /// that is near and in front of you; G again (or a hold run out) throws
+    /// it along your aim.
+    fn grab_step(&mut self, c: &Content, ctl: &Controls) {
+        if let Some(i) = self.grabbed {
+            self.grab_age += 1;
+            if !self.enemies[i].alive() {
+                self.grabbed = None;
+                return;
+            }
+            let fwd = facing(self.player.yaw, 0);
+            let at = self
+                .player
+                .chest()
+                .add(fwd.scale(ONE * 14 / 10))
+                .add(v3(0, ONE * 4 / 10, 0));
+            let e = &mut self.enemies[i];
+            e.pos = at;
+            e.prev = at;
+            e.vel = V3::ZERO;
+            if ctl.grab_pressed || self.grab_age > GRAB_HOLD {
+                self.throw(c, i);
+            }
+            return;
+        }
+        if !ctl.grab_pressed {
+            return;
+        }
+        let chest = self.player.chest();
+        let fwd = facing(self.player.yaw, 0);
+        let pick = (0..self.enemies.len())
+            .filter(|&i| {
+                let e = &self.enemies[i];
+                let d = &c.enemies[e.def];
+                let to = e.pos.sub(chest);
+                e.hurtable()
+                    && e.health_pct() <= GRAB_PCT
+                    && !d.elite
+                    && !matches!(d.kind, Kind::Boss | Kind::Tank | Kind::Mech | Kind::Double)
+                    && to.len() <= GRAB_REACH + d.radius
+                    && to.norm().dot(fwd) > ONE / 2
+            })
+            .min_by_key(|&i| self.enemies[i].pos.sub(chest).len());
+        match pick {
+            Some(i) => {
+                self.grabbed = Some(i);
+                self.grab_age = 0;
+                self.enemies[i].held = true;
+                self.enemies[i].path.clear();
+                self.note("grab", String::new());
+            }
+            None => self.note("grab_miss", c.say("callout_grab_miss")),
+        }
+    }
+
+    /// The held enemy, thrown: it dies, and flies on as a body that bursts
+    /// on what it meets.
+    fn throw(&mut self, c: &Content, i: usize) {
+        self.grabbed = None;
+        let e = &self.enemies[i];
+        let (def, at) = (e.def, e.pos);
+        let r = c.enemies[def].radius;
+        let dir = self.aim_point.sub(at).norm();
+        self.enemies[i].held = false;
+        self.enemies[i].hp = 0;
+        self.fell(c, vec![i]);
+        self.shots.push(Shot {
+            pos: at,
+            prev: at,
+            vel: dir.scale(THROW_SPEED),
+            damage: THROW_DAMAGE,
+            radius: r,
+            life: secs(2, 1),
+            splash_radius: THROW_RADIUS,
+            splash: THROW_SPLASH,
+            pierce: 0,
+            passed: vec![i],
+            rgb: c.pal.c("spark"),
+            kind: ShotKind::Thrown(def),
+            erases: false,
+            lodged: None,
+            teeth: 0,
+        });
+        self.note("throw", String::new());
+    }
+
+    /// The Idiot God comes: the summit melts away and you are drawn up into
+    /// its maw; then the revelation.
+    fn ending_step(&mut self, c: &Content) {
+        self.ending += 1;
+        self.effects_step();
+        let maw = MAW;
+        let p = &mut self.player;
+        let to = maw.sub(p.pos);
+        // slow at first, then falling into it
+        let pull = fx::mul(per_tick(2, 1), ONE + self.ending * ONE / secs(3, 1));
+        p.prev_pos = p.pos;
+        p.pos = p.pos.add(to.norm().scale(pull.min(to.len())));
+        p.vel = V3::ZERO;
+        p.grounded = false;
+        let (yaw, pitch) = crate::geom::yaw_pitch_of(to);
+        p.yaw = fx::lerp_angle(p.yaw, yaw, ONE / 20);
+        p.pitch = fx::lerp(p.pitch, fx::wrap(pitch).clamp(PITCH_MIN, PITCH_MAX), ONE / 20);
+        self.shake = self.shake.max(SHAKE_TICKS / 2);
+        if self.ending % 6 == 0 {
+            let at = p.pos.add(v3(
+                int(self.rng.range(-8, 8)),
+                int(self.rng.range(-4, 2)),
+                int(self.rng.range(-8, 8)),
+            ));
+            self.sparks(at, c.pal.c("eldritch_glow"), 6, ONE / 5);
+        }
+        if self.ending > ENDING_TICKS {
+            self.outcome = Outcome::Won;
+        }
+    }
+
+    /// How far the summit has melted, Q16 from 0 to ONE, for the shader.
+    pub fn melt(&self) -> i32 {
+        if self.ending == 0 {
+            0
+        } else {
+            fx::div(self.ending.min(ENDING_TICKS) * ONE, ENDING_TICKS * ONE)
+        }
     }
 
     /// A ground pound lands: a shockwave along the floor.
@@ -2394,21 +2641,23 @@ mod house {
     /// An arena of the house, its waves cleared so a test adds its own.
     fn house_world(kind: NodeKind, elite: bool) -> (Content, World) {
         let c = content();
-        let r = Route::build_for(&c, 2, 11, 1);
-        let i = r
-            .nodes
-            .iter()
-            .position(|n| {
-                n.kind == kind
-                    && n.elite.is_some() == elite
-                    && (kind != NodeKind::Fight || n.archetype == "hall" || elite)
+        let chief = c.enemy("chief");
+        // a map with the room wanted: the Great Hall's fight without its
+        // mini-boss, or the Section Chief's Ballroom
+        let (r, i) = (0..60u64)
+            .find_map(|seed| {
+                let r = Route::build_for(&c, 2, seed, 1);
+                let i = r.nodes.iter().position(|n| {
+                    n.kind == kind
+                        && if elite {
+                            n.elite == chief
+                        } else {
+                            n.elite.is_none() && (kind != NodeKind::Fight || n.archetype == "hall")
+                        }
+                })?;
+                Some((r, i))
             })
-            .or_else(|| {
-                r.nodes
-                    .iter()
-                    .position(|n| n.kind == kind && n.elite.is_some() == elite)
-            })
-            .unwrap();
+            .expect("a map with the room");
         let p = Player::new(V3::ZERO, 0, Build::default());
         let mut w = World::new(&c, &r.nodes[i], &[], p, Held::new(0, 1), 1);
         if kind == NodeKind::Fight && !elite {
@@ -2955,5 +3204,306 @@ mod house {
             "his men withdrew"
         );
         let _ = earned;
+    }
+}
+
+#[cfg(test)]
+mod ascent {
+    use super::*;
+    use crate::content::tests::content;
+    use crate::enemy::State;
+    use crate::player::Build;
+    use crate::route::Route;
+
+    /// A node of zone `zone`'s map: of `kind`, with the mini-boss `elite`
+    /// if one is named; its waves cleared unless it is a boss's.
+    fn world_in(zone: usize, kind: NodeKind, elite: Option<&str>) -> (Content, World) {
+        let c = content();
+        let want = elite.and_then(|id| c.enemy(id));
+        let (r, i) = (0..60u64)
+            .find_map(|seed| {
+                let r = Route::build_for(&c, zone, seed, 1);
+                let i = r.nodes.iter().position(|n| n.kind == kind && n.elite == want)?;
+                Some((r, i))
+            })
+            .expect("a map with the room");
+        let p = Player::new(V3::ZERO, 0, Build::default());
+        let mut w = World::new(&c, &r.nodes[i], &[], p, Held::new(0, 1), 1);
+        if kind == NodeKind::Fight && elite.is_none() {
+            w.waves_left.clear();
+        }
+        (c, w)
+    }
+
+    fn put(c: &Content, w: &mut World, id: &str, at: V3) -> usize {
+        let d = c.enemy(id).unwrap();
+        let mut e = Enemy::new(d, &c.enemies[d], at.add(v3(0, c.enemies[d].hover, 0)), 1);
+        e.state = State::Rest(10_000);
+        w.enemies.push(e);
+        w.enemies.len() - 1
+    }
+
+    fn step(c: &Content, w: &mut World, ctl: &Controls) {
+        let f = facing(w.player.yaw, w.player.pitch);
+        let eye = w.player.chest().sub(f.scale(int(4)));
+        w.tick(c, ctl, eye, f);
+    }
+
+    fn still() -> Controls {
+        Controls::default()
+    }
+
+    #[test]
+    fn an_injured_enemy_can_be_grabbed_and_thrown_into_another_and_a_healthy_one_cannot() {
+        let (c, mut w) = world_in(3, NodeKind::Fight, None);
+        w.player.iframes = 1_000_000;
+        let ahead = w.player.pos.add(v3(0, 0, -int(2)));
+        let held = put(&c, &mut w, "proxy", ahead);
+        let far = w.player.pos.add(v3(0, 0, -int(6)));
+        let other = put(&c, &mut w, "proxy", far);
+        let grab = Controls {
+            grab_pressed: true,
+            ..still()
+        };
+        // healthy: no
+        step(&c, &mut w, &grab);
+        assert!(w.grabbed.is_none(), "a healthy enemy is not grabbed");
+        // hurt to half: yes
+        w.enemies[held].hp = w.enemies[held].max_hp / 2;
+        step(&c, &mut w, &grab);
+        assert_eq!(w.grabbed, Some(held));
+        for _ in 0..5 {
+            w.enemies[other].state = State::Rest(10_000);
+            step(&c, &mut w, &still());
+        }
+        let hp = w.enemies[other].hp;
+        let kills = w.kills;
+        // aimed at the other, thrown
+        let f = facing(w.player.yaw, 0);
+        let eye = w.player.chest().sub(f.scale(int(4)));
+        let to = w.enemies[other].pos.sub(eye).norm();
+        w.tick(&c, &grab, eye, to);
+        assert!(
+            w.grabbed.is_none() && !w.enemies[held].alive(),
+            "it is thrown, and dies"
+        );
+        for _ in 0..60 {
+            w.enemies[other].state = State::Rest(10_000);
+            w.tick(&c, &still(), eye, to);
+        }
+        assert!(
+            hp - w.enemies[other].hp >= THROW_DAMAGE.min(hp),
+            "{hp} to {}",
+            w.enemies[other].hp
+        );
+        assert!(w.kills > kills);
+    }
+
+    #[test]
+    fn your_time_stop_holds_enemies_and_orbs_still_and_your_shots_hang_until_it_resumes() {
+        let (c, mut w) = world_in(3, NodeKind::Fight, None);
+        w.cleared = true;
+        w.player.build.stop_ticks = STOP_BASE;
+        let at = w.player.pos.add(v3(int(8), 0, -int(8)));
+        let e = put(&c, &mut w, "shade", at);
+        w.enemies[e].state = State::Rest(5);
+        let chest = w.player.chest();
+        w.orbs.push(Orb::new(
+            chest.add(v3(0, 0, -int(6))),
+            v3(0, 0, ONE),
+            ONE / 20,
+            ONE / 4,
+            [0; 3],
+            ORB_DAMAGE,
+        ));
+        let start = w.player.pos;
+        step(
+            &c,
+            &mut w,
+            &Controls {
+                stop_pressed: true,
+                ..still()
+            },
+        );
+        assert!(w.stop.is_some());
+        let (orb, en) = (w.orbs[0].pos, w.enemies[e].state);
+        // fire during it: the shot hangs
+        step(
+            &c,
+            &mut w,
+            &Controls {
+                fire: true,
+                fire_pressed: true,
+                ..still()
+            },
+        );
+        let shot = w.shots.first().map(|s| s.pos).expect("a shot");
+        for _ in 0..STOP_BASE / 2 {
+            step(
+                &c,
+                &mut w,
+                &Controls {
+                    move_z: ONE,
+                    ..still()
+                },
+            );
+        }
+        assert_eq!(w.orbs[0].pos, orb, "the orb held still");
+        assert_eq!(w.enemies[e].state, en, "the enemy held still");
+        assert_eq!(w.shots[0].pos, shot, "your shot hangs");
+        assert!(w.player.pos.z < start.z - int(2), "and you moved");
+        for _ in 0..STOP_BASE {
+            step(&c, &mut w, &still());
+        }
+        assert!(w.stop.is_none());
+        assert!(w.shots.is_empty() || w.shots[0].pos != shot, "the shot flies on");
+    }
+
+    #[test]
+    fn the_defendant_stops_time_holds_you_still_and_lays_shots_that_fly_when_it_resumes() {
+        let (c, mut w) = world_in(3, NodeKind::Boss, None);
+        w.player.iframes = 1_000_000;
+        for _ in 0..90 {
+            step(&c, &mut w, &still());
+        }
+        let b = w.boss.expect("the Defendant came");
+        let d = &c.enemies[w.enemies[b].def];
+        let k = d.phases[0].attacks.iter().position(|a| a.stop > 0).unwrap();
+        w.enemies[b].attack = k;
+        w.enemies[b].state = State::Windup(1);
+        let mut stopped = 0;
+        let mut seen_still = false;
+        let mut flew = false;
+        for _ in 0..secs(6, 1) {
+            let before = w.player.pos;
+            let was = w.stop.is_some_and(|s| s.caster == Some(b));
+            step(
+                &c,
+                &mut w,
+                &Controls {
+                    move_x: ONE,
+                    ..still()
+                },
+            );
+            if was && w.stop.is_some_and(|s| s.caster == Some(b)) {
+                stopped += 1;
+                assert_eq!(w.player.pos, before, "you are held still");
+                let held = w.orbs.iter().all(|o| o.speed == 0 || o.pos == o.prev);
+                seen_still |= !w.orbs.is_empty() && held;
+            } else if stopped > 0 && w.orbs.iter().any(|o| o.speed > 0) {
+                flew = true;
+            }
+        }
+        let whole = d.phases[0].attacks[k].stop;
+        assert!(
+            stopped >= whole - 2 && stopped <= whole,
+            "for its whole stop: {stopped} of {whole}"
+        );
+        assert!(seen_still, "its shots wait in the stopped moment");
+        assert!(flew, "and fly when it resumes");
+    }
+
+    #[test]
+    fn when_the_defendant_falls_the_idiot_god_draws_you_into_its_maw() {
+        let (c, mut w) = world_in(3, NodeKind::Boss, None);
+        w.player.iframes = 1_000_000;
+        for _ in 0..90 {
+            step(&c, &mut w, &still());
+        }
+        let b = w.boss.unwrap();
+        w.enemies[b].state = State::Rest(100);
+        w.enemies[b].hp = 1;
+        w.enemies[b].hurt(5);
+        step(&c, &mut w, &still());
+        assert!(w.ending > 0);
+        let start = w.player.pos.dist(MAW);
+        for _ in 0..ENDING_TICKS / 2 {
+            step(
+                &c,
+                &mut w,
+                &Controls {
+                    move_z: -ONE,
+                    ..still()
+                },
+            );
+        }
+        assert!(w.player.pos.dist(MAW) < start - int(10), "drawn toward the maw");
+        assert!(w.melt() > ONE / 3, "and the summit melts");
+        assert_eq!(w.outcome, Outcome::Playing);
+        for _ in 0..ENDING_TICKS {
+            step(&c, &mut w, &still());
+        }
+        assert_eq!(w.outcome, Outcome::Won);
+    }
+
+    #[test]
+    fn the_pioneer_boosts_sideways_and_rises_into_the_air() {
+        let (c, mut w) = world_in(1, NodeKind::Fight, Some("pioneer"));
+        w.player.iframes = 1_000_000;
+        let mut top = 0;
+        let mut fastest = 0;
+        let mut found = false;
+        for _ in 0..secs(20, 1) {
+            step(&c, &mut w, &still());
+            if let Some(k) = w.elite {
+                found = true;
+                let e = &w.enemies[k];
+                top = top.max(e.lift);
+                fastest = fastest.max(e.pos.sub(e.prev).len_xz());
+            }
+        }
+        assert!(found, "the Pioneer came");
+        assert!(top > int(5), "it ascends: {top}");
+        assert!(fastest > per_tick(18, 1), "it quick-boosts: {fastest}");
+    }
+
+    #[test]
+    fn the_escort_is_a_smaller_tank_that_falls_when_its_last_weak_point_breaks() {
+        let (c, mut w) = world_in(2, NodeKind::Fight, Some("escort"));
+        w.player.iframes = 1_000_000;
+        for _ in 0..90 {
+            step(&c, &mut w, &still());
+        }
+        let k = w.elite.expect("the Escort came");
+        let d = c.enemies[w.enemies[k].def].clone();
+        assert!(
+            w.enemies[k].tank.as_ref().unwrap().scale < ONE * 3 / 4,
+            "smaller than the Executor"
+        );
+        let earned = w.earned;
+        for _ in 0..d.phases.len() {
+            w.enemies[k].state = State::Rest(5);
+            for (at, _, j) in tank::weak_points(&w.enemies[k], &d) {
+                w.hurt_weak(&c, k, j, 10_000, at);
+            }
+        }
+        assert!(!w.enemies[k].alive(), "it is down");
+        assert!(w.earned >= earned + d.clemency);
+    }
+
+    #[test]
+    fn the_big_iron_fires_six_and_must_load_again() {
+        let (c, mut w) = world_in(3, NodeKind::Fight, None);
+        w.cleared = true;
+        w.held = Held::new(c.gun("big_iron"), 1);
+        let mut fired = 0;
+        for _ in 0..secs(4, 1) {
+            let before = w.shots.len();
+            step(
+                &c,
+                &mut w,
+                &Controls {
+                    fire: true,
+                    ..still()
+                },
+            );
+            fired += (w.shots.len() > before) as i32;
+        }
+        assert_eq!(fired, 6, "six, then the cylinder is empty");
+        let gl = c.guns[w.held.gun].level(1);
+        for _ in 0..gl.shell * 7 {
+            step(&c, &mut w, &still());
+        }
+        assert_eq!(w.held.rounds, 6, "loaded again");
     }
 }

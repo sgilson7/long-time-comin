@@ -15,6 +15,7 @@ use crate::world::{FxKind, PickupKind, World};
 
 mod beasts;
 mod house;
+pub use house::azathoth;
 
 fn dm(x: i32) -> i32 {
     ONE * x / 10
@@ -74,6 +75,48 @@ pub fn world(
         }
     }
     orbs(b, c, w, alpha, cam);
+    if w.ending > 0 {
+        house::azathoth(b, c, clock, w.melt());
+    }
+    // a revolver loading: the cylinder swung out, a shell going in
+    let gl = c.guns[w.held.gun].level(w.held.level);
+    if body && w.held.reloading(gl.mag) {
+        let hand = hand_of(&w.player, alpha);
+        let side = right_of(w.player.yaw).scale(-cm(12));
+        let cyl = hand.add(side).add(v3(0, cm(4), 0));
+        let spin = fx::div(w.held.loading * ONE, gl.shell.max(1) * ONE);
+        let f = Affine::translate(cyl)
+            .then(&Affine::rot_y(w.player.yaw))
+            .then(&Affine::rot_x(fx::QUARTER))
+            .then(&Affine::rot_y(fx::mul(spin, fx::TURN / 6)));
+        b.inked(
+            Mesh::Cyl,
+            &f.then(&Affine::scale(v3(cm(14), cm(10), cm(14)))),
+            c.pal.c("player_gun"),
+            0,
+        );
+        for k in 0..gl.mag {
+            let a = fx::TURN / gl.mag * k;
+            let full = k < w.held.rounds;
+            let p = f.apply(v3(fx::mul(fx::cos(a), cm(4)), cm(6), fx::mul(fx::sin(a), cm(4))));
+            let col = if full { c.pal.c("brass") } else { c.pal.c("shadow") };
+            b.push(
+                Mesh::Cyl,
+                &boxed(p, v3(cm(3), cm(3), cm(3))),
+                col,
+                ONE / 3,
+                crate::render::PASS_SOLID,
+            );
+        }
+        // the next shell, rising into its chamber
+        let shell = cyl.add(v3(0, -cm(30) + fx::mul(spin, cm(26)), 0));
+        b.inked(
+            Mesh::Cyl,
+            &boxed(shell, v3(cm(4), cm(8), cm(4))),
+            c.pal.c("brass"),
+            ONE / 3,
+        );
+    }
     if let Some(wall) = w.wall() {
         injunction(b, c, &wall, w.player.wall_left);
     }
@@ -83,6 +126,21 @@ pub fn world(
         match s.kind {
             crate::weapons::ShotKind::Bullet => {
                 rod(b, tail, at, s.radius * 2, s.rgb, ONE, false);
+            }
+            crate::weapons::ShotKind::Thrown(def) => {
+                // the body, tumbling
+                let d = &c.enemies[def];
+                let mut e = Enemy::new(def, d, at, 1);
+                e.state = State::Rest(1);
+                e.yaw = w.tick * deg(23);
+                e.age = w.tick;
+                enemy(b, c, &e, ONE, chest);
+                b.glow(
+                    Mesh::Sphere,
+                    &boxed(at, v3(d.radius * 3, d.radius * 3, d.radius * 3)),
+                    s.rgb,
+                    ONE / 4,
+                );
             }
             crate::weapons::ShotKind::Saw => {
                 // a spinning blade, its teeth round its rim
@@ -400,6 +458,39 @@ pub fn gun_model(b: &mut Batch, c: &Content, gun: usize, hand: V3, yaw: i32, pit
                 ONE / 2,
             );
             part(b, &f, Mesh::Cube, v3(0, -cm(6), 0), v3(cm(6), dm(2), cm(8)), body);
+        }
+        "big_iron" => {
+            // a long barrel, a heavy cylinder, a hammer, a worn grip
+            let barrel = f
+                .then(&Affine::translate(v3(0, cm(4), -dm(5))))
+                .then(&Affine::rot_x(fx::QUARTER))
+                .then(&Affine::scale(v3(cm(6), dm(6), cm(6))));
+            b.inked(Mesh::Cyl, &barrel, shade(body, 120), 0);
+            let cyl = f
+                .then(&Affine::translate(v3(0, cm(4), -cm(5))))
+                .then(&Affine::rot_x(fx::QUARTER))
+                .then(&Affine::scale(v3(cm(14), cm(12), cm(14))));
+            b.inked(Mesh::Cyl, &cyl, body, 0);
+            part(
+                b,
+                &f,
+                Mesh::Cube,
+                v3(0, cm(9), cm(5)),
+                v3(cm(3), cm(5), cm(4)),
+                body,
+            );
+            let grip = f
+                .then(&Affine::translate(v3(0, -cm(6), cm(8))))
+                .then(&Affine::rot_x(-deg(20)))
+                .then(&Affine::scale(v3(cm(6), cm(14), cm(7))));
+            b.inked(Mesh::Cube, &grip, c.pal.c("wood"), 0);
+            b.push(
+                Mesh::Cube,
+                &f.then(&boxed(v3(0, cm(8), -dm(5)), v3(cm(2), cm(2), dm(5)))),
+                glow,
+                ONE,
+                crate::render::PASS_SOLID,
+            );
         }
         "ripsaw" => {
             // a body, a guard over the front, a blade ready in it
@@ -767,7 +858,7 @@ pub fn enemy(b: &mut Batch, c: &Content, e: &Enemy, alpha: i32, target: V3) {
     } else {
         core
     };
-    if matches!(d.kind, Kind::Agent | Kind::Tank) {
+    if matches!(d.kind, Kind::Agent | Kind::Tank | Kind::Mech | Kind::Double) {
         house::draw(b, c, e, d, at, alpha, target, &paint);
         return;
     }
@@ -924,7 +1015,7 @@ pub fn enemy(b: &mut Batch, c: &Content, e: &Enemy, alpha: i32, target: V3) {
             );
         }
         Kind::Boss => bailiff(b, c, e, at, s, paint),
-        Kind::Agent | Kind::Tank => {}
+        Kind::Agent | Kind::Tank | Kind::Mech | Kind::Double => {}
     }
     // the windup: a halo that grows as the attack comes
     if charge > 0 && d.kind != Kind::Boss {

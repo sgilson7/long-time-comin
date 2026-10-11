@@ -43,6 +43,8 @@ pub const ACTIONS: &[(&str, u32)] = &[
     ("wall", 1 << 11),
     ("pound", 1 << 12),
     ("alt", 1 << 13),
+    ("grab", 1 << 14),
+    ("stop", 1 << 15),
 ];
 
 fn bit(name: &str) -> u32 {
@@ -238,6 +240,25 @@ impl Game {
         let d = self.c.enemies[w.enemies[b].def].clone();
         for (at, _, k) in crate::tank::weak_points(&w.enemies[b], &d) {
             w.hurt_weak(&self.c, b, k, i32::MAX / 2, at);
+        }
+    }
+
+    /// Brings the boss in the arena down at once, for tools that drive the
+    /// game (to see or measure what follows its fall).
+    pub fn fell_boss(&mut self) {
+        let Some(run) = self.run.as_mut() else {
+            return;
+        };
+        let w = &mut run.world;
+        if let Some(b) = w.boss {
+            let e = &mut w.enemies[b];
+            e.state = crate::enemy::State::Rest(10);
+            if let Some(t) = e.tank.as_mut() {
+                t.survive = 1;
+            } else {
+                e.hp = 1;
+                e.hurt(10);
+            }
         }
     }
 
@@ -552,6 +573,8 @@ impl Game {
             Outcome::Died => self.die(),
             Outcome::Won => {
                 let run = self.run.as_mut().unwrap();
+                let boss = self.c.zones[run.zone].boss.clone();
+                self.meta.beat(&boss);
                 run.earned += self.c.zones[run.zone].route.clemency_boss;
                 run.cleared += 1;
                 let next = run.zone + 1;
@@ -747,6 +770,12 @@ impl Game {
         // (nothing is cut) in the menus
         let (at, floor) = focus.unwrap_or((self.camera.eye, self.camera.eye.y));
         self.view.extend([at.x, at.y, at.z, floor]);
+        // the summit's melt and stopped time, for the shader
+        let (melt, stopped) = match (&self.run, in_run) {
+            (Some(r), true) => (r.world.melt(), if r.world.stop.is_some() { ONE } else { 0 }),
+            _ => (0, 0),
+        };
+        self.view.extend([melt, stopped]);
         let _ = self.hub_seed;
     }
 
@@ -812,34 +841,38 @@ impl Game {
         let pct = |a: i32, b: i32| a.max(0) * 100 / b.max(1);
         // the boss's bar, or a mini-boss's: a tank's shows what is left of
         // its phase's weak points, or of the time to outlast it
-        let boss = w.boss.or(w.elite.filter(|&k| w.enemies[k].alive())).map(|b| {
-            let e = &w.enemies[b];
-            let d = &c.enemies[e.def];
-            let words = c.story.bosses.get(&d.id);
-            let (pct, timer) = match e.tank.as_ref() {
-                Some(t) if t.survive > 0 => {
-                    let total = d.phases[e.phase].survive.max(1);
-                    let secs = (t.survive + TICKS_PER_SECOND - 1) / TICKS_PER_SECOND;
-                    (
-                        t.survive * 100 / total,
-                        c.say("hud_survive").replace("{n}", &secs.to_string()),
-                    )
-                }
-                Some(t) => {
-                    let total: i32 = d.phases[e.phase].weak.iter().map(|w| w.hp).sum();
-                    let left: i32 = t.weak.iter().map(|h| (*h).max(0)).sum();
-                    (left * 100 / total.max(1), String::new())
-                }
-                None => (e.health_pct(), String::new()),
-            };
-            json!({
-                "name": words.map(|x| x.name.clone()).unwrap_or_default(),
-                "title": words.map(|x| x.title.clone()).unwrap_or_default(),
-                "pct": pct,
-                "phase": e.phase + 1,
-                "timer": timer,
-            })
-        });
+        let boss = w
+            .boss
+            .or(w.elite.filter(|&k| w.enemies[k].alive()))
+            .filter(|_| w.ending == 0)
+            .map(|b| {
+                let e = &w.enemies[b];
+                let d = &c.enemies[e.def];
+                let words = c.story.bosses.get(&d.id);
+                let (pct, timer) = match e.tank.as_ref() {
+                    Some(t) if t.survive > 0 => {
+                        let total = d.phases[e.phase].survive.max(1);
+                        let secs = (t.survive + TICKS_PER_SECOND - 1) / TICKS_PER_SECOND;
+                        (
+                            t.survive * 100 / total,
+                            c.say("hud_survive").replace("{n}", &secs.to_string()),
+                        )
+                    }
+                    Some(t) => {
+                        let total: i32 = d.phases[e.phase].weak.iter().map(|w| w.hp).sum();
+                        let left: i32 = t.weak.iter().map(|h| (*h).max(0)).sum();
+                        (left * 100 / total.max(1), String::new())
+                    }
+                    None => (e.health_pct(), String::new()),
+                };
+                json!({
+                    "name": words.map(|x| x.name.clone()).unwrap_or_default(),
+                    "title": words.map(|x| x.title.clone()).unwrap_or_default(),
+                    "pct": pct,
+                    "phase": e.phase + 1,
+                    "timer": timer,
+                })
+            });
         let gates: Vec<Value> = w
             .gates
             .iter()
@@ -920,7 +953,7 @@ impl Game {
                 m
             })
             .collect();
-        if let Some(b) = w.boss {
+        for b in w.boss.into_iter().chain(w.elite) {
             let e = &w.enemies[b];
             let d = &c.enemies[e.def];
             if let Some(t) = e.tank.as_ref().filter(|_| e.hurtable()) {
@@ -988,6 +1021,19 @@ impl Game {
             "gun_trait": crate::codex::gun_summary(gl),
             "gun_colour": hex(c.pal.c(&gun.colour)),
             "alt": c.say("hud_alt").replace("{name}", &gun.alt.name),
+            "grabbing": w.grabbed.is_some(),
+            "stop": p.build.stop_ticks > 0,
+            "stop_ready": p.build.stop_ticks > 0 && p.stop_cooldown == 0,
+            "stopped": w.stop.map(|s| c.say("hud_stopped").replace("{n}", &((s.left + TICKS_PER_SECOND - 1) / TICKS_PER_SECOND).to_string())).unwrap_or_default(),
+            "rounds": if gl.mag > 0 {
+                let mut t = c.say("hud_rounds").replace("{n}", &w.held.rounds.min(gl.mag).to_string()).replace("{max}", &gl.mag.to_string());
+                if w.held.reloading(gl.mag) {
+                    t = format!("{t} · {}", c.say("hud_loading"));
+                }
+                t
+            } else {
+                String::new()
+            },
             "alt_ready": w.held.alt_cooldown == 0,
             "grapple": p.build.grapple,
             "grapple_ready": p.build.grapple && p.grapple_cooldown == 0,
@@ -1138,6 +1184,10 @@ impl Game {
                         c.say("why_requires").replace("{name}", &name)
                     }
                     Err(Refusal::Cost(n)) => c.say("why_cost").replace("{n}", &n.to_string()),
+                    Err(Refusal::Locked(boss)) => c.say("why_locked").replace(
+                        "{boss}",
+                        &c.story.bosses.get(&boss).map_or(boss.clone(), |b| b.name.clone()),
+                    ),
                     Err(Refusal::Unknown) => String::new(),
                 };
                 // how many upgrades stand above it in its branch
@@ -1329,6 +1379,8 @@ pub fn controls(held: u32, pressed: u32) -> Controls {
         pound_pressed: hit("pound"),
         fire_pressed: hit("fire"),
         alt_pressed: hit("alt"),
+        grab_pressed: hit("grab"),
+        stop_pressed: hit("stop"),
     }
 }
 
@@ -1393,7 +1445,7 @@ pub fn numbers() -> String {
         "uniforms": [["uLightDir", 3], ["uSky", 3], ["uFog", 3], ["uFogRange", 2], ["uLight", 3], ["uWindowDark", 3], ["uInk", 3], ["uSee", 4], ["uSeeSolid", 1]],
         // the view values: the matrix, the eye, then the see-through focus
         // (the head, and the floor under it)
-        "view": { "matrix": [0, 16], "eye": [16, 19], "focus": [19, 23] },
+        "view": { "matrix": [0, 16], "eye": [16, 19], "focus": [19, 23], "fx": [23, 25] },
         "percent": 100,
     })
     .to_string()
@@ -1564,20 +1616,48 @@ pub(crate) mod tests {
         run.world.enemies[b].tank.as_mut().unwrap().survive = 2;
         run.world.player.iframes = 100_000;
         frames(&mut g, 400, 0);
+        // the Executor's orders, and the climb
+        assert_eq!(g.mode, Mode::Interlude, "the Executor does not end the run");
+        let s: Value = serde_json::from_str(&g.screen_json()).unwrap();
+        assert_eq!(s["interlude"]["title"], "THE ORDERS");
+        g.continue_run();
+        let h: Value = serde_json::from_str(&g.hud_json()).unwrap();
+        assert_eq!(h["zone"], "The Ascent");
+        assert_eq!(h["node"], "The Trailhead");
+        // the Defendant, and what comes after it
+        let boss = g.run.as_ref().unwrap().route.boss();
+        g.go(boss);
+        frames(&mut g, 120, 0);
+        let run = g.run.as_mut().unwrap();
+        let b = run.world.boss.expect("the Defendant came");
+        assert_eq!(g.c.enemies[run.world.enemies[b].def].id, "defendant");
+        run.world.player.iframes = 100_000;
+        let e = &mut run.world.enemies[b];
+        e.phase = 2;
+        e.state = crate::enemy::State::Rest(1000);
+        e.hp = 1;
+        e.hurt(5);
+        frames(&mut g, 60, 0);
+        assert_eq!(g.mode, Mode::Play, "the Idiot God comes first");
+        assert!(g.run.as_ref().unwrap().world.melt() > 0);
+        frames(&mut g, ENDING_TICKS + 60, 0);
         assert_eq!(g.mode, Mode::Won);
         assert_eq!(g.meta.wins, 1);
-        // all three bosses' Clemency banked: 25, 40 and 55 in zone.json
-        assert!(g.meta.clemency >= 120, "{}", g.meta.clemency);
+        // all four bosses' Clemency banked: 25, 40, 55 and 80 in zone.json
+        assert!(g.meta.clemency >= 200, "{}", g.meta.clemency);
         let s: Value = serde_json::from_str(&g.screen_json()).unwrap();
         assert_eq!(s["verdict"]["title"], g.c.story.victory_title.as_str());
         g.to_holding();
         assert_eq!(g.mode, Mode::Holding);
-        // and a run may now start on the ice or in the house
+        // the time stop is yours now
+        assert_eq!(g.meta.build(&g.c).0.stop_ticks, STOP_BASE);
+        // and a run may now start on the ice, in the house or on the mountain
         let s: Value = serde_json::from_str(&g.screen_json()).unwrap();
         assert_eq!(s["starts"][0]["zone"], 1);
         assert_eq!(s["starts"][1]["zone"], 2);
-        g.start_run_at(2);
-        assert_eq!(g.run.as_ref().unwrap().zone, 2);
+        assert_eq!(s["starts"][2]["zone"], 3);
+        g.start_run_at(3);
+        assert_eq!(g.run.as_ref().unwrap().zone, 3);
     }
 
     #[test]
@@ -1603,7 +1683,7 @@ pub(crate) mod tests {
                 assert_eq!(w.player.health, w.player.build.max_health, "healed");
             }
         }
-        assert_eq!(bosses, ["bailiff", "witness", "executor"]);
+        assert_eq!(bosses, ["bailiff", "witness", "executor", "defendant"]);
         assert_eq!(g.mode, Mode::Won);
         assert_eq!(g.meta.rush_wins, 1);
         let s: Value = serde_json::from_str(&g.screen_json()).unwrap();
@@ -1627,7 +1707,13 @@ pub(crate) mod tests {
             e.hp = 1;
             e.hurt(5);
         }
-        frames(g, 400, 0);
+        let zone = g.run.as_ref().unwrap().zone;
+        for _ in 0..ENDING_TICKS + 200 {
+            frames(g, 1, 0);
+            if g.mode != Mode::Play || g.run.as_ref().is_some_and(|r| r.zone != zone) {
+                break;
+            }
+        }
         id
     }
 
@@ -1810,7 +1896,7 @@ pub(crate) mod tests {
         }
         // in play the view carries the head and the floor under it
         let v = &g.view;
-        assert_eq!(v.len(), 23);
+        assert_eq!(v.len(), 25);
         let p = g.run.as_ref().unwrap().world.player.pos;
         assert_eq!((v[19], v[21], v[22]), (p.x, p.z, p.y));
         assert!(v[20] > p.y + int(1));

@@ -1,5 +1,5 @@
 {
-  "_about": "The four guns. Units: damage in health points, rate_ms between shots, speed_cms in cm/s, spread_deg the half-angle of the cone a shot may stray in, size_cm the shot's radius, life_ms how long it flies, splash_cm the radius of the blast and splash its damage, pierce how many enemies a shot passes through. Every number the Codex and the HUD show for a gun is computed from these by crates/core/src/codex.rs. Levels 1 to 4: a run finds higher levels on side paths; level 4 only in the house. A saw gun (saws > 0) throws a blade on each press while it has one in hand: saws blades out at once, each dealing damage on impact and, while the trigger is held, rev_damage every rev_ms until it has dealt teeth in all; then it comes back in recall_ms. from_zone: the first zone (counted from 0) whose rewards offer the gun. alt: the gun's second fire on the right mouse button: kind burst (count heavy rounds one behind another), slug (one heavy round that pierces), cluster (count bombs in a fan, spread_deg apart) or detonate (every lodged blade bursts for damage plus half its teeth left, splash_cm round it, and comes back); damage at level 1, 25% more each level above; cooldown_ms between uses.",
+  "_about": "The five guns. Units: damage in health points, rate_ms between shots, speed_cms in cm/s, spread_deg the half-angle of the cone a shot may stray in, size_cm the shot's radius, life_ms how long it flies, splash_cm the radius of the blast and splash its damage, pierce how many enemies a shot passes through. Every number the Codex and the HUD show for a gun is computed from these by crates/core/src/codex.rs. Levels 1 to 4: a run finds higher levels on side paths; level 4 only in the house. A saw gun (saws > 0) throws a blade on each press while it has one in hand: saws blades out at once, each dealing damage on impact and, while the trigger is held, rev_damage every rev_ms until it has dealt teeth in all; then it comes back in recall_ms. from_zone: the first zone (counted from 0) whose rewards offer the gun. alt: the gun's second fire on the right mouse button: kind burst (count heavy rounds one behind another), slug (one heavy round that pierces), cluster (count bombs in a fan, spread_deg apart) or detonate (every lodged blade bursts for damage plus half its teeth left, splash_cm round it, and comes back); damage at level 1, 25% more each level above; cooldown_ms between uses. mag and shell_ms: a revolver's cylinder and the time to load one round into it; it loads one shell at a time once the trigger has been let be a moment (at once when empty). Alt kind fan: every round left, one after another, a little wild.",
   "weapons": [
     {
       "id": "carbine",
@@ -288,6 +288,82 @@
         "splash_cm": 250,
         "splash": 30,
         "cooldown_ms": 1500
+      }
+    },
+    {
+      "id": "big_iron",
+      "name": "Big Iron",
+      "blurb": "A six-shot hand cannon. Very heavy, slow rounds; loads one shell at a time.",
+      "colour": "shot_iron",
+      "from_zone": 3,
+      "levels": [
+        {
+          "damage": 70,
+          "rate_ms": 420,
+          "pellets": 1,
+          "spread_deg": 0,
+          "speed_cms": 5500,
+          "size_cm": 20,
+          "life_ms": 1500,
+          "splash_cm": 0,
+          "splash": 0,
+          "pierce": 0,
+          "mag": 6,
+          "shell_ms": 400
+        },
+        {
+          "damage": 80,
+          "rate_ms": 420,
+          "pellets": 1,
+          "spread_deg": 0,
+          "speed_cms": 5500,
+          "size_cm": 20,
+          "life_ms": 1500,
+          "splash_cm": 0,
+          "splash": 0,
+          "pierce": 0,
+          "mag": 6,
+          "shell_ms": 400
+        },
+        {
+          "damage": 95,
+          "rate_ms": 420,
+          "pellets": 1,
+          "spread_deg": 0,
+          "speed_cms": 5500,
+          "size_cm": 20,
+          "life_ms": 1500,
+          "splash_cm": 0,
+          "splash": 0,
+          "pierce": 1,
+          "mag": 6,
+          "shell_ms": 400
+        },
+        {
+          "damage": 110,
+          "rate_ms": 420,
+          "pellets": 1,
+          "spread_deg": 0,
+          "speed_cms": 5500,
+          "size_cm": 20,
+          "life_ms": 1500,
+          "splash_cm": 0,
+          "splash": 0,
+          "pierce": 1,
+          "mag": 6,
+          "shell_ms": 400
+        }
+      ],
+      "alt": {
+        "kind": "fan",
+        "name": "Fan the hammer",
+        "damage": 55,
+        "count": 6,
+        "speed_cms": 5000,
+        "size_cm": 18,
+        "life_ms": 1400,
+        "spread_deg": 6,
+        "cooldown_ms": 1200
       }
     }
   ]

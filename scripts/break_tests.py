@@ -68,11 +68,30 @@ BREAKS = [
  ("the lab's walls", "crates/core/src/arena/house.rs", "            let deep = -LAB_DEPTH - m(1);", "            let deep = -m(1);", "every_house_gate"),
  ("a hit is heard", "crates/core/src/world.rs", "            self.note(\"hurt\", String::new());\n            if self.player.recess_left < recess {", "            if self.player.recess_left < recess {", "an_orbs_hit_is_heard"),
  # round six
- ("the second fire's cooldown", "crates/core/src/weapons.rs", "    held.alt_cooldown = a.cooldown;", "    held.alt_cooldown = 0;", "every_gun_has_a_second_fire"),
+ ("the second fire's cooldown", "crates/core/src/weapons.rs", "    held.alt_cooldown = a.cooldown;\n    let damage = a.damage_at(held.level);", "    held.alt_cooldown = 0;\n    let damage = a.damage_at(held.level);", "every_gun_has_a_second_fire"),
  ("the blades shatter", "crates/core/src/world.rs", "                blasts.push((s.pos, enemy, weak, base + s.teeth / 2));", "", "the_ripsaws_second_fire"),
  ("the rush goes on", "crates/core/src/game.rs", "                if run.rush {", "                if false && run.rush {", "a_boss_rush_runs"),
  ("the rush waits for a win", "crates/core/src/game.rs", " || !self.meta.rush_open()", "", "a_boss_rush_runs"),
  ("the test save owns it all", "crates/core/src/meta.rs", "            owned: c.upgrades.iter().map(|u| u.id.clone()).collect(),", "            owned: Vec::new(),", "the_test_save_holds"),
+ # round seven
+ ("grab only the injured", "crates/core/src/world.rs", "                    && e.health_pct() <= GRAB_PCT\n", "", "an_injured_enemy_can_be_grabbed"),
+ ("the throw's damage", "crates/core/src/world.rs", "            damage: THROW_DAMAGE,", "            damage: 0,", "an_injured_enemy_can_be_grabbed"),
+ ("stopped orbs", "crates/core/src/world.rs", "        if !stopped {\n            self.orbs_step(c, chest);", "        if true {\n            self.orbs_step(c, chest);", "your_time_stop_holds"),
+ ("held still by its stop", "crates/core/src/world.rs", "        let frozen = self.stop.is_some_and(|s| s.caster.is_some());", "        let frozen = false;", "the_defendant_stops_time"),
+ ("drawn into the maw", "crates/core/src/world.rs", "        p.pos = p.pos.add(to.norm().scale(pull.min(to.len())));", "", "when_the_defendant_falls"),
+ ("the summit melts", "crates/core/src/world.rs", "            fx::div(self.ending.min(ENDING_TICKS) * ONE, ENDING_TICKS * ONE)", "            0", "when_the_defendant_falls"),
+ ("the mech ascends", "crates/core/src/enemy.rs", "(secs(9, 1), int(7), secs(4, 1))", "(secs(9, 1), 0, secs(4, 1))", "the_pioneer_boosts"),
+ ("the mech boosts", "crates/core/src/enemy.rs", "(secs(3, 1), secs(1, 2), per_tick(22, 1))", "(secs(3, 1), 0, per_tick(22, 1))", "the_pioneer_boosts"),
+ ("the escort is small", "crates/core/src/tank.rs", "            scale: fx::div(d.radius, crate::content::cm(320)).clamp(ONE / 4, ONE * 2),", "            scale: ONE,", "the_escort_is_a_smaller"),
+ ("the escort falls", "crates/core/src/world.rs", "            self.enemies[i].hp = 0;\n            self.fell(c, vec![i]);\n            return;", "            return;", "the_escort_is_a_smaller"),
+ ("a dry cylinder waits", "crates/core/src/weapons.rs", " || held.dry))", "))", "the_big_iron_fires_six"),
+ ("one shell at a time", "crates/core/src/weapons.rs", "                self.rounds += 1;", "                self.rounds = mag;", "every_gun_has_a_second_fire"),
+ ("the clocks wait for the Defendant", "crates/core/src/meta.rs", "        if !u.unlock.is_empty() && !self.beaten.contains(&u.unlock) {", "        if false {", "the_stopped_clocks_wait"),
+ ("the time stop comes with the win", "crates/core/src/meta.rs", "            b.stop_ticks += STOP_BASE;", "            b.stop_ticks += 0;", "the_stopped_clocks_wait"),
+ ("each step is higher", "crates/core/src/arena/ascent.rs", "        let depth = rise + m(80);", "        let depth = m(80);", "every_gate_on_the_mountain"),
+ ("the mini-boss list", "crates/core/src/route.rs", "            let mb = r.minibosses.iter().find(|m| m.at == i);", "            let mb = r.minibosses.iter().find(|m| m.at == 99);", "the_house_route_has"),
+ ("the ascent's own patterns", "data/enemies.json", '"pattern": "proxy_burst"', '"pattern": "burst_fire"', "the_ascent_has_seven"),
+ ("safe ground", "crates/core/src/player.rs", "            if self.safe_ground(level) {", "            if true {", "a_fall_returns_you"),
 ]
 
 

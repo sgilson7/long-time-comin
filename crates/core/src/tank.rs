@@ -66,6 +66,8 @@ pub struct Treads {
     /// choices made, for its rhythm
     pub choices: i32,
     pub rammed: i32,
+    /// its size against the Executor's (Q16, from its radius)
+    pub scale: i32,
 }
 
 impl Treads {
@@ -84,6 +86,7 @@ impl Treads {
             roll: 0,
             choices: 0,
             rammed: 0,
+            scale: fx::div(d.radius, crate::content::cm(320)).clamp(ONE / 4, ONE * 2),
         }
     }
 
@@ -102,13 +105,14 @@ pub fn place(e: &Enemy, t: &Treads, p: &Part) -> V3 {
         On::Hull => t.hull,
         On::Turret => t.turret,
     };
+    let k = |x: i32| fx::mul(x, t.scale);
     let base = match p.on {
         On::Hull => e.pos,
-        On::Turret => e.pos.add(v3(0, TURRET_Y, 0)),
+        On::Turret => e.pos.add(v3(0, k(TURRET_Y), 0)),
     };
-    base.add(right_of(yaw).scale(p.at[0]))
-        .add(v3(0, p.at[1], 0))
-        .add(facing(yaw, 0).scale(p.at[2]))
+    base.add(right_of(yaw).scale(k(p.at[0])))
+        .add(v3(0, k(p.at[1]), 0))
+        .add(facing(yaw, 0).scale(k(p.at[2])))
 }
 
 /// Every cannon grown by phase `phase`, with the phase each grew in.
@@ -133,7 +137,7 @@ pub fn muzzles(e: &Enemy, d: &EnemyDef) -> Vec<V3> {
                 On::Hull => t.hull,
                 On::Turret => t.turret,
             } + c.yaw;
-            place(e, t, c).add(facing(yaw, c.pitch).scale(int(1)))
+            place(e, t, c).add(facing(yaw, c.pitch).scale(fx::mul(int(1), t.scale)))
         })
         .collect()
 }
@@ -143,9 +147,10 @@ pub fn main_gun(e: &Enemy) -> V3 {
     let Some(t) = e.tank.as_ref() else {
         return e.pos;
     };
+    let k = |x: i32| fx::mul(x, t.scale);
     e.pos
-        .add(v3(0, TURRET_Y + ONE / 2, 0))
-        .add(facing(t.turret, 0).scale(int(6)))
+        .add(v3(0, k(TURRET_Y + ONE / 2), 0))
+        .add(facing(t.turret, 0).scale(k(int(6))))
 }
 
 /// The armour shots glance off: the hull as three spheres along it, the
@@ -155,11 +160,12 @@ pub fn armour(e: &Enemy) -> Vec<(V3, i32)> {
         return Vec::new();
     };
     let fwd = facing(t.hull, 0);
+    let k = |x: i32| fx::mul(x, t.scale);
     let mut out: Vec<(V3, i32)> = [-int(25) / 10, 0, int(25) / 10]
         .iter()
-        .map(|&k| (e.pos.add(fwd.scale(k)), HULL_WIDE / 2))
+        .map(|&j| (e.pos.add(fwd.scale(k(j))), k(HULL_WIDE / 2)))
         .collect();
-    out.push((e.pos.add(v3(0, TURRET_Y + ONE / 3, 0)), ONE * 21 / 10));
+    out.push((e.pos.add(v3(0, k(TURRET_Y + ONE / 3), 0)), k(ONE * 21 / 10)));
     out
 }
 
@@ -187,8 +193,8 @@ fn turn(from: i32, to: i32, rate: i32) -> i32 {
 
 /// Would the hull fit with its centre at `at`? Low things (under a metre)
 /// it rolls over.
-fn fits(level: &Level, at: V3) -> bool {
-    let r = HULL_WIDE / 2;
+fn fits(level: &Level, at: V3, scale: i32) -> bool {
+    let r = fx::mul(HULL_WIDE / 2, scale);
     at.len_xz() < ROAM + int(2) && !level.blocked(v3(at.x - r, ONE, at.z - r), v3(at.x + r, int(3), at.z + r))
 }
 
@@ -260,7 +266,7 @@ pub fn drive(e: &mut Enemy, level: &Level, target: V3, top: i32) {
     }
     let step = fwd.scale(t.speed);
     let next = v3(me.x + step.x, me.y, me.z + step.z);
-    if t.drive == Drive::Enter || fits(level, next) {
+    if t.drive == Drive::Enter || fits(level, next, t.scale) {
         e.pos = next;
     } else if t.speed != 0 {
         // something in the way: stop and pick another heading
@@ -273,7 +279,7 @@ pub fn drive(e: &mut Enemy, level: &Level, target: V3, top: i32) {
     } else {
         level.floor_below(e.pos.x, e.pos.y + ONE, e.pos.z).unwrap_or(0)
     };
-    e.pos.y = ground + HULL_Y + t.lift;
+    e.pos.y = ground + fx::mul(HULL_Y, t.scale) + t.lift;
     e.vel = step;
     t.roll = t.roll.wrapping_add(t.speed);
     // the turret keeps its guns on you, slower than you can circle it

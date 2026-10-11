@@ -31,6 +31,9 @@ pub struct Controls {
     pub fire_pressed: bool,
     /// the second fire's button went down
     pub alt_pressed: bool,
+    /// the grab key and the time stop's went down
+    pub grab_pressed: bool,
+    pub stop_pressed: bool,
 }
 
 /// What a run has made of the body: the upgrades bought and the pickups found.
@@ -65,6 +68,8 @@ pub struct Build {
     pub bail: i32,
     /// the Lien: a Ripsaw waits at every arrival
     pub lien: bool,
+    /// your time stop, in ticks (0: not yet yours)
+    pub stop_ticks: i32,
 }
 
 impl Default for Build {
@@ -90,6 +95,7 @@ impl Default for Build {
             plating: 0,
             bail: 0,
             lien: false,
+            stop_ticks: 0,
         }
     }
 }
@@ -143,6 +149,8 @@ pub struct Player {
     pub pounding: bool,
     pub pound_from: i32,
     pub pound_cooldown: i32,
+    /// until your time stop can be used again
+    pub stop_cooldown: i32,
     pub last_ground: V3,
     /// ticks since a hit landed, for the screen's red flash
     pub hurt_age: i32,
@@ -171,6 +179,8 @@ pub enum Event {
     Vent,
     /// a ground pound landed
     Pound,
+    /// you stopped time
+    Stop,
 }
 
 impl Player {
@@ -201,6 +211,7 @@ impl Player {
             pounding: false,
             pound_from: 0,
             pound_cooldown: 0,
+            stop_cooldown: 0,
             last_ground: pos,
             hurt_age: 1000,
             stride: 0,
@@ -340,6 +351,13 @@ impl Player {
             self.events.push(Event::Parry);
         }
 
+        // your time stop: the world's to carry out
+        self.stop_cooldown = (self.stop_cooldown - 1).max(0);
+        if c.stop_pressed && self.build.stop_ticks > 0 && self.stop_cooldown == 0 {
+            self.stop_cooldown = STOP_COOLDOWN;
+            self.events.push(Event::Stop);
+        }
+
         // the ground pound: in the air, straight down
         self.pound_cooldown = (self.pound_cooldown - 1).max(0);
         if c.pound_pressed
@@ -445,7 +463,11 @@ impl Player {
             }
             self.jumps_used = 0;
             self.coyote = COYOTE_TICKS;
-            self.last_ground = self.pos;
+            // a fall returns you to the last floor with ground all round
+            // it, never to the lip of a drop (SECOND-ORDER Q11)
+            if self.safe_ground(level) {
+                self.last_ground = self.pos;
+            }
         } else {
             self.coyote = (self.coyote - 1).max(0);
             if self.coyote == 0 && self.jumps_used == 0 {
@@ -472,6 +494,18 @@ impl Player {
             self.hurt(FALL_DAMAGE);
             self.events.push(Event::Fell);
         }
+    }
+
+    /// Is there floor a metre out on every side, at about this height?
+    fn safe_ground(&self, level: &Level) -> bool {
+        let reach = ONE * 12 / 10;
+        [(reach, 0), (-reach, 0), (0, reach), (0, -reach)]
+            .iter()
+            .all(|(dx, dz)| {
+                level
+                    .floor_below(self.pos.x + dx, self.pos.y + STEP_UP, self.pos.z + dz)
+                    .is_some_and(|y| (y - self.pos.y).abs() <= STEP_UP)
+            })
     }
 
     /// Steers the flat velocity toward where the player is pushing. Above
@@ -879,6 +913,37 @@ mod tests {
         assert!(p.grapple.is_none(), "let go on arrival");
         assert!(p.pos.z < -int(25), "{}", p.pos.z);
         assert!(peak_speed > RUN_SPEED * 2, "{peak_speed}");
+    }
+
+    #[test]
+    fn a_fall_returns_you_to_floor_with_ground_all_round_not_to_the_edge() {
+        // a floor that ends at x = 10, over nothing
+        let l = Level::new(vec![Solid::new(
+            v3(-int(10), -ONE, -int(10)),
+            v3(int(10), 0, int(10)),
+        )]);
+        let mut p = Player::new(V3::ZERO, 0, Build::default());
+        settle(&mut p, &l);
+        let mut fell = false;
+        for _ in 0..600 {
+            p.step(
+                &Controls {
+                    move_x: ONE,
+                    ..idle()
+                },
+                &l,
+            );
+            if p.events.contains(&Event::Fell) {
+                fell = true;
+                break;
+            }
+        }
+        assert!(fell, "it walked off");
+        assert!(
+            p.pos.x <= int(10) - ONE * 8 / 10,
+            "back a step from the edge: {}",
+            p.pos.x
+        );
     }
 
     #[test]

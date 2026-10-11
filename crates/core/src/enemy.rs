@@ -113,6 +113,13 @@ pub struct Enemy {
     pub rallied: bool,
     /// the Executor's treads, turret and weak points
     pub tank: Option<Box<Treads>>,
+    /// a mech's or a double's quick boost (ticks left) and its rise (Q16
+    /// metres over its standing height), and their clocks
+    pub boost: i32,
+    pub lift: i32,
+    pub air: i32,
+    /// held in your hands, to be thrown
+    pub held: bool,
 }
 
 /// What an enemy did this tick that the world must act on.
@@ -122,6 +129,8 @@ pub struct Deeds {
     /// enemies to summon, by definition index
     pub summons: Vec<usize>,
     pub phase_changed: bool,
+    /// it stops time this long, for everything but itself
+    pub stop: i32,
     pub burst: bool,
     /// a blinker moved: from, to
     pub blink: Option<(V3, V3)>,
@@ -163,6 +172,10 @@ impl Enemy {
             summon_timer: 0,
             rallied: false,
             tank: (d.kind == Kind::Tank).then(|| Box::new(Treads::new(d))),
+            boost: 0,
+            lift: 0,
+            air: 0,
+            held: false,
         }
     }
 
@@ -262,7 +275,7 @@ impl Enemy {
             }
         }
         // a boss changes phase the moment its health crosses the line
-        if d.kind == Kind::Boss {
+        if matches!(d.kind, Kind::Boss | Kind::Double) {
             let next = self.phase + 1;
             if next < d.phases.len() && self.health_pct() <= d.phases[next].from_pct {
                 self.phase = next;
@@ -335,9 +348,22 @@ impl Enemy {
             }
             State::Windup(_) => {
                 self.held_fire = false;
+                deeds.stop = attack.stop;
                 State::Casting(0)
             }
             State::Casting(t) => {
+                // in a stopped moment it moves round you between volleys
+                if attack.stop > 0
+                    && t > 0
+                    && pattern.volleys.iter().any(|v| {
+                        t >= v.delay
+                            && v.every > 0
+                            && (t - v.delay) % v.every == 0
+                            && (t - v.delay) / v.every < v.repeat
+                    })
+                {
+                    self.reposition(level, target, t);
+                }
                 let from = if attack.cannons {
                     tank::muzzles(self, d)
                 } else if d.kind == Kind::Tank {
@@ -462,6 +488,101 @@ impl Enemy {
             s => s,
         };
         deeds
+    }
+
+    /// Somewhere else round `target` at this enemy's range, on the floor
+    /// there: where a time stopper steps to between volleys.
+    fn reposition(&mut self, level: &Level, target: V3, t: i32) {
+        let d_range = int(9);
+        for k in 0..6 {
+            let a = (self.age * 37 + t * 211 + k * 97) % 360;
+            let flat = target.add(facing(fx::deg(a), 0).scale(d_range));
+            let Some(ground) = level.floor_below(flat.x, target.y + int(3), flat.z) else {
+                continue;
+            };
+            let at = v3(flat.x, ground + self.pos.y - self.floor(level), flat.z);
+            if !level.sphere_hits(at, ONE / 2) {
+                self.pos = at;
+                self.prev = at;
+                self.vel = V3::ZERO;
+                return;
+            }
+        }
+    }
+
+    fn floor(&self, level: &Level) -> i32 {
+        level.floor_below(self.pos.x, self.pos.y, self.pos.z).unwrap_or(0)
+    }
+
+    /// A mech or a double skirmishes: it circles you at its range on its
+    /// legs, bursts sideways now and then (a quick boost, a dash), and now
+    /// and then rises (a mech's ascent, a double's jump) and comes down.
+    fn skirmish(&mut self, d: &EnemyDef, level: &Level, target: V3) {
+        let to = v3(target.x - self.pos.x, 0, target.z - self.pos.z);
+        let dist = to.len_xz();
+        let towards = to.norm();
+        let side = v3(-towards.z, 0, towards.x).scale(self.orbit * ONE);
+        let mech = d.kind == Kind::Mech;
+        let (boost_every, boost_len, boost_speed) = if mech {
+            (secs(3, 1), secs(1, 2), per_tick(22, 1))
+        } else {
+            (secs(22, 10), DASH_TICKS, DASH_SPEED)
+        };
+        let (rise_every, rise, rise_ticks) = if mech {
+            (secs(9, 1), int(7), secs(4, 1))
+        } else {
+            (secs(4, 1), ONE * 15 / 10, secs(7, 10))
+        };
+        self.air += 1;
+        if self.boost > 0 {
+            self.boost -= 1;
+        } else if (self.age + self.def as i32 * 13) % boost_every == 0 {
+            self.boost = boost_len;
+            self.orbit = -self.orbit;
+        }
+        let radial = if dist > d.range + int(3) {
+            towards
+        } else if dist < d.range - int(3) {
+            towards.neg()
+        } else {
+            V3::ZERO
+        };
+        let wish = if self.boost > 0 {
+            side.norm().scale(boost_speed)
+        } else {
+            radial.add(side).norm().scale(d.speed)
+        };
+        self.vel = if self.boost > 0 {
+            wish
+        } else {
+            self.vel.lerp(wish, ONE / 10)
+        };
+        // the rise: up, a hold, and down again
+        let phase = self.air % rise_every;
+        let want_lift = if phase < rise_ticks {
+            fx::mul(
+                rise,
+                fx::sin(fx::mul(fx::div(phase * ONE, rise_ticks * ONE), fx::HALF)).max(0),
+            )
+        } else {
+            0
+        };
+        self.lift = fx::approach(self.lift, want_lift, rise / 20);
+        let v = self.vel;
+        let tries = [v, v3(v.x, 0, 0), v3(0, 0, v.z)];
+        if let Some(t) = tries
+            .iter()
+            .find(|t| !level.sphere_hits(self.pos.add(**t), d.radius))
+        {
+            self.pos = self.pos.add(*t);
+        } else {
+            self.orbit = -self.orbit;
+            self.boost = 0;
+        }
+        let ground = level
+            .floor_below(self.pos.x, self.pos.y + ONE, self.pos.z)
+            .unwrap_or(0);
+        self.pos.y = fx::approach(self.pos.y, ground + d.hover + self.lift, ONE / 4);
     }
 
     /// A burrower goes under the floor where it stands.
@@ -609,6 +730,7 @@ impl Enemy {
         let side = v3(-towards.z, 0, towards.x).scale(self.orbit * ONE);
         match d.kind {
             Kind::Turret | Kind::Tank => {}
+            Kind::Mech | Kind::Double => self.skirmish(d, level, target),
             Kind::Agent => self.walk(d, level, target),
             Kind::Blinker => {
                 // a slow bob where it stands; it moves by blinking
