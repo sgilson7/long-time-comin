@@ -1000,7 +1000,10 @@ impl Content {
                 if !r.miniboss.is_empty() {
                     find_enemy(&r.miniboss)?;
                     if r.miniboss_at >= r.main_fights || r.miniboss_arena.is_empty() {
-                        return Err(format!("zone {}: the mini-boss needs a main fight and an arena", z.id));
+                        return Err(format!(
+                            "zone {}: the mini-boss needs a main fight and an arena",
+                            z.id
+                        ));
                     }
                 }
                 for name in [
@@ -1377,7 +1380,11 @@ fn parse_enemies(text: &str, patterns: &[Pattern]) -> Result<Vec<EnemyDef>, Stri
                         .map(|a| attack(a, &e.id))
                         .collect::<Result<_, _>>()?,
                     weak: p.weak.iter().map(|w| part(w, &e.id)).collect::<Result<_, _>>()?,
-                    cannons: p.cannons.iter().map(|w| part(w, &e.id)).collect::<Result<_, _>>()?,
+                    cannons: p
+                        .cannons
+                        .iter()
+                        .map(|w| part(w, &e.id))
+                        .collect::<Result<_, _>>()?,
                     survive: ms(p.survive_ms),
                 });
             }
@@ -1387,7 +1394,11 @@ fn parse_enemies(text: &str, patterns: &[Pattern]) -> Result<Vec<EnemyDef>, Stri
                 let last = ps.len() - 1;
                 for (k, p) in ps.iter().enumerate() {
                     if k < last && (p.weak.is_empty() || p.weak.iter().any(|w| w.hp <= 0 || w.radius <= 0)) {
-                        return Err(format!("enemies: {} phase {} has no weak point to break", e.id, k + 1));
+                        return Err(format!(
+                            "enemies: {} phase {} has no weak point to break",
+                            e.id,
+                            k + 1
+                        ));
                     }
                     if k == last && p.survive <= 0 {
                         return Err(format!("enemies: {} last phase has no survive_ms", e.id));
@@ -1598,11 +1609,19 @@ pub mod tests {
         let (two, _) = roster(&c, 1);
         let (three, boss) = roster(&c, 2);
         assert_eq!(three.len(), 7);
-        assert!(three.iter().all(|&e| c.enemies[e].kind == Kind::Agent), "all of them people");
+        assert!(
+            three.iter().all(|&e| c.enemies[e].kind == Kind::Agent),
+            "all of them people"
+        );
         assert_eq!(c.enemies[boss].kind, Kind::Tank);
         let pats = |ids: &[usize]| -> Vec<usize> {
             ids.iter()
-                .flat_map(|&e| c.enemies[e].phases.iter().flat_map(|p| p.attacks.iter().map(|a| a.pattern)))
+                .flat_map(|&e| {
+                    c.enemies[e]
+                        .phases
+                        .iter()
+                        .flat_map(|p| p.attacks.iter().map(|a| a.pattern))
+                })
                 .collect()
         };
         let before: Vec<usize> = pats(&one).into_iter().chain(pats(&two)).collect();

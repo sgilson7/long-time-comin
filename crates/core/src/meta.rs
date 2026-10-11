@@ -333,7 +333,19 @@ mod tests {
             clemency: 10_000,
             ..Meta::default()
         };
-        for id in ["constitution_1", "recess", "appeal", "gavel", "gavel_2", "armory", "precedent", "bail", "lien", "writ", "writ_2"] {
+        for id in [
+            "constitution_1",
+            "recess",
+            "appeal",
+            "gavel",
+            "gavel_2",
+            "armory",
+            "precedent",
+            "bail",
+            "lien",
+            "writ",
+            "writ_2",
+        ] {
             m.buy(&c, id).unwrap_or_else(|e| panic!("{id}: {e:?}"));
         }
         let (b, _) = m.build(&c);

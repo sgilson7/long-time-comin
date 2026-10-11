@@ -1295,9 +1295,9 @@
           "length_cm": 1200,
           "radius_cm": 300,
           "at": "target",
-          "hold_ms": 700,
+          "hold_ms": 900,
           "launch": "close",
-          "speed_cms": 900,
+          "speed_cms": 700,
           "size_cm": 34,
           "colour": "blue"
         },
@@ -1305,7 +1305,6 @@
           "shape": "aimed",
           "count": 3,
           "spread_deg": 30,
-          "bounce": 1,
           "speed_cms": 1300,
           "size_cm": 28,
           "colour": "chalk",
@@ -1318,11 +1317,11 @@
       "volleys": [
         {
           "shape": "ring",
-          "count": 14,
-          "speed_cms": 1000,
+          "count": 12,
+          "speed_cms": 900,
           "size_cm": 28,
           "colour": "chalk",
-          "bounce": 3,
+          "bounce": 1,
           "repeat": 2,
           "every_ms": 400,
           "spin_deg": 12
@@ -1666,7 +1665,7 @@
       "volleys": [
         {
           "shape": "ring",
-          "count": 6,
+          "count": 8,
           "speed_cms": 800,
           "size_cm": 28,
           "colour": "chalk",
@@ -1685,7 +1684,7 @@
           "speed_cms": 1300,
           "size_cm": 26,
           "colour": "scarlet",
-          "repeat": 4,
+          "repeat": 6,
           "every_ms": 250
         },
         {

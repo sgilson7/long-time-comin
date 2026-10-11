@@ -148,7 +148,11 @@ pub fn fire(
             speed,
             accel: v.accel,
             min_speed: v.min_speed,
-            max_speed: if v.fall > 0 { speed * 4 } else { v.max_speed.max(speed) },
+            max_speed: if v.fall > 0 {
+                speed * 4
+            } else {
+                v.max_speed.max(speed)
+            },
             curl,
             radius: v.size,
             rgb,
@@ -545,25 +549,29 @@ impl Orb {
 /// along which `prev` was furthest outside the solid it now touches.
 fn glance(level: &Level, prev: V3, pos: V3, r: i32) -> Option<usize> {
     let mut best: Option<(i32, usize)> = None;
-    level.each_near(v3(pos.x - r, pos.y - r, pos.z - r), v3(pos.x + r, pos.y + r, pos.z + r), |s| {
-        if !within(s.nearest(pos), pos, r) {
-            return;
-        }
-        let out = [
-            (s.min.x - prev.x).max(prev.x - s.max.x),
-            (s.min.y - prev.y).max(prev.y - s.max.y),
-            (s.min.z - prev.z).max(prev.z - s.max.z),
-        ];
-        let (k, d) = out
-            .iter()
-            .enumerate()
-            .max_by_key(|(_, d)| **d)
-            .map(|(k, d)| (k, *d))
-            .unwrap_or((0, 0));
-        if best.is_none_or(|(b, _)| d > b) {
-            best = Some((d, k));
-        }
-    });
+    level.each_near(
+        v3(pos.x - r, pos.y - r, pos.z - r),
+        v3(pos.x + r, pos.y + r, pos.z + r),
+        |s| {
+            if !within(s.nearest(pos), pos, r) {
+                return;
+            }
+            let out = [
+                (s.min.x - prev.x).max(prev.x - s.max.x),
+                (s.min.y - prev.y).max(prev.y - s.max.y),
+                (s.min.z - prev.z).max(prev.z - s.max.z),
+            ];
+            let (k, d) = out
+                .iter()
+                .enumerate()
+                .max_by_key(|(_, d)| **d)
+                .map(|(k, d)| (k, *d))
+                .unwrap_or((0, 0));
+            if best.is_none_or(|(b, _)| d > b) {
+                best = Some((d, k));
+            }
+        },
+    );
     best.map(|(_, k)| k)
 }
 
@@ -896,8 +904,14 @@ mod tests {
     #[test]
     fn a_ricochet_glances_off_a_wall_and_comes_back() {
         let l = Level::new(vec![
-            crate::level::Solid::new(v3(-fx::int(40), -ONE, -fx::int(40)), v3(fx::int(40), 0, fx::int(40))),
-            crate::level::Solid::new(v3(-fx::int(5), 0, -fx::int(11)), v3(fx::int(5), fx::int(5), -fx::int(10))),
+            crate::level::Solid::new(
+                v3(-fx::int(40), -ONE, -fx::int(40)),
+                v3(fx::int(40), 0, fx::int(40)),
+            ),
+            crate::level::Solid::new(
+                v3(-fx::int(5), 0, -fx::int(11)),
+                v3(fx::int(5), fx::int(5), -fx::int(10)),
+            ),
         ]);
         let mut o = Orb::new(v3(0, ONE, 0), v3(0, 0, -ONE), ONE / 4, ONE / 4, [0; 3], 10);
         o.bounce = 1;
@@ -934,7 +948,11 @@ mod tests {
             assert!(o.landed, "it landed");
             let off = o.pos.sub(feet).len_xz();
             // the middle one at your feet, the others round them by the spread
-            let near = if k as i32 == v.count / 2 { ONE * 3 / 2 } else { fx::int(4) };
+            let near = if k as i32 == v.count / 2 {
+                ONE * 3 / 2
+            } else {
+                fx::int(4)
+            };
             assert!(off < near, "{k}: {off}");
             assert!(o.plant.is_some());
         }
@@ -949,8 +967,14 @@ mod tests {
         let target = v3(0, ONE, -fx::int(20));
         let yaw = |k: i32| yaw_pitch_of(fire(v, v3(0, ONE, 0), target, k, 0, &pal, &l).orbs[0].dir).0;
         let (first, last) = (fx::wrap(yaw(0)), fx::wrap(yaw(v.repeat - 1)));
-        assert!((fx::wrap(first - last).abs() - v.sweep).abs() < fx::deg(1), "{first} {last}");
-        assert!(fx::wrap(first).abs() < v.sweep && fx::wrap(last).abs() < v.sweep, "centred on you");
+        assert!(
+            (fx::wrap(first - last).abs() - v.sweep).abs() < fx::deg(1),
+            "{first} {last}"
+        );
+        assert!(
+            fx::wrap(first).abs() < v.sweep && fx::wrap(last).abs() < v.sweep,
+            "centred on you"
+        );
     }
 
     #[test]
@@ -963,13 +987,21 @@ mod tests {
         let target = v3(0, PLAYER_CHEST, 0);
         let mut s = fire(v, v3(0, ONE, -fx::int(15)), target, 0, 0, &pal, &l);
         assert_eq!(s.orbs.len() as i32, v.count * 2);
-        assert!(s.orbs.iter().all(|o| (o.pos.x.abs() - v.radius).abs() < ONE / 10), "either side");
+        assert!(
+            s.orbs.iter().all(|o| (o.pos.x.abs() - v.radius).abs() < ONE / 10),
+            "either side"
+        );
         for o in s.orbs.iter_mut() {
             for _ in 0..v.hold + 2 {
                 o.step(&l, target, V3::ZERO);
             }
             // each flies across toward the middle line
-            assert!(o.dir.x.signum() == -o.pos.x.signum() || o.pos.x.abs() < ONE / 2, "{:?} {:?}", o.pos, o.dir);
+            assert!(
+                o.dir.x.signum() == -o.pos.x.signum() || o.pos.x.abs() < ONE / 2,
+                "{:?} {:?}",
+                o.pos,
+                o.dir
+            );
             assert!(o.dir.z.abs() < ONE / 10);
         }
     }

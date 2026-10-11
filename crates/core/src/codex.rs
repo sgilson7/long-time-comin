@@ -578,7 +578,13 @@ fn rules(c: &Content) -> Vec<String> {
         format!("A gun on the floor is taken with E within {} m. Your old gun is left in its place.", m(PICKUP_REACH)),
         format!("Clemency: {}; plus each enemy's own value. You keep it all when you die. Dying mid-fight credits that fight's share for each of its enemies you killed. Your first death adds a grant of {FIRST_DEATH_GRANT}. Each 10 years of sentence add {SENTENCE_BONUS_PCT}% to all Clemency earned.", clemency.join("; ")),
         "Beating a zone's boss does not end the run: after an interlude the run goes on into the next zone, with your health restored and everything you carry kept. Once a zone's boss has been beaten, a run can also start at the next zone, from the Holding.".to_string(),
-        "Zone two's arrival holds a cache of two rewards: press E at one to take it; the other is lost.".to_string(),
+        "Zone two's and zone three's arrivals hold a cache of two rewards: press E at one to take it; the other is lost.".to_string(),
+        format!(
+            "In the house, people take cover: they hide where you cannot see them and step out to fire. Two who are ready wait for each other and fire on the same tick when they stand at least {}° apart round you; with a Handler alive, three or more fire at once from round you, and all of them rest {COMMAND_PCT}% less. One waits at most {} s.",
+            deg(CROSSFIRE_APART),
+            s(SYNC_WAIT)
+        ),
+        format!("Rewards found in the house: guns of level III or IV, Hair Trigger (guns fire {TRIGGER_PCT}% faster; they stack) and Plating (hits do {PLATING_PCT}% less, up to {PLATING_MAX})."),
         format!("Updraft vents (glowing grates on the ice) throw you about {} m up when you stand on them. You keep your air jumps.", m(fx::div(fx::mul(VENT_SPEED, VENT_SPEED) / 2, GRAVITY))),
         "Some attacks place their orbs in a shape and hold them still before they fly: a held orb is smaller, with a ring round it, and swells to full size just before it moves. Held orbs hurt to touch.".to_string(),
         format!("Each death reads the next count of the indictment and adds years to the sentence: 1 for the first death, 2 for the second, and so on. The first run to reach a tier {FAR_TIER} fight, and the first win, each read a count too."),

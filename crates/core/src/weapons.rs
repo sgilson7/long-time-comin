@@ -59,7 +59,11 @@ impl Held {
 /// its centre; or in a wall, for a moment.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Lodge {
-    Enemy { enemy: usize, weak: Option<usize>, offset: V3 },
+    Enemy {
+        enemy: usize,
+        weak: Option<usize>,
+        offset: V3,
+    },
     Wall(i32),
 }
 
@@ -114,7 +118,15 @@ pub fn rate(base: i32, triggers: i32) -> i32 {
 /// gun is ready: the shots leave `muzzle` toward `aim_point`, each strayed
 /// inside the level's spread by the seeded generator. A saw gun throws a
 /// blade on a press, while it has one in hand.
-pub fn trigger(held: &mut Held, gun: &Gun, rgb: Rgb, pull: Pull, muzzle: V3, aim_point: V3, rng: &mut Rng) -> Vec<Shot> {
+pub fn trigger(
+    held: &mut Held,
+    gun: &Gun,
+    rgb: Rgb,
+    pull: Pull,
+    muzzle: V3,
+    aim_point: V3,
+    rng: &mut Rng,
+) -> Vec<Shot> {
     held.cooldown = (held.cooldown - 1).max(0);
     held.recall_step();
     let l = gun.level(held.level);
@@ -207,7 +219,16 @@ mod tests {
         let mut rng = Rng::new(1);
         let mut shots = 0;
         for _ in 0..60 {
-            shots += trigger(&mut h, g, [0; 3], firing(), V3::ZERO, v3(0, 0, -int(10)), &mut rng).len();
+            shots += trigger(
+                &mut h,
+                g,
+                [0; 3],
+                firing(),
+                V3::ZERO,
+                v3(0, 0, -int(10)),
+                &mut rng,
+            )
+            .len();
         }
         // every 6 ticks (105 ms rounded) for 60 ticks: 10 shots
         assert_eq!(shots, 10);
@@ -235,11 +256,29 @@ mod tests {
         };
         let mut thrown = 0;
         for _ in 0..60 {
-            thrown += trigger(&mut h, g, [0; 3], held_only, V3::ZERO, v3(0, 0, -int(10)), &mut rng).len();
+            thrown += trigger(
+                &mut h,
+                g,
+                [0; 3],
+                held_only,
+                V3::ZERO,
+                v3(0, 0, -int(10)),
+                &mut rng,
+            )
+            .len();
         }
         assert_eq!(thrown, 0, "holding the trigger throws nothing");
         for _ in 0..120 {
-            thrown += trigger(&mut h, g, [0; 3], firing(), V3::ZERO, v3(0, 0, -int(10)), &mut rng).len();
+            thrown += trigger(
+                &mut h,
+                g,
+                [0; 3],
+                firing(),
+                V3::ZERO,
+                v3(0, 0, -int(10)),
+                &mut rng,
+            )
+            .len();
         }
         assert_eq!(thrown as i32, saws, "no more than the blades in hand");
         h.recall_blade(10);
@@ -255,7 +294,15 @@ mod tests {
         let g = &c.guns[c.gun("scattergun")];
         let mut h = Held::new(c.gun("scattergun"), 2);
         let mut rng = Rng::new(9);
-        let shots = trigger(&mut h, g, [0; 3], firing(), V3::ZERO, v3(0, 0, -int(10)), &mut rng);
+        let shots = trigger(
+            &mut h,
+            g,
+            [0; 3],
+            firing(),
+            V3::ZERO,
+            v3(0, 0, -int(10)),
+            &mut rng,
+        );
         assert_eq!(shots.len(), 11);
         let cos_spread = fx::cos(g.level(2).spread * 3 / 2);
         for s in &shots {
@@ -273,7 +320,15 @@ mod tests {
         let mut rng = Rng::new(3);
         for (level, erases) in [(1, false), (2, false), (3, true)] {
             let mut h = Held::new(c.gun("launcher"), level);
-            let s = trigger(&mut h, g, [0; 3], firing(), V3::ZERO, v3(0, 0, -int(10)), &mut rng);
+            let s = trigger(
+                &mut h,
+                g,
+                [0; 3],
+                firing(),
+                V3::ZERO,
+                v3(0, 0, -int(10)),
+                &mut rng,
+            );
             assert_eq!(s[0].kind, ShotKind::Bomb);
             assert_eq!(s[0].erases, erases, "level {level}");
         }

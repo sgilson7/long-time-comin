@@ -213,6 +213,31 @@ impl Game {
         &self.c
     }
 
+    /// Straight into node `to` of the run's map, for tools that drive the
+    /// game (the playtest harness, the screenshot script).
+    pub fn go_to(&mut self, to: usize) {
+        if self.mode == Mode::Play && self.run.as_ref().is_some_and(|r| to < r.route.nodes.len()) {
+            self.go(to);
+        }
+    }
+
+    /// Breaks every weak point the boss has open now, for tools that drive
+    /// the game (to see or measure a later phase).
+    pub fn break_weak_points(&mut self) {
+        let Some(run) = self.run.as_mut() else {
+            return;
+        };
+        let w = &mut run.world;
+        let Some(b) = w.boss else {
+            return;
+        };
+        w.enemies[b].state = crate::enemy::State::Rest(1);
+        let d = self.c.enemies[w.enemies[b].def].clone();
+        for (at, _, k) in crate::tank::weak_points(&w.enemies[b], &d) {
+            w.hurt_weak(&self.c, b, k, i32::MAX / 2, at);
+        }
+    }
+
     /// The name the HUD gives a node.
     pub fn name_of(&self, n: &crate::route::Node) -> String {
         self.node_name(n)
@@ -729,7 +754,10 @@ impl Game {
                 Some(t) if t.survive > 0 => {
                     let total = d.phases[e.phase].survive.max(1);
                     let secs = (t.survive + TICKS_PER_SECOND - 1) / TICKS_PER_SECOND;
-                    (t.survive * 100 / total, c.say("hud_survive").replace("{n}", &secs.to_string()))
+                    (
+                        t.survive * 100 / total,
+                        c.say("hud_survive").replace("{n}", &secs.to_string()),
+                    )
                 }
                 Some(t) => {
                     let total: i32 = d.phases[e.phase].weak.iter().map(|w| w.hp).sum();
@@ -865,7 +893,11 @@ impl Game {
             perks.push(format!("{} ×{}", c.say("reward_trigger"), p.build.trigger));
         }
         if p.build.plating > 0 {
-            perks.push(format!("{} ×{}", c.say("reward_plating"), p.build.plating.min(PLATING_MAX)));
+            perks.push(format!(
+                "{} ×{}",
+                c.say("reward_plating"),
+                p.build.plating.min(PLATING_MAX)
+            ));
         }
         let story = self
             .story
@@ -1467,7 +1499,6 @@ pub(crate) mod tests {
         g.start_run_at(2);
         assert_eq!(g.run.as_ref().unwrap().zone, 2);
     }
-
 
     #[test]
     fn a_run_cannot_start_in_a_zone_not_yet_reached() {

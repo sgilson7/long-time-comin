@@ -102,10 +102,8 @@ pub fn direct(enemies: &mut [Enemy], c: &Content, nav: &Nav, level: &Level, m: &
         let e = &enemies[i];
         let role = c.enemies[e.def].role;
         let resting = matches!(e.state, State::Rest(_));
-        let chase = matches!(role, Role::Rush | Role::Shield)
-            && resting
-            && (tick + i as i32 * 7) % 40 == 0;
-        if !(resting && e.order == Order::None) && !chase {
+        let chase = matches!(role, Role::Rush | Role::Shield) && resting && (tick + i as i32 * 7) % 40 == 0;
+        if !(chase || resting && e.order == Order::None) {
             continue;
         }
         if matches!(e.state, State::Spawning(_)) {
@@ -124,7 +122,8 @@ pub fn direct(enemies: &mut [Enemy], c: &Content, nav: &Nav, level: &Level, m: &
     let windup = |e: &Enemy| {
         let d = &c.enemies[e.def];
         let atk = &d.phases[0].attacks;
-        atk.get(e.attack % atk.len().max(1)).map_or(30, |a| a.windup.max(1))
+        atk.get(e.attack % atk.len().max(1))
+            .map_or(30, |a| a.windup.max(1))
     };
     let start = |enemies: &mut [Enemy], group: &[usize]| {
         let w = group.iter().map(|&i| windup(&enemies[i])).max().unwrap_or(30);
@@ -224,7 +223,11 @@ fn place(enemies: &mut [Enemy], i: usize, c: &Content, nav: &Nav, level: &Level,
             };
             let want = inside(m.feet.add(facing(a, 0).scale(far)));
             // where it already hides, if that still works, saves a walk
-            let here = (feet.sub(m.feet).len_xz() - far).abs() < int(6) && nav.cover.iter().any(|&n| nav.pos(n).is_some_and(|p| p.dist(feet) < ONE));
+            let here = (feet.sub(m.feet).len_xz() - far).abs() < int(6)
+                && nav
+                    .cover
+                    .iter()
+                    .any(|&n| nav.pos(n).is_some_and(|p| p.dist(feet) < ONE));
             let want = if here { feet } else { want };
             match cover(nav, level, m, want, role != Role::Grenadier) {
                 Some((c, p)) => (Order::Cover, Some(c), p),
@@ -279,7 +282,10 @@ fn cover(nav: &Nav, level: &Level, m: &Mark, want: V3, peek: bool) -> Option<(V3
             let Some(p) = nav.pos(n) else {
                 continue;
             };
-            if (p.y - cpos.y).abs() <= AGENT_STEP && p.dist(cpos) <= PEEK_REACH + ONE && clear(level, head(p), m.chest) {
+            if (p.y - cpos.y).abs() <= AGENT_STEP
+                && p.dist(cpos) <= PEEK_REACH + ONE
+                && clear(level, head(p), m.chest)
+            {
                 return Some((cpos, Some(p)));
             }
         }
@@ -288,7 +294,14 @@ fn cover(nav: &Nav, level: &Level, m: &Mark, want: V3, peek: bool) -> Option<(V3
 }
 
 /// An open place near `want` that sees you and passes `ok`.
-fn open_near(nav: &Nav, level: &Level, m: &Mark, want: V3, reach: i32, ok: impl Fn(V3) -> bool) -> Option<V3> {
+fn open_near(
+    nav: &Nav,
+    level: &Level,
+    m: &Mark,
+    want: V3,
+    reach: i32,
+    ok: impl Fn(V3) -> bool,
+) -> Option<V3> {
     let mut best: Option<(i32, V3)> = None;
     let step = int(2);
     let n = reach / step;

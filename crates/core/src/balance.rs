@@ -145,6 +145,9 @@ pub const BAIL_HEAL: i32 = 15;
 
 /// an agent turns to face where it walks or aims at most this fast
 pub const AGENT_TURN: i32 = deg(9);
+/// a shield turns slower, so you can get round it: 72° a second, slower
+/// than you run round it at its range
+pub const SHIELD_TURN: i32 = deg(6) / 5;
 /// a step an agent climbs; a drop it will take
 pub const AGENT_STEP: i32 = ONE * 6 / 10;
 pub const AGENT_DROP: i32 = int(6);

@@ -340,7 +340,12 @@ impl Player {
 
         // the ground pound: in the air, straight down
         self.pound_cooldown = (self.pound_cooldown - 1).max(0);
-        if c.pound_pressed && self.build.pound > 0 && !self.grounded && !self.pounding && self.pound_cooldown == 0 {
+        if c.pound_pressed
+            && self.build.pound > 0
+            && !self.grounded
+            && !self.pounding
+            && self.pound_cooldown == 0
+        {
             self.release_grapple();
             self.dash_ticks = 0;
             self.pounding = true;

@@ -467,14 +467,27 @@ impl<'a> B<'a> {
             self.block(x, 0, z, w, h, d, wall);
             if self.house {
                 // a cabinet pushed over as a barricade: panels and brass
-                let face = if along_x { v3(0, 0, d / 2 + dm(1) / 2) } else { v3(w / 2 + dm(1) / 2, 0, 0) };
+                let face = if along_x {
+                    v3(0, 0, d / 2 + dm(1) / 2)
+                } else {
+                    v3(w / 2 + dm(1) / 2, 0, 0)
+                };
                 for side in [-1, 1] {
-                    let size = if along_x { v3(w - dm(4), h - dm(6), dm(1)) } else { v3(dm(1), h - dm(6), d - dm(4)) };
+                    let size = if along_x {
+                        v3(w - dm(4), h - dm(6), dm(1))
+                    } else {
+                        v3(dm(1), h - dm(6), d - dm(4))
+                    };
                     let c = self.c("house_wood");
                     self.deco(Mesh::Cube, v3(x, h / 2, z).add(face.scale(side * ONE)), size, c);
                 }
                 let brass = self.c("house_brass");
-                self.deco(Mesh::Cube, v3(x, h + dm(1) / 2, z), v3(w + dm(2), dm(1), d + dm(2)), brass);
+                self.deco(
+                    Mesh::Cube,
+                    v3(x, h + dm(1) / 2, z),
+                    v3(w + dm(2), dm(1), d + dm(2)),
+                    brass,
+                );
                 placed += 1;
                 continue;
             }
@@ -2105,10 +2118,13 @@ mod reach {
                     .iter()
                     .filter(|p| nav.nearest(**p).is_none_or(|n| !walked.contains(&n)))
                     .count();
-                assert!(lost * 10 <= a.ground_spawns.len(), "{kind} seed {seed}: {lost} spawns off the grid");
+                assert!(
+                    lost * 10 <= a.ground_spawns.len(),
+                    "{kind} seed {seed}: {lost} spawns off the grid"
+                );
                 assert!(nav.cover.len() > 40, "{kind}: {} cover places", nav.cover.len());
                 // no edge a body can walk off drops into nothing (the lab's
-                // basement once ran on under the floor, SECOND-ORDER G6)
+                // basement once ran on under the floor, SECOND-ORDER M6)
                 for p in &reached {
                     for (dx, dz) in [(ONE / 2, 0), (-ONE / 2, 0), (0, ONE / 2), (0, -ONE / 2)] {
                         let n = v3(p.x + dx, p.y, p.z + dz);

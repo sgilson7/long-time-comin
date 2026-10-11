@@ -106,9 +106,14 @@ impl Route {
                 b += 1;
             }
             for k in [a, b] {
-                arrival
-                    .cache
-                    .push(reward_of(c, zone, &r.cache_rewards[k], r.weapon_levels[0], carbine_level, &mut rng));
+                arrival.cache.push(reward_of(
+                    c,
+                    zone,
+                    &r.cache_rewards[k],
+                    r.weapon_levels[0],
+                    carbine_level,
+                    &mut rng,
+                ));
             }
         }
         nodes.push(arrival);
@@ -120,8 +125,14 @@ impl Route {
             }
             last_arch = arch.clone();
             let tier = r.main_tiers[i];
-            let elite = (!r.miniboss.is_empty() && i == r.miniboss_at).then(|| c.enemy(&r.miniboss)).flatten();
-            let arch = if elite.is_some() { r.miniboss_arena.clone() } else { arch };
+            let elite = (!r.miniboss.is_empty() && i == r.miniboss_at)
+                .then(|| c.enemy(&r.miniboss))
+                .flatten();
+            let arch = if elite.is_some() {
+                r.miniboss_arena.clone()
+            } else {
+                arch
+            };
             let mut n = node(NodeKind::Fight, &arch, tier, STRIDE * (i as i32 + 1), &mut rng);
             n.encounter = Some(pick_encounter(c, zone, tier, &mut rng));
             n.elite = elite;
@@ -132,7 +143,14 @@ impl Route {
         // the Antechamber's alternative to its fountain
         if !r.rest_rewards.is_empty() {
             let pick = &r.rest_rewards[rng.range(0, r.rest_rewards.len() as i32 - 1) as usize];
-            rest.reward = Some(reward_of(c, zone, pick, r.weapon_levels[1], carbine_level, &mut rng));
+            rest.reward = Some(reward_of(
+                c,
+                zone,
+                pick,
+                r.weapon_levels[1],
+                carbine_level,
+                &mut rng,
+            ));
         }
         nodes.push(rest);
         nodes.push(node(NodeKind::Boss, "boss", 0, rest_step + STRIDE, &mut rng));
@@ -390,7 +408,10 @@ mod tests {
             for z in [0, 1] {
                 let r = Route::build_for(&c, z, seed, 1);
                 for n in &r.nodes {
-                    assert!(!matches!(n.reward, Some(Reward::Gun(g, _)) if g == saw), "zone {z} offers the Ripsaw");
+                    assert!(
+                        !matches!(n.reward, Some(Reward::Gun(g, _)) if g == saw),
+                        "zone {z} offers the Ripsaw"
+                    );
                     assert!(n.elite.is_none());
                 }
             }

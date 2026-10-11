@@ -6,14 +6,16 @@ shows. Expected values are worked out by hand from the data files, never
 copied from the game's own output:
 
 - story.json's sentencing has 5 lines; its indictment has 10 counts.
-- the Codex has 5 tabs (copy.json codex_tabs), 12 control rows
-  (copy.json controls), 3 guns (weapons.json) and 16 enemies (enemies.json:
-  seven and a boss in each of the two built zones).
+- the Codex has 5 tabs (copy.json codex_tabs), 13 control rows
+  (copy.json controls), 4 guns (weapons.json) and 25 enemies (enemies.json:
+  seven and a boss in each of the three built zones, and the house's
+  mini-boss).
 - the crater's gate is open, so its label shows; the first fight's gates
   stay dark and unlabelled until its enemies are defeated.
-- upgrades.json lists 12 upgrades; the cheapest (Constitution I) costs 8, so
-  a new record with 0 Clemency can buy none of them.
-- zone.json lists 4 zones, 2 built: 2 are sealed.
+- upgrades.json lists 27 upgrades in 4 branches (copy.json holding_branches);
+  the cheapest (Constitution I) costs 8, so a new record with 0 Clemency can
+  buy none of them.
+- zone.json lists 4 zones, 3 built: 1 is sealed.
 - a run starts in the arrival node, named "The Crater" in zone.json; with
   no upgrades the body has 100 health (balance.rs BASE_HEALTH), 1 jump
   (BASE_JUMPS) and 2 dashes (DASH_CHARGES).
@@ -24,6 +26,9 @@ copied from the game's own output:
 - a record with zone two open (unlocked 1) offers one more start in the
   Holding; it starts on the ice, at "The Landing" of "The White Waste"
   (zone.json), whose arrival holds two rewards to choose from.
+- a record with zone three open (unlocked 2) offers two; the second starts
+  in "The Vestibule" of "The Glass House", and a death there is headed by
+  story.json's death title for the house.
 """
 
 import json
@@ -58,10 +63,12 @@ def run(page, check, engine):
     check(mode(page) == "holding", "then the Holding")
     cards = page.query_selector_all("#upgrades .upgrade")
     buyable = page.query_selector_all("#upgrades .upgrade:not(:disabled)")
-    check(len(cards) == 12 and len(buyable) == 0, f"12 upgrades, none affordable with 0 Clemency ({len(cards)}, {len(buyable)})")
+    check(len(cards) == 27 and len(buyable) == 0, f"27 upgrades, none affordable with 0 Clemency ({len(cards)}, {len(buyable)})")
+    branches = page.query_selector_all("#upgrades .branch")
+    check(len(branches) == 4, f"in four branches ({len(branches)})")
     check(page.inner_text("#m-counts") == "0 / 10", f"no count read yet ({page.inner_text('#m-counts')!r})")
     sealed = page.query_selector_all("#m-route li.sealed")
-    check(len(sealed) == 2, f"two zones sealed in this build ({len(sealed)})")
+    check(len(sealed) == 1, f"one zone sealed in this build ({len(sealed)})")
     later = page.query_selector_all("#start-later button")
     check(len(later) == 0, f"a new record can start only in 2031 ({len(later)})")
 
@@ -69,13 +76,13 @@ def run(page, check, engine):
     check(page.is_visible("#codex"), "the Codex opens from the Holding")
     tabs = page.query_selector_all("#codex-tabs .tab")
     rows = page.query_selector_all("#codex-body table.stats tr")
-    check(len(tabs) == 5 and len(rows) == 12, f"5 tabs, 12 control rows ({len(tabs)}, {len(rows)})")
+    check(len(tabs) == 5 and len(rows) == 13, f"5 tabs, 13 control rows ({len(tabs)}, {len(rows)})")
     click(page, "#codex-tabs .tab:nth-child(2)")
     guns = page.query_selector_all("#codex-body .codex-card")
-    check(len(guns) == 3, f"three guns ({len(guns)})")
+    check(len(guns) == 4, f"four guns ({len(guns)})")
     click(page, "#codex-tabs .tab:nth-child(3)")
     foes = page.query_selector_all("#codex-body .codex-card")
-    check(len(foes) == 16, f"sixteen enemies ({len(foes)})")
+    check(len(foes) == 25, f"twenty-five enemies ({len(foes)})")
     body = page.inner_text("#codex-body")
     check("{" not in body, "no unfilled placeholder in the Codex")
     click(page, "#codex-close")
@@ -164,3 +171,29 @@ def run(page, check, engine):
     click(page, "#abandon")
     check(mode(page) == "dead", f"abandoning on the ice reads the indictment ({mode(page)})")
     check(page.inner_text("#d-title") == STORY["death_titles"]["white_waste"], "headed as the ice's death")
+
+    # a record that has beaten the Witness can start in the house
+    record = page.evaluate("() => localStorage.getItem('long-time-comin.record')")
+    opened = json.loads(record)
+    opened["unlocked"] = 2
+    page.evaluate("(r) => localStorage.setItem('long-time-comin.record', r)", json.dumps(opened))
+    page.reload()
+    page.wait_for_selector("body[data-ready='true']", state="attached", timeout=20000)
+    if mode(page) == "title":
+        click(page, "#begin")
+    later = page.query_selector_all("#start-later button")
+    check(len(later) == 2, f"two more starts, on the ice and in the house ({len(later)})")
+    click(page, "#start-later button:nth-child(2)")
+    check(mode(page) == "play", f"it plays ({mode(page)})")
+    page.wait_for_timeout(500)
+    check(page.text_content("#h-zone") == "The Glass House", f"in the Glass House ({page.text_content('#h-zone')!r})")
+    check(page.inner_text("#h-node") == "The Vestibule", f"at the Vestibule ({page.inner_text('#h-node')!r})")
+    page.keyboard.press("Escape")
+    page.wait_for_timeout(300)
+    if mode(page) == "play":
+        page.keyboard.press("Escape")
+        page.wait_for_timeout(300)
+    click(page, "#abandon")
+    click(page, "#abandon")
+    check(mode(page) == "dead", f"abandoning in the house reads the indictment ({mode(page)})")
+    check(page.inner_text("#d-title") == STORY["death_titles"]["glass_house"], "headed as the house's death")

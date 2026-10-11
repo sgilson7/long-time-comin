@@ -1,0 +1,393 @@
+\documentclass[tikz,border=0pt]{standalone}
+\usepackage{xcolor}
+\usetikzlibrary{calc}
+% Palette: Sam_Comm_final.png by eye, and data/palette.json.
+\definecolor{ink}{HTML}{3B2340}
+\definecolor{sky}{HTML}{EFC46A}
+\definecolor{skyhi}{HTML}{F5DA92}
+\definecolor{skylow}{HTML}{E9B060}
+\definecolor{cloud}{HTML}{F2D58A}
+\definecolor{wallA}{HTML}{E88A73}
+\definecolor{wallB}{HTML}{EE9F7E}
+\definecolor{wallC}{HTML}{E47A7E}
+\definecolor{wallD}{HTML}{F0B07E}
+\definecolor{wallE}{HTML}{D9765F}
+\definecolor{wallF}{HTML}{E99A8A}
+\definecolor{greenA}{HTML}{8DBB7E}
+\definecolor{greenB}{HTML}{6FA77A}
+\definecolor{greenC}{HTML}{A9C97F}
+\definecolor{greenD}{HTML}{5E9C6A}
+\definecolor{window}{HTML}{F6E7A0}
+\definecolor{windark}{HTML}{8C5A64}
+\definecolor{metal}{HTML}{8D9A93}
+\definecolor{metaldark}{HTML}{5E6B66}
+\definecolor{wood}{HTML}{B9835A}
+\definecolor{paving}{HTML}{E2BD8C}
+\definecolor{ground}{HTML}{D3A77D}
+\definecolor{stone}{HTML}{E7C9A0}
+\definecolor{clock}{HTML}{F8EBC8}
+\definecolor{court}{HTML}{9E4F55}
+\definecolor{courtdark}{HTML}{6E3542}
+\definecolor{goldtrim}{HTML}{F2B53A}
+\definecolor{paper}{HTML}{F6E7C4}
+\definecolor{paperdark}{HTML}{E3CC98}
+\definecolor{violet}{HTML}{7B2FF7}
+\definecolor{magenta}{HTML}{FF2E88}
+\definecolor{cyan}{HTML}{13CFE3}
+\definecolor{gold}{HTML}{FFB000}
+\definecolor{coat}{HTML}{2F4858}
+\definecolor{coatdark}{HTML}{22323F}
+\definecolor{trim}{HTML}{F26B38}
+\definecolor{skin}{HTML}{E0AC69}
+\definecolor{hair}{HTML}{3B2340}
+\definecolor{gun}{HTML}{3E3A46}
+\definecolor{robe}{HTML}{2D2240}
+\definecolor{bossface}{HTML}{F8EBC8}
+\definecolor{eye}{HTML}{FF2E88}
+\definecolor{red}{HTML}{B3262E}
+\definecolor{heart}{HTML}{FF4F6D}
+\definecolor{jump}{HTML}{8DE36B}
+\definecolor{lamp}{HTML}{FFE6A3}
+\definecolor{night}{HTML}{4A3357}
+\definecolor{nightsky}{HTML}{6B4A6E}
+\definecolor{icesky}{HTML}{A7C4E2}
+\definecolor{icefog}{HTML}{8FAFD2}
+\definecolor{icesnow}{HTML}{EEF5F9}
+\definecolor{icesnowdark}{HTML}{CFDDE7}
+\definecolor{icewhite}{HTML}{E4F1F8}
+\definecolor{iceblue}{HTML}{A9D3EA}
+\definecolor{icedeep}{HTML}{6FA9D2}
+\definecolor{iceglow}{HTML}{8FE3FF}
+\definecolor{icerock}{HTML}{5E6E82}
+\definecolor{icerockdark}{HTML}{3F4C5F}
+\definecolor{icered}{HTML}{D94A3A}
+\definecolor{hull}{HTML}{A8392F}
+\definecolor{hulldark}{HTML}{6C2A27}
+\definecolor{icemetal}{HTML}{8A97A6}
+\definecolor{canvas}{HTML}{E9C47C}
+\definecolor{auroragreen}{HTML}{5CF2B0}
+\definecolor{aurorapink}{HTML}{F27AD0}
+\definecolor{cobalt}{HTML}{1F4FFF}
+\definecolor{ember}{HTML}{FF6A1A}
+\definecolor{witnessrobe}{HTML}{1E2742}
+\definecolor{witnessice}{HTML}{CDEBFA}
+\definecolor{navy}{HTML}{1C2A44}
+\definecolor{water}{HTML}{2C6690}
+\definecolor{dawn}{HTML}{F7C89A}
+\definecolor{housesky}{HTML}{1C2440}
+\definecolor{housenight}{HTML}{2A3358}
+\definecolor{paperwall}{HTML}{7A2E3A}
+\definecolor{paperwall2}{HTML}{2F5A4A}
+\definecolor{panel}{HTML}{5A3424}
+\definecolor{hwood}{HTML}{8A4F2E}
+\definecolor{hwooddark}{HTML}{4E2A1C}
+\definecolor{marble}{HTML}{E9DFC9}
+\definecolor{marbledark}{HTML}{3D3436}
+\definecolor{brass}{HTML}{E0A93E}
+\definecolor{candle}{HTML}{FFD27A}
+\definecolor{moon}{HTML}{9FC6FF}
+\definecolor{carpet}{HTML}{9C2F3C}
+\definecolor{cream}{HTML}{F1E6CC}
+\definecolor{labwhite}{HTML}{DCE7E6}
+\definecolor{labfluid}{HTML}{7CFFB2}
+\definecolor{grassnight}{HTML}{2E4A3A}
+\definecolor{hedge}{HTML}{1F3A2C}
+\definecolor{glass}{HTML}{BFEFFF}
+\definecolor{suit}{HTML}{33363D}
+\definecolor{suitdark}{HTML}{1E2026}
+\definecolor{shirt}{HTML}{EDEDE6}
+\definecolor{agentskin}{HTML}{D8C3A8}
+\definecolor{shades}{HTML}{0E0F12}
+\definecolor{tankhull}{HTML}{3B4249}
+\definecolor{tankplate}{HTML}{5A646F}
+\definecolor{tanktread}{HTML}{22262B}
+\definecolor{tankweak}{HTML}{FF7A1A}
+\definecolor{tankeye}{HTML}{FFF3B0}
+\definecolor{tankiris}{HTML}{FF4A3A}
+\definecolor{halo}{HTML}{FFC94A}
+\definecolor{scarlet}{HTML}{FF2E3A}
+\definecolor{chalk}{HTML}{FFF6DA}
+\definecolor{lime}{HTML}{B6FF3A}
+\definecolor{sawsteel}{HTML}{E8F0F5}
+% One ink for every outline (the TikZ house style and the game's ink pass).
+\newcommand{\Ink}{1.1pt}
+\tikzset{inked/.style={draw=ink, line width=\Ink, line join=round, line cap=round}}
+\begin{document}
+\begin{tikzpicture}
+\clip (0,0) rectangle (32,18);
+\fill[housesky] (0,0) rectangle (32,18);
+\fill[grassnight] (0,0) rectangle (32,6.5);
+\filldraw[inked,fill=hedge] (14.223,6.737) circle (0.639);
+\filldraw[inked,fill=hedge] (13.403,6.3) circle (1.271);
+\filldraw[inked,fill=hedge] (13.033,6.844) circle (1.181);
+\filldraw[inked,fill=hedge] (5.939,5.814) circle (0.857);
+\filldraw[inked,fill=hedge] (4.794,5.776) circle (1.29);
+\filldraw[inked,fill=hedge] (28.276,6.876) circle (1.255);
+\filldraw[inked,fill=hedge] (15.349,6.098) circle (0.875);
+\filldraw[inked,fill=hedge] (13.627,5.929) circle (1.023);
+\filldraw[inked,fill=hedge] (12.788,6.197) circle (1.202);
+\filldraw[inked,fill=hedge] (23.932,6.225) circle (0.671);
+\draw[tanktread, line width=2.2pt] (0,0) -- (0,16);
+\draw[tanktread, line width=2.2pt] (2.4,0) -- (2.4,16);
+\filldraw[inked,fill=glass,fill opacity=0.5,line width=0.6pt] (2.4,12) -- (4.8,12) -- (4.3,11.2) -- (3.7,11.7) -- (3.1,10.9) -- cycle;
+\draw[tanktread, line width=2.2pt] (4.8,0) -- (4.8,16);
+\draw[tanktread, line width=2.2pt] (7.2,0) -- (7.2,16);
+\filldraw[inked,fill=glass,fill opacity=0.5,line width=0.6pt] (7.2,12) -- (9.6,12) -- (9.1,11.2) -- (8.5,11.7) -- (7.9,10.9) -- cycle;
+\draw[tanktread, line width=2.2pt] (9.6,0) -- (9.6,16);
+\draw[tanktread, line width=2.2pt] (12,0) -- (12,16);
+\draw[tanktread, line width=2.2pt] (14.4,0) -- (14.4,16);
+\draw[tanktread, line width=2.2pt] (16.8,0) -- (16.8,16);
+\filldraw[inked,fill=glass,fill opacity=0.5,line width=0.6pt] (16.8,12) -- (19.2,12) -- (18.7,11.2) -- (18.1,11.7) -- (17.5,10.9) -- cycle;
+\draw[tanktread, line width=2.2pt] (19.2,0) -- (19.2,16);
+\filldraw[inked,fill=glass,fill opacity=0.5,line width=0.6pt] (19.2,12) -- (21.6,12) -- (21.1,11.2) -- (20.5,11.7) -- (19.9,10.9) -- cycle;
+\draw[tanktread, line width=2.2pt] (0,4) -- (21,4);
+\draw[tanktread, line width=2.2pt] (0,8) -- (21,8);
+\draw[tanktread, line width=2.2pt] (0,12) -- (21,12);
+\draw[tanktread, line width=2.2pt] (0,16) -- (21,16);
+\filldraw[inked,fill=marble] (-0.5,-0.5) -- (32.5,-0.5) -- (32.5,3) -- (-0.5,3) -- cycle;
+\fill[marbledark] (0,0) rectangle (1,1.5);
+\fill[marbledark] (1,1.5) rectangle (2,3);
+\fill[marbledark] (2,0) rectangle (3,1.5);
+\fill[marbledark] (3,1.5) rectangle (4,3);
+\fill[marbledark] (4,0) rectangle (5,1.5);
+\fill[marbledark] (5,1.5) rectangle (6,3);
+\fill[marbledark] (6,0) rectangle (7,1.5);
+\fill[marbledark] (7,1.5) rectangle (8,3);
+\fill[marbledark] (8,0) rectangle (9,1.5);
+\fill[marbledark] (9,1.5) rectangle (10,3);
+\fill[marbledark] (10,0) rectangle (11,1.5);
+\fill[marbledark] (11,1.5) rectangle (12,3);
+\fill[marbledark] (12,0) rectangle (13,1.5);
+\fill[marbledark] (13,1.5) rectangle (14,3);
+\fill[marbledark] (14,0) rectangle (15,1.5);
+\fill[marbledark] (15,1.5) rectangle (16,3);
+\fill[marbledark] (16,0) rectangle (17,1.5);
+\fill[marbledark] (17,1.5) rectangle (18,3);
+\fill[marbledark] (18,0) rectangle (19,1.5);
+\fill[marbledark] (19,1.5) rectangle (20,3);
+\fill[marbledark] (20,0) rectangle (21,1.5);
+\fill[marbledark] (21,1.5) rectangle (22,3);
+\fill[marbledark] (22,0) rectangle (23,1.5);
+\fill[marbledark] (23,1.5) rectangle (24,3);
+\fill[marbledark] (24,0) rectangle (25,1.5);
+\fill[marbledark] (25,1.5) rectangle (26,3);
+\fill[marbledark] (26,0) rectangle (27,1.5);
+\fill[marbledark] (27,1.5) rectangle (28,3);
+\fill[marbledark] (28,0) rectangle (29,1.5);
+\fill[marbledark] (29,1.5) rectangle (30,3);
+\fill[marbledark] (30,0) rectangle (31,1.5);
+\fill[marbledark] (31,1.5) rectangle (32,3);
+\filldraw[inked,fill=glass,fill opacity=0.8,line width=0.5pt] (11.175,1.704) -- (11.016,1.717) -- (11.195,1.784) -- cycle;
+\filldraw[inked,fill=glass,fill opacity=0.8,line width=0.5pt] (13.17,2.395) -- (13.479,2.431) -- (12.982,2.475) -- cycle;
+\filldraw[inked,fill=glass,fill opacity=0.8,line width=0.5pt] (19.256,0.281) -- (19.633,0.367) -- (18.931,0.361) -- cycle;
+\filldraw[inked,fill=glass,fill opacity=0.8,line width=0.5pt] (15.153,2.198) -- (15.148,2.328) -- (14.849,2.278) -- cycle;
+\filldraw[inked,fill=glass,fill opacity=0.8,line width=0.5pt] (4.447,1.221) -- (4.15,1.226) -- (4.531,1.301) -- cycle;
+\filldraw[inked,fill=glass,fill opacity=0.8,line width=0.5pt] (19.056,1.787) -- (19.354,1.856) -- (18.797,1.867) -- cycle;
+\filldraw[inked,fill=glass,fill opacity=0.8,line width=0.5pt] (1.126,1.616) -- (1.012,1.755) -- (0.834,1.696) -- cycle;
+\filldraw[inked,fill=glass,fill opacity=0.8,line width=0.5pt] (7.411,2.018) -- (7.582,2.126) -- (7.1,2.098) -- cycle;
+\filldraw[inked,fill=glass,fill opacity=0.8,line width=0.5pt] (3.308,2.677) -- (3.041,2.685) -- (3.375,2.757) -- cycle;
+\filldraw[inked,fill=glass,fill opacity=0.8,line width=0.5pt] (2.664,1.654) -- (2.455,1.762) -- (2.475,1.734) -- cycle;
+\filldraw[inked,fill=glass,fill opacity=0.8,line width=0.5pt] (16.839,2.135) -- (16.955,2.279) -- (16.461,2.215) -- cycle;
+\filldraw[inked,fill=glass,fill opacity=0.8,line width=0.5pt] (15.937,2.373) -- (15.695,2.428) -- (15.886,2.453) -- cycle;
+\filldraw[inked,fill=glass,fill opacity=0.8,line width=0.5pt] (18.887,1.75) -- (18.645,1.845) -- (18.74,1.83) -- cycle;
+\filldraw[inked,fill=glass,fill opacity=0.8,line width=0.5pt] (17.977,2.436) -- (17.74,2.557) -- (17.767,2.516) -- cycle;
+\filldraw[inked,fill=glass,fill opacity=0.8,line width=0.5pt] (9.249,1.161) -- (9.031,1.298) -- (8.997,1.241) -- cycle;
+\filldraw[inked,fill=glass,fill opacity=0.8,line width=0.5pt] (0.872,2.313) -- (0.719,2.336) -- (0.866,2.393) -- cycle;
+\filldraw[inked,fill=glass,fill opacity=0.8,line width=0.5pt] (13.73,0.338) -- (14.147,0.367) -- (13.527,0.418) -- cycle;
+\filldraw[inked,fill=glass,fill opacity=0.8,line width=0.5pt] (20.846,1.984) -- (20.74,2.102) -- (20.601,2.064) -- cycle;
+\filldraw[inked,fill=glass,fill opacity=0.8,line width=0.5pt] (3.209,2.102) -- (3.228,2.171) -- (3.041,2.182) -- cycle;
+\filldraw[inked,fill=glass,fill opacity=0.8,line width=0.5pt] (17.39,0.316) -- (17.714,0.432) -- (17.011,0.396) -- cycle;
+\filldraw[inked,fill=glass,fill opacity=0.8,line width=0.5pt] (11.642,1.987) -- (11.251,2.013) -- (11.707,2.067) -- cycle;
+\filldraw[inked,fill=glass,fill opacity=0.8,line width=0.5pt] (2.127,2.447) -- (2.157,2.512) -- (1.964,2.527) -- cycle;
+\filldraw[inked,fill=glass,fill opacity=0.8,line width=0.5pt] (17.335,1.778) -- (17.302,1.864) -- (17.142,1.858) -- cycle;
+\filldraw[inked,fill=glass,fill opacity=0.8,line width=0.5pt] (11.231,1.092) -- (11.299,1.165) -- (11.035,1.172) -- cycle;
+\filldraw[inked,fill=glass,fill opacity=0.8,line width=0.5pt] (1.178,0.802) -- (1.352,0.962) -- (0.741,0.882) -- cycle;
+\filldraw[inked,fill=glass,fill opacity=0.8,line width=0.5pt] (18.563,1.93) -- (18.763,1.934) -- (18.488,2.01) -- cycle;
+\filldraw[inked,fill=glass,fill opacity=0.8,line width=0.5pt] (9.651,0.82) -- (9.75,0.907) -- (9.414,0.9) -- cycle;
+\filldraw[inked,fill=glass,fill opacity=0.8,line width=0.5pt] (0.954,1.434) -- (0.761,1.45) -- (0.98,1.514) -- cycle;
+\filldraw[inked,fill=glass,fill opacity=0.8,line width=0.5pt] (18.867,1.375) -- (19.019,1.487) -- (18.552,1.455) -- cycle;
+\filldraw[inked,fill=glass,fill opacity=0.8,line width=0.5pt] (8.523,1.474) -- (8.75,1.538) -- (8.299,1.554) -- cycle;
+\filldraw[inked,fill=glass,fill opacity=0.8,line width=0.5pt] (2.977,2.09) -- (2.577,2.127) -- (3.019,2.17) -- cycle;
+\filldraw[inked,fill=glass,fill opacity=0.8,line width=0.5pt] (7.045,2.34) -- (7.032,2.507) -- (6.655,2.42) -- cycle;
+\filldraw[inked,fill=glass,fill opacity=0.8,line width=0.5pt] (5.666,1.698) -- (6.06,1.698) -- (5.538,1.778) -- cycle;
+\filldraw[inked,fill=glass,fill opacity=0.8,line width=0.5pt] (8.091,1.219) -- (8.173,1.288) -- (7.9,1.299) -- cycle;
+\filldraw[inked,fill=glass,fill opacity=0.8,line width=0.5pt] (3.995,0.248) -- (3.873,0.283) -- (3.953,0.328) -- cycle;
+\filldraw[inked,fill=glass,fill opacity=0.8,line width=0.5pt] (4.328,2.115) -- (4.173,2.136) -- (4.328,2.195) -- cycle;
+\filldraw[inked,fill=glass,fill opacity=0.8,line width=0.5pt] (5.928,0.248) -- (5.578,0.284) -- (5.954,0.328) -- cycle;
+\filldraw[inked,fill=glass,fill opacity=0.8,line width=0.5pt] (10.432,1.333) -- (10.567,1.441) -- (10.134,1.413) -- cycle;
+\filldraw[inked,fill=glass,fill opacity=0.8,line width=0.5pt] (6.597,2.117) -- (6.417,2.2) -- (6.457,2.197) -- cycle;
+\filldraw[inked,fill=glass,fill opacity=0.8,line width=0.5pt] (6.227,1.387) -- (6.573,1.411) -- (6.057,1.467) -- cycle;
+\filldraw[inked,fill=tanktread,rounded corners=4pt] (4.18,2) rectangle (13.42,3.43);
+\filldraw[inked,fill=tankplate] (4.84,2.715) circle (0.495);
+\filldraw[inked,fill=tankplate] (6.16,2.715) circle (0.495);
+\filldraw[inked,fill=tankplate] (7.48,2.715) circle (0.495);
+\filldraw[inked,fill=tankplate] (8.8,2.715) circle (0.495);
+\filldraw[inked,fill=tankplate] (10.12,2.715) circle (0.495);
+\filldraw[inked,fill=tankplate] (11.44,2.715) circle (0.495);
+\filldraw[inked,fill=tankplate] (12.76,2.715) circle (0.495);
+\filldraw[inked,fill=tankhull] (3.85,3.43) -- (13.53,3.43) -- (13.53,4.64) -- (5.06,4.64) -- cycle;
+\filldraw[inked,fill=tankplate] (6.6,4.64) -- (11.22,4.64) -- (11.66,5.96) -- (7.04,5.96) -- cycle;
+\filldraw[inked,fill=tanktread] (0,5.135) rectangle (6.71,5.52);
+\filldraw[inked,fill=tanktread] (-0.44,5.025) rectangle (0.33,5.63);
+\fill[tankweak, opacity=0.35] (11.33,5.19) circle (0.495);
+\filldraw[inked,fill=tankweak] (11.33,5.19) circle (0.22);
+\fill[tankweak, opacity=0.35] (11.44,5.63) circle (0.495);
+\filldraw[inked,fill=tankweak] (11.44,5.63) circle (0.22);
+\draw[tanktread, line width=3.3000000000000003pt, line cap=round] (9.46,5.85) -- (12.156,8.113);
+\filldraw[inked,fill=halo] (12.156,8.113) circle (0.275);
+\filldraw[inked,fill=tankeye] (12.156,8.663) ellipse (0.352 and 0.055);
+\draw[tanktread, line width=3.3000000000000003pt, line cap=round] (9.46,5.85) -- (11.325,8.835);
+\filldraw[inked,fill=halo] (11.325,8.835) circle (0.275);
+\filldraw[inked,fill=tankeye] (11.325,9.385) ellipse (0.352 and 0.055);
+\draw[tanktread, line width=3.3000000000000003pt, line cap=round] (9.46,5.85) -- (10.312,9.265);
+\filldraw[inked,fill=halo] (10.312,9.265) circle (0.275);
+\filldraw[inked,fill=tankeye] (10.312,9.815) ellipse (0.352 and 0.055);
+\draw[tanktread, line width=3.3000000000000003pt, line cap=round] (9.46,5.85) -- (9.214,9.361);
+\filldraw[inked,fill=halo] (9.214,9.361) circle (0.275);
+\filldraw[inked,fill=tankeye] (9.214,9.911) ellipse (0.352 and 0.055);
+\draw[tanktread, line width=3.3000000000000003pt, line cap=round] (9.46,5.85) -- (8.141,9.114);
+\filldraw[inked,fill=halo] (8.141,9.114) circle (0.275);
+\filldraw[inked,fill=tankeye] (8.141,9.664) ellipse (0.352 and 0.055);
+\draw[tanktread, line width=3.3000000000000003pt, line cap=round] (9.46,5.85) -- (7.197,8.546);
+\filldraw[inked,fill=halo] (7.197,8.546) circle (0.275);
+\filldraw[inked,fill=tankeye] (7.197,9.096) ellipse (0.352 and 0.055);
+\draw[tanktread, line width=2.8600000000000003pt, line cap=round] (8.36,5.74) -- (5.672,6.718);
+\draw[tanktread, line width=2.8600000000000003pt, line cap=round] (8.36,5.74) -- (6.235,7.654);
+\draw[tanktread, line width=2.8600000000000003pt, line cap=round] (8.36,5.74) -- (7.106,8.311);
+\draw[tanktread, line width=2.8600000000000003pt, line cap=round] (8.36,5.74) -- (8.16,8.593);
+\filldraw[inked,fill=tankeye] (5.5,4.035) ellipse (0.374 and 0.055);
+\filldraw[inked,fill=tankeye] (7.15,4.035) ellipse (0.374 and 0.055);
+\filldraw[inked,fill=tankeye] (8.8,4.035) ellipse (0.374 and 0.055);
+\filldraw[inked,fill=tankeye] (10.45,4.035) ellipse (0.374 and 0.055);
+\filldraw[inked,fill=tankeye] (12.1,4.035) ellipse (0.374 and 0.055);
+\draw[halo, line width=2.42pt] (9.13,10.36) ellipse (1.98 and 0.495);
+\filldraw[inked,fill=coatdark] (15.114,1.2) -- (15.438,1.2) -- (15.614,2.82) -- (15.326,2.82) -- cycle;
+\filldraw[inked,fill=hair] (15.06,1.164) -- (15.564,1.164) -- (15.564,1.362) -- (15.06,1.362) -- cycle;
+\filldraw[inked,fill=coatdark] (15.762,1.2) -- (16.086,1.2) -- (15.874,2.82) -- (15.586,2.82) -- cycle;
+\filldraw[inked,fill=hair] (15.708,1.164) -- (16.212,1.164) -- (16.212,1.362) -- (15.708,1.362) -- cycle;
+\filldraw[inked,fill=coat] (14.844,2.01) -- (16.356,2.01) -- (16.086,3.09) -- (15.114,3.09) -- cycle;
+\filldraw[inked,fill=coat] (15.114,3) -- (16.086,3) -- (16.14,4.116) -- (15.06,4.116) -- cycle;
+\filldraw[inked,fill=trim] (15.096,3) -- (16.104,3) -- (16.104,3.144) -- (15.096,3.144) -- cycle;
+\filldraw[inked,fill=trim] (15.384,4.08) .. controls (14.52,4.35) and (13.98,3.81) .. (13.17,4.116) -- (13.26,3.9) .. controls (14.07,3.576) and (14.61,3.99) .. (15.78,3.9) -- cycle;
+\filldraw[inked,fill=skin] (15.6,4.494) circle (0.36);
+\filldraw[inked,fill=hair] (15.222,4.494) arc (180:0:0.378) -- (15.816,4.53) -- (15.51,4.674) -- cycle;
+\draw[coat, line width=4.0pt, line cap=round] (16.05,3.9) -- (16.41,3.81);
+\filldraw[inked,fill=cream,rotate around={-12:(16.41,3.81)}] (16.31,3.61) rectangle (17.71,5.31);
+\draw[ink, line width=0.6pt, rotate around={-12:(16.41,3.81)}] (16.51,5.06) -- (17.51,5.06);
+\draw[ink, line width=0.6pt, rotate around={-12:(16.41,3.81)}] (16.51,4.84) -- (17.51,4.84);
+\draw[ink, line width=0.6pt, rotate around={-12:(16.41,3.81)}] (16.51,4.62) -- (17.51,4.62);
+\draw[ink, line width=0.6pt, rotate around={-12:(16.41,3.81)}] (16.51,4.4) -- (17.51,4.4);
+\draw[ink, line width=0.6pt, rotate around={-12:(16.41,3.81)}] (16.51,4.18) -- (17.51,4.18);
+\draw[ink, line width=1.0pt, rotate around={-12:(16.41,3.81)}] (16.56,3.86) .. controls (16.81,4.16) and (17.01,3.71) .. (17.41,3.96);
+\draw[moon, line width=0.6pt, opacity=0.55] (1.007,12.42) -- (0.757,11.52);
+\draw[moon, line width=0.6pt, opacity=0.55] (16.182,16.019) -- (15.932,15.119);
+\draw[moon, line width=0.6pt, opacity=0.55] (15.384,6.433) -- (15.134,5.533);
+\draw[moon, line width=0.6pt, opacity=0.55] (8.582,17.238) -- (8.332,16.338);
+\draw[moon, line width=0.6pt, opacity=0.55] (7.528,15.247) -- (7.278,14.347);
+\draw[moon, line width=0.6pt, opacity=0.55] (6.452,12.058) -- (6.202,11.158);
+\draw[moon, line width=0.6pt, opacity=0.55] (8.142,5.518) -- (7.892,4.618);
+\draw[moon, line width=0.6pt, opacity=0.55] (13.75,7.27) -- (13.5,6.37);
+\draw[moon, line width=0.6pt, opacity=0.55] (0.359,16.374) -- (0.109,15.474);
+\draw[moon, line width=0.6pt, opacity=0.55] (11.186,3.918) -- (10.936,3.018);
+\draw[moon, line width=0.6pt, opacity=0.55] (2.473,5.677) -- (2.223,4.777);
+\draw[moon, line width=0.6pt, opacity=0.55] (0.514,6.756) -- (0.264,5.856);
+\draw[moon, line width=0.6pt, opacity=0.55] (14.223,3.362) -- (13.973,2.462);
+\draw[moon, line width=0.6pt, opacity=0.55] (13.279,1.537) -- (13.029,0.637);
+\draw[moon, line width=0.6pt, opacity=0.55] (2.406,11.824) -- (2.156,10.924);
+\draw[moon, line width=0.6pt, opacity=0.55] (19.716,16.654) -- (19.466,15.754);
+\draw[moon, line width=0.6pt, opacity=0.55] (13.279,10.931) -- (13.029,10.031);
+\draw[moon, line width=0.6pt, opacity=0.55] (14.988,12.782) -- (14.738,11.882);
+\draw[moon, line width=0.6pt, opacity=0.55] (17.326,9.294) -- (17.076,8.394);
+\draw[moon, line width=0.6pt, opacity=0.55] (15.661,10.284) -- (15.411,9.384);
+\draw[moon, line width=0.6pt, opacity=0.55] (0.303,14.805) -- (0.053,13.905);
+\draw[moon, line width=0.6pt, opacity=0.55] (10.008,7.752) -- (9.758,6.852);
+\draw[moon, line width=0.6pt, opacity=0.55] (19.104,10.95) -- (18.854,10.05);
+\draw[moon, line width=0.6pt, opacity=0.55] (3.628,12.531) -- (3.378,11.631);
+\draw[moon, line width=0.6pt, opacity=0.55] (19.106,3.914) -- (18.856,3.014);
+\draw[moon, line width=0.6pt, opacity=0.55] (11.055,2.349) -- (10.805,1.449);
+\draw[moon, line width=0.6pt, opacity=0.55] (10.873,2.01) -- (10.623,1.11);
+\draw[moon, line width=0.6pt, opacity=0.55] (11.728,7.887) -- (11.478,6.987);
+\draw[moon, line width=0.6pt, opacity=0.55] (17.104,7.236) -- (16.854,6.336);
+\draw[moon, line width=0.6pt, opacity=0.55] (12.453,13.486) -- (12.203,12.586);
+\draw[moon, line width=0.6pt, opacity=0.55] (10.646,0.173) -- (10.396,-0.727);
+\draw[moon, line width=0.6pt, opacity=0.55] (5.65,10.477) -- (5.4,9.577);
+\draw[moon, line width=0.6pt, opacity=0.55] (9.756,11.488) -- (9.506,10.588);
+\draw[moon, line width=0.6pt, opacity=0.55] (19.417,1.348) -- (19.167,0.448);
+\draw[moon, line width=0.6pt, opacity=0.55] (1.443,3.578) -- (1.193,2.678);
+\draw[moon, line width=0.6pt, opacity=0.55] (15.569,16.937) -- (15.319,16.037);
+\draw[moon, line width=0.6pt, opacity=0.55] (0.593,11.583) -- (0.343,10.683);
+\draw[moon, line width=0.6pt, opacity=0.55] (0.639,15.999) -- (0.389,15.099);
+\draw[moon, line width=0.6pt, opacity=0.55] (2.811,3.374) -- (2.561,2.474);
+\draw[moon, line width=0.6pt, opacity=0.55] (12.517,13.462) -- (12.267,12.562);
+\draw[moon, line width=0.6pt, opacity=0.55] (0.388,3.278) -- (0.138,2.378);
+\draw[moon, line width=0.6pt, opacity=0.55] (9.544,6.476) -- (9.294,5.576);
+\draw[moon, line width=0.6pt, opacity=0.55] (11.85,3.968) -- (11.6,3.068);
+\draw[moon, line width=0.6pt, opacity=0.55] (18.82,11.411) -- (18.57,10.511);
+\draw[moon, line width=0.6pt, opacity=0.55] (18.43,0.902) -- (18.18,0.002);
+\draw[moon, line width=0.6pt, opacity=0.55] (13.417,8.747) -- (13.167,7.847);
+\draw[moon, line width=0.6pt, opacity=0.55] (6.085,5.09) -- (5.835,4.19);
+\draw[moon, line width=0.6pt, opacity=0.55] (1.719,11.025) -- (1.469,10.125);
+\draw[moon, line width=0.6pt, opacity=0.55] (0.821,13.303) -- (0.571,12.403);
+\draw[moon, line width=0.6pt, opacity=0.55] (1.996,10.574) -- (1.746,9.674);
+\draw[moon, line width=0.6pt, opacity=0.55] (4.031,3.209) -- (3.781,2.309);
+\draw[moon, line width=0.6pt, opacity=0.55] (7.628,0.857) -- (7.378,-0.043);
+\draw[moon, line width=0.6pt, opacity=0.55] (13.415,13.331) -- (13.165,12.431);
+\draw[moon, line width=0.6pt, opacity=0.55] (6.345,10.339) -- (6.095,9.439);
+\draw[moon, line width=0.6pt, opacity=0.55] (0.771,10.04) -- (0.521,9.14);
+\draw[moon, line width=0.6pt, opacity=0.55] (6.639,9.506) -- (6.389,8.606);
+\draw[moon, line width=0.6pt, opacity=0.55] (0.786,8.243) -- (0.536,7.343);
+\draw[moon, line width=0.6pt, opacity=0.55] (15.692,12.786) -- (15.442,11.886);
+\draw[moon, line width=0.6pt, opacity=0.55] (15.34,6.012) -- (15.09,5.112);
+\draw[moon, line width=0.6pt, opacity=0.55] (16.599,4.447) -- (16.349,3.547);
+\draw[moon, line width=0.6pt, opacity=0.55] (17.024,4.835) -- (16.774,3.935);
+\draw[moon, line width=0.6pt, opacity=0.55] (9.622,3.373) -- (9.372,2.473);
+\draw[moon, line width=0.6pt, opacity=0.55] (10.072,5.059) -- (9.822,4.159);
+\draw[moon, line width=0.6pt, opacity=0.55] (15.261,8.067) -- (15.011,7.167);
+\draw[moon, line width=0.6pt, opacity=0.55] (4.975,5.436) -- (4.725,4.536);
+\draw[moon, line width=0.6pt, opacity=0.55] (20.892,4.846) -- (20.642,3.946);
+\draw[moon, line width=0.6pt, opacity=0.55] (14.387,3.24) -- (14.137,2.34);
+\draw[moon, line width=0.6pt, opacity=0.55] (18.454,14.608) -- (18.204,13.708);
+\draw[moon, line width=0.6pt, opacity=0.55] (0.373,8.288) -- (0.123,7.388);
+\draw[moon, line width=0.6pt, opacity=0.55] (7.051,8.909) -- (6.801,8.009);
+\draw[moon, line width=0.6pt, opacity=0.55] (8.55,6.728) -- (8.3,5.828);
+\draw[moon, line width=0.6pt, opacity=0.55] (13.882,3.954) -- (13.632,3.054);
+\draw[moon, line width=0.6pt, opacity=0.55] (14.344,17.874) -- (14.094,16.974);
+\draw[moon, line width=0.6pt, opacity=0.55] (3.159,10.407) -- (2.909,9.507);
+\draw[moon, line width=0.6pt, opacity=0.55] (5.617,6.618) -- (5.367,5.718);
+\draw[moon, line width=0.6pt, opacity=0.55] (11.379,1.151) -- (11.129,0.251);
+\draw[moon, line width=0.6pt, opacity=0.55] (14.321,1.489) -- (14.071,0.589);
+\draw[moon, line width=0.6pt, opacity=0.55] (7.917,1.703) -- (7.667,0.803);
+\draw[moon, line width=0.6pt, opacity=0.55] (5.004,2.754) -- (4.754,1.854);
+\draw[moon, line width=0.6pt, opacity=0.55] (8.083,4.274) -- (7.833,3.374);
+\draw[moon, line width=0.6pt, opacity=0.55] (10.269,8.934) -- (10.019,8.034);
+\draw[moon, line width=0.6pt, opacity=0.55] (17.445,11.771) -- (17.195,10.871);
+\draw[moon, line width=0.6pt, opacity=0.55] (1.434,7.282) -- (1.184,6.382);
+\draw[moon, line width=0.6pt, opacity=0.55] (18.65,0.463) -- (18.4,-0.437);
+\draw[moon, line width=0.6pt, opacity=0.55] (10.977,9.673) -- (10.727,8.773);
+\draw[moon, line width=0.6pt, opacity=0.55] (3.354,1.71) -- (3.104,0.81);
+\draw[moon, line width=0.6pt, opacity=0.55] (6.956,2.723) -- (6.706,1.823);
+\draw[moon, line width=0.6pt, opacity=0.55] (1.78,11.449) -- (1.53,10.549);
+\draw[moon, line width=0.6pt, opacity=0.55] (13.533,16.96) -- (13.283,16.06);
+\draw[moon, line width=0.6pt, opacity=0.55] (3.976,6.513) -- (3.726,5.613);
+\draw[moon, line width=0.6pt, opacity=0.55] (4.461,0.388) -- (4.211,-0.512);
+\draw[moon, line width=0.6pt, opacity=0.55] (14.218,8.435) -- (13.968,7.535);
+\draw[moon, line width=0.6pt, opacity=0.55] (9.415,14.1) -- (9.165,13.2);
+\draw[moon, line width=0.6pt, opacity=0.55] (12.672,4.937) -- (12.422,4.037);
+\draw[moon, line width=0.6pt, opacity=0.55] (12.534,14.72) -- (12.284,13.82);
+\draw[moon, line width=0.6pt, opacity=0.55] (4.643,2.338) -- (4.393,1.438);
+\draw[moon, line width=0.6pt, opacity=0.55] (12.637,13.403) -- (12.387,12.503);
+\draw[moon, line width=0.6pt, opacity=0.55] (3.249,6.834) -- (2.999,5.934);
+\draw[moon, line width=0.6pt, opacity=0.55] (9.518,9.291) -- (9.268,8.391);
+\draw[moon, line width=0.6pt, opacity=0.55] (3.1,4.118) -- (2.85,3.218);
+\draw[moon, line width=0.6pt, opacity=0.55] (5.034,9.451) -- (4.784,8.551);
+\draw[moon, line width=0.6pt, opacity=0.55] (5.768,6.613) -- (5.518,5.713);
+\draw[moon, line width=0.6pt, opacity=0.55] (20.898,12.724) -- (20.648,11.824);
+\draw[moon, line width=0.6pt, opacity=0.55] (17.075,0.532) -- (16.825,-0.368);
+\draw[moon, line width=0.6pt, opacity=0.55] (17.154,7.777) -- (16.904,6.877);
+\draw[moon, line width=0.6pt, opacity=0.55] (10.214,3.073) -- (9.964,2.173);
+\draw[moon, line width=0.6pt, opacity=0.55] (4.567,0.989) -- (4.317,0.089);
+\draw[moon, line width=0.6pt, opacity=0.55] (7.469,10.089) -- (7.219,9.189);
+\draw[moon, line width=0.6pt, opacity=0.55] (4.203,1.14) -- (3.953,0.24);
+\draw[moon, line width=0.6pt, opacity=0.55] (17.764,2.63) -- (17.514,1.73);
+\end{tikzpicture}
+\end{document}

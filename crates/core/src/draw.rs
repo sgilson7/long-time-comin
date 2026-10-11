@@ -70,7 +70,7 @@ pub fn world(
     for (k, p) in w.arena.panes.iter().enumerate() {
         let broken = w.broken.get(k).is_some_and(|t| *t != 0 && w.tick >= *t);
         if !broken {
-            b.glow(Mesh::Cube, &boxed(p.centre, p.size), glass, ONE / 5);
+            b.glow(Mesh::Cube, &boxed(p.centre, p.size), glass, ONE / 3);
         }
     }
     orbs(b, c, w, alpha, cam);
@@ -91,17 +91,31 @@ pub fn world(
                 let disc = Affine::translate(at)
                     .then(&Affine::rot_y(spin))
                     .then(&Affine::rot_z(deg(70)));
-                b.inked(Mesh::Cyl, &disc.then(&Affine::scale(v3(r, cm(4), r))), s.rgb, ONE / 3);
+                b.inked(
+                    Mesh::Cyl,
+                    &disc.then(&Affine::scale(v3(r, cm(4), r))),
+                    s.rgb,
+                    ONE / 3,
+                );
                 for k in 0..8 {
                     let a = fx::TURN / 8 * k;
                     let tooth = disc
-                        .then(&Affine::translate(v3(fx::mul(fx::cos(a), r / 2), 0, fx::mul(fx::sin(a), r / 2))))
+                        .then(&Affine::translate(v3(
+                            fx::mul(fx::cos(a), r / 2),
+                            0,
+                            fx::mul(fx::sin(a), r / 2),
+                        )))
                         .then(&Affine::rot_y(-a))
                         .then(&Affine::scale(v3(cm(6), cm(4), cm(10))));
                     b.push(Mesh::Wedge, &tooth, s.rgb, ONE / 2, crate::render::PASS_SOLID);
                 }
                 if s.lodged.is_some() && w.revving > 0 {
-                    b.glow(Mesh::Sphere, &boxed(at, v3(r * 2, r * 2, r * 2)), c.pal.c("spark"), ONE / 3);
+                    b.glow(
+                        Mesh::Sphere,
+                        &boxed(at, v3(r * 2, r * 2, r * 2)),
+                        c.pal.c("spark"),
+                        ONE / 3,
+                    );
                 }
             }
             _ => {
@@ -188,8 +202,8 @@ pub fn world(
                     .then(&Affine::rot_y(spin))
                     .then(&Affine::rot_x(spin / 2))
                     .then(&Affine::scale(v3(e.size, e.size, cm(3))));
-                let fade = ONE - k;
-                b.glow(Mesh::Cube, &a, e.rgb, fade * 2 / 3);
+                // pale and lit, so it reads against the dark room
+                b.push(Mesh::Cube, &a, e.rgb, (ONE - k) / 2, crate::render::PASS_SOLID);
             }
         }
     }
@@ -324,7 +338,12 @@ pub fn player(b: &mut Batch, c: &Content, p: &Player, gun: usize, alpha: i32) {
         // the drop: a column of light above, the gavel's fall
         for k in 1..4 {
             let g = feet.add(v3(0, dm(9) + dm(8) * k, 0));
-            b.glow(Mesh::Sphere, &boxed(g, v3(dm(7), dm(14), dm(7))), c.pal.c("pound"), ONE / (k + 1));
+            b.glow(
+                Mesh::Sphere,
+                &boxed(g, v3(dm(7), dm(14), dm(7))),
+                c.pal.c("pound"),
+                ONE / (k + 1),
+            );
         }
     }
     if p.parry_window > 0 {
@@ -384,8 +403,22 @@ pub fn gun_model(b: &mut Batch, c: &Content, gun: usize, hand: V3, yaw: i32, pit
         }
         "ripsaw" => {
             // a body, a guard over the front, a blade ready in it
-            part(b, &f, Mesh::Cube, v3(0, 0, -dm(2)), v3(cm(10), cm(14), dm(5)), body);
-            part(b, &f, Mesh::Cube, v3(0, -cm(9), 0), v3(cm(6), cm(12), cm(6)), body);
+            part(
+                b,
+                &f,
+                Mesh::Cube,
+                v3(0, 0, -dm(2)),
+                v3(cm(10), cm(14), dm(5)),
+                body,
+            );
+            part(
+                b,
+                &f,
+                Mesh::Cube,
+                v3(0, -cm(9), 0),
+                v3(cm(6), cm(12), cm(6)),
+                body,
+            );
             let blade = f
                 .then(&Affine::translate(v3(0, cm(6), -dm(5))))
                 .then(&Affine::rot_z(fx::QUARTER))

@@ -49,7 +49,9 @@ Commands (several per call, run in order; time is in seconds of game time):
   pause | resume            as Esc and the Resume button
   abandon                   give up the run (counts as a death)
   reset                     wipe the session (a fresh record)
-  record <json>             start over from a saved record, e.g. record {\"seen_intro\":true,\"unlocked\":1}";
+  record <json>             start over from a saved record, e.g. record {\"seen_intro\":true,\"unlocked\":1}
+  goto <node name>|boss     straight to a node of this run's map (a measuring shortcut, not play)
+  break                     break every weak point the boss has open (to reach a later phase)";
 
 fn main() {
     let mut args = std::env::args().skip(1);
@@ -195,6 +197,24 @@ impl Harness {
                 self.g.start_run_at(zone);
                 self.last_hp = self.g.world().map_or(0, |w| w.player.health);
             }
+            "goto" => {
+                self.need_play()?;
+                let want = w[1..].join(" ");
+                let (route, _) = self.g.route().ok_or("no run")?;
+                let to = route
+                    .nodes
+                    .iter()
+                    .position(|n| {
+                        (want == "boss" && n.kind == ltc_core::route::NodeKind::Boss)
+                            || self.g.name_of(n).eq_ignore_ascii_case(&want)
+                    })
+                    .ok_or("no such node on this map")?;
+                self.g.go_to(to);
+            }
+            "break" => {
+                self.need_play()?;
+                self.g.break_weak_points();
+            }
             "north" => {
                 if mode != Mode::Interlude {
                     return Err(format!("north only from the interlude (now {mode:?})"));
@@ -282,21 +302,16 @@ impl Harness {
         }
         let before = self.g.route().map(|(_, at)| at);
         let h0 = self.g.world().map_or(0, |w| w.player.health);
-        let p0 = self.g.world().map(|w| (w.player.pos, w.player.vel, w.player.grounded, w.player.pounding));
         self.g.tick(c);
-        if let (Some(w), Some(p0)) = (self.g.world(), p0) {
-            if w.player.pos.y < -int(6) && p0.0.y >= -int(6) {
-                eprintln!("BELOW from {:?} to {:?} ground {}", p0, w.player.pos, w.player.grounded);
-            }
-        }
-        self.t += 1;
         if let Some(w) = self.g.world() {
             let lost = h0 - w.player.health;
             if lost > 0 {
                 let who = w
                     .hit_by
                     .and_then(|i| w.enemies.get(i))
-                    .map_or("a fall".to_string(), |e| self.g.content().enemies[e.def].name.clone());
+                    .map_or("a fall".to_string(), |e| {
+                        self.g.content().enemies[e.def].name.clone()
+                    });
                 let e = self.hits.entry(who).or_insert((0, 0));
                 e.0 += 1;
                 e.1 += lost;
@@ -893,12 +908,18 @@ fn bot(c: &ltc_core::content::Content, w: &World, t: i32, stuck: bool) -> (Contr
     let chest = p.chest();
     let mut ctl = Controls::default();
     let (mut yaw, mut pitch) = (p.yaw, p.pitch);
+    // a shield facing you is passed over for another target while one is up
+    let shielded = |e: &&ltc_core::enemy::Enemy| {
+        let d = &c.enemies[e.def];
+        d.armour > 0 && chest.sub(e.pos).norm().dot(ltc_core::geom::facing(e.yaw, 0)) > fx::cos(d.armour)
+    };
     let target = w
         .enemies
         .iter()
         .filter(|e| e.hurtable())
-        .min_by_key(|e| e.pos.sub(chest).len());
+        .min_by_key(|e| e.pos.sub(chest).len() + if shielded(e) { int(40) } else { 0 });
     if let Some(e) = target {
+        let flank = shielded(&e);
         // a tank: its nearest weak point, else round behind its turret
         let mut aim_at = e.pos;
         let mut behind: Option<V3> = None;
@@ -925,12 +946,24 @@ fn bot(c: &ltc_core::content::Content, w: &World, t: i32, stuck: bool) -> (Contr
         } else {
             0
         };
+        // round a shield: run hard to one side, dashing
+        if flank {
+            ctl.move_x = if (t / 240) % 2 == 0 { ONE } else { -ONE };
+            ctl.move_z = if d > int(8) { ONE } else { 0 };
+            ctl.dash_pressed = t % 50 == 0;
+        }
         // round behind the tank's turret: strafe toward that side
         if let Some(b) = behind {
             let r = ltc_core::geom::right_of(yaw);
             let side = b.sub(p.pos).dot(r);
             ctl.move_x = if side > 0 { ONE } else { -ONE };
-            ctl.move_z = if d < int(10) { -ONE } else if d > int(18) { ONE } else { 0 };
+            ctl.move_z = if d < int(10) {
+                -ONE
+            } else if d > int(18) {
+                ONE
+            } else {
+                0
+            };
         }
         // a saw gun throws on a press and revs while held
         if c.guns[w.held.gun].level(w.held.level).saw.is_some() {

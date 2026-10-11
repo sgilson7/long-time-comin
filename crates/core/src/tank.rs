@@ -189,8 +189,7 @@ fn turn(from: i32, to: i32, rate: i32) -> i32 {
 /// it rolls over.
 fn fits(level: &Level, at: V3) -> bool {
     let r = HULL_WIDE / 2;
-    at.len_xz() < ROAM + int(2)
-        && !level.blocked(v3(at.x - r, ONE, at.z - r), v3(at.x + r, int(3), at.z + r))
+    at.len_xz() < ROAM + int(2) && !level.blocked(v3(at.x - r, ONE, at.z - r), v3(at.x + r, int(3), at.z + r))
 }
 
 /// One tick of the tank's driving and its turret. `target` is your chest,

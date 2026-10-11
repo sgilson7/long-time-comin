@@ -5,12 +5,12 @@
 use crate::arena::{self, Arena, Side};
 use crate::balance::*;
 use crate::content::Content;
+use crate::content::Kind;
 use crate::enemy::{self, Enemy};
 use crate::fx::{self, int, ONE};
 use crate::geom::{facing, right_of, v3, V3};
 use crate::orbs::{self, Orb, Wave};
 use crate::player::{Controls, Event, Player};
-use crate::content::Kind;
 use crate::rng::Rng;
 use crate::route::{Node, NodeKind, Reward};
 use crate::tank;
@@ -544,7 +544,15 @@ impl World {
             pierce: self.player.build.pierce,
             trigger: self.player.build.trigger,
         };
-        let shots = weapons::trigger(&mut self.held, gun, rgb, pull, muzzle, self.aim_point, &mut self.rng);
+        let shots = weapons::trigger(
+            &mut self.held,
+            gun,
+            rgb,
+            pull,
+            muzzle,
+            self.aim_point,
+            &mut self.rng,
+        );
         self.revving = if ctl.fire { self.revving + 1 } else { 0 };
         if !shots.is_empty() {
             let sound = match gun.id.as_str() {
@@ -653,7 +661,7 @@ impl World {
                 if !self.player.invulnerable() {
                     self.hit_by = Some(i);
                 }
-                self.hurt_from(dmg, from);
+                self.hurt_from(c, dmg, from);
             }
         }
 
@@ -795,7 +803,7 @@ impl World {
             self.note("shatter", String::new());
         }
         if let Some((damage, from)) = hurt {
-            self.hurt_from(damage, from);
+            self.hurt_from(c, damage, from);
         }
         for o in spent {
             self.effect(FxKind::Burst, o.pos, V3::ZERO, 10, o.rgb, o.radius * 2);
@@ -855,7 +863,7 @@ impl World {
             alive
         });
         if let Some((damage, from)) = wave_hit {
-            self.hurt_from(damage, from);
+            self.hurt_from(c, damage, from);
         }
     }
 
@@ -1226,10 +1234,17 @@ impl World {
     }
 
     /// A hit, and where it came from.
-    fn hurt_from(&mut self, damage: i32, from: V3) {
+    fn hurt_from(&mut self, c: &Content, damage: i32, from: V3) {
+        let recess = self.player.recess_left;
         if self.player.hurt(damage) {
             self.hit_from = from;
             self.hit_age = 0;
+            // the body's own events for this tick were read already: say
+            // it here, or the page never hears an orb's hit (SECOND-ORDER M12)
+            self.note("hurt", String::new());
+            if self.player.recess_left < recess {
+                self.note("recess", c.say("callout_recess"));
+            }
         }
     }
 
@@ -1345,7 +1360,15 @@ fn body_spheres(c: &Content, e: &Enemy) -> Vec<(V3, i32)> {
 
 impl World {
     /// The first enemy part along a ray, within `len`.
-    fn first_hit(&self, c: &Content, o: V3, dir: V3, radius: i32, len: i32, passed: &[usize]) -> Option<(i32, Target)> {
+    fn first_hit(
+        &self,
+        c: &Content,
+        o: V3,
+        dir: V3,
+        radius: i32,
+        len: i32,
+        passed: &[usize],
+    ) -> Option<(i32, Target)> {
         let mut first: Option<(i32, Target)> = None;
         let mut take = |t: i32, what: Target| {
             if t <= len && first.is_none_or(|(ft, _)| t < ft) {
@@ -1376,8 +1399,16 @@ impl World {
                 // a shield stops what comes at it from in front, unless
                 // it comes from well above
                 let from = dir.neg();
-                let shielded = d.armour > 0 && from.dot(facing(e.yaw, 0)) > fx::cos(d.armour) && from.y < ONE / 2;
-                take(t, if shielded { Target::Armour(i) } else { Target::Body(i) });
+                let shielded =
+                    d.armour > 0 && from.dot(facing(e.yaw, 0)) > fx::cos(d.armour) && from.y < ONE / 2;
+                take(
+                    t,
+                    if shielded {
+                        Target::Armour(i)
+                    } else {
+                        Target::Body(i)
+                    },
+                );
             }
         }
         first
@@ -1385,7 +1416,7 @@ impl World {
 
     /// Damage to a tank's weak point; breaking the phase's last one starts
     /// the next phase.
-    fn hurt_weak(&mut self, c: &Content, i: usize, k: usize, damage: i32, at: V3) {
+    pub fn hurt_weak(&mut self, c: &Content, i: usize, k: usize, damage: i32, at: V3) {
         let d = &c.enemies[self.enemies[i].def];
         if !self.enemies[i].hurtable() {
             return;
@@ -1497,7 +1528,8 @@ impl World {
             }
         }
         // a spent blade, lodged no more, flies no more
-        self.shots.retain(|s| !(s.kind == ShotKind::Saw && s.lodged.is_none() && s.life <= 0));
+        self.shots
+            .retain(|s| !(s.kind == ShotKind::Saw && s.lodged.is_none() && s.life <= 0));
         for _ in 0..spent {
             self.held.recall_blade(saw_recall(c, &self.held));
         }
@@ -1547,7 +1579,14 @@ impl World {
             }
         }
         let rgb = c.pal.c("pound");
-        self.effect(FxKind::Ring, feet.add(v3(0, ONE / 10, 0)), V3::ZERO, 20, rgb, radius * 2);
+        self.effect(
+            FxKind::Ring,
+            feet.add(v3(0, ONE / 10, 0)),
+            V3::ZERO,
+            20,
+            rgb,
+            radius * 2,
+        );
         self.sparks(feet, rgb, 24, ONE / 4);
         self.shake = self.shake.max(SHAKE_TICKS / 4);
         self.fell(c, killed);
@@ -1619,6 +1658,9 @@ impl World {
             }
             self.shake = SHAKE_TICKS;
             self.note("crash", c.say("callout_crash"));
+            let at = v3(front.x, int(3), line);
+            self.effect(FxKind::Flash, at, V3::ZERO, 30, c.pal.c("glass"), int(14));
+            self.sparks(at, c.pal.c("glass"), 40, ONE / 3);
         }
         let glass = c.pal.c("glass");
         for k in 0..self.arena.panes.len() {
@@ -1637,7 +1679,7 @@ impl World {
                     int(self.rng.range(0, 4)) / 60,
                     int(self.rng.range(4, 12)) / 60,
                 );
-                let life = self.rng.range(70, 130);
+                let life = self.rng.range(120, 210);
                 self.effect(FxKind::Shard, p.centre.add(off), vel, life, glass, p.size.x / 3);
             }
         }
@@ -2284,8 +2326,16 @@ mod house {
         let i = r
             .nodes
             .iter()
-            .position(|n| n.kind == kind && n.elite.is_some() == elite && (kind != NodeKind::Fight || n.archetype == "hall" || elite))
-            .or_else(|| r.nodes.iter().position(|n| n.kind == kind && n.elite.is_some() == elite))
+            .position(|n| {
+                n.kind == kind
+                    && n.elite.is_some() == elite
+                    && (kind != NodeKind::Fight || n.archetype == "hall" || elite)
+            })
+            .or_else(|| {
+                r.nodes
+                    .iter()
+                    .position(|n| n.kind == kind && n.elite.is_some() == elite)
+            })
             .unwrap();
         let p = Player::new(V3::ZERO, 0, Build::default());
         let mut w = World::new(&c, &r.nodes[i], &[], p, Held::new(0, 1), 1);
@@ -2334,7 +2384,11 @@ mod house {
             let chest = w.player.chest();
             let to = head.sub(chest);
             let blocked = w.arena.level.ray(chest, to.norm(), to.len()).is_some();
-            if e.order == crate::enemy::Order::Cover && e.path.is_empty() && matches!(e.state, State::Rest(_)) && blocked {
+            if e.order == crate::enemy::Order::Cover
+                && e.path.is_empty()
+                && matches!(e.state, State::Rest(_))
+                && blocked
+            {
                 hidden_in_cover = true;
             }
             if hidden_in_cover && matches!(e.state, State::Casting(0)) {
@@ -2352,8 +2406,18 @@ mod house {
         w.player.iframes = 1_000_000;
         let me = w.player.pos;
         let spawns: Vec<V3> = w.arena.ground_spawns.clone();
-        let east = spawns.iter().copied().filter(|p| p.x > me.x + int(10)).min_by_key(|p| (p.z - me.z).abs()).unwrap();
-        let west = spawns.iter().copied().filter(|p| p.x < me.x - int(10)).min_by_key(|p| (p.z - me.z).abs()).unwrap();
+        let east = spawns
+            .iter()
+            .copied()
+            .filter(|p| p.x > me.x + int(10))
+            .min_by_key(|p| (p.z - me.z).abs())
+            .unwrap();
+        let west = spawns
+            .iter()
+            .copied()
+            .filter(|p| p.x < me.x - int(10))
+            .min_by_key(|p| (p.z - me.z).abs())
+            .unwrap();
         let a = put(&c, &mut w, "greyman", east);
         let b = put(&c, &mut w, "greyman", west);
         let mut fired: Vec<(usize, i32, i32)> = Vec::new();
@@ -2410,7 +2474,11 @@ mod house {
                 break;
             }
         }
-        assert!(got_behind, "it is at {:?}, you at {:?}", w.enemies[i].pos, w.player.pos);
+        assert!(
+            got_behind,
+            "it is at {:?}, you at {:?}",
+            w.enemies[i].pos, w.player.pos
+        );
     }
 
     #[test]
@@ -2479,7 +2547,9 @@ mod house {
             }
         }
         let dir = first.expect("it fired");
-        let want = locked.sub(w.enemies[i].muzzle(&c.enemies[w.enemies[i].def])).norm();
+        let want = locked
+            .sub(w.enemies[i].muzzle(&c.enemies[w.enemies[i].def]))
+            .norm();
         assert!(dir.dot(want) > ONE * 99 / 100, "{dir:?} {want:?}");
     }
 
@@ -2497,10 +2567,20 @@ mod house {
     fn the_executor_comes_through_the_glass() {
         let (c, mut w, b) = tank_world();
         assert!(w.broken.iter().all(|t| *t == 0), "whole while it is outside");
+        let mut most = 0;
         for _ in 0..60 * 5 {
             step(&c, &mut w, &still());
+            most = most.max(w.effects.iter().filter(|e| e.kind == FxKind::Shard).count());
         }
-        assert!(w.enemies[b].pos.z > -int(24), "it drove in: {:?}", w.enemies[b].pos);
+        assert!(
+            most >= w.arena.panes.len() * 4,
+            "the glass falls in pieces: {most}"
+        );
+        assert!(
+            w.enemies[b].pos.z > -int(24),
+            "it drove in: {:?}",
+            w.enemies[b].pos
+        );
         let gone = w.broken.iter().filter(|t| **t != 0 && w.tick >= **t).count();
         assert_eq!(gone, w.arena.panes.len(), "every pane broke");
         assert!(w.notes.iter().any(|n| n.sound == "crash"));
@@ -2547,8 +2627,14 @@ mod house {
         }
         assert_eq!(w.enemies[b].phase, 1);
         assert!(matches!(w.enemies[b].state, State::Changing(_)));
-        assert!(crate::tank::muzzles(&w.enemies[b], d).len() > guns, "it grew cannons");
-        assert_eq!(crate::tank::weak_points(&w.enemies[b], d).len(), d.phases[1].weak.len());
+        assert!(
+            crate::tank::muzzles(&w.enemies[b], d).len() > guns,
+            "it grew cannons"
+        );
+        assert_eq!(
+            crate::tank::weak_points(&w.enemies[b], d).len(),
+            d.phases[1].weak.len()
+        );
     }
 
     #[test]
@@ -2611,7 +2697,10 @@ mod house {
         }
         assert!(landed);
         assert_eq!(hp - w.enemies[i].hp, POUND_DAMAGE, "the shockwave");
-        assert!(peak >= start + POUND_OVER - ONE / 5, "bounced to {peak}, began at {start}");
+        assert!(
+            peak >= start + POUND_OVER - ONE / 5,
+            "bounced to {peak}, began at {start}"
+        );
     }
 
     #[test]
@@ -2649,7 +2738,12 @@ mod house {
         }
         let after_hit = w.enemies[0].hp;
         assert!(after_hit < hp, "the throw hit");
-        assert!(w.shots.iter().any(|s| s.kind == ShotKind::Saw && s.lodged.is_some()), "it lodged");
+        assert!(
+            w.shots
+                .iter()
+                .any(|s| s.kind == ShotKind::Saw && s.lodged.is_some()),
+            "it lodged"
+        );
         for _ in 0..30 {
             w.enemies[0].state = State::Rest(10_000);
             let (eye, fwd) = aim(&w);
@@ -2659,9 +2753,50 @@ mod house {
         for _ in 0..60 {
             w.enemies[0].state = State::Rest(10_000);
             let (eye, fwd) = aim(&w);
-            w.tick(&c, &Controls { fire: true, ..still() }, eye, fwd);
+            w.tick(
+                &c,
+                &Controls {
+                    fire: true,
+                    ..still()
+                },
+                eye,
+                fwd,
+            );
         }
-        assert!(w.enemies[0].hp < after_hit - 40, "the rev bites: {} to {}", after_hit, w.enemies[0].hp);
+        assert!(
+            w.enemies[0].hp < after_hit - 40,
+            "the rev bites: {} to {}",
+            after_hit,
+            w.enemies[0].hp
+        );
+    }
+
+    #[test]
+    fn an_orbs_hit_is_heard_and_a_recess_is_called() {
+        let (c, mut w) = house_world(NodeKind::Fight, false);
+        w.player.build.recess = true;
+        w.player.recess_left = 1;
+        w.player.health = 5;
+        // cleared already, so the clearing does not sweep the orb away
+        w.cleared = true;
+        let chest = w.player.chest();
+        w.orbs.push(Orb::new(
+            chest.add(v3(0, 0, -int(1))),
+            v3(0, 0, ONE),
+            ONE / 10,
+            ONE * 4 / 10,
+            [0; 3],
+            ORB_DAMAGE,
+        ));
+        for _ in 0..12 {
+            step(&c, &mut w, &still());
+        }
+        assert!(w.notes.iter().any(|n| n.sound == "hurt"), "the hit is heard");
+        assert!(
+            w.notes.iter().any(|n| n.sound == "recess" && !n.text.is_empty()),
+            "and the Recess called"
+        );
+        assert!(w.player.alive());
     }
 
     #[test]
@@ -2677,7 +2812,11 @@ mod house {
             w.player.iframes = 1_000_000;
             step(&c, &mut w, &still());
         }
-        let called = w.enemies.iter().filter(|e| e.alive() && e.summoned_by == Some(k)).count() as i32;
+        let called = w
+            .enemies
+            .iter()
+            .filter(|e| e.alive() && e.summoned_by == Some(k))
+            .count() as i32;
         assert!(called > 0 && called <= d.summon_cap, "{called}");
         let earned = w.earned;
         w.enemies[k].hp = 1;
@@ -2685,7 +2824,10 @@ mod house {
         w.enemies[k].hurt(5);
         step(&c, &mut w, &still());
         step(&c, &mut w, &still());
-        assert!(w.enemies.iter().all(|e| e.summoned_by != Some(k) || !e.alive()), "his men withdrew");
+        assert!(
+            w.enemies.iter().all(|e| e.summoned_by != Some(k) || !e.alive()),
+            "his men withdrew"
+        );
         let _ = earned;
     }
 }

@@ -362,7 +362,17 @@ impl Enemy {
     /// The volleys of a pattern that fire on tick `t` of its cast, from
     /// each of `from`.
     #[allow(clippy::too_many_arguments)]
-    fn cast(&self, c: &Content, pattern: &Pattern, t: i32, from: &[V3], target: V3, me: usize, level: &Level, deeds: &mut Deeds) {
+    fn cast(
+        &self,
+        c: &Content,
+        pattern: &Pattern,
+        t: i32,
+        from: &[V3],
+        target: V3,
+        me: usize,
+        level: &Level,
+        deeds: &mut Deeds,
+    ) {
         for v in &pattern.volleys {
             let since = t - v.delay;
             if since < 0 {
@@ -583,7 +593,12 @@ impl Enemy {
             moved
         };
         let (want, _) = yaw_pitch_of(look);
-        let turn = fx::wrap(want - self.yaw).clamp(-AGENT_TURN, AGENT_TURN);
+        let rate = if d.role == Role::Shield {
+            SHIELD_TURN
+        } else {
+            AGENT_TURN
+        };
+        let turn = fx::wrap(want - self.yaw).clamp(-rate, rate);
         self.yaw = fx::wrap(self.yaw + turn);
     }
 

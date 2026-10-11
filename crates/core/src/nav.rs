@@ -54,7 +54,10 @@ impl Nav {
                     if k == LEVELS {
                         break;
                     }
-                    let free = !level.blocked(v3(x - r, y + ONE / 20, z - r), v3(x + r, y + PLAYER_HEIGHT, z + r));
+                    let free = !level.blocked(
+                        v3(x - r, y + ONE / 20, z - r),
+                        v3(x + r, y + PLAYER_HEIGHT, z + r),
+                    );
                     if free {
                         heights[(j * side + i) as usize][k] = y;
                         k += 1;
@@ -145,7 +148,16 @@ impl Nav {
         let c = (n / LEVELS as u32) as i32;
         let y = self.heights[c as usize][(n % LEVELS as u32) as usize];
         let (i, j) = (c % self.side, c / self.side);
-        for (di, dj) in [(1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (1, -1), (-1, 1), (-1, -1)] {
+        for (di, dj) in [
+            (1, 0),
+            (-1, 0),
+            (0, 1),
+            (0, -1),
+            (1, 1),
+            (1, -1),
+            (-1, 1),
+            (-1, -1),
+        ] {
             let (ni, nj) = (i + di, j + dj);
             if ni < 0 || nj < 0 || ni >= self.side || nj >= self.side {
                 continue;
@@ -254,7 +266,10 @@ mod tests {
             // a wall across the middle with a gap at its east end
             Solid::new(v3(-int(20), 0, -ONE / 4), v3(int(10), int(4), ONE / 4)),
             // a gallery 5 m up along the west, over a walkable floor
-            Solid::new(v3(-int(12), int(5) - ONE * 4 / 10, int(4)), v3(-int(6), int(5), int(12))),
+            Solid::new(
+                v3(-int(12), int(5) - ONE * 4 / 10, int(4)),
+                v3(-int(6), int(5), int(12)),
+            ),
         ])
     }
 
@@ -268,7 +283,9 @@ mod tests {
         assert!(!p.is_empty(), "a way round");
         // it goes through the gap, east of x = 10
         assert!(p.iter().any(|q| q.x > int(10) && q.z.abs() < ONE), "{p:?}");
-        assert!(p.iter().all(|q| l.floor_below(q.x, q.y + ONE / 10, q.z).is_some()));
+        assert!(p
+            .iter()
+            .all(|q| l.floor_below(q.x, q.y + ONE / 10, q.z).is_some()));
     }
 
     #[test]
