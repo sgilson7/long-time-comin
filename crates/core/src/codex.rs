@@ -594,7 +594,7 @@ fn enemy(d: &EnemyDef, c: &Content) -> Value {
                 })
                 .collect();
             json!({
-                "from": if d.kind == Kind::Boss { format!("Phase {} (from {}% health)", k + 1, p.from_pct) } else { String::new() },
+                "from": if matches!(d.kind, Kind::Boss | Kind::God) { format!("Phase {} (from {}% health)", k + 1, p.from_pct) } else { String::new() },
                 "attacks": attacks,
             })
         })
@@ -607,6 +607,38 @@ fn enemy(d: &EnemyDef, c: &Content) -> Value {
     if let Some(p) = d.burst {
         let words: Vec<String> = c.patterns[p].volleys.iter().map(volley).collect();
         moves += &format!(" When it dies it leaves this behind: {}", words.join(" "));
+    }
+    if let Some(&first) = d.splits.first() {
+        moves += &format!(
+            " When it dies it splits into {} × {}.",
+            d.splits.len(),
+            c.enemies[first].name
+        );
+    }
+    if let Some(l) = d.lullaby.as_ref() {
+        let notes: usize = l.verses.iter().map(|v| v.notes.len()).sum();
+        let beats: Vec<String> = l
+            .beats
+            .iter()
+            .map(|b| {
+                let from = if b.from_verse > 0 {
+                    format!(", from verse {}", b.from_verse + 1)
+                } else {
+                    String::new()
+                };
+                format!("{} every {} beats{from}", c.patterns[b.pattern].id, b.every)
+            })
+            .collect();
+        moves += &format!(
+            " The lullaby: {} verses ({notes} notes) at a beat of {} s, each piped by the dancers and then played back by you on five keys (left mouse, Q, E, R, F). A note within {} s of its time is great, within {} s good; {}% of a verse's notes good or better and it sleeps a verse deeper, fewer and it stirs ({}) and the verse comes again. On the beat it fires: {}.",
+            l.verses.len(),
+            s(l.beat),
+            s(l.great),
+            s(l.good),
+            l.pass_pct,
+            c.patterns[l.stir].id,
+            beats.join("; ")
+        );
     }
     json!({
         "name": d.name,

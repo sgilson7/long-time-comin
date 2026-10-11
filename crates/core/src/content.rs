@@ -1371,6 +1371,12 @@ impl Content {
 
     /// The zone an enemy belongs to, by index, if one lists it.
     pub fn zone_of_enemy(&self, def: usize) -> Option<usize> {
+        // what another splits into is of that one's zone
+        if let Some(parent) = self.enemies.iter().position(|e| e.splits.contains(&def)) {
+            if parent != def {
+                return self.zone_of_enemy(parent);
+            }
+        }
         let id = &self.enemies[def].id;
         self.zones.iter().position(|z| {
             &z.boss == id

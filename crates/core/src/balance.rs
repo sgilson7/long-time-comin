@@ -281,9 +281,12 @@ pub const ECHO_DELAY: i32 = secs(3, 1);
 /// off an edge of the god's floors you fall, and come down again from
 /// this high over the floor you fell from (the arena's `wrap`)
 pub const WRAP_BELOW: i32 = int(24);
-/// the lullaby: how far ahead the staff shows a note, and how much a stir
-/// costs the sleep (the verse is played again)
+/// the lullaby: how far ahead the staff shows a note
 pub const STAFF_AHEAD: i32 = secs(3, 1);
+/// where on the staff the line is, and how much is left past the last
+/// note shown, in percent of its width
+pub const STAFF_LINE_PCT: i32 = 12;
+pub const STAFF_END_PCT: i32 = 4;
 /// a bubble of stopped time round the god, grown a share each verse
 pub const BUBBLE_RADIUS: i32 = int(22);
 /// the trumpet's last note rings this long over the stopped god before

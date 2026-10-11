@@ -2144,14 +2144,11 @@ impl World {
         };
         let want = d.radius + BUBBLE_RADIUS * share / n;
         self.bubble_r = fx::approach(self.bubble_r, want, ONE / 8);
-        if song.part == Part::Asleep && song.clock < ASLEEP_TICKS {
-            song.clock += 1;
-            if song.clock >= ASLEEP_TICKS {
-                // it sleeps
-                let god = &mut self.enemies[b];
-                god.floor_hp = 0;
-                god.hp = 0;
-            }
+        if song.part == Part::Asleep && song.clock >= ASLEEP_TICKS && self.enemies[b].floor_hp > 0 {
+            // it sleeps
+            let god = &mut self.enemies[b];
+            god.floor_hp = 0;
+            god.hp = 0;
         }
         self.song = Some(song);
         // the patterns fired on the beat, each on its own clock
@@ -4099,5 +4096,306 @@ mod ascent {
             step(&c, &mut w, &still());
         }
         assert_eq!(w.held.rounds, 6, "loaded again");
+    }
+}
+
+#[cfg(test)]
+mod god {
+    use super::*;
+    use crate::arena::Seam;
+    use crate::content::tests::content;
+    use crate::enemy::State;
+    use crate::player::Build;
+    use crate::route::Route;
+    use crate::song::Part;
+
+    /// A node of zone five's map, of `kind`; a fight's waves cleared.
+    fn world_in(kind: NodeKind) -> (Content, World) {
+        let c = content();
+        let r = Route::build_for(&c, 4, 3, 1);
+        let i = r.nodes.iter().position(|n| n.kind == kind).expect("the node");
+        let p = Player::new(V3::ZERO, 0, Build::default());
+        let mut w = World::new(&c, &r.nodes[i], &[], p, Held::new(0, 1), 1);
+        if kind == NodeKind::Fight {
+            w.waves_left.clear();
+        }
+        (c, w)
+    }
+
+    fn put(c: &Content, w: &mut World, id: &str, at: V3) -> usize {
+        let d = c.enemy(id).unwrap();
+        let mut e = Enemy::new(d, &c.enemies[d], at.add(v3(0, c.enemies[d].hover, 0)), 1);
+        e.state = State::Rest(10_000);
+        w.enemies.push(e);
+        w.enemies.len() - 1
+    }
+
+    fn step(c: &Content, w: &mut World, ctl: &Controls) {
+        let f = facing(w.player.yaw, w.player.pitch);
+        let eye = w.player.chest().sub(f.scale(int(4)));
+        w.tick(c, ctl, eye, f);
+    }
+
+    fn forward() -> Controls {
+        Controls {
+            move_z: ONE,
+            ..Controls::default()
+        }
+    }
+
+    #[test]
+    fn a_reprise_walks_the_path_you_walked_seconds_before() {
+        let (c, mut w) = world_in(NodeKind::Fight);
+        w.player.iframes = 1_000_000;
+        let start = w.player.pos;
+        let r = put(&c, &mut w, "reprise", start.add(v3(int(12), 0, 0)));
+        let mut path = Vec::new();
+        for _ in 0..secs(5, 2) {
+            step(&c, &mut w, &forward());
+            path.push(w.player.chest());
+        }
+        // it is on your path, some seconds back along it, not on you
+        let at = w.enemies[r].pos;
+        let near = path.iter().map(|p| p.dist(at)).min().unwrap();
+        assert!(near < ONE / 2, "on your path: {near}");
+        assert!(at.dist(w.player.chest()) > int(5), "behind you");
+        // stand still, and it reaches you
+        for _ in 0..secs(5, 1) {
+            step(&c, &mut w, &Controls::default());
+        }
+        assert!(
+            w.enemies[r].pos.dist(w.player.chest()) < ONE / 2,
+            "it catches you up: {:?} {:?} {}",
+            w.enemies[r].pos,
+            w.player.chest(),
+            w.enemies[r].alive()
+        );
+    }
+
+    #[test]
+    fn a_recursion_splits_into_three_and_each_of_those_into_three_more() {
+        let (c, mut w) = world_in(NodeKind::Fight);
+        w.player.iframes = 1_000_000;
+        let at = w.player.pos.add(v3(0, 0, -int(10)));
+        let big = put(&c, &mut w, "recursion", at);
+        w.enemies[big].hp = 0;
+        w.fell(&c, vec![big]);
+        let minor = c.enemy("recursion_minor").unwrap();
+        let least = c.enemy("recursion_least").unwrap();
+        let of = |w: &World, d: usize| w.enemies.iter().filter(|e| e.alive() && e.def == d).count();
+        assert_eq!(of(&w, minor), 3);
+        let first = w.enemies.iter().position(|e| e.def == minor).unwrap();
+        w.enemies[first].hp = 0;
+        w.fell(&c, vec![first]);
+        assert_eq!(of(&w, least), 3);
+        let one = w.enemies.iter().position(|e| e.def == least).unwrap();
+        w.enemies[one].hp = 0;
+        let before = w.enemies.len();
+        w.fell(&c, vec![one]);
+        assert_eq!(w.enemies.len(), before, "the least splits no further");
+    }
+
+    #[test]
+    fn off_an_edge_inside_the_god_you_fall_and_come_down_again_from_above_unhurt() {
+        let (c, mut w) = world_in(NodeKind::Fight);
+        assert!(w.arena.wrap > 0);
+        let health = w.player.health;
+        // out over the void, past the floor's edge
+        w.player.pos = v3(int(80), int(2), int(80));
+        w.player.prev_pos = w.player.pos;
+        let mut came_round = false;
+        let mut lowest = w.player.pos.y;
+        for _ in 0..secs(5, 1) {
+            let before = w.player.pos.y;
+            step(&c, &mut w, &Controls::default());
+            lowest = lowest.min(w.player.pos.y);
+            if w.player.pos.y > before + int(10) {
+                came_round = true;
+            }
+        }
+        assert!(came_round, "it came round from above");
+        assert!(
+            lowest > KILL_FLOOR,
+            "and never reached the floor that kills: {lowest}"
+        );
+        assert_eq!(w.player.health, health, "unhurt");
+    }
+
+    /// Two seams facing different ways, 20 m apart, each the other's.
+    fn seams(w: &mut World) {
+        w.arena.seams = vec![
+            Seam {
+                at: v3(0, 0, 0),
+                yaw: 0,
+                half: int(2),
+                height: int(4),
+                to: 1,
+            },
+            Seam {
+                at: v3(int(20), 0, 0),
+                yaw: fx::QUARTER,
+                half: int(2),
+                height: int(4),
+                to: 0,
+            },
+        ];
+    }
+
+    #[test]
+    fn through_a_seam_you_come_out_of_its_partner_turned_as_it_is_and_keeping_your_speed() {
+        let (c, mut w) = world_in(NodeKind::Fight);
+        seams(&mut w);
+        // a step south of the first seam, walking north through it
+        w.player.pos = v3(0, 0, int(1));
+        w.player.prev_pos = w.player.pos;
+        w.player.yaw = 0;
+        let mut through = false;
+        for _ in 0..secs(1, 1) {
+            step(&c, &mut w, &forward());
+            if w.player.pos.x > int(15) {
+                through = true;
+                break;
+            }
+        }
+        assert!(through, "out of the other: {:?}", w.player.pos);
+        // the second faces west (a quarter turn): coming out, you face east
+        // and walk on east, away from it
+        let way = facing(w.player.yaw, 0);
+        assert!(way.x > ONE * 9 / 10, "turned: {way:?}");
+        let x = w.player.pos.x;
+        for _ in 0..10 {
+            step(&c, &mut w, &forward());
+        }
+        assert!(w.player.pos.x > x, "and on, away from it");
+    }
+
+    #[test]
+    fn an_orb_through_a_seam_comes_out_of_its_partner() {
+        let (c, mut w) = world_in(NodeKind::Fight);
+        seams(&mut w);
+        w.cleared = true;
+        w.player.pos = v3(-int(20), 0, int(20));
+        let mut o = Orb::new(
+            v3(0, int(1), int(1)),
+            v3(0, 0, -ONE),
+            ONE / 4,
+            ONE / 4,
+            [ONE; 3],
+            5,
+        );
+        o.prev = o.pos;
+        w.orbs.push(o);
+        let mut out = None;
+        for _ in 0..20 {
+            step(&c, &mut w, &Controls::default());
+            if let Some(o) = w.orbs.first().filter(|o| o.pos.x > int(15)) {
+                out = Some(o.dir);
+                break;
+            }
+        }
+        let dir = out.unwrap_or_else(|| {
+            panic!(
+                "it came out of the other seam: {:?}",
+                w.orbs.first().map(|o| o.pos)
+            )
+        });
+        assert!(dir.x > ONE * 9 / 10, "turned as the seam is: {dir:?}");
+    }
+
+    /// The Heart with the god in it, come in and past its first moments.
+    fn heart() -> (Content, World, usize) {
+        let (c, mut w) = world_in(NodeKind::Boss);
+        w.player.iframes = 1_000_000;
+        for _ in 0..secs(3, 1) {
+            step(&c, &mut w, &Controls::default());
+        }
+        let b = w.boss.expect("the god came");
+        (c, w, b)
+    }
+
+    #[test]
+    fn the_gods_last_bar_does_not_kill_it_you_take_out_the_trumpet_instead() {
+        let (c, mut w, b) = heart();
+        assert_eq!(c.enemies[w.enemies[b].def].kind, Kind::God);
+        w.enemies[b].phase = 2;
+        w.enemies[b].state = State::Rest(100);
+        w.enemies[b].hurt(i32::MAX / 2);
+        assert!(w.enemies[b].alive(), "it cannot be killed");
+        step(&c, &mut w, &Controls::default());
+        assert!(w.song.is_some(), "the song begins");
+        assert!(w.orbs.is_empty());
+        assert!(w.notes.iter().any(|n| n.sound == "trumpet"));
+        // the trigger plays a note now, and fires nothing
+        while w.song.as_ref().is_some_and(|s| s.part == Part::Intro) {
+            step(&c, &mut w, &Controls::default());
+        }
+        let shots = w.shots.len();
+        let seq = w.seq;
+        step(
+            &c,
+            &mut w,
+            &Controls {
+                fire: true,
+                fire_pressed: true,
+                ..Controls::default()
+            },
+        );
+        assert_eq!(w.shots.len(), shots, "the gun is put away");
+        assert!(w
+            .notes
+            .iter()
+            .any(|n| n.seq > seq && n.sound.starts_with("trumpet_")));
+    }
+
+    #[test]
+    fn played_through_the_lullaby_puts_the_god_to_sleep_and_the_run_is_won() {
+        let (c, mut w, b) = heart();
+        w.enemies[b].phase = 2;
+        w.enemies[b].state = State::Rest(100);
+        w.enemies[b].hurt(i32::MAX / 2);
+        let l = c.enemies[w.enemies[b].def].lullaby.clone().unwrap();
+        let keys = |w: &World| {
+            let mut k = [false; 5];
+            if let Some(s) = w.song.as_ref().filter(|s| s.part == Part::Play) {
+                let first = crate::song::Song::start(&l);
+                for &(at, key) in &l.verses[s.verse].notes {
+                    if first + at == s.clock + 1 {
+                        k[key] = true;
+                    }
+                }
+            }
+            k
+        };
+        let mut beat_orbs = 0;
+        let mut largest = 0;
+        for _ in 0..secs(400, 1) {
+            let k = keys(&w);
+            let ctl = Controls {
+                fire_pressed: k[0],
+                parry_pressed: k[1],
+                interact_pressed: k[2],
+                wall_pressed: k[3],
+                grapple_pressed: k[4],
+                ..Controls::default()
+            };
+            step(&c, &mut w, &ctl);
+            beat_orbs = beat_orbs.max(w.orbs.len());
+            largest = largest.max(w.bubble()[3]);
+            if w.outcome != Outcome::Playing {
+                break;
+            }
+        }
+        assert!(beat_orbs > 0, "it fired on the beat as you played");
+        assert!(
+            largest > c.enemies[w.enemies[b].def].radius + BUBBLE_RADIUS / 2,
+            "the bubble grew: {largest}"
+        );
+        assert_eq!(
+            w.outcome,
+            Outcome::Won,
+            "it sleeps: {:?} {:?}",
+            w.song.as_ref().map(|s| (s.part, s.verse, s.asleep, s.clock)),
+            w.enemies[b].hp
+        );
     }
 }

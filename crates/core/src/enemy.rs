@@ -1730,4 +1730,140 @@ mod tests {
         }
         assert_eq!(began_flying, 0, "no attack begins in flight");
     }
+
+    #[test]
+    fn a_glyph_marches_sideways_a_step_at_a_time_then_steps_toward_you_and_turns_back() {
+        let c = content();
+        let l = floor();
+        let you = v3(0, int(1), 0);
+        let i = c.enemy("glyph").unwrap();
+        let d = &c.enemies[i];
+        // far off, so its step toward you is a step nearer
+        let mut e = Enemy::new(i, d, v3(d.range + int(8), d.hover, 0), 1);
+        e.state = State::Rest(1_000_000);
+        let mut moves = Vec::new();
+        let mut still = 0;
+        for _ in 0..MARCH_EVERY * (MARCH_ACROSS * 2 + 1) {
+            let before = e.pos;
+            e.step(&c, &l, you, 0);
+            let m = e.pos.sub(before);
+            if m.len_xz() < ONE / 100 {
+                still += 1;
+            } else {
+                moves.push(m);
+            }
+        }
+        assert!(still > moves.len() as i32, "it holds still between steps");
+        // steps across (along z, its side of you), one toward you (along
+        // x), then back across the other way
+        let across: Vec<i32> = moves.iter().map(|m| m.z).collect();
+        assert!(across.iter().any(|z| *z > ONE / 20), "{across:?}");
+        assert!(across.iter().any(|z| *z < -ONE / 20), "and back: {across:?}");
+        assert!(
+            moves.iter().any(|m| m.x < -ONE / 20 && m.z.abs() < ONE / 50),
+            "a step toward you"
+        );
+    }
+
+    #[test]
+    fn an_etching_moves_and_fires_only_while_you_are_not_looking_at_it() {
+        let c = content();
+        let l = floor();
+        let you = v3(0, int(1), 0);
+        let i = c.enemy("etching").unwrap();
+        let d = &c.enemies[i];
+        let mut e = Enemy::new(i, d, v3(int(15), d.hover, 0), 1);
+        e.state = State::Rest(1);
+        e.seen = true;
+        let start = e.pos;
+        let mut fired = 0;
+        for _ in 0..secs(3, 1) {
+            fired += e.step(&c, &l, you, 0).salvo.orbs.len();
+        }
+        assert_eq!(e.pos, start, "a statue while you look");
+        assert_eq!(fired, 0, "and silent");
+        e.seen = false;
+        for _ in 0..secs(1, 1) {
+            fired += e.step(&c, &l, you, 0).salvo.orbs.len();
+        }
+        assert!(e.pos.x < start.x - int(5), "looking away, it comes: {:?}", e.pos);
+        for _ in 0..secs(3, 1) {
+            fired += e.step(&c, &l, you, 0).salvo.orbs.len();
+        }
+        assert!(fired > 0, "and fires");
+    }
+
+    #[test]
+    fn a_render_turns_on_the_spot_and_then_charges_straight_whatever_you_do() {
+        let c = content();
+        let l = floor();
+        let i = c.enemy("render").unwrap();
+        let d = &c.enemies[i];
+        let mut e = Enemy::new(i, d, v3(0, d.hover, 0), 1);
+        e.state = State::Rest(1_000_000);
+        // you are behind it: it turns first, standing where it is
+        let you = v3(0, int(1), int(20));
+        let start = e.pos;
+        let mut turned = 0;
+        while e.leap == 0 && turned < secs(3, 1) {
+            e.step(&c, &l, you, 0);
+            turned += 1;
+            if e.leap == 0 {
+                assert!(e.pos.sub(start).len_xz() < ONE / 50, "it turns on the spot");
+            }
+        }
+        assert!(turned > secs(1, 2), "a half turn takes a while: {turned}");
+        // charging, you step aside: it goes straight on
+        let dir = e.bite_dir;
+        let aside = v3(int(10), int(1), int(10));
+        let from = e.pos;
+        for _ in 0..secs(1, 2) {
+            e.step(&c, &l, aside, 0);
+        }
+        let went = e.pos.sub(from);
+        assert!(went.len_xz() > int(5), "it charges: {went:?}");
+        let off = went.norm().dot(dir);
+        assert!(off > ONE * 99 / 100, "straight on, not after you");
+    }
+
+    #[test]
+    fn every_toon_bounces_on_the_one_shared_beat() {
+        let c = content();
+        let l = floor();
+        let you = v3(0, int(1), 0);
+        let i = c.enemy("toon").unwrap();
+        let d = &c.enemies[i];
+        let mut a = Enemy::new(i, d, v3(int(10), d.hover, 0), 1);
+        let mut b = Enemy::new(i, d, v3(-int(10), d.hover, int(4)), -1);
+        a.age = 37;
+        for e in [&mut a, &mut b] {
+            e.state = State::Rest(1_000_000);
+        }
+        let mut lowest = Vec::new();
+        for t in 1..BOUNCE_TICKS * 3 {
+            for e in [&mut a, &mut b] {
+                e.beat = t;
+                e.step(&c, &l, you, 0);
+            }
+            assert_eq!(a.pos.y, b.pos.y, "together, whatever their own clocks");
+            if a.pos.y <= d.hover + ONE / 50 {
+                lowest.push(t % BOUNCE_TICKS);
+            }
+        }
+        assert!(
+            !lowest.is_empty() && lowest.iter().all(|t| *t == 0),
+            "they land on the beat: {lowest:?}"
+        );
+        let high = (0..BOUNCE_TICKS)
+            .map(|t| {
+                let mut e = Enemy::new(i, d, v3(0, d.hover, int(9)), 1);
+                e.state = State::Rest(1_000_000);
+                e.beat = t;
+                e.step(&c, &l, you, 0);
+                e.pos.y
+            })
+            .max()
+            .unwrap_or(0);
+        assert!(high > d.hover + BOUNCE_HEIGHT * 9 / 10, "and bounce high: {high}");
+    }
 }

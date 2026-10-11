@@ -151,6 +151,35 @@ table.controls td:first-child { font-weight: 700; white-space: nowrap; }
 .bar { position: relative; height: 18px; border: 3px solid var(--ink); border-radius: 9px; background: rgba(59, 35, 64, 0.5); overflow: hidden; }
 .bar .fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--coral); transition: width 120ms; }
 #boss .bar .fill { background: linear-gradient(90deg, var(--violet), var(--magenta)); }
+/* a bar for each phase (the Idiot God): the ones left lit; the lullaby's
+   bar is the sleep, in pale gold */
+.boss-bars { justify-content: center; margin-top: 4px; }
+#boss.sleep .bar .fill { background: linear-gradient(90deg, #7af0e0, #ffe27a); }
+/* the lullaby's staff, after the ocarina's: five lines low in the middle
+   of the screen, the notes sliding left to the line */
+#staff { position: absolute; left: 50%; bottom: 150px; translate: -50% 0; width: min(78vw, 860px); height: 132px; background: rgba(18, 8, 32, 0.72); border: 3px solid var(--ink); border-radius: 12px; box-shadow: 4px 4px 0 var(--ink); }
+#staff .staff-label { position: absolute; left: 12px; top: -26px; font-weight: 900; letter-spacing: 0.14em; color: var(--paper); text-shadow: 2px 2px 0 var(--ink); }
+#staff[data-part="play"] .staff-label { color: #ffe27a; }
+.staff-lines { position: absolute; left: 8px; right: 8px; top: 18px; bottom: 18px; display: flex; flex-direction: column; justify-content: space-between; }
+.staff-lines i { display: block; height: 2px; background: rgba(246, 231, 196, 0.55); }
+.staff-keys { position: absolute; left: 4px; top: 8px; bottom: 8px; display: flex; flex-direction: column; justify-content: space-between; font-size: 0.7rem; font-weight: 900; color: var(--paper); }
+.staff-line { position: absolute; top: 6px; bottom: 6px; width: 4px; translate: -50% 0; background: #ffe27a; box-shadow: 0 0 10px #ffe27a; }
+.staff-notes { position: absolute; inset: 0; }
+.note { position: absolute; translate: -50% -50%; width: 30px; height: 30px; border-radius: 50%; border: 3px solid var(--ink); display: grid; place-items: center; font-size: 0.72rem; font-weight: 900; color: var(--ink); background: var(--c); }
+.note.lane-0 { top: 85%; --c: #4a8cff; }
+.note.lane-1 { top: 67.5%; --c: #ffd84a; }
+.note.lane-2 { top: 50%; --c: #ffd84a; }
+.note.lane-3 { top: 32.5%; --c: #ffd84a; }
+.note.lane-4 { top: 15%; --c: #ffd84a; }
+.note.ghost { opacity: 0.55; border-style: dashed; }
+.note.great { --c: #ffe27a; box-shadow: 0 0 14px #ffe27a; scale: 1.2; }
+.note.good { --c: #7af0e0; box-shadow: 0 0 10px #7af0e0; }
+.note.miss { --c: #e03030; opacity: 0.6; }
+.staff-keys span:nth-child(1) { order: 5; }
+.staff-keys span:nth-child(2) { order: 4; }
+.staff-keys span:nth-child(3) { order: 3; }
+.staff-keys span:nth-child(4) { order: 2; }
+.staff-keys span:nth-child(5) { order: 1; }
 #bottom-left { position: absolute; left: 18px; bottom: 18px; width: min(36vw, 340px); background: rgba(246, 231, 196, 0.92); border: 3px solid var(--ink); border-radius: 12px; padding: 8px 12px; box-shadow: 4px 4px 0 var(--ink); }
 #bottom-left .label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700; }
 .bar.health { height: 22px; }

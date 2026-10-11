@@ -85,6 +85,37 @@ export function makeHud(copy, play) {
         text("b-title", h.boss.title);
         el("b-fill").style.width = `${h.boss.pct}%`;
         text("b-timer", h.boss.timer);
+        pips("b-bars", h.boss.bars, h.boss.bars_left);
+        boss.classList.toggle("sleep", h.boss.sleep);
+      }
+
+      // the lullaby's staff
+      const staff = el("staff");
+      staff.hidden = !h.song;
+      if (h.song) {
+        staff.dataset.part = h.song.part;
+        text("s-label", h.song.label);
+        el("s-line").style.left = `${h.song.line}%`;
+        const keys = el("s-keys");
+        if (keys.dataset.list !== h.song.keys.join("|")) {
+          keys.dataset.list = h.song.keys.join("|");
+          keys.replaceChildren(
+            ...h.song.keys.map((k) => {
+              const span = document.createElement("span");
+              span.textContent = k;
+              return span;
+            }),
+          );
+        }
+        const notes = el("s-notes");
+        while (notes.children.length < h.song.notes.length) notes.appendChild(document.createElement("div"));
+        while (notes.children.length > h.song.notes.length) notes.lastChild.remove();
+        h.song.notes.forEach((n, k) => {
+          const node = notes.children[k];
+          node.className = `note lane-${n.lane} ${n.state}`;
+          node.style.left = `${n.x}%`;
+          if (node.textContent !== n.key) node.textContent = n.key;
+        });
       }
 
       el("prompt").hidden = !h.prompt;

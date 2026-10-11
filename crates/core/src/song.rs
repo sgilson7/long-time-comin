@@ -123,6 +123,12 @@ impl Song {
                             h.notes.push((key, false));
                         }
                     }
+                    // you may play along while you listen; nothing is judged
+                    for (key, down) in pressed.iter().enumerate() {
+                        if *down {
+                            h.notes.push((key, true));
+                        }
+                    }
                 } else {
                     self.play(l, pressed, &mut h);
                 }

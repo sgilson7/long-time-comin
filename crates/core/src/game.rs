@@ -271,9 +271,10 @@ impl Game {
         };
         let w = &mut run.world;
         if let Some(b) = w.boss {
+            let last = self.c.enemies[w.enemies[b].def].phases.len().max(1) - 1;
             let e = &mut w.enemies[b];
             if e.floor_hp > 0 && w.song.is_none() {
-                e.phase = e.phase.max(1);
+                e.phase = last;
                 e.state = crate::enemy::State::Rest(10);
                 e.hp = e.floor_hp;
             }
@@ -876,6 +877,38 @@ impl Game {
                 let e = &w.enemies[b];
                 let d = &c.enemies[e.def];
                 let words = c.story.bosses.get(&d.id);
+                // a boss with a bar for each phase: its phase's share of
+                // its health; the lullaby's bar is the sleep
+                if let Some(w) = words.filter(|w| !w.bars.is_empty()) {
+                    let n = d.phases.len();
+                    let (bar, pct, title) = match (&run.world.song, d.lullaby.as_ref()) {
+                        (Some(song), Some(l)) => (
+                            n,
+                            song.sleep(l) * 100 / ONE,
+                            c.say("song_verse")
+                                .replace("{n}", &(song.verse + 1).min(l.verses.len()).to_string())
+                                .replace("{max}", &l.verses.len().to_string()),
+                        ),
+                        _ => {
+                            let k = e.phase.min(n - 1);
+                            let top = d.phases[k].from_pct;
+                            let floor = d.phases.get(k + 1).map_or(0, |p| p.from_pct);
+                            let pct = (e.health_pct() - floor).max(0) * 100 / (top - floor).max(1);
+                            (k, pct, w.title.clone())
+                        }
+                    };
+                    let bars = n + d.lullaby.is_some() as usize;
+                    return json!({
+                        "name": w.name,
+                        "title": title,
+                        "pct": pct,
+                        "phase": bar + 1,
+                        "timer": w.bars.get(bar).cloned().unwrap_or_default(),
+                        "bars": bars,
+                        "bars_left": bars - bar,
+                        "sleep": run.world.song.is_some(),
+                    });
+                }
                 let (pct, timer) = match e.tank.as_ref() {
                     Some(t) if t.survive > 0 => {
                         let total = d.phases[e.phase].survive.max(1);
@@ -898,6 +931,9 @@ impl Game {
                     "pct": pct,
                     "phase": e.phase + 1,
                     "timer": timer,
+                    "bars": 0,
+                    "bars_left": 0,
+                    "sleep": false,
                 })
             });
         let gates: Vec<Value> = w
@@ -939,7 +975,13 @@ impl Game {
         // hints show for a few seconds, then get out of the way
         let fresh = |since: i32| w.tick - since < HINT_TICKS;
         let house = c.zones[run.zone].id == "glass_house";
+        let god = c.zones[run.zone].id == "idiot_god";
+        let learning = w.song.as_ref().is_some_and(|s| {
+            s.asleep == 0 && matches!(s.part, crate::song::Part::Intro | crate::song::Part::Listen)
+        });
         let hint = match node.kind {
+            NodeKind::Boss if learning => c.say("hint_song"),
+            NodeKind::Arrival if god && fresh(0) => c.say("hint_gullet"),
             NodeKind::Arrival if house => c.say("hint_vestibule"),
             NodeKind::Boss if house && w.tick > secs(4, 1) && fresh(secs(4, 1)) => c.say("hint_tank"),
             NodeKind::Arrival if !node.cache.is_empty() => c.say("hint_landing"),
@@ -1094,8 +1136,76 @@ impl Game {
             "perks": perks,
             "pulse_ready": p.build.pulse && w.pulse_cooldown == 0,
             "story": story,
+            "song": self.song_hud(w),
         });
         h.to_string()
+    }
+
+    /// The lullaby's staff: the verse's notes scrolling toward the line,
+    /// each with its key and how it was played, and what part the song is in.
+    fn song_hud(&self, w: &World) -> Value {
+        let c = &self.c;
+        let (Some(song), Some(b)) = (&w.song, w.boss) else {
+            return Value::Null;
+        };
+        let Some(l) = c.enemies[w.enemies[b].def].lullaby.as_ref() else {
+            return Value::Null;
+        };
+        use crate::song::{Judge, Part};
+        let part = match song.part {
+            Part::Intro => "intro",
+            Part::Listen => "listen",
+            Part::Play => "play",
+            Part::Finale => "finale",
+            Part::Asleep => "asleep",
+        };
+        let label = c.say(&format!("song_{part}"));
+        let verse = &l.verses[song.verse.min(l.verses.len() - 1)];
+        let first = crate::song::Song::start(l);
+        let span = 100 - STAFF_LINE_PCT - STAFF_END_PCT;
+        let notes: Vec<Value> = if matches!(song.part, Part::Listen | Part::Play) {
+            verse
+                .notes
+                .iter()
+                .enumerate()
+                .filter_map(|(k, &(at, key))| {
+                    let ahead = first + at - song.clock;
+                    // gone well past the line, or not yet on the staff
+                    if ahead < -l.good * 2 || ahead > STAFF_AHEAD {
+                        return None;
+                    }
+                    let state = if song.part == Part::Listen {
+                        "ghost"
+                    } else {
+                        match song.judged.get(k) {
+                            Some(Judge::Great) => "great",
+                            Some(Judge::Good) => "good",
+                            Some(Judge::Miss) => "miss",
+                            _ => "wait",
+                        }
+                    };
+                    Some(json!({
+                        "x": STAFF_LINE_PCT + ahead * span / STAFF_AHEAD,
+                        "lane": key,
+                        "key": c.say(&format!("song_key_{key}")),
+                        "state": state,
+                    }))
+                })
+                .collect()
+        } else {
+            Vec::new()
+        };
+        let keys: Vec<String> = (0..crate::content::NOTE_KEYS.len())
+            .map(|k| c.say(&format!("song_key_{k}")))
+            .collect();
+        json!({
+            "part": part,
+            "label": label,
+            "line": STAFF_LINE_PCT,
+            "notes": notes,
+            "keys": keys,
+            "words": { "great": c.say("song_great"), "good": c.say("song_good"), "miss": c.say("song_miss") },
+        })
     }
 
     /// Where to mark an enemy on screen: over it, or at the screen's edge
@@ -1771,6 +1881,49 @@ pub(crate) mod tests {
             }
         }
         id
+    }
+
+    #[test]
+    fn the_god_has_a_bar_for_each_phase_and_then_the_lullabys_staff() {
+        let mut g = game_with(r#"{"seen_intro": true}"#);
+        g.begin();
+        g.test_save();
+        g.start_run_at(4);
+        let boss = g.run.as_ref().unwrap().route.boss();
+        g.go(boss);
+        frames(&mut g, 120, 0);
+        let h: Value = serde_json::from_str(&g.hud_json()).unwrap();
+        assert_eq!(h["boss"]["bars"], 4, "three phases and the lullaby");
+        assert_eq!(h["boss"]["bars_left"], 4);
+        assert_eq!(h["boss"]["timer"], "THE BLIND MASS");
+        assert_eq!(h["boss"]["pct"], 100);
+        assert!(h["song"].is_null());
+        // half way through the second bar
+        let run = g.run.as_mut().unwrap();
+        let b = run.world.boss.unwrap();
+        run.world.player.iframes = 1_000_000;
+        let e = &mut run.world.enemies[b];
+        e.phase = 1;
+        e.hp = e.max_hp / 2;
+        let h: Value = serde_json::from_str(&g.hud_json()).unwrap();
+        assert_eq!(h["boss"]["bars_left"], 3);
+        assert_eq!(h["boss"]["timer"], "THE DANCERS");
+        let pct = h["boss"]["pct"].as_i64().unwrap();
+        assert!((45..=55).contains(&pct), "{pct}");
+        // its last bar empty: the staff
+        g.lull();
+        frames(&mut g, 2, 0);
+        let h: Value = serde_json::from_str(&g.hud_json()).unwrap();
+        assert_eq!(h["boss"]["sleep"], true);
+        assert_eq!(h["boss"]["timer"], "THE LULLABY");
+        assert_eq!(h["song"]["keys"].as_array().unwrap().len(), 5);
+        frames(&mut g, 300, 0);
+        let h: Value = serde_json::from_str(&g.hud_json()).unwrap();
+        assert_eq!(h["song"]["part"], "listen");
+        assert!(
+            !h["song"]["notes"].as_array().unwrap().is_empty(),
+            "notes on the staff"
+        );
     }
 
     #[test]
