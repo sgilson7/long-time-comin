@@ -123,6 +123,8 @@ Live: PR #7 passed both workflows (check 38163993223, breaks 38163993270) and me
 - **HUD**: a bar per phase (`story.json` `bars`), the staff (`Game::song_hud`, `#staff`).
 - **The ending**: `story.json` `interludes.the_ascent` (THE DOOR), the verdict THE LULLABY, `web/art/lullaby.png`.
 
+Live: PR #8 passed both workflows (check 38179829228, breaks 38179829239, after one round-seven break was repointed and the break workflow's limit raised to 90 minutes: it took 43) and merged as 742bb98; the main run 38182675685 deployed it, and the live browser check passed in chromium, firefox and webkit. The website's page was updated (commit cbf864e in `~/Documents/website`, unpushed under its rule) and deployed as build 23b9c76a; `make gate-live` passed.
+
 ## What remains
 
 - Sam's playtest (`TRIAGE.md`). Every feel and balance number is the agent's guess (SECOND-ORDER T1); the probe shows the curve (no wins with no upgrades, about half with 62 Clemency of upgrades), not whether it is fun (T2, P2).
