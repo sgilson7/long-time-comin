@@ -56,7 +56,7 @@ A subagent played seven runs through the playtest harness (`cargo run --release 
 
 ## Round 6 (2026-10-11): a test save, the boss rush, second fires
 
-`./scripts/check.sh` passed locally (154 core and 11 boundary tests, the browser check in three engines, now also driving the test save and the boss rush). `BRIEF.md` has the request, `PLAN.md` (Round 6) the design, `SECOND-ORDER.md` R6, N1 to N4 and B4 what was chosen.
+**Live:** pull request #3 passed check (run 38117985724) and break tests (run 38117985758); merged, run 38118787560 passed check and deploy; the live three-engine browser check passed. Scholar site page updated (commit in `~/Documents/website`, unpushed), `make deploy` build d19e51c7, `make gate-live` passed. `./scripts/check.sh` passed locally (154 core and 11 boundary tests, the browser check in three engines, now also driving the test save and the boss rush). `BRIEF.md` has the request, `PLAN.md` (Round 6) the design, `SECOND-ORDER.md` R6, N1 to N4 and B4 what was chosen.
 
 - **Test save**: `Meta::everything`, `Game::test_save`, the Holding's `#test-save` (asks twice).
 - **Boss rush**: `Route::rush`, `Game::start_rush`, `Run.rush`; the Holding's `#start-rush` once `Meta::rush_open`.
