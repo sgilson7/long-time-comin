@@ -100,6 +100,8 @@ Live: PR #5 passed both workflows (check 38152218054, breaks 38152218086) and me
 - **The Escort fix**: an elite is never the arena's boss (`World::spawn`), so felling the Escort no longer ends zone three.
 - **Harness**: `hit_by` cleared each tick and set by waves; the autopilot avoids drops and leads moving targets.
 
+Live: PR #6 passed both workflows (check 38158683100, breaks 38158683105) and merged as 7d009d4; the main run 38160592662 deployed it, and the live browser check passed in chromium, firefox and webkit. The website's page was updated and deployed as build 8b75088c; `make gate-live` passed.
+
 ## What remains
 
 - Sam's playtest (`TRIAGE.md`). Every feel and balance number is the agent's guess (SECOND-ORDER T1); the probe shows the curve (no wins with no upgrades, about half with 62 Clemency of upgrades), not whether it is fun (T2, P2).
