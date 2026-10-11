@@ -7,7 +7,7 @@ copied from the game's own output:
 
 - story.json's sentencing has 5 lines; its indictment has 10 counts.
 - the Codex has 5 tabs (copy.json codex_tabs), 16 control rows
-  (copy.json controls), 5 guns (weapons.json) and 42 enemies (enemies.json:
+  (copy.json controls), 5 guns (weapons.json) and 43 enemies (enemies.json:
   seven and a boss in each of the four built zones, and three mini-bosses).
 - the crater's gate is open, so its label shows; the first fight's gates
   stay dark and unlabelled until its enemies are defeated.
@@ -83,7 +83,7 @@ def run(page, check, engine):
     check(len(guns) == 5, f"five guns ({len(guns)})")
     click(page, "#codex-tabs .tab:nth-child(3)")
     foes = page.query_selector_all("#codex-body .codex-card")
-    check(len(foes) == 42, f"forty-two enemies ({len(foes)})")
+    check(len(foes) == 43, f"forty-three enemies ({len(foes)})")
     body = page.inner_text("#codex-body")
     check("{" not in body, "no unfilled placeholder in the Codex")
     click(page, "#codex-close")

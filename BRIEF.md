@@ -46,6 +46,12 @@ And, while that was under way:
 
 Done means, for this round: zone four's waves are mostly its own creatures, mountain fauna and flora (deer, birds, toads, a man-eating plant, a river elemental, and more), each moving in its own way and drawn corrupted by the ritual and by the Idiot God, more the higher the climb; some enemies from the earlier zones and some of the assassins with them; upgrades for the Injunction that let it break orbs of more colours. Deploying to Pages is the standing approval (Autonomy).
 
+## The tenth request, word for word (2026-10-11)
+
+> the new enemies are great. also add a mini boss that is a giant owl that goes from perch to perch firing down at you and trying to swoop and melee attack you. the number of enemies per level in zone 4 per wave should be higher; i want fights where there are like 10 enemies all spawned at once, max of 15 enemies on screen absolute maximum
+
+Done means, for this round: a giant owl mini-boss in zone four that perches high, fires down, flies from perch to perch and swoops to strike; zone four's waves of about ten enemies at once; never more than fifteen enemies up at once. Deploying to Pages is the standing approval (Autonomy).
+
 ## The tool
 
 A third-person bullet-hell shooter that runs in a desktop browser with a keyboard and mouse. Roguelike runs across a graph of arenas; meta-progression between runs; a story told by an indictment that is revealed one count at a time, on each death.

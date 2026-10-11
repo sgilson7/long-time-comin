@@ -31,6 +31,7 @@ pub fn draw(
         "freshet" => freshet(b, c, e, at, s, paint),
         "sporecap" => sporecap(b, c, e, at, s, paint),
         "ursine" => ursine(b, c, e, at, s, paint),
+        "great_horned" => owl(b, c, e, at, s, paint),
         _ => return false,
     };
     corruption(b, c, e, at, s, &spots);
@@ -477,6 +478,136 @@ fn sporecap(b: &mut Batch, c: &Content, e: &Enemy, at: V3, s: i32, paint: &dyn F
         ONE / 6,
     );
     spots
+}
+
+/// The Great Horned: an owl the size of a cart, ear tufts like horns, a
+/// face disc round two great eyes; wings folded on a perch, spread wide
+/// in flight and wider before a swoop, talons down when it dives. Its
+/// perches are dead snags it brings down with it.
+fn owl(b: &mut Batch, c: &Content, e: &Enemy, at: V3, s: i32, paint: &dyn Fn(Rgb) -> Rgb) -> Vec<V3> {
+    let feather = paint(c.pal.c("fauna_owl"));
+    let pale = paint(c.pal.c("fauna_owl_pale"));
+    let wood = c.pal.c("fauna_snag");
+    let eye = c.pal.c("gold");
+    // its perches: bare snags up from the floor, a crook at the top
+    for p in &e.perches {
+        let foot = p.sub(v3(0, crate::balance::PERCH_HEIGHT, 0));
+        let top = p.sub(v3(0, s * 6 / 10, 0));
+        rod(b, foot, top, s / 6, wood, 0, true);
+        for k in [-1, 1] {
+            let twig = top.add(v3(k * s / 3, s / 6, s / 8));
+            rod(b, top.sub(v3(0, s / 3, 0)), twig, s / 16, wood, 0, true);
+        }
+    }
+    let f = f_of(at, e.yaw, s);
+    let flying = e.flying > 0;
+    let tell = e.swoop_tell();
+    b.inked(
+        Mesh::Sphere,
+        &f.then(&boxed(v3(0, -u(6), u(6)), v3(u(70), u(90), u(66)))),
+        feather,
+        0,
+    );
+    b.inked(
+        Mesh::Sphere,
+        &f.then(&boxed(v3(0, -u(14), -u(18)), v3(u(52), u(64), u(30)))),
+        pale,
+        0,
+    );
+    let head = v3(0, u(46), -u(10));
+    b.inked(
+        Mesh::Sphere,
+        &f.then(&boxed(head, v3(u(60), u(48), u(50)))),
+        feather,
+        0,
+    );
+    b.inked(
+        Mesh::Cyl,
+        &f.then(
+            &Affine::translate(v3(0, u(46), -u(32)))
+                .then(&Affine::rot_x(fx::QUARTER))
+                .then(&Affine::scale(v3(u(52), u(4), u(40)))),
+        ),
+        pale,
+        0,
+    );
+    for side in [-1, 1] {
+        // eyes, wide; brighter before a swoop
+        let glow = if tell { ONE } else { ONE * 6 / 10 };
+        b.inked(
+            Mesh::Sphere,
+            &f.then(&boxed(v3(side * u(13), u(50), -u(35)), v3(u(16), u(16), u(8)))),
+            eye,
+            glow,
+        );
+        b.push(
+            Mesh::Sphere,
+            &f.then(&boxed(v3(side * u(13), u(50), -u(39)), v3(u(7), u(9), u(4)))),
+            c.pal.c("eldritch_void"),
+            0,
+            PASS_SOLID,
+        );
+        // horns: the ear tufts
+        b.inked(
+            Mesh::Cone,
+            &f.then(
+                &Affine::translate(v3(side * u(22), u(72), -u(6)))
+                    .then(&Affine::rot_z(-side * deg(20)))
+                    .then(&Affine::scale(v3(u(12), u(30), u(10)))),
+            ),
+            feather,
+            0,
+        );
+        // wings: folded at its sides, spread in flight, wider for a swoop
+        let (spread, lift) = if tell {
+            (deg(80), u(20))
+        } else if flying {
+            (deg(60) + fx::sin(e.age * fx::TURN / 24) / 3, 0)
+        } else {
+            (deg(8), 0)
+        };
+        let wing = f
+            .then(&Affine::translate(v3(side * u(40), u(20) + lift, u(6))))
+            .then(&Affine::rot_z(side * spread))
+            .then(&Affine::translate(v3(side * u(50), 0, 0)))
+            .then(&Affine::scale(v3(u(110), u(8), u(64))));
+        b.inked(Mesh::Wedge, &wing, shade(feather, 90), 0);
+        // talons: down and open in a dive
+        let reach = if e.diving { u(40) } else { 0 };
+        let toe = f.apply(v3(side * u(18), -u(60) - reach, -u(8) - reach / 2));
+        rod(
+            b,
+            f.apply(v3(side * u(16), -u(40), 0)),
+            toe,
+            s / 18,
+            c.pal.c("fauna_beak"),
+            0,
+            true,
+        );
+    }
+    b.inked(
+        Mesh::Cone,
+        &f.then(
+            &Affine::translate(v3(0, u(40), -u(38)))
+                .then(&Affine::rot_x(fx::HALF))
+                .then(&Affine::scale(v3(u(8), u(14), u(8)))),
+        ),
+        c.pal.c("fauna_beak"),
+        0,
+    );
+    if tell {
+        b.glow(Mesh::Sphere, &boxed(at, v3(s, s, s)), c.pal.c("scarlet"), ONE / 4);
+    }
+    vec![
+        f.apply(v3(-u(30), u(10), -u(30))),
+        f.apply(v3(u(30), u(10), -u(30))),
+        f.apply(v3(0, u(70), -u(30))),
+        f.apply(v3(-u(40), -u(20), u(10))),
+        f.apply(v3(u(40), -u(20), u(10))),
+        f.apply(v3(0, -u(30), -u(34))),
+        f.apply(v3(-u(20), u(30), u(30))),
+        f.apply(v3(u(20), u(30), u(30))),
+    ]
 }
 
 /// An ursine: a bear of the high slopes, a hump of fur, a jaw that has

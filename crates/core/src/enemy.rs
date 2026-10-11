@@ -136,6 +136,15 @@ pub struct Enemy {
     /// how far corruption has taken it, 0 to ONE: the ritual's clockwork
     /// and the Idiot God's eyes, more the higher up the mountain
     pub corrupt: i32,
+    /// a percher's perches (found as it first moves), the one it sits on
+    /// or flies to, how long it has sat, how many moves it has made, and
+    /// its flight: ticks left, and whether it is the swoop's dive
+    pub perches: Vec<V3>,
+    pub perch: usize,
+    pub perched: i32,
+    pub moves: i32,
+    pub flying: i32,
+    pub diving: bool,
 }
 
 /// What an enemy did this tick that the world must act on.
@@ -201,6 +210,12 @@ impl Enemy {
             bite_dir: V3::ZERO,
             bite_t: 0,
             corrupt: 0,
+            perches: Vec::new(),
+            perch: 0,
+            perched: 0,
+            moves: 0,
+            flying: 0,
+            diving: false,
         }
     }
 
@@ -324,6 +339,12 @@ impl Enemy {
             return deeds;
         }
 
+        // a percher holds its fire while it flies
+        if d.gait == Gait::Perch && self.flying > 0 {
+            if let State::Rest(t) = self.state {
+                self.state = State::Rest(t.max(2));
+            }
+        }
         if d.kind != Kind::Agent && matches!(self.state, State::Rest(t) if t <= 1) {
             self.pass_over(c);
         }
@@ -738,8 +759,67 @@ impl Enemy {
                     self.pos.y = fx::approach(self.pos.y, f + d.hover, ONE / 6);
                 }
             }
+            Gait::Perch => self.perching(level, target),
             Gait::None => {}
         }
+    }
+
+    /// Its wings are spread for a swoop that is coming.
+    pub fn swoop_tell(&self) -> bool {
+        self.flying == 0 && (self.moves + 1) % SWOOP_EVERY == 0 && self.perched > PERCH_HOLD - SWOOP_TELL
+    }
+
+    /// A percher: on a perch, then off to another, now and then by way of
+    /// a swoop through where you stand.
+    fn perching(&mut self, level: &Level, target: V3) {
+        if self.perches.is_empty() {
+            self.perches = perches(self.home, level);
+            let near = (0..self.perches.len())
+                .min_by_key(|&k| self.perches[k].dist(self.pos))
+                .unwrap_or(0);
+            self.perch = near;
+            self.anchor = self.perches.get(near).copied().unwrap_or(self.pos);
+            self.fly_to(self.anchor, PERCH_GLIDE);
+        }
+        if self.flying > 0 {
+            self.flying -= 1;
+            self.pos = self.pos.add(self.vel);
+            if self.flying == 0 {
+                if self.diving {
+                    // up out of the swoop, to its next perch
+                    self.diving = false;
+                    self.fly_to(self.perches[self.perch], PERCH_GLIDE);
+                } else {
+                    self.pos = self.anchor;
+                    self.vel = V3::ZERO;
+                    self.perched = 0;
+                }
+            }
+            return;
+        }
+        self.perched += 1;
+        if self.perched < PERCH_HOLD {
+            return;
+        }
+        self.moves += 1;
+        let n = self.perches.len().max(1);
+        self.perch = (self.perch + 1 + (self.age as usize / 7) % (n - 1).max(1)) % n;
+        if self.moves % SWOOP_EVERY == 0 {
+            // through where you stand, and on past
+            let way = target.sub(self.pos).norm();
+            self.diving = true;
+            self.fly_to(target.add(way.scale(SWOOP_PAST)), SWOOP_SPEED);
+        } else {
+            self.fly_to(self.perches[self.perch], PERCH_GLIDE);
+        }
+    }
+
+    fn fly_to(&mut self, to: V3, speed: i32) {
+        let way = to.sub(self.pos);
+        let ticks = (fx::div(way.len(), speed.max(1)) / ONE).max(1);
+        self.anchor = to;
+        self.flying = ticks;
+        self.vel = v3(way.x / ticks, way.y / ticks, way.z / ticks);
     }
 
     /// Still pulled along its hook toward the anchor.
@@ -1125,6 +1205,22 @@ impl Enemy {
     }
 }
 
+/// A percher's perches: round the arena's centre, over floor, high up.
+pub fn perches(home: V3, level: &Level) -> Vec<V3> {
+    (0..PERCHES)
+        .filter_map(|k| {
+            let a = fx::TURN / PERCHES * k + fx::TURN / PERCHES / 2;
+            [PERCH_RING, PERCH_RING * 3 / 4, PERCH_RING / 2]
+                .iter()
+                .find_map(|&r| {
+                    let p = home.add(facing(a, 0).scale(r));
+                    let f = level.floor_below(p.x, home.y + int(4), p.z)?;
+                    Some(v3(p.x, f + PERCH_HEIGHT, p.z))
+                })
+        })
+        .collect()
+}
+
 /// The damage a body takes from touching an enemy, if it does.
 pub fn contact(e: &Enemy, d: &EnemyDef, feet: V3) -> bool {
     let chest = feet.add(v3(0, PLAYER_CHEST, 0));
@@ -1410,5 +1506,58 @@ mod tests {
             .filter(|w| fx::wrap(w[1] - w[0]).abs() > fx::deg(30))
             .count();
         assert!(quarters >= 2, "round you: {angles:?}");
+    }
+
+    #[test]
+    fn the_great_horned_perches_high_flies_between_perches_and_swoops_through_you() {
+        let c = content();
+        let l = floor();
+        let you = v3(0, PLAYER_CHEST, 0);
+        let i = c.enemy("great_horned").unwrap();
+        let d = &c.enemies[i];
+        let mut e = Enemy::new(i, d, v3(int(10), int(6), 0), 1);
+        e.home = V3::ZERO;
+        e.state = State::Rest(1_000_000);
+        let mut sat_on = Vec::new();
+        let mut closest = i32::MAX;
+        let mut swoops = 0;
+        for _ in 0..PERCH_HOLD * 8 {
+            let was = e.flying;
+            let diving = e.diving;
+            e.step(&c, &l, you, 0);
+            if was > 0 && e.flying == 0 && !e.diving {
+                sat_on.push(e.perch);
+                assert!(e.pos.y >= PERCH_HEIGHT - ONE / 10, "perched high: {}", e.pos.y);
+            }
+            if diving {
+                closest = closest.min(e.pos.dist(you));
+            }
+            swoops += i32::from(!diving && e.diving);
+        }
+        assert_eq!(e.perches.len() as i32, PERCHES);
+        sat_on.dedup();
+        assert!(sat_on.len() >= 4, "from perch to perch: {sat_on:?}");
+        assert!(swoops >= 2, "it swoops: {swoops}");
+        assert!(closest < d.radius, "through where you stand: {closest}");
+    }
+
+    #[test]
+    fn the_great_horned_holds_its_fire_while_it_flies() {
+        let c = content();
+        let l = floor();
+        let you = v3(0, PLAYER_CHEST, 0);
+        let i = c.enemy("great_horned").unwrap();
+        let mut e = Enemy::new(i, &c.enemies[i], v3(int(10), int(6), 0), 1);
+        e.home = V3::ZERO;
+        e.state = State::Rest(1);
+        let mut began_flying = 0;
+        for _ in 0..PERCH_HOLD * 6 {
+            let before = e.state;
+            e.step(&c, &l, you, 0);
+            if e.flying > 0 && matches!(before, State::Rest(_)) && matches!(e.state, State::Windup(_)) {
+                began_flying += 1;
+            }
+        }
+        assert_eq!(began_flying, 0, "no attack begins in flight");
     }
 }

@@ -199,7 +199,10 @@
     "fauna_foam": "#f2fbff",
     "fauna_cap": "#c8582c",
     "fauna_gill": "#e9c7a0",
-    "fauna_fur": "#4a3426"
+    "fauna_fur": "#4a3426",
+    "fauna_owl": "#6b5a48",
+    "fauna_owl_pale": "#d9c8a8",
+    "fauna_snag": "#5a4a40"
   },
   "walls": [
     "#E88A73",

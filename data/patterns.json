@@ -2435,12 +2435,12 @@
       "volleys": [
         {
           "shape": "aimed",
-          "count": 5,
+          "count": 3,
           "spread_deg": 50,
           "speed_cms": 1500,
           "size_cm": 26,
           "colour": "chalk",
-          "repeat": 3,
+          "repeat": 2,
           "every_ms": 220
         }
       ]
@@ -2449,14 +2449,8 @@
       "id": "hoofbeat",
       "volleys": [
         {
-          "shape": "wave",
-          "speed_cms": 1100,
-          "size_cm": 2600,
-          "colour": "ember"
-        },
-        {
           "shape": "ring",
-          "count": 14,
+          "count": 10,
           "speed_cms": 900,
           "size_cm": 26,
           "colour": "violet"
@@ -2468,12 +2462,12 @@
       "volleys": [
         {
           "shape": "aimed",
-          "count": 3,
+          "count": 2,
           "spread_deg": 18,
           "speed_cms": 1400,
           "size_cm": 20,
           "colour": "scarlet",
-          "repeat": 3,
+          "repeat": 2,
           "every_ms": 160
         }
       ]
@@ -2500,7 +2494,7 @@
         {
           "shape": "form",
           "form": "ring",
-          "count": 10,
+          "count": 8,
           "radius_cm": 120,
           "hold_ms": 600,
           "launch": "out",
@@ -2529,13 +2523,13 @@
       "volleys": [
         {
           "shape": "ring",
-          "count": 18,
+          "count": 10,
           "speed_cms": 800,
           "size_cm": 24,
           "colour": "lime",
           "curl_degs": 30,
           "alternate": true,
-          "repeat": 2,
+          "repeat": 1,
           "every_ms": 400
         }
       ]
@@ -2609,13 +2603,13 @@
       "volleys": [
         {
           "shape": "ring",
-          "count": 14,
+          "count": 10,
           "speed_cms": 700,
           "accel_cms2": -500,
           "min_cms": 150,
           "size_cm": 34,
           "colour": "lime",
-          "repeat": 3,
+          "repeat": 2,
           "every_ms": 600,
           "spin_deg": 13
         }
@@ -2655,7 +2649,7 @@
       "volleys": [
         {
           "shape": "aimed",
-          "count": 7,
+          "count": 5,
           "spread_deg": 100,
           "speed_cms": 1200,
           "size_cm": 30,
@@ -2681,6 +2675,60 @@
           "size_cm": 2000,
           "colour": "ember",
           "delay_ms": 200
+        }
+      ]
+    },
+    {
+      "id": "owl_talons",
+      "volleys": [
+        {
+          "shape": "aimed",
+          "count": 5,
+          "spread_deg": 30,
+          "speed_cms": 1500,
+          "size_cm": 28,
+          "colour": "scarlet",
+          "repeat": 4,
+          "every_ms": 200
+        }
+      ]
+    },
+    {
+      "id": "owl_feathers",
+      "volleys": [
+        {
+          "shape": "ring",
+          "count": 16,
+          "pitch_deg": -60,
+          "speed_cms": 1100,
+          "size_cm": 26,
+          "colour": "violet",
+          "repeat": 3,
+          "every_ms": 300,
+          "spin_deg": 10
+        }
+      ]
+    },
+    {
+      "id": "owl_screech",
+      "volleys": [
+        {
+          "shape": "ring",
+          "count": 28,
+          "speed_cms": 900,
+          "size_cm": 26,
+          "colour": "chalk"
+        },
+        {
+          "shape": "aimed",
+          "count": 3,
+          "spread_deg": 12,
+          "speed_cms": 1800,
+          "size_cm": 32,
+          "colour": "ember",
+          "repeat": 2,
+          "every_ms": 350,
+          "delay_ms": 300
         }
       ]
     }

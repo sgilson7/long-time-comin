@@ -334,6 +334,16 @@ fn movement(d: &EnemyDef, c: &Content) -> String {
                 m(d.range),
                 s(SURGE_PERIOD)
             ),
+            Gait::Perch => format!(
+                "Sits on {PERCHES} dead snags {} m high round the arena, {} s on each, firing down; then glides to another at {} m/s. One move in {SWOOP_EVERY} it spreads its wings for {} s and swoops instead, at {} m/s, through where you stood and {} m past, striking with its talons ({} damage), and climbs to its next perch. It holds its fire while it flies.",
+                m(PERCH_HEIGHT),
+                s(PERCH_HOLD),
+                mps(PERCH_GLIDE),
+                s(SWOOP_TELL),
+                mps(SWOOP_SPEED),
+                m(SWOOP_PAST),
+                d.contact
+            ),
             Gait::None => String::new(),
         },
         Kind::Turret => format!(

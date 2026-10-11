@@ -147,3 +147,11 @@ The request is in `BRIEF.md`. Choices it leaves open (SECOND-ORDER rows Q18 on):
 - **The waves**: mostly creatures (more than two thirds), with enemies from below (the Auger, the Rime Kite, Shardlings, the Lantern, the Clerk, the Drifter) and the assassins in some waves.
 - **The wall's wards**: an orb's colour gives the ward the Injunction needs to break it (`palette.json` `wards`): blue and cyan with the Injunction; violet, magenta and lime with a Standing Order; scarlet, ember and chalk with a Permanent Injunction (`upgrades.json`, effect `wall_ward`, its amount the ward it opens). Gold stays the parry's. An orb your wall breaks has a pale rim.
 
+## Round 10: the Great Horned, and big fights (2026-10-11)
+
+The request is in `BRIEF.md`. Choices it leaves open (SECOND-ORDER rows Q26 on):
+
+- **The Great Horned** (`enemies.json`, a beast of gait `perch`, elite; zone four's mini-boss on its third main fight, in the Spire): an owl 3.4 m across, ear tufts like horns, a face disc round two gold eyes. Six dead snags stand round the arena, 8 m high (`perches` in `enemy.rs`); it sits 4 s on one, firing down (talons, a rain of feathers, a screech), then glides to another. One move in two it spreads its wings for 0.8 s and swoops instead, at 22 m/s, through where you stood and 6 m past, striking with its talons (its contact damage), then climbs to its next snag. It holds its fire in flight and calls up to two Rooks.
+- **Big fights**: zone four's waves are 8 creatures at the first tier, 10 to 14 after (`zone.json`), most of them light: the Toad, Rook, Sporecap and Hart lost health and shots to suit coming ten at a time, the Hart's hoofbeat lost its ground wave, and the creatures' Clemency was halved.
+- **Fifteen at most** (`MAX_ALIVE`): a wave larger than the room left comes in as room is made, and calls and a boss's summons are cut to the room left.
+

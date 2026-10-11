@@ -142,6 +142,8 @@ pub struct World {
     pub effects: Vec<Effect>,
     pub waves_left: Vec<Vec<usize>>,
     pub wave_timer: i32,
+    /// the next wave has begun to come in, held back by MAX_ALIVE
+    pub wave_open: bool,
     pub cleared: bool,
     pub reward: Option<Reward>,
     pub rng: Rng,
@@ -255,6 +257,7 @@ impl World {
             effects: Vec::new(),
             waves_left,
             wave_timer: FIRST_WAVE,
+            wave_open: false,
             cleared: !fight,
             reward: node.reward,
             rng: Rng::new(seed ^ node.seed),
@@ -354,6 +357,11 @@ impl World {
 
     pub fn alive_enemies(&self) -> usize {
         self.enemies.iter().filter(|e| e.alive()).count()
+    }
+
+    /// How many more enemies may come before MAX_ALIVE are up.
+    fn room(&self) -> usize {
+        MAX_ALIVE.saturating_sub(self.alive_enemies())
     }
 
     /// The point the crosshair is on: the first solid or enemy along the
@@ -747,7 +755,8 @@ impl World {
                 self.waves.clear();
                 self.note("boss_phase", c.say("callout_phase"));
             }
-            for s in deeds.summons {
+            let room = self.room();
+            for s in deeds.summons.into_iter().take(room) {
                 self.spawn(c, s);
             }
         }
@@ -863,11 +872,30 @@ impl World {
         }
         let alive = self.alive_enemies();
         if !self.waves_left.is_empty() {
+            if self.wave_open {
+                // the rest of a wave too big for the room, as room is made
+                let n = self.room().min(self.waves_left[0].len());
+                let more: Vec<usize> = self.waves_left[0].drain(..n).collect();
+                for def in more {
+                    self.spawn(c, def);
+                }
+                if self.waves_left[0].is_empty() {
+                    self.waves_left.remove(0);
+                    self.wave_open = false;
+                }
+                return;
+            }
             let ready = alive as i32 <= WAVE_REMAINDER || self.enemies.is_empty();
             if ready {
                 self.wave_timer -= 1;
                 if self.wave_timer <= 0 {
-                    let wave = self.waves_left.remove(0);
+                    let n = self.room().min(self.waves_left[0].len());
+                    let wave: Vec<usize> = self.waves_left[0].drain(..n).collect();
+                    if self.waves_left[0].is_empty() {
+                        self.waves_left.remove(0);
+                    } else {
+                        self.wave_open = true;
+                    }
                     for def in wave {
                         self.spawn(c, def);
                     }
@@ -1959,6 +1987,10 @@ impl World {
             if call.is_empty() {
                 continue;
             }
+            call.truncate(self.room());
+            if call.is_empty() {
+                continue;
+            }
             self.note("call", c.say("callout_call"));
             for def in call {
                 self.spawn(c, def);
@@ -2018,7 +2050,8 @@ impl World {
 
 /// Enemies that spawn in the air.
 fn flies(d: &crate::content::EnemyDef) -> bool {
-    matches!(d.kind, Kind::Floater | Kind::Moth | Kind::Blinker) || d.gait == crate::content::Gait::Wheel
+    matches!(d.kind, Kind::Floater | Kind::Moth | Kind::Blinker)
+        || matches!(d.gait, crate::content::Gait::Wheel | crate::content::Gait::Perch)
 }
 
 /// How far over the floor a ground kind's centre stands.
@@ -3640,6 +3673,33 @@ mod ascent {
             high_parts > low_parts + 6,
             "more eyes, tendrils and hours: {low_parts} to {high_parts}"
         );
+    }
+
+    #[test]
+    fn never_more_than_fifteen_are_up_and_a_big_wave_comes_in_as_room_is_made() {
+        let (c, mut w) = world_in(3, NodeKind::Fight, None);
+        w.player.iframes = 1_000_000;
+        let toad = c.enemy("toad").unwrap();
+        w.waves_left = vec![vec![toad; 20]];
+        w.wave_timer = 1;
+        let mut most = 0;
+        for _ in 0..30 {
+            step(&c, &mut w, &still());
+            most = most.max(w.alive_enemies());
+        }
+        assert_eq!(most, MAX_ALIVE, "fifteen at once, no more");
+        assert_eq!(w.waves_left.first().map(|wv| wv.len()), Some(5), "five wait");
+        // two fall: two of the rest come at once
+        let up: Vec<usize> = (0..w.enemies.len())
+            .filter(|&i| w.enemies[i].alive())
+            .take(2)
+            .collect();
+        for i in up {
+            w.enemies[i].hp = 0;
+        }
+        step(&c, &mut w, &still());
+        assert_eq!(w.alive_enemies(), MAX_ALIVE);
+        assert_eq!(w.waves_left.first().map(|wv| wv.len()), Some(3));
     }
 
     #[test]

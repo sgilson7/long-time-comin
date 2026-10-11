@@ -233,6 +233,20 @@ pub const BITE_EVERY: i32 = secs(14, 10);
 /// you once in this long, turning toward it this fast
 pub const SURGE_PERIOD: i32 = secs(5, 1);
 pub const SURGE_TURN: i32 = ONE / 14;
+/// a perching beast (the Great Horned): this many perches, this far round
+/// the arena's centre and this high over the floor there; it sits this
+/// long on each, glides between them this fast, and every `SWOOP_EVERY`th
+/// move swoops instead: through where you stood at this speed and this
+/// far past, its wings spread this long before
+pub const PERCHES: i32 = 6;
+pub const PERCH_RING: i32 = int(14);
+pub const PERCH_HEIGHT: i32 = int(8);
+pub const PERCH_HOLD: i32 = secs(4, 1);
+pub const PERCH_GLIDE: i32 = per_tick(14, 1);
+pub const SWOOP_EVERY: i32 = 2;
+pub const SWOOP_SPEED: i32 = per_tick(22, 1);
+pub const SWOOP_PAST: i32 = int(6);
+pub const SWOOP_TELL: i32 = secs(4, 5);
 /// creatures are fully corrupted by this step of the map (the last main
 /// fight's), and a little from the first
 pub const CORRUPT_FULL_STEP: i32 = 20;
@@ -267,6 +281,9 @@ pub const HEAL_ON_CLEAR: i32 = 20;
 pub const GATE_REACH: i32 = ONE * 22 / 10;
 /// after an arena is cleared, the next wave of reward dust settles this long
 pub const CLEAR_PAUSE: i32 = secs(1, 1);
+/// never more than this many enemies up at once: a wave larger than the
+/// room left comes in as room is made, and calls wait
+pub const MAX_ALIVE: usize = 15;
 /// a new wave comes when this few enemies of the last one are left
 pub const WAVE_REMAINDER: i32 = 0;
 /// and comes this long after the last one is down, so waves never pile up
