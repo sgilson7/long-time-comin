@@ -112,6 +112,13 @@ BREAKS = [
  ("a beast's body clears the floor", "crates/core/src/enemy.rs", "let body = d.radius.min(d.hover * 9 / 10).max(ONE / 10);", "let body = d.radius;", "a_toad_hops"),
 
  ("a mini-boss is not the zone's boss", "crates/core/src/world.rs", "if matches!(d.kind, Kind::Boss | Kind::Tank | Kind::Double) && !d.elite {", "if matches!(d.kind, Kind::Boss | Kind::Tank | Kind::Double) {", "the_escort_is_a_smaller"),
+ # round ten: the Great Horned, big waves
+ ("the owl perches high", "crates/core/src/enemy.rs", "Some(v3(p.x, f + PERCH_HEIGHT, p.z))", "Some(v3(p.x, f, p.z))", "the_great_horned_perches"),
+ ("the owl swoops through you", "crates/core/src/enemy.rs", "self.fly_to(target.add(way.scale(SWOOP_PAST)), SWOOP_SPEED);", "self.fly_to(self.perches[self.perch], SWOOP_SPEED);", "the_great_horned_perches"),
+ ("the owl holds fire in flight", "crates/core/src/enemy.rs", "self.state = State::Rest(t.max(2));", "self.state = State::Rest(t);", "the_great_horned_holds"),
+ ("fifteen at most", "crates/core/src/world.rs", "MAX_ALIVE.saturating_sub(self.alive_enemies())", "usize::MAX", "never_more_than_fifteen"),
+ ("the big wave comes in as room is made", "crates/core/src/world.rs", "                let n = self.room().min(self.waves_left[0].len());\n                let more", "                let n = 0;\n                let more", "never_more_than_fifteen"),
+
 ]
 
 

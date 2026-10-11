@@ -725,6 +725,9 @@ pub enum Gait {
     Root,
     /// rushes along the ground in sweeping curves past you
     Surge,
+    /// sits on high perches round the arena, flies between them, and now
+    /// and then swoops through where you stand
+    Perch,
 }
 
 /// An agent's part in its squad.
@@ -1559,6 +1562,7 @@ fn parse_enemies(text: &str, patterns: &[Pattern]) -> Result<Vec<EnemyDef>, Stri
             "wheel" => Gait::Wheel,
             "root" => Gait::Root,
             "surge" => Gait::Surge,
+            "perch" => Gait::Perch,
             g => return Err(format!("enemies: {} has no gait {g}", e.id)),
         };
         if (kind == Kind::Beast) != (gait != Gait::None) {
@@ -1897,6 +1901,25 @@ pub mod tests {
             "{beasts} of {} are creatures",
             all.len()
         );
+        // big fights: a wave of eight at the least, ten from the second
+        // tier, and never more than can be up at once
+        for e in &c.zones[3].encounters {
+            for w in &e.waves {
+                let least = if e.tier >= 2 { 10 } else { 8 };
+                assert!(
+                    w.len() >= least && w.len() <= crate::balance::MAX_ALIVE,
+                    "a wave of {}",
+                    w.len()
+                );
+            }
+        }
+        let owl = c.enemy("great_horned").unwrap();
+        assert!(c.enemies[owl].elite && c.enemies[owl].gait == Gait::Perch);
+        assert!(c.zones[3]
+            .route
+            .minibosses
+            .iter()
+            .any(|m| m.enemy == "great_horned"));
         let four = own;
         assert_eq!(c.enemies[boss].kind, Kind::Double);
         let pats = |ids: &[usize]| -> Vec<usize> {

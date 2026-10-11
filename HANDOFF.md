@@ -102,6 +102,14 @@ Live: PR #5 passed both workflows (check 38152218054, breaks 38152218086) and me
 
 Live: PR #6 passed both workflows (check 38158683100, breaks 38158683105) and merged as 7d009d4; the main run 38160592662 deployed it, and the live browser check passed in chromium, firefox and webkit. The website's page was updated and deployed as build 8b75088c; `make gate-live` passed.
 
+## Round 10 (2026-10-11): the Great Horned, and big fights
+
+`./scripts/check.sh` passed locally (179 core and 11 boundary tests, the browser check in three engines), and every break in `scripts/break_tests.py` fails its test. `BRIEF.md` has the request, `PLAN.md` (Round 10) the design, `SECOND-ORDER.md` R10, Q26 to Q29, B8 and T11 what was chosen and found.
+
+- **The Great Horned**: `Gait::Perch`, `Enemy::perching`, `perches`, `swoop_tell` (`enemy.rs`); `PERCH_*` and `SWOOP_*` in `balance.rs`; drawn in `draw/fauna.rs` `owl`; zone four's `minibosses`.
+- **Fifteen at most**: `MAX_ALIVE`, `World::room`, `wave_open`.
+- **Big waves**: zone four's `encounters` in `zone.json`.
+
 ## What remains
 
 - Sam's playtest (`TRIAGE.md`). Every feel and balance number is the agent's guess (SECOND-ORDER T1); the probe shows the curve (no wins with no upgrades, about half with 62 Clemency of upgrades), not whether it is fun (T2, P2).

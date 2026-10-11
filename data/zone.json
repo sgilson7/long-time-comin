@@ -1054,6 +1054,13 @@
         "weapon_levels": [
           3,
           4
+        ],
+        "minibosses": [
+          {
+            "enemy": "great_horned",
+            "at": 2,
+            "arena": "spire"
+          }
         ]
       },
       "archetypes": [
@@ -1078,131 +1085,233 @@
           "tier": 1,
           "waves": [
             [
+              "toad",
+              "toad",
+              "toad",
+              "rook",
+              "rook",
+              "sporecap",
               "hart",
-              "toad"
+              "hart"
             ],
             [
               "rook",
+              "rook",
+              "rook",
+              "toad",
+              "toad",
+              "gaper",
+              "hart",
+              "freshet"
+            ]
+          ]
+        },
+        {
+          "tier": 1,
+          "waves": [
+            [
+              "gaper",
+              "toad",
+              "toad",
+              "toad",
+              "rook",
+              "rook",
+              "hart",
+              "sporecap"
+            ],
+            [
+              "hart",
+              "hart",
+              "hart",
+              "toad",
+              "toad",
+              "rook",
+              "rook",
+              "auger"
+            ]
+          ]
+        },
+        {
+          "tier": 1,
+          "waves": [
+            [
+              "freshet",
+              "toad",
+              "toad",
+              "rook",
+              "rook",
+              "sporecap",
+              "sporecap",
+              "hart"
+            ],
+            [
+              "auger",
+              "auger",
+              "rook",
+              "rook",
+              "toad",
+              "toad",
+              "hart",
+              "ursine"
+            ]
+          ]
+        },
+        {
+          "tier": 2,
+          "waves": [
+            [
+              "hart",
+              "hart",
+              "hart",
+              "gaper",
+              "toad",
+              "toad",
+              "toad",
+              "rook",
+              "rook",
+              "rook"
+            ],
+            [
+              "freshet",
+              "freshet",
+              "toad",
+              "toad",
+              "sporecap",
+              "sporecap",
+              "rook",
+              "rook",
+              "ursine",
+              "shardling"
+            ]
+          ]
+        },
+        {
+          "tier": 2,
+          "waves": [
+            [
+              "sporecap",
+              "sporecap",
+              "hart",
+              "hart",
+              "rook",
+              "rook",
+              "rook",
+              "toad",
+              "toad",
+              "proxy"
+            ],
+            [
+              "rime_kite",
+              "rime_kite",
+              "rook",
+              "rook",
+              "toad",
+              "toad",
+              "toad",
+              "knife",
+              "knife",
+              "ursine"
+            ]
+          ]
+        },
+        {
+          "tier": 2,
+          "waves": [
+            [
+              "ursine",
+              "toad",
+              "toad",
+              "toad",
+              "toad",
+              "rook",
+              "rook",
+              "hart",
+              "hart",
+              "gaper"
+            ],
+            [
+              "shardling",
+              "shardling",
+              "shardling",
+              "hart",
+              "hart",
+              "freshet",
+              "rook",
+              "rook",
+              "sporecap",
+              "gaper"
+            ]
+          ]
+        },
+        {
+          "tier": 2,
+          "waves": [
+            [
+              "freshet",
+              "freshet",
+              "hart",
+              "hart",
+              "rook",
+              "rook",
+              "lantern",
+              "toad",
+              "toad",
+              "toad"
+            ],
+            [
+              "shade",
+              "shade",
+              "gaper",
+              "gaper",
+              "toad",
+              "toad",
+              "rook",
+              "rook",
+              "hart",
               "sporecap"
             ]
           ]
         },
         {
-          "tier": 1,
-          "waves": [
-            [
-              "gaper",
-              "toad"
-            ],
-            [
-              "hart",
-              "rook"
-            ]
-          ]
-        },
-        {
-          "tier": 1,
-          "waves": [
-            [
-              "freshet",
-              "toad"
-            ],
-            [
-              "auger",
-              "rook"
-            ]
-          ]
-        },
-        {
-          "tier": 2,
-          "waves": [
-            [
-              "hart",
-              "gaper"
-            ],
-            [
-              "freshet",
-              "toad",
-              "toad"
-            ],
-            [
-              "ursine",
-              "rook"
-            ]
-          ]
-        },
-        {
-          "tier": 2,
-          "waves": [
-            [
-              "sporecap",
-              "hart"
-            ],
-            [
-              "rime_kite",
-              "rook"
-            ],
-            [
-              "proxy",
-              "knife",
-              "toad"
-            ]
-          ]
-        },
-        {
-          "tier": 2,
+          "tier": 3,
           "waves": [
             [
               "ursine",
-              "toad"
-            ],
-            [
-              "gaper",
-              "rook"
-            ],
-            [
-              "shardling",
-              "shardling",
-              "hart"
-            ]
-          ]
-        },
-        {
-          "tier": 2,
-          "waves": [
-            [
-              "freshet",
-              "freshet"
-            ],
-            [
+              "hart",
+              "hart",
               "hart",
               "rook",
-              "lantern"
-            ],
-            [
-              "shade",
-              "gaper"
-            ]
-          ]
-        },
-        {
-          "tier": 3,
-          "waves": [
-            [
-              "ursine",
-              "hart",
-              "rook"
+              "rook",
+              "rook",
+              "toad",
+              "toad",
+              "toad"
             ],
             [
               "gaper",
+              "gaper",
               "sporecap",
-              "freshet"
+              "sporecap",
+              "freshet",
+              "freshet",
+              "toad",
+              "toad",
+              "rook",
+              "rook",
+              "rook",
+              "hart"
             ],
             [
               "auger",
               "auger",
               "toad",
-              "toad"
+              "toad",
+              "toad",
+              "toad",
+              "rook",
+              "rook",
+              "hart",
+              "hart"
             ]
           ]
         },
@@ -1212,17 +1321,39 @@
             [
               "hart",
               "hart",
-              "rook"
+              "hart",
+              "hart",
+              "rook",
+              "rook",
+              "rook",
+              "toad",
+              "toad",
+              "sporecap"
             ],
             [
               "freshet",
-              "ursine"
+              "freshet",
+              "ursine",
+              "ursine",
+              "toad",
+              "toad",
+              "toad",
+              "rook",
+              "rook",
+              "rook"
             ],
             [
               "watcher",
               "bellringer",
               "sower",
-              "gaper"
+              "gaper",
+              "gaper",
+              "toad",
+              "toad",
+              "rook",
+              "rook",
+              "hart",
+              "hart"
             ]
           ]
         },
@@ -1231,40 +1362,39 @@
           "waves": [
             [
               "sporecap",
+              "sporecap",
+              "gaper",
               "gaper",
               "toad",
-              "toad"
-            ],
-            [
-              "clerk",
+              "toad",
+              "toad",
+              "toad",
               "rook",
               "rook"
             ],
             [
-              "ursine",
+              "clerk",
+              "clerk",
+              "rook",
+              "rook",
+              "rook",
+              "rook",
               "hart",
-              "freshet"
-            ]
-          ]
-        },
-        {
-          "tier": 4,
-          "waves": [
-            [
-              "ursine",
-              "ursine",
-              "rook"
+              "hart",
+              "toad",
+              "toad",
+              "toad"
             ],
             [
-              "freshet",
-              "freshet",
+              "ursine",
               "hart",
-              "hart"
-            ],
-            [
-              "second",
-              "proxy",
-              "gaper",
+              "hart",
+              "freshet",
+              "freshet",
+              "rook",
+              "rook",
+              "toad",
+              "toad",
               "sporecap"
             ]
           ]
@@ -1273,23 +1403,97 @@
           "tier": 4,
           "waves": [
             [
+              "ursine",
+              "ursine",
+              "rook",
+              "rook",
+              "rook",
+              "rook",
+              "toad",
+              "toad",
+              "toad",
+              "hart",
+              "hart",
+              "hart"
+            ],
+            [
+              "freshet",
+              "freshet",
+              "freshet",
+              "hart",
+              "hart",
+              "hart",
+              "toad",
+              "toad",
+              "toad",
+              "rook",
+              "rook",
+              "sporecap"
+            ],
+            [
+              "second",
+              "proxy",
+              "proxy",
               "gaper",
               "gaper",
               "sporecap",
+              "sporecap",
+              "toad",
+              "toad",
+              "toad",
+              "rook",
+              "rook",
+              "hart",
+              "hart"
+            ]
+          ]
+        },
+        {
+          "tier": 4,
+          "waves": [
+            [
+              "gaper",
+              "gaper",
+              "gaper",
+              "sporecap",
+              "sporecap",
+              "rook",
+              "rook",
+              "rook",
+              "rook",
+              "toad",
+              "toad",
+              "toad"
+            ],
+            [
+              "hart",
+              "hart",
+              "hart",
+              "hart",
+              "toad",
+              "toad",
+              "toad",
+              "toad",
+              "drifter",
+              "drifter",
+              "rook",
               "rook"
             ],
             [
-              "hart",
-              "hart",
-              "toad",
-              "toad",
-              "drifter"
-            ],
-            [
+              "ursine",
               "ursine",
               "freshet",
+              "freshet",
               "knife",
-              "knife"
+              "knife",
+              "toad",
+              "toad",
+              "rook",
+              "rook",
+              "rook",
+              "hart",
+              "hart",
+              "hart"
             ]
           ]
         }
