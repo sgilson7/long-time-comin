@@ -157,14 +157,17 @@ table.controls td:first-child { font-weight: 700; white-space: nowrap; }
 #boss.sleep .bar .fill { background: linear-gradient(90deg, #7af0e0, #ffe27a); }
 /* the lullaby's staff, after the ocarina's: five lines low in the middle
    of the screen, the notes sliding left to the line */
-#staff { position: absolute; left: 50%; bottom: 150px; translate: -50% 0; width: min(78vw, 860px); height: 132px; background: rgba(18, 8, 32, 0.72); border: 3px solid var(--ink); border-radius: 12px; box-shadow: 4px 4px 0 var(--ink); }
+#staff { position: absolute; left: 50%; bottom: 14px; translate: -50% 0; width: min(38vw, 560px); height: 118px; background: rgba(18, 8, 32, 0.72); border: 3px solid var(--ink); border-radius: 12px; box-shadow: 4px 4px 0 var(--ink); }
 #staff .staff-label { position: absolute; left: 12px; top: -26px; font-weight: 900; letter-spacing: 0.14em; color: var(--paper); text-shadow: 2px 2px 0 var(--ink); }
 #staff[data-part="play"] .staff-label { color: #ffe27a; }
-.staff-lines { position: absolute; left: 8px; right: 8px; top: 18px; bottom: 18px; display: flex; flex-direction: column; justify-content: space-between; }
+.staff-lines { position: absolute; left: 44px; right: 8px; top: 18px; bottom: 18px; display: flex; flex-direction: column; justify-content: space-between; }
 .staff-lines i { display: block; height: 2px; background: rgba(246, 231, 196, 0.55); }
-.staff-keys { position: absolute; left: 4px; top: 8px; bottom: 8px; display: flex; flex-direction: column; justify-content: space-between; font-size: 0.7rem; font-weight: 900; color: var(--paper); }
+.staff-keys { position: absolute; left: 6px; top: 10px; bottom: 10px; width: 34px; display: flex; flex-direction: column; justify-content: space-between; font-size: 0.72rem; font-weight: 900; color: var(--paper); }
 .staff-line { position: absolute; top: 6px; bottom: 6px; width: 4px; translate: -50% 0; background: #ffe27a; box-shadow: 0 0 10px #ffe27a; }
+.staff-track { position: absolute; top: 0; bottom: 0; left: 44px; right: 8px; }
 .staff-notes { position: absolute; inset: 0; }
+/* while the staff is up, the hint stands over it */
+body:has(#staff:not([hidden])) #hint { bottom: 168px; }
 .note { position: absolute; translate: -50% -50%; width: 30px; height: 30px; border-radius: 50%; border: 3px solid var(--ink); display: grid; place-items: center; font-size: 0.72rem; font-weight: 900; color: var(--ink); background: var(--c); }
 .note.lane-0 { top: 85%; --c: #4a8cff; }
 .note.lane-1 { top: 67.5%; --c: #ffd84a; }

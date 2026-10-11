@@ -1192,6 +1192,23 @@ impl Game {
                     }))
                 })
                 .collect()
+        } else if song.part == Part::Finale {
+            // the last verse once more, played for you
+            let mut out = Vec::new();
+            if let Some(v) = l.verses.last() {
+                for &(n, key) in &v.notes {
+                    let ahead = n - (song.clock - 1);
+                    if (-l.good * 2..=STAFF_AHEAD).contains(&ahead) {
+                        out.push(json!({
+                            "x": STAFF_LINE_PCT + ahead * span / STAFF_AHEAD,
+                            "lane": key,
+                            "key": c.say(&format!("song_key_{key}")),
+                            "state": if ahead <= 0 { "great" } else { "ghost" },
+                        }));
+                    }
+                }
+            }
+            out
         } else {
             Vec::new()
         };

@@ -6,7 +6,7 @@
 //! tick the key went down: great, good, or missed. A verse with enough of
 //! its notes on time puts the god a verse deeper asleep and the next verse
 //! begins; too few, and the god stirs and the verse is piped again. After
-//! the last verse the whole song plays over the god while time stops round
+//! the last verse it plays once more over the god while time stops round
 //! it (the finale), and it sleeps.
 //!
 //! Throughout, the song keeps a beat, and the god fires on it: which of
@@ -23,7 +23,7 @@ pub enum Part {
     Listen,
     /// you play it back
     Play,
-    /// the whole song, over the stopped god
+    /// the last verse once more, over the stopped god
     Finale,
     /// done: it sleeps
     Asleep,
@@ -137,15 +137,13 @@ impl Song {
                 }
             }
             Part::Finale => {
-                // every verse again, one after another, on the trumpet
-                let mut at = 0;
-                for v in &l.verses {
+                // the last verse again, on the trumpet, played for you
+                if let Some(v) = l.verses.last() {
                     for &(n, key) in &v.notes {
-                        if at + n == self.clock - 1 {
+                        if n == self.clock - 1 {
                             h.notes.push((key, true));
                         }
                     }
-                    at += v.length;
                 }
                 if self.clock % l.beat == 0 {
                     h.beat = Some((self.clock / l.beat) % BAR == 0);
@@ -161,11 +159,11 @@ impl Song {
         h
     }
 
-    /// The finale's length: every verse back to back, or the lullaby's
-    /// own count of beats if that is longer.
+    /// The finale's length: the last verse, or the lullaby's own count of
+    /// beats if that is longer.
     pub fn finale_length(&self, l: &Lullaby) -> i32 {
-        let all: i32 = l.verses.iter().map(|v| v.length).sum();
-        all.max(l.finale_beats * l.beat)
+        let last = l.verses.last().map_or(0, |v| v.length);
+        last.max(l.finale_beats * l.beat)
     }
 
     fn begin(&mut self, part: Part, l: &Lullaby) {

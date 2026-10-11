@@ -61,6 +61,7 @@ impl B<'_> {
         self.wrap = WRAP;
         if kind == "boss" {
             self.heart();
+            self.repeat = self.shapes.len();
             self.dreams();
             self.insides(COURT_RADIUS);
             return;
@@ -81,6 +82,7 @@ impl B<'_> {
             _ => self.fold(),
         }
         self.gate_arches(gaps);
+        self.repeat = self.shapes.len();
         self.dreams();
         self.insides(HALF);
     }

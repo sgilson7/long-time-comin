@@ -18,9 +18,10 @@ uniform vec3 uEye;
 uniform float uPass;
 const float PS1 = 5.0;
 const vec2 PS1_GRID = vec2(160.0, 120.0);
-// near the eye space is flat, so aiming is as it looks
+// near the eye space is flat, so aiming is as it looks; each shape is
+// lifted as one piece
 const float FLAT_NEAR = 18.0;
-const float CURL = 0.009;
+const float CURL = 0.0035;
 const float BREATHE = 0.025;
 out vec3 vWorld;
 out vec3 vNormal;
@@ -33,7 +34,10 @@ void main() {
   w.y -= melt * (18.0 + 9.0 * sin(w.x * 0.37 + w.z * 0.21));
   w.x += melt * 3.0 * sin(w.y * 0.5 + w.z * 0.3);
   if (uFx.z > 0.0) {
-    float far = max(length(w.xz - uEye.xz) - FLAT_NEAR, 0.0);
+    // by the shape's centre, so a shape bends as one piece: a floor is
+    // not tilted by its far corners
+    vec3 centre = vec3(iA.w, iB.w, iC.w);
+    float far = max(length(centre.xz - uEye.xz) - FLAT_NEAR, 0.0);
     float t = uFx.w;
     w.y += uFx.z * far * far * CURL;
     w += uFx.z * far * BREATHE * vec3(sin(t * 0.7 + w.z * 0.11), sin(t * 0.5 + w.x * 0.09), cos(t * 0.6 + w.y * 0.1));

@@ -725,7 +725,8 @@ struct LullabyFile {
     beats: Vec<OnBeatFile>,
     /// fired when a verse is played badly and the god stirs
     stir: String,
-    /// the whole song, played over the god as time stops round it
+    /// the finale lasts at least this many beats: the last verse, played
+    /// over the god as time stops round it
     finale_beats: i32,
     /// how long the trumpet takes to come out, before the first verse
     intro_ms: i32,

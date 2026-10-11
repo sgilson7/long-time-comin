@@ -88,6 +88,9 @@ pub struct Arena {
     pub wrap: i32,
     /// doorways that lead elsewhere, each to its partner
     pub seams: Vec<Seam>,
+    /// how many of the arena's own shapes are drawn again above and below
+    /// (the copies are the last of `shapes`)
+    pub repeated: usize,
 }
 
 /// A doorway whose opening leads elsewhere: whatever passes through it
@@ -167,6 +170,9 @@ struct B<'a> {
     /// zone five: inside the god
     wrap: i32,
     seams: Vec<Seam>,
+    /// the shapes drawn again above and below, when the arena wraps: its
+    /// own, not the far scenery round it
+    repeat: usize,
 }
 
 /// The dry canal's channel runs north to south between these two x values.
@@ -1819,6 +1825,7 @@ pub fn build_at(zone: &str, kind: &str, seed: u64, exits: &[Side], pal: &Palette
         panes: Vec::new(),
         wrap: 0,
         seams: Vec::new(),
+        repeat: usize::MAX,
     };
     let is_court = kind == "boss";
     if zone == "white_waste" {
@@ -1877,9 +1884,11 @@ pub fn build_at(zone: &str, kind: &str, seed: u64, exits: &[Side], pal: &Palette
         b.solids
             .push(Solid::stand(g.x, 0, g.z + dm(5), m(5), m(6), dm(4)));
     }
+    let mut repeated = 0;
     if b.wrap > 0 {
         // the world over and under you, again: the floor you will land on
-        let own = b.shapes.clone();
+        let own = b.shapes[..b.repeat.min(b.shapes.len())].to_vec();
+        repeated = own.len();
         for dy in [b.wrap, -b.wrap] {
             for sh in &own {
                 let mut copy = sh.clone();
@@ -1980,6 +1989,7 @@ pub fn build_at(zone: &str, kind: &str, seed: u64, exits: &[Side], pal: &Palette
         panes: b.panes,
         wrap: b.wrap,
         seams: b.seams,
+        repeated,
         level,
     }
 }
@@ -2545,12 +2555,14 @@ mod in_the_god {
         let c = content();
         for kind in KINDS {
             let a = build("idiot_god", kind, 2, &[Side::North], &c.pal);
-            assert_eq!(a.shapes.len() % 3, 0);
-            let own = a.shapes.len() / 3;
-            for k in 0..own {
+            let r = a.repeated;
+            let all = a.shapes.len() - r * 2;
+            assert!(r > 30, "{kind}: its floors are drawn again ({r})");
+            assert!(r < all, "{kind}: the far insides are not");
+            for k in 0..r {
                 let s = &a.shapes[k];
-                assert_eq!(a.shapes[own + k].at.t.y, s.at.t.y + a.wrap);
-                assert_eq!(a.shapes[own * 2 + k].at.t.y, s.at.t.y - a.wrap);
+                assert_eq!(a.shapes[all + k].at.t.y, s.at.t.y + a.wrap);
+                assert_eq!(a.shapes[all + r + k].at.t.y, s.at.t.y - a.wrap);
             }
         }
     }

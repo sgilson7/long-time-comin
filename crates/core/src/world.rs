@@ -118,7 +118,7 @@ const FIRST_WAVE: i32 = secs(1, 1);
 /// where the Idiot God's maw opens over the summit
 pub const MAW: V3 = v3(0, fx::int(70), -fx::int(160));
 /// where it heaves over the north of the Heart, at its heart
-pub const GOD_HOME: V3 = v3(0, fx::int(14), -fx::int(40));
+pub const GOD_HOME: V3 = v3(0, fx::int(12), -fx::int(46));
 /// the level of the Ripsaw the Lien leaves at an arrival
 pub const LIEN_LEVEL: i32 = 2;
 /// a pane of glass this far from where the Executor breaks through breaks
@@ -4229,7 +4229,7 @@ mod god {
         w.player.pitch = 0;
         let you = w.player.pos;
         // one ahead of you, in the middle of the view; one behind
-        let ahead = put(&c, &mut w, "etching", you.add(v3(0, 0, -int(14))));
+        let ahead = put(&c, &mut w, "etching", you.add(v3(0, 0, -int(6))));
         let behind = put(&c, &mut w, "etching", you.add(v3(0, 0, int(14))));
         let (a0, b0) = (w.enemies[ahead].pos, w.enemies[behind].pos);
         for _ in 0..secs(1, 6) {
