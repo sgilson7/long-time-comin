@@ -1016,7 +1016,7 @@ pub fn enemy(b: &mut Batch, c: &Content, e: &Enemy, alpha: i32, target: V3) {
             );
         }
         Kind::Boss => bailiff(b, c, e, at, s, paint),
-        Kind::Agent | Kind::Tank | Kind::Mech | Kind::Double | Kind::Beast => {}
+        Kind::Agent | Kind::Tank | Kind::Mech | Kind::Double | Kind::Beast | Kind::God => {}
     }
     // the windup: a halo that grows as the attack comes
     if charge > 0 && d.kind != Kind::Boss {

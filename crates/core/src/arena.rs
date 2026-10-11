@@ -21,6 +21,7 @@ use crate::rng::Rng;
 use std::collections::BTreeSet;
 
 mod ascent;
+mod god;
 mod house;
 mod ice;
 
@@ -81,6 +82,55 @@ pub struct Arena {
     pub nav: Option<crate::nav::Nav>,
     /// panes of glass drawn apart from the scenery, so they can shatter
     pub panes: Vec<Pane>,
+    /// inside the god: off an edge you fall, and come down again from
+    /// this far above (0: a fall is a fall); the scene is drawn again
+    /// this far above and below
+    pub wrap: i32,
+    /// doorways that lead elsewhere, each to its partner
+    pub seams: Vec<Seam>,
+}
+
+/// A doorway whose opening leads elsewhere: whatever passes through it
+/// (you, an orb) comes out of its partner, turned as the partner is turned
+/// and keeping its speed. `at` is the middle of the opening's sill, `yaw`
+/// the way its front faces, `half` half its width.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Seam {
+    pub at: V3,
+    pub yaw: i32,
+    pub half: i32,
+    pub height: i32,
+    pub to: usize,
+}
+
+impl Seam {
+    /// The turn from this seam's frame to its partner's: a body going in
+    /// at the front comes out of the partner's back, facing on.
+    pub fn turn(&self, other: &Seam) -> i32 {
+        fx::wrap(other.yaw - self.yaw + fx::HALF)
+    }
+
+    /// Where a point near this seam is, through it.
+    pub fn carry(&self, other: &Seam, p: V3) -> V3 {
+        other
+            .at
+            .add(crate::geom::rotate_y(p.sub(self.at), self.turn(other)))
+    }
+
+    /// Did a move from `a` to `b` pass through the opening?
+    pub fn crossed(&self, a: V3, b: V3) -> bool {
+        let n = crate::geom::facing(self.yaw, 0);
+        let (da, db) = (a.sub(self.at).dot(n), b.sub(self.at).dot(n));
+        if (da > 0) == (db > 0) {
+            return false;
+        }
+        // where it crossed the plane, across and up the opening
+        let t = fx::div(da, da - db).clamp(0, ONE);
+        let at = a.lerp(b, t);
+        let across = v3(-n.z, 0, n.x);
+        let rel = at.sub(self.at);
+        rel.dot(across).abs() <= self.half && rel.y >= -ONE / 2 && rel.y <= self.height
+    }
 }
 
 /// A pane of glass: its centre and size (thin along z).
@@ -114,6 +164,9 @@ struct B<'a> {
     /// zone four: the mountain's stone
     ascent: bool,
     panes: Vec<Pane>,
+    /// zone five: inside the god
+    wrap: i32,
+    seams: Vec<Seam>,
 }
 
 /// The dry canal's channel runs north to south between these two x values.
@@ -1764,6 +1817,8 @@ pub fn build_at(zone: &str, kind: &str, seed: u64, exits: &[Side], pal: &Palette
         house: zone == "glass_house",
         ascent: zone == "the_ascent",
         panes: Vec::new(),
+        wrap: 0,
+        seams: Vec::new(),
     };
     let is_court = kind == "boss";
     if zone == "white_waste" {
@@ -1772,6 +1827,8 @@ pub fn build_at(zone: &str, kind: &str, seed: u64, exits: &[Side], pal: &Palette
         b.house(kind, exits);
     } else if zone == "the_ascent" {
         b.ascent(kind, exits, rise);
+    } else if zone == "idiot_god" {
+        b.god(kind, exits);
     } else if is_court {
         b.court();
         b.shape(
@@ -1819,6 +1876,17 @@ pub fn build_at(zone: &str, kind: &str, seed: u64, exits: &[Side], pal: &Palette
         let (g, _) = Side::South.place(HALF);
         b.solids
             .push(Solid::stand(g.x, 0, g.z + dm(5), m(5), m(6), dm(4)));
+    }
+    if b.wrap > 0 {
+        // the world over and under you, again: the floor you will land on
+        let own = b.shapes.clone();
+        for dy in [b.wrap, -b.wrap] {
+            for sh in &own {
+                let mut copy = sh.clone();
+                copy.at.t.y += dy;
+                b.shapes.push(copy);
+            }
+        }
     }
     let level = Level::new(b.solids.clone());
     // spawn points: a grid over the floor, kept where a body fits
@@ -1910,6 +1978,8 @@ pub fn build_at(zone: &str, kind: &str, seed: u64, exits: &[Side], pal: &Palette
         nav: matches!(zone, "glass_house" | "the_ascent")
             .then(|| crate::nav::Nav::build(&level, COURT_RADIUS + m(2))),
         panes: b.panes,
+        wrap: b.wrap,
+        seams: b.seams,
         level,
     }
 }

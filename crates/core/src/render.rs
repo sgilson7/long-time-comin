@@ -27,7 +27,24 @@ pub const PASS_SOLID: u32 = 0;
 pub const PASS_FACADE: u32 = 1;
 pub const PASS_INK: u32 = 2;
 pub const PASS_GLOW: u32 = 3;
-pub const PASSES: usize = 4;
+/// Solids drawn in another art's manner (zone five's enemies): one-bit
+/// dither as an engraving is, a PlayStation's corners snapped to a coarse
+/// grid, and a photograph's negative.
+pub const PASS_DITHER: u32 = 4;
+pub const PASS_PS1: u32 = 5;
+pub const PASS_NEGATIVE: u32 = 6;
+pub const PASSES: usize = 7;
+/// The order the passes are drawn in: every solid before the ink, the
+/// glow last.
+pub const PASS_ORDER: [u32; PASSES] = [
+    PASS_SOLID,
+    PASS_FACADE,
+    PASS_DITHER,
+    PASS_PS1,
+    PASS_NEGATIVE,
+    PASS_INK,
+    PASS_GLOW,
+];
 
 pub const NEAR: i32 = ONE / 5;
 pub const FAR: i32 = fx::int(900);
@@ -44,6 +61,8 @@ pub struct Batch {
     ink: Rgb,
     /// while set, outlines are black and three times as thick (enemies)
     pub bold: bool,
+    /// the pass a solid goes in: PASS_SOLID, or one of the styles
+    pub style: u32,
 }
 
 fn slot(mesh: Mesh, pass: u32) -> usize {
@@ -56,10 +75,12 @@ impl Batch {
             lists: vec![Vec::new(); PASSES * Mesh::ALL.len()],
             ink,
             bold: false,
+            style: PASS_SOLID,
         }
     }
 
     pub fn push(&mut self, mesh: Mesh, a: &Affine, rgb: Rgb, glow: i32, pass: u32) {
+        let pass = if pass == PASS_SOLID { self.style } else { pass };
         self.lists[slot(mesh, pass)].extend_from_slice(&[
             a.c0.x, a.c0.y, a.c0.z, a.t.x, a.c1.x, a.c1.y, a.c1.z, a.t.y, a.c2.x, a.c2.y, a.c2.z, a.t.z,
             rgb[0], rgb[1], rgb[2], glow,
@@ -110,8 +131,9 @@ impl Batch {
     /// in pass order.
     pub fn finish(self, buffer: u32) -> (Vec<i32>, Vec<Vec<u32>>) {
         let mut values = Vec::new();
+        // indexed by pass; drawn in PASS_ORDER
         let mut draws = vec![Vec::new(); PASSES];
-        for pass in 0..PASSES as u32 {
+        for pass in PASS_ORDER {
             for mesh in Mesh::ALL {
                 let v = &self.lists[slot(mesh, pass)];
                 if v.is_empty() {

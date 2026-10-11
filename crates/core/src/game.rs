@@ -256,8 +256,26 @@ impl Game {
             if let Some(t) = e.tank.as_mut() {
                 t.survive = 1;
             } else {
+                e.floor_hp = 0;
                 e.hp = 1;
                 e.hurt(10);
+            }
+        }
+    }
+
+    /// Empties the god's last bar at once, so the lullaby begins, for
+    /// tools that drive the game (to see or measure the song).
+    pub fn lull(&mut self) {
+        let Some(run) = self.run.as_mut() else {
+            return;
+        };
+        let w = &mut run.world;
+        if let Some(b) = w.boss {
+            let e = &mut w.enemies[b];
+            if e.floor_hp > 0 && w.song.is_none() {
+                e.phase = e.phase.max(1);
+                e.state = crate::enemy::State::Rest(10);
+                e.hp = e.floor_hp;
             }
         }
     }
@@ -759,9 +777,9 @@ impl Game {
         }
         let (values, dyn_draws) = b.finish(render::DYNAMIC_BUFFER);
         let mut draws = Vec::new();
-        for pass in 0..render::PASSES {
-            draws.extend_from_slice(&self.static_draws[pass]);
-            draws.extend_from_slice(&dyn_draws[pass]);
+        for pass in render::PASS_ORDER {
+            draws.extend_from_slice(&self.static_draws[pass as usize]);
+            draws.extend_from_slice(&dyn_draws[pass as usize]);
         }
         self.values = values;
         self.draws = draws;
@@ -770,12 +788,21 @@ impl Game {
         // (nothing is cut) in the menus
         let (at, floor) = focus.unwrap_or((self.camera.eye, self.camera.eye.y));
         self.view.extend([at.x, at.y, at.z, floor]);
-        // the summit's melt and stopped time, for the shader
-        let (melt, stopped) = match (&self.run, in_run) {
-            (Some(r), true) => (r.world.melt(), if r.world.stop.is_some() { ONE } else { 0 }),
-            _ => (0, 0),
+        // the summit's melt, stopped time, how far space is bent and the
+        // clock (seconds, wrapped), and a bubble of stopped time, for the
+        // shader
+        let (melt, stopped, bubble) = match (&self.run, in_run) {
+            (Some(r), true) => (
+                r.world.melt(),
+                if r.world.stop.is_some() { ONE } else { 0 },
+                r.world.bubble(),
+            ),
+            _ => (0, 0, [0; 4]),
         };
-        self.view.extend([melt, stopped]);
+        let warp = self.scene_zone().scene.warp_pct * ONE / 100;
+        let seconds = ((self.menu_us % 1_000_000_000) * ONE as i64 / 1_000_000) as i32;
+        self.view.extend([melt, stopped, warp, seconds]);
+        self.view.extend(bubble);
         let _ = self.hub_seed;
     }
 
@@ -1445,7 +1472,7 @@ pub fn numbers() -> String {
         "uniforms": [["uLightDir", 3], ["uSky", 3], ["uFog", 3], ["uFogRange", 2], ["uLight", 3], ["uWindowDark", 3], ["uInk", 3], ["uSee", 4], ["uSeeSolid", 1]],
         // the view values: the matrix, the eye, then the see-through focus
         // (the head, and the floor under it)
-        "view": { "matrix": [0, 16], "eye": [16, 19], "focus": [19, 23], "fx": [23, 25] },
+        "view": { "matrix": [0, 16], "eye": [16, 19], "focus": [19, 23], "fx": [23, 27], "bubble": [27, 31] },
         "percent": 100,
     })
     .to_string()
@@ -1641,23 +1668,47 @@ pub(crate) mod tests {
         assert_eq!(g.mode, Mode::Play, "the Idiot God comes first");
         assert!(g.run.as_ref().unwrap().world.melt() > 0);
         frames(&mut g, ENDING_TICKS + 60, 0);
+        // the revelation, and the fall into it
+        assert_eq!(g.mode, Mode::Interlude, "the Defendant does not end the run");
+        let s: Value = serde_json::from_str(&g.screen_json()).unwrap();
+        assert_eq!(s["interlude"]["title"], "THE DOOR");
+        g.continue_run();
+        let h: Value = serde_json::from_str(&g.hud_json()).unwrap();
+        assert_eq!(h["zone"], "The Idiot God");
+        assert_eq!(h["node"], "The Gullet");
+        // the god, sung to sleep (here, at once)
+        let boss = g.run.as_ref().unwrap().route.boss();
+        g.go(boss);
+        frames(&mut g, 120, 0);
+        let run = g.run.as_mut().unwrap();
+        let b = run.world.boss.expect("the god came");
+        assert_eq!(g.c.enemies[run.world.enemies[b].def].id, "azathoth");
+        run.world.player.iframes = 100_000;
+        let e = &mut run.world.enemies[b];
+        e.state = crate::enemy::State::Rest(1000);
+        e.floor_hp = 0;
+        e.hp = 1;
+        e.hurt(5);
+        frames(&mut g, 400, 0);
         assert_eq!(g.mode, Mode::Won);
         assert_eq!(g.meta.wins, 1);
-        // all four bosses' Clemency banked: 25, 40, 55 and 80 in zone.json
-        assert!(g.meta.clemency >= 200, "{}", g.meta.clemency);
+        // all five bosses' Clemency banked: 25, 40, 55, 80 and 150 in zone.json
+        assert!(g.meta.clemency >= 350, "{}", g.meta.clemency);
         let s: Value = serde_json::from_str(&g.screen_json()).unwrap();
         assert_eq!(s["verdict"]["title"], g.c.story.victory_title.as_str());
         g.to_holding();
         assert_eq!(g.mode, Mode::Holding);
         // the time stop is yours now
         assert_eq!(g.meta.build(&g.c).0.stop_ticks, STOP_BASE);
-        // and a run may now start on the ice, in the house or on the mountain
+        // and a run may now start on the ice, in the house, on the
+        // mountain or in the god
         let s: Value = serde_json::from_str(&g.screen_json()).unwrap();
         assert_eq!(s["starts"][0]["zone"], 1);
         assert_eq!(s["starts"][1]["zone"], 2);
         assert_eq!(s["starts"][2]["zone"], 3);
-        g.start_run_at(3);
-        assert_eq!(g.run.as_ref().unwrap().zone, 3);
+        assert_eq!(s["starts"][3]["zone"], 4);
+        g.start_run_at(4);
+        assert_eq!(g.run.as_ref().unwrap().zone, 4);
     }
 
     #[test]
@@ -1683,7 +1734,10 @@ pub(crate) mod tests {
                 assert_eq!(w.player.health, w.player.build.max_health, "healed");
             }
         }
-        assert_eq!(bosses, ["bailiff", "witness", "executor", "defendant"]);
+        assert_eq!(
+            bosses,
+            ["bailiff", "witness", "executor", "defendant", "azathoth"]
+        );
         assert_eq!(g.mode, Mode::Won);
         assert_eq!(g.meta.rush_wins, 1);
         let s: Value = serde_json::from_str(&g.screen_json()).unwrap();
@@ -1704,6 +1758,8 @@ pub(crate) mod tests {
         if let Some(t) = e.tank.as_mut() {
             t.survive = 2;
         } else {
+            // the god is put to sleep at once, its song skipped
+            e.floor_hp = 0;
             e.hp = 1;
             e.hurt(5);
         }
@@ -1896,7 +1952,7 @@ pub(crate) mod tests {
         }
         // in play the view carries the head and the floor under it
         let v = &g.view;
-        assert_eq!(v.len(), 25);
+        assert_eq!(v.len(), 31);
         let p = g.run.as_ref().unwrap().world.player.pos;
         assert_eq!((v[19], v[21], v[22]), (p.x, p.z, p.y));
         assert!(v[20] > p.y + int(1));

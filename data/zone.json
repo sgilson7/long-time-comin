@@ -1502,9 +1502,504 @@
     {
       "id": "idiot_god",
       "name": "The Idiot God",
-      "year": "After",
-      "built": false,
-      "boss": "azathoth"
+      "year": "Outside",
+      "built": true,
+      "boss": "azathoth",
+      "scene": {
+        "sky": "god_sky",
+        "fog": "god_fog",
+        "light": "god_light",
+        "window_dark": "god_window_dark",
+        "ink": "god_ink",
+        "fog_near_m": 40,
+        "fog_far_m": 420,
+        "warp_pct": 100
+      },
+      "route": {
+        "main_fights": 5,
+        "main_tiers": [
+          1,
+          2,
+          2,
+          3,
+          3
+        ],
+        "detours_min": 3,
+        "detours_max": 4,
+        "detour_max": 2,
+        "rewards": [
+          "weapon",
+          "trigger",
+          "health",
+          "weapon",
+          "plating",
+          "jump",
+          "pierce",
+          "pulse",
+          "speed",
+          "mend"
+        ],
+        "clemency_main": 5,
+        "clemency_detour": 10,
+        "clemency_boss": 150,
+        "rest_rewards": [
+          "trigger",
+          "plating",
+          "pierce",
+          "pulse",
+          "mend",
+          "health"
+        ],
+        "cache_rewards": [
+          "weapon",
+          "trigger",
+          "plating",
+          "health",
+          "jump"
+        ],
+        "weapon_levels": [
+          3,
+          4
+        ],
+        "minibosses": []
+      },
+      "archetypes": [
+        "fold",
+        "stair",
+        "doors",
+        "lattice",
+        "orrery"
+      ],
+      "names": {
+        "arrival": "The Gullet",
+        "rest": "The Still Point",
+        "boss": "The Heart",
+        "fold": "The Fold",
+        "stair": "The Penrose Stair",
+        "doors": "The Doors",
+        "lattice": "The Lattice",
+        "orrery": "The Orrery"
+      },
+      "encounters": [
+        {
+          "tier": 1,
+          "waves": [
+            [
+              "toon",
+              "tesseract",
+              "tesseract",
+              "etching",
+              "glyph",
+              "glyph",
+              "tesseract",
+              "etching"
+            ],
+            [
+              "glyph",
+              "glyph",
+              "etching",
+              "render",
+              "glyph",
+              "recursion",
+              "glyph",
+              "tesseract"
+            ]
+          ]
+        },
+        {
+          "tier": 1,
+          "waves": [
+            [
+              "toon",
+              "tesseract",
+              "etching",
+              "tesseract",
+              "glyph",
+              "reprise",
+              "toon",
+              "toon"
+            ],
+            [
+              "reprise",
+              "reprise",
+              "recursion",
+              "glyph",
+              "glyph",
+              "glyph",
+              "tesseract",
+              "glyph"
+            ]
+          ]
+        },
+        {
+          "tier": 1,
+          "waves": [
+            [
+              "glyph",
+              "glyph",
+              "tesseract",
+              "glyph",
+              "etching",
+              "glyph",
+              "glyph",
+              "render"
+            ],
+            [
+              "toon",
+              "etching",
+              "glyph",
+              "toon",
+              "glyph",
+              "tesseract",
+              "recursion",
+              "reprise"
+            ]
+          ]
+        },
+        {
+          "tier": 2,
+          "waves": [
+            [
+              "glyph",
+              "glyph",
+              "etching",
+              "tesseract",
+              "recursion",
+              "glyph",
+              "glyph",
+              "tesseract",
+              "glyph",
+              "reprise"
+            ],
+            [
+              "render",
+              "etching",
+              "tesseract",
+              "glyph",
+              "tesseract",
+              "reprise",
+              "tesseract",
+              "tesseract",
+              "glyph",
+              "render"
+            ]
+          ]
+        },
+        {
+          "tier": 2,
+          "waves": [
+            [
+              "glyph",
+              "tesseract",
+              "reprise",
+              "recursion",
+              "tesseract",
+              "toon",
+              "toon",
+              "glyph",
+              "tesseract",
+              "recursion"
+            ],
+            [
+              "glyph",
+              "reprise",
+              "glyph",
+              "glyph",
+              "render",
+              "glyph",
+              "toon",
+              "recursion",
+              "etching",
+              "toon"
+            ]
+          ]
+        },
+        {
+          "tier": 2,
+          "waves": [
+            [
+              "glyph",
+              "toon",
+              "toon",
+              "tesseract",
+              "tesseract",
+              "tesseract",
+              "etching",
+              "reprise",
+              "recursion",
+              "glyph"
+            ],
+            [
+              "etching",
+              "reprise",
+              "etching",
+              "toon",
+              "toon",
+              "render",
+              "glyph",
+              "tesseract",
+              "glyph",
+              "glyph"
+            ]
+          ]
+        },
+        {
+          "tier": 2,
+          "waves": [
+            [
+              "glyph",
+              "tesseract",
+              "reprise",
+              "toon",
+              "glyph",
+              "tesseract",
+              "etching",
+              "tesseract",
+              "recursion",
+              "toon"
+            ],
+            [
+              "tesseract",
+              "tesseract",
+              "render",
+              "toon",
+              "recursion",
+              "recursion",
+              "toon",
+              "toon",
+              "glyph",
+              "etching"
+            ]
+          ]
+        },
+        {
+          "tier": 3,
+          "waves": [
+            [
+              "render",
+              "toon",
+              "toon",
+              "glyph",
+              "glyph",
+              "toon",
+              "recursion",
+              "tesseract",
+              "reprise",
+              "etching"
+            ],
+            [
+              "tesseract",
+              "tesseract",
+              "toon",
+              "tesseract",
+              "recursion",
+              "glyph",
+              "render",
+              "etching",
+              "etching",
+              "toon",
+              "tesseract",
+              "toon"
+            ],
+            [
+              "etching",
+              "glyph",
+              "glyph",
+              "glyph",
+              "toon",
+              "render",
+              "tesseract",
+              "recursion",
+              "reprise",
+              "reprise"
+            ]
+          ]
+        },
+        {
+          "tier": 3,
+          "waves": [
+            [
+              "toon",
+              "tesseract",
+              "etching",
+              "render",
+              "toon",
+              "glyph",
+              "glyph",
+              "reprise",
+              "etching",
+              "toon"
+            ],
+            [
+              "glyph",
+              "tesseract",
+              "tesseract",
+              "toon",
+              "reprise",
+              "etching",
+              "glyph",
+              "toon",
+              "toon",
+              "render",
+              "recursion",
+              "toon"
+            ],
+            [
+              "toon",
+              "reprise",
+              "recursion",
+              "recursion",
+              "render",
+              "tesseract",
+              "glyph",
+              "reprise",
+              "tesseract",
+              "tesseract"
+            ]
+          ]
+        },
+        {
+          "tier": 3,
+          "waves": [
+            [
+              "tesseract",
+              "recursion",
+              "tesseract",
+              "etching",
+              "glyph",
+              "recursion",
+              "tesseract",
+              "etching",
+              "toon",
+              "toon"
+            ],
+            [
+              "toon",
+              "toon",
+              "render",
+              "render",
+              "etching",
+              "glyph",
+              "glyph",
+              "toon",
+              "toon",
+              "tesseract",
+              "reprise",
+              "toon"
+            ],
+            [
+              "toon",
+              "render",
+              "render",
+              "glyph",
+              "etching",
+              "toon",
+              "recursion",
+              "tesseract",
+              "recursion",
+              "glyph"
+            ]
+          ]
+        },
+        {
+          "tier": 4,
+          "waves": [
+            [
+              "recursion",
+              "recursion",
+              "glyph",
+              "tesseract",
+              "glyph",
+              "tesseract",
+              "render",
+              "etching",
+              "tesseract",
+              "tesseract",
+              "etching",
+              "tesseract"
+            ],
+            [
+              "glyph",
+              "toon",
+              "tesseract",
+              "toon",
+              "etching",
+              "render",
+              "toon",
+              "recursion",
+              "glyph",
+              "reprise",
+              "reprise",
+              "toon"
+            ],
+            [
+              "tesseract",
+              "tesseract",
+              "tesseract",
+              "glyph",
+              "glyph",
+              "render",
+              "recursion",
+              "etching",
+              "tesseract",
+              "toon",
+              "glyph",
+              "render",
+              "recursion",
+              "etching"
+            ]
+          ]
+        },
+        {
+          "tier": 4,
+          "waves": [
+            [
+              "reprise",
+              "render",
+              "glyph",
+              "toon",
+              "tesseract",
+              "glyph",
+              "tesseract",
+              "toon",
+              "recursion",
+              "render",
+              "reprise",
+              "toon"
+            ],
+            [
+              "tesseract",
+              "toon",
+              "render",
+              "reprise",
+              "tesseract",
+              "toon",
+              "glyph",
+              "tesseract",
+              "tesseract",
+              "recursion",
+              "recursion",
+              "render"
+            ],
+            [
+              "glyph",
+              "reprise",
+              "toon",
+              "glyph",
+              "tesseract",
+              "glyph",
+              "toon",
+              "recursion",
+              "recursion",
+              "glyph",
+              "render",
+              "etching",
+              "etching",
+              "tesseract"
+            ]
+          ]
+        }
+      ]
     }
   ]
 }

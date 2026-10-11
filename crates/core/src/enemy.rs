@@ -145,6 +145,17 @@ pub struct Enemy {
     pub moves: i32,
     pub flying: i32,
     pub diving: bool,
+    /// you are looking at it (the world says, each tick): an Etching
+    /// stands still
+    pub seen: bool,
+    /// where you were a few seconds ago (the world says): a Reprise
+    /// walks there
+    pub trail: Option<V3>,
+    /// the world's clock, so a beat can be shared (the Toons)
+    pub beat: i32,
+    /// it cannot be brought below this (the Idiot God, which is sung to
+    /// sleep, not killed)
+    pub floor_hp: i32,
 }
 
 /// What an enemy did this tick that the world must act on.
@@ -216,6 +227,10 @@ impl Enemy {
             moves: 0,
             flying: 0,
             diving: false,
+            seen: false,
+            trail: None,
+            beat: 0,
+            floor_hp: if d.kind == Kind::God { 1 } else { 0 },
         }
     }
 
@@ -237,7 +252,7 @@ impl Enemy {
         if !self.hurtable() {
             return false;
         }
-        self.hp -= damage;
+        self.hp = (self.hp - damage).max(self.floor_hp);
         self.flash = 0;
         self.hp <= 0
     }
@@ -275,7 +290,7 @@ impl Enemy {
         self.flash = (self.flash + 1).min(100);
         let to = target.sub(self.pos);
         let (aim_yaw, _) = yaw_pitch_of(to);
-        if !matches!(d.kind, Kind::Agent | Kind::Tank) {
+        if !matches!(d.kind, Kind::Agent | Kind::Tank) && d.gait != Gait::Charge {
             self.yaw = fx::lerp_angle(self.yaw, aim_yaw, ONE / 8);
         }
 
@@ -315,7 +330,7 @@ impl Enemy {
             }
         }
         // a boss changes phase the moment its health crosses the line
-        if matches!(d.kind, Kind::Boss | Kind::Double) {
+        if matches!(d.kind, Kind::Boss | Kind::Double | Kind::God) {
             let next = self.phase + 1;
             if next < d.phases.len() && self.health_pct() <= d.phases[next].from_pct {
                 self.phase = next;
@@ -337,6 +352,19 @@ impl Enemy {
         };
         if d.kind == Kind::Moth {
             return deeds;
+        }
+        // an Etching looked at is a statue: it neither moves nor fires
+        if d.gait == Gait::Unseen && self.seen {
+            return deeds;
+        }
+        // a Toon waits for the beat, so it fires as it lands
+        if d.gait == Gait::Bounce {
+            if let (State::Rest(t), Some(a)) = (self.state, self.current_attack(c)) {
+                if t <= 1 && (self.beat + a.windup) % BOUNCE_TICKS != 0 {
+                    self.state = State::Rest(1);
+                    return deeds;
+                }
+            }
         }
 
         // a percher holds its fire while it flies
@@ -459,21 +487,7 @@ impl Enemy {
         level: &Level,
         deeds: &mut Deeds,
     ) {
-        for v in &pattern.volleys {
-            let since = t - v.delay;
-            if since < 0 {
-                continue;
-            }
-            let k = if v.every > 0 { since / v.every } else { since };
-            let on_beat = v.every == 0 || since % v.every == 0;
-            if on_beat && k < v.repeat {
-                for &at in from {
-                    let s = orbs::fire(v, at, target, k, me, &c.pal, level);
-                    deeds.salvo.orbs.extend(s.orbs);
-                    deeds.salvo.waves.extend(s.waves);
-                }
-            }
-        }
+        cast_volleys(c, pattern, t, from, target, me, level, &mut deeds.salvo);
     }
 
     /// An agent's attack cycle. Its rest is spent walking where the squad
@@ -760,6 +774,121 @@ impl Enemy {
                 }
             }
             Gait::Perch => self.perching(level, target),
+            Gait::March => {
+                // in the air at its height over you, a step at a time
+                let floor = ground(self.pos).unwrap_or(target.y - PLAYER_CHEST);
+                let y = floor.max(target.y - PLAYER_CHEST) + d.hover;
+                if self.leap > 0 {
+                    self.leap -= 1;
+                    let next = self.pos.add(self.vel);
+                    if level.sphere_hits(next, body) {
+                        self.leap = 0;
+                        self.orbit = -self.orbit;
+                    } else {
+                        self.pos = next;
+                    }
+                } else if (self.age + self.def as i32 * 5) % MARCH_EVERY == 0 {
+                    self.moves += 1;
+                    let way = flat.norm();
+                    let step = if self.moves % MARCH_ACROSS == 0 {
+                        // a step nearer (or back, too near), and the other way
+                        self.orbit = -self.orbit;
+                        if dist > d.range {
+                            way
+                        } else {
+                            way.neg()
+                        }
+                    } else {
+                        v3(-way.z * self.orbit, 0, way.x * self.orbit)
+                    };
+                    self.vel = step.scale(MARCH_STEP / MARCH_GLIDE);
+                    self.leap = MARCH_GLIDE;
+                }
+                self.pos.y = fx::approach(self.pos.y, y, ONE / 10);
+            }
+            Gait::Unseen => {
+                // still while you look; while you do not, straight at you
+                self.vel = V3::ZERO;
+                if self.seen || dist < d.radius {
+                    return;
+                }
+                let wish = flat.norm().scale(d.speed);
+                let tries = [wish, v3(wish.x, 0, 0), v3(0, 0, wish.z)];
+                if let Some(p) = tries
+                    .iter()
+                    .map(|t| self.pos.add(*t))
+                    .find(|p| !level.sphere_hits(*p, body))
+                {
+                    self.vel = p.sub(self.pos);
+                    self.pos = p;
+                }
+                if let Some(f) = ground(self.pos) {
+                    self.pos.y = fx::approach(self.pos.y, f + d.hover, ONE / 6);
+                }
+            }
+            Gait::Charge => {
+                // tank controls: turn on the spot, then straight on
+                if self.leap > 0 {
+                    self.leap -= 1;
+                    let next = self.pos.add(self.bite_dir.scale(d.speed));
+                    let floor_ahead = ground(next).is_some_and(|f| f > self.pos.y - d.hover - int(2));
+                    if level.sphere_hits(next, body) || !floor_ahead {
+                        self.leap = 0;
+                    } else {
+                        self.pos = next;
+                    }
+                    if self.leap == 0 {
+                        self.perched = CHARGE_REST;
+                    }
+                } else if self.perched > 0 {
+                    self.perched -= 1;
+                } else {
+                    let (want, _) = yaw_pitch_of(flat);
+                    let off = fx::wrap(want - self.yaw);
+                    if off.abs() <= CHARGE_AIM {
+                        self.leap = CHARGE_TICKS;
+                        self.bite_dir = facing(self.yaw, 0);
+                    } else {
+                        self.yaw = fx::wrap(self.yaw + off.clamp(-CHARGE_TURN, CHARGE_TURN));
+                    }
+                }
+                if let Some(f) = ground(self.pos) {
+                    self.pos.y = fx::approach(self.pos.y, f + d.hover, ONE / 6);
+                }
+            }
+            Gait::Bounce => {
+                // up and down on the shared beat; across only in the air,
+                // toward its range from you
+                let t = self.beat % BOUNCE_TICKS;
+                let up = (4 * t as i64 * (BOUNCE_TICKS - t) as i64 * BOUNCE_HEIGHT as i64
+                    / (BOUNCE_TICKS as i64 * BOUNCE_TICKS as i64)) as i32;
+                let floor =
+                    ground(v3(self.pos.x, self.pos.y + int(2), self.pos.z)).unwrap_or(self.pos.y - d.hover);
+                if t > 0 {
+                    let way = if dist > d.range {
+                        flat.norm()
+                    } else {
+                        flat.norm().neg()
+                    };
+                    let side = v3(-way.z, 0, way.x).scale(self.orbit * ONE / 2);
+                    let wish = way.add(side).norm().scale(d.speed);
+                    let next = v3(self.pos.x + wish.x, self.pos.y, self.pos.z + wish.z);
+                    if !level.sphere_hits(next, body) && ground(next).is_some() {
+                        self.pos = next;
+                    } else {
+                        self.orbit = -self.orbit;
+                    }
+                }
+                self.pos.y = floor + d.hover + up;
+            }
+            Gait::Echo => {
+                // where you were: it walks the very path
+                if let Some(to) = self.trail {
+                    let step = to.sub(self.pos).clamp_len(d.speed);
+                    self.vel = step;
+                    self.pos = self.pos.add(step);
+                }
+            }
             Gait::None => {}
         }
     }
@@ -1085,6 +1214,17 @@ impl Enemy {
         let side = v3(-towards.z, 0, towards.x).scale(self.orbit * ONE);
         match d.kind {
             Kind::Turret | Kind::Tank => {}
+            Kind::God => {
+                // vast and slow, over its home, heaving
+                let bob = v3(
+                    fx::sin(self.age * fx::TURN / secs(11, 1)) * 2,
+                    fx::sin(self.age * fx::TURN / secs(7, 1)) * 2,
+                    0,
+                );
+                let want = self.home.add(bob);
+                self.pos = self.pos.add(want.sub(self.pos).clamp_len(ONE / 30));
+                let _ = (dist, side);
+            }
             Kind::Mech | Kind::Double => self.skirmish(d, level, target),
             Kind::Agent => self.walk(d, level, target),
             Kind::Beast => self.beast(d, level, target),
@@ -1200,6 +1340,36 @@ impl Enemy {
                     self.pos.y = fx::approach(self.pos.y, f + d.radius, ONE / 6);
                 }
                 let _ = target;
+            }
+        }
+    }
+}
+
+/// The volleys of a pattern that fire on tick `t` of its cast, from each of
+/// `from`, at `target`, owned by enemy `me`.
+#[allow(clippy::too_many_arguments)]
+pub fn cast_volleys(
+    c: &Content,
+    pattern: &Pattern,
+    t: i32,
+    from: &[V3],
+    target: V3,
+    me: usize,
+    level: &Level,
+    salvo: &mut Salvo,
+) {
+    for v in &pattern.volleys {
+        let since = t - v.delay;
+        if since < 0 {
+            continue;
+        }
+        let k = if v.every > 0 { since / v.every } else { since };
+        let on_beat = v.every == 0 || since % v.every == 0;
+        if on_beat && k < v.repeat {
+            for &at in from {
+                let s = orbs::fire(v, at, target, k, me, &c.pal, level);
+                salvo.orbs.extend(s.orbs);
+                salvo.waves.extend(s.waves);
             }
         }
     }

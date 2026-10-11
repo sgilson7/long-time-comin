@@ -13,6 +13,7 @@ use crate::orbs::{self, Orb, Wave};
 use crate::player::{Controls, Event, Player};
 use crate::rng::Rng;
 use crate::route::{Node, NodeKind, Reward};
+use crate::song::{Part, Song};
 use crate::tank;
 use crate::weapons::{self, Held, Lodge, Pull, Shot, ShotKind};
 
@@ -116,6 +117,8 @@ const WIN_TICKS: i32 = secs(5, 2);
 const FIRST_WAVE: i32 = secs(1, 1);
 /// where the Idiot God's maw opens over the summit
 pub const MAW: V3 = v3(0, fx::int(70), -fx::int(160));
+/// where it heaves over the north of the Heart, at its heart
+pub const GOD_HOME: V3 = v3(0, fx::int(14), -fx::int(40));
 /// the level of the Ripsaw the Lien leaves at an arrival
 pub const LIEN_LEVEL: i32 = 2;
 /// a pane of glass this far from where the Executor breaks through breaks
@@ -190,7 +193,21 @@ pub struct World {
     /// how far corruption has taken this arena's creatures (0 to ONE),
     /// by how far along the map it is
     pub corrupt: i32,
+    /// the lullaby, once the Idiot God's last bar is empty
+    pub song: Option<Song>,
+    /// the god's patterns fired on the song's beat, and how far into each
+    pub song_casts: Vec<(usize, i32)>,
+    /// the bubble of stopped time round the god: its radius now
+    pub bubble_r: i32,
+    /// where your chest was, tick by tick, the newest last (the Reprise
+    /// walks it)
+    pub trail: Vec<V3>,
 }
+
+/// The sounds of the lullaby's five notes, on the trumpet and on the
+/// dancers' pipes.
+pub const TRUMPET: [&str; 5] = ["trumpet_d", "trumpet_f", "trumpet_a", "trumpet_b", "trumpet_d2"];
+pub const PIPES: [&str; 5] = ["pipe_d", "pipe_f", "pipe_a", "pipe_b", "pipe_d2"];
 
 /// Time held still.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -287,6 +304,10 @@ impl World {
             grab_age: 0,
             ending: 0,
             corrupt: (node.step * ONE / CORRUPT_FULL_STEP).clamp(CORRUPT_LEAST, ONE),
+            song: None,
+            song_casts: Vec::new(),
+            bubble_r: 0,
+            trail: Vec::new(),
         };
         w.broken = vec![0; w.arena.panes.len()];
         if let Some(def) = node.elite {
@@ -419,7 +440,10 @@ impl World {
             })
             .collect();
         let list = if fits.is_empty() { pool.clone() } else { fits };
-        let mut at = if d.kind == Kind::Double {
+        let mut at = if d.kind == Kind::God {
+            // over the north of the Heart, vast
+            GOD_HOME
+        } else if d.kind == Kind::Double {
             // the Defendant waits before the Long Door
             let f = self.arena.level.floor_below(0, int(3), -int(4)).unwrap_or(0);
             v3(0, f, -int(4))
@@ -428,9 +452,15 @@ impl World {
         } else {
             list[self.rng.range(0, list.len() as i32 - 1) as usize]
         };
-        if !air && d.kind != Kind::Boss {
+        if !air && !matches!(d.kind, Kind::Boss | Kind::God) {
             at.y += standing_lift(d);
         }
+        self.spawn_at(c, def, at);
+    }
+
+    /// An enemy, appearing at `at`.
+    fn spawn_at(&mut self, c: &Content, def: usize, mut at: V3) {
+        let d = &c.enemies[def];
         let entering = d.kind == Kind::Tank && !d.elite;
         if entering {
             // outside, beyond the glass, coming in
@@ -440,7 +470,11 @@ impl World {
         }
         let orbit = if self.rng.chance(50) { 1 } else { -1 };
         let mut e = Enemy::new(def, d, at, orbit);
-        e.home = self.arena.centre;
+        e.home = if d.kind == Kind::God {
+            at
+        } else {
+            self.arena.centre
+        };
         e.corrupt = self.corrupt;
         if entering {
             e.state = enemy::State::Rest(tank::ENTER_TICKS + secs(1, 1));
@@ -451,7 +485,7 @@ impl World {
         }
         // the zone's boss; a mini-boss (the Escort, a tank too) is not, and
         // felling it only clears its arena (SECOND-ORDER Q25)
-        if matches!(d.kind, Kind::Boss | Kind::Tank | Kind::Double) && !d.elite {
+        if matches!(d.kind, Kind::Boss | Kind::Tank | Kind::Double | Kind::God) && !d.elite {
             self.boss = Some(self.enemies.len());
         }
         if d.elite {
@@ -503,6 +537,36 @@ impl World {
             self.ending_step(c);
             return;
         }
+        // the trumpet: the five keys play notes, and the gun and the
+        // abilities they belong to are put away
+        let mut keys = [false; 5];
+        let quiet;
+        let ctl = if self.song.is_some() {
+            keys = [
+                ctl.fire_pressed,
+                ctl.parry_pressed,
+                ctl.interact_pressed,
+                ctl.wall_pressed,
+                ctl.grapple_pressed,
+            ];
+            quiet = Controls {
+                fire: false,
+                fire_pressed: false,
+                alt_pressed: false,
+                parry_pressed: false,
+                interact_pressed: false,
+                wall_pressed: false,
+                grapple_pressed: false,
+                grapple_held: false,
+                grab_pressed: false,
+                stop_pressed: false,
+                pound_pressed: false,
+                ..*ctl
+            };
+            &quiet
+        } else {
+            ctl
+        };
         let stopped = self.stop.is_some();
         // stopped by an enemy, you are as still as everything else
         let frozen = self.stop.is_some_and(|s| s.caster.is_some());
@@ -542,6 +606,11 @@ impl World {
             self.player.events.clear();
         } else {
             self.player.step(ctl, &self.arena.level);
+            self.wrap_and_seams();
+        }
+        self.trail.push(self.player.chest());
+        if self.trail.len() > (ECHO_DELAY * 2) as usize {
+            self.trail.remove(0);
         }
         for ev in self.player.events.clone() {
             let sound = match ev {
@@ -709,15 +778,50 @@ impl World {
             }
         }
 
+        // what the enemies are told: the clock, whether you look at them,
+        // and where you were
+        let look = fx::cos(UNSEEN_LOOK);
+        for i in 0..self.enemies.len() {
+            let gait = c.enemies[self.enemies[i].def].gait;
+            let e = &self.enemies[i];
+            let seen = gait == crate::content::Gait::Unseen && {
+                let to = e.pos.sub(eye);
+                let dist = to.len();
+                let dir = to.norm();
+                dir.dot(fwd) >= look && self.arena.level.ray(eye, dir, dist).is_none()
+            };
+            let trail = (gait == crate::content::Gait::Echo).then(|| {
+                let back = (ECHO_DELAY - secs(1, 2) + (i as i32 % 3) * secs(1, 2)) as usize;
+                self.trail[self.trail.len().saturating_sub(back + 1)]
+            });
+            let e = &mut self.enemies[i];
+            e.beat = self.tick;
+            e.seen = seen;
+            e.trail = trail;
+        }
+
         // the enemies and what they fire
         for i in 0..self.enemies.len() {
             if !self.enemies[i].alive() || self.enemies[i].held {
+                continue;
+            }
+            if self.song.is_some() && Some(i) == self.boss {
+                // asleep, or being sung there: it heaves, and fires only
+                // on the song's beat
+                self.enemies[i].age += 1;
+                self.enemies[i].prev = self.enemies[i].pos;
                 continue;
             }
             if stopped && self.stop.is_none_or(|s| s.caster != Some(i)) {
                 continue;
             }
             let deeds = self.enemies[i].step(c, &self.arena.level, chest, i);
+            if self.arena.wrap > 0 && self.enemies[i].pos.y < -WRAP_BELOW {
+                // fallen off the god's floor: down again from above
+                let up = v3(0, self.arena.wrap, 0);
+                self.enemies[i].pos = self.enemies[i].pos.add(up);
+                self.enemies[i].prev = self.enemies[i].pos;
+            }
             if deeds.stop > 0 && self.stop.is_none() {
                 self.stop = Some(TimeStop {
                     left: deeds.stop,
@@ -762,11 +866,13 @@ impl World {
         }
         self.glass_step(c);
         self.shake = (self.shake - 1).max(0);
+        self.lullaby(c, keys, chest);
 
         if !stopped {
             self.orbs_step(c, chest);
             self.shots_step(c);
             self.saws_step(c);
+            self.shots_through_seams();
         }
         if let Some(s) = self.stop.as_mut() {
             s.left -= 1;
@@ -837,7 +943,11 @@ impl World {
                         .get(&c.enemies[self.enemies[b].def].id)
                         .map(|w| w.name.clone())
                         .unwrap_or_default();
-                    self.note("boss_down", c.say("callout_boss_down").replace("{name}", &name));
+                    if c.enemies[self.enemies[b].def].kind == Kind::God {
+                        self.note("asleep", c.say("callout_asleep"));
+                    } else {
+                        self.note("boss_down", c.say("callout_boss_down").replace("{name}", &name));
+                    }
                     for o in std::mem::take(&mut self.orbs) {
                         self.effect(FxKind::Burst, o.pos, V3::ZERO, 16, o.rgb, o.radius * 2);
                     }
@@ -955,10 +1065,20 @@ impl World {
         let wall = self.wall();
         let wards = self.player.build.wards();
         let mut broken = 0;
+        let seams = self.arena.seams.clone();
         for mut o in std::mem::take(&mut self.orbs) {
             if !o.step(level, chest, moving) {
                 spent.push(o);
                 continue;
+            }
+            if let Some(k) = seams.iter().position(|s| s.crossed(o.prev, o.pos)) {
+                let (a, b) = (seams[k], seams[seams[k].to]);
+                let turn = a.turn(&b);
+                o.pos = a.carry(&b, o.pos);
+                o.prev = a.carry(&b, o.prev);
+                o.hub = a.carry(&b, o.hub);
+                o.dir = crate::geom::rotate_y(o.dir, turn);
+                o.axis = crate::geom::rotate_y(o.axis, turn);
             }
             if o.ward > 0 && o.ward <= wards && wall.is_some_and(|w| w.breaks(&o)) {
                 broken += 1;
@@ -1209,6 +1329,14 @@ impl World {
             self.burst(c, i);
             let e = &self.enemies[i];
             let (at, def) = (e.pos, e.def);
+            let d = &c.enemies[def];
+            // a Recursion falls into smaller copies of itself
+            for (k, &part) in d.splits.iter().enumerate().take(self.room()) {
+                let a = fx::TURN / d.splits.len().max(1) as i32 * k as i32;
+                let off = v3(fx::mul(fx::cos(a), d.radius), 0, fx::mul(fx::sin(a), d.radius));
+                self.spawn_at(c, part, at.add(off));
+            }
+            let e = &self.enemies[i];
             let d = &c.enemies[def];
             // what a caller called is worth nothing: a fight with a caller
             // in it would never run dry
@@ -1902,6 +2030,164 @@ impl World {
         }
     }
 
+    /// Off an edge inside the god you fall, and come down from above;
+    /// through a seam you come out of its partner.
+    fn wrap_and_seams(&mut self) {
+        let p = &mut self.player;
+        if self.arena.wrap > 0 && p.pos.y < -WRAP_BELOW {
+            let up = v3(0, self.arena.wrap, 0);
+            p.pos = p.pos.add(up);
+            p.prev_pos = p.prev_pos.add(up);
+            p.release_grapple();
+            self.note("wrap", String::new());
+            return;
+        }
+        let seams = &self.arena.seams;
+        if let Some(k) = seams.iter().position(|s| s.crossed(p.prev_pos, p.pos)) {
+            let (a, b) = (seams[k], seams[seams[k].to]);
+            let turn = a.turn(&b);
+            p.pos = a.carry(&b, p.pos);
+            p.prev_pos = a.carry(&b, p.prev_pos);
+            p.vel = crate::geom::rotate_y(p.vel, turn);
+            p.dash_dir = crate::geom::rotate_y(p.dash_dir, turn);
+            p.yaw = fx::wrap(p.yaw + turn);
+            p.release_grapple();
+            self.note("seam", String::new());
+        }
+    }
+
+    /// Your shots through the seams too.
+    fn shots_through_seams(&mut self) {
+        let seams = &self.arena.seams;
+        if seams.is_empty() {
+            return;
+        }
+        for s in self.shots.iter_mut().filter(|s| s.lodged.is_none()) {
+            if let Some(k) = seams.iter().position(|m| m.crossed(s.prev, s.pos)) {
+                let (a, b) = (seams[k], seams[seams[k].to]);
+                s.pos = a.carry(&b, s.pos);
+                s.prev = s.pos;
+                s.vel = crate::geom::rotate_y(s.vel, a.turn(&b));
+            }
+        }
+    }
+
+    /// The lullaby: once the god's last bar is empty, the trumpet comes
+    /// out and the song is played; the god fires on its beat; when it is
+    /// done the god sleeps.
+    fn lullaby(&mut self, c: &Content, keys: [bool; 5], chest: V3) {
+        let Some(b) = self.boss else {
+            return;
+        };
+        let d = &c.enemies[self.enemies[b].def];
+        let Some(l) = d.lullaby.as_ref() else {
+            return;
+        };
+        let god = &self.enemies[b];
+        if self.song.is_none() {
+            if !god.alive() || god.hp > god.floor_hp || !god.hurtable() {
+                return;
+            }
+            // its last bar is empty: you take out the trumpet
+            self.song = Some(Song::new());
+            self.enemies[b].state = enemy::State::Changing(1);
+            for o in std::mem::take(&mut self.orbs) {
+                self.effect(FxKind::Burst, o.pos, V3::ZERO, 16, o.rgb, o.radius * 2);
+            }
+            self.waves.clear();
+            for (i, e) in self.enemies.iter_mut().enumerate() {
+                if i != b {
+                    e.hp = 0;
+                }
+            }
+            self.grabbed = None;
+            self.stop = None;
+            self.note("trumpet", c.say("callout_trumpet"));
+            return;
+        }
+        let mut song = self.song.take().unwrap_or_default();
+        let heard = song.step(l, keys);
+        for &(key, trumpet) in &heard.notes {
+            self.note(if trumpet { TRUMPET[key] } else { PIPES[key] }, String::new());
+        }
+        if heard.sour {
+            self.note("sour", String::new());
+        }
+        if let Some(down) = heard.beat {
+            self.note(if down { "drum" } else { "tick" }, String::new());
+        }
+        for p in heard.fire {
+            self.song_casts.push((p, 0));
+        }
+        if heard.stirred {
+            self.song_casts.push((l.stir, 0));
+            self.note("stir", c.say("callout_stir"));
+        }
+        if heard.passed && !heard.finale {
+            self.note("verse", c.say("callout_verse"));
+        }
+        if heard.finale {
+            // time stops round it
+            self.song_casts.clear();
+            for o in std::mem::take(&mut self.orbs) {
+                self.effect(FxKind::Burst, o.pos, V3::ZERO, 16, o.rgb, o.radius * 2);
+            }
+            self.waves.clear();
+            self.note("time_stop", c.say("callout_bubble"));
+        }
+        // the bubble grows a share a verse, and is whole in the finale
+        let n = l.verses.len().max(1) as i32;
+        let share = if matches!(song.part, Part::Finale | Part::Asleep) {
+            n
+        } else {
+            song.asleep as i32
+        };
+        let want = d.radius + BUBBLE_RADIUS * share / n;
+        self.bubble_r = fx::approach(self.bubble_r, want, ONE / 8);
+        if song.part == Part::Asleep && song.clock < ASLEEP_TICKS {
+            song.clock += 1;
+            if song.clock >= ASLEEP_TICKS {
+                // it sleeps
+                let god = &mut self.enemies[b];
+                god.floor_hp = 0;
+                god.hp = 0;
+            }
+        }
+        self.song = Some(song);
+        // the patterns fired on the beat, each on its own clock
+        let at = self.enemies[b].pos;
+        let mut salvo = orbs::Salvo::default();
+        for (p, t) in self.song_casts.iter_mut() {
+            enemy::cast_volleys(
+                c,
+                &c.patterns[*p],
+                *t,
+                &[at],
+                chest,
+                b,
+                &self.arena.level,
+                &mut salvo,
+            );
+            *t += 1;
+        }
+        self.song_casts.retain(|(p, t)| *t <= c.patterns[*p].length());
+        let room = MAX_ORBS.saturating_sub(self.orbs.len());
+        self.orbs.extend(salvo.orbs.into_iter().take(room));
+        self.waves.extend(salvo.waves);
+    }
+
+    /// The bubble of stopped time round the god, for the shader: its
+    /// centre and radius (all 0 when there is none).
+    pub fn bubble(&self) -> [i32; 4] {
+        match (self.boss, self.bubble_r) {
+            (Some(b), r) if r > 0 => {
+                let at = self.enemies[b].pos;
+                [at.x, at.y, at.z, r]
+            }
+            _ => [0; 4],
+        }
+    }
+
     /// How far the summit has melted, Q16 from 0 to ONE, for the shader.
     pub fn melt(&self) -> i32 {
         if self.ending == 0 {
@@ -2051,7 +2337,10 @@ impl World {
 /// Enemies that spawn in the air.
 fn flies(d: &crate::content::EnemyDef) -> bool {
     matches!(d.kind, Kind::Floater | Kind::Moth | Kind::Blinker)
-        || matches!(d.gait, crate::content::Gait::Wheel | crate::content::Gait::Perch)
+        || matches!(
+            d.gait,
+            crate::content::Gait::Wheel | crate::content::Gait::Perch | crate::content::Gait::March
+        )
 }
 
 /// How far over the floor a ground kind's centre stands.

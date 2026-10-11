@@ -686,7 +686,88 @@ struct EnemyFile {
     /// a rooted beast bites this far when you come this close
     #[serde(default)]
     bite_cm: i32,
+    /// what it splits into where it dies
+    #[serde(default)]
+    splits: Vec<String>,
+    /// the god's lullaby: the song you play it to sleep with
+    #[serde(default)]
+    lullaby: Option<LullabyFile>,
 }
+
+#[derive(Debug, Clone, Deserialize)]
+struct VerseFile {
+    /// each note: the half beat it falls on, and its key (0 to 4)
+    notes: Vec<[i32; 2]>,
+    /// the verse's length in half beats
+    length: i32,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct OnBeatFile {
+    pattern: String,
+    /// fired every this many beats, this many beats into the count
+    every: i32,
+    #[serde(default)]
+    at: i32,
+    /// from this verse on (counted from 0)
+    #[serde(default)]
+    from_verse: usize,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct LullabyFile {
+    beat_ms: i32,
+    count_in: i32,
+    pass_pct: i32,
+    great_ms: i32,
+    good_ms: i32,
+    verses: Vec<VerseFile>,
+    beats: Vec<OnBeatFile>,
+    /// fired when a verse is played badly and the god stirs
+    stir: String,
+    /// the whole song, played over the god as time stops round it
+    finale_beats: i32,
+    /// how long the trumpet takes to come out, before the first verse
+    intro_ms: i32,
+}
+
+/// One verse of the lullaby.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Verse {
+    /// each note: the tick it falls on (from the verse's first beat) and
+    /// its key
+    pub notes: Vec<(i32, usize)>,
+    pub length: i32,
+}
+
+/// A pattern the god fires on the song's beat.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct OnBeat {
+    pub pattern: usize,
+    pub every: i32,
+    pub at: i32,
+    pub from_verse: usize,
+}
+
+/// The song the Defendant plays the Idiot God to sleep with: verses the
+/// dancers pipe and you play back, on a beat, in time (ticks throughout).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Lullaby {
+    pub beat: i32,
+    pub count_in: i32,
+    pub pass_pct: i32,
+    pub great: i32,
+    pub good: i32,
+    pub verses: Vec<Verse>,
+    pub beats: Vec<OnBeat>,
+    pub stir: usize,
+    pub finale_beats: i32,
+    pub intro: i32,
+}
+
+/// The keys of the lullaby's five notes, by the action each is pressed
+/// with: the trumpet frees them from the gun and the abilities.
+pub const NOTE_KEYS: [&str; 5] = ["fire", "parry", "interact", "wall", "grapple"];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Kind {
@@ -709,6 +790,9 @@ pub enum Kind {
     Double,
     /// the mountain's creatures: each moves by its gait
     Beast,
+    /// the Idiot God: phases as a boss's, each its own bar; when the last
+    /// empties it does not die, and the lullaby begins
+    God,
 }
 
 /// How a beast moves.
@@ -728,6 +812,19 @@ pub enum Gait {
     /// sits on high perches round the arena, flies between them, and now
     /// and then swoops through where you stand
     Perch,
+    /// steps sideways in the air, a step at a time, then a step toward
+    /// you, then back the other way (the Glyph)
+    March,
+    /// moves only while you are not looking at it, and then fast (the
+    /// Etching)
+    Unseen,
+    /// turns on the spot until it faces you, then charges straight, as
+    /// tank controls do (the Render)
+    Charge,
+    /// bounces on a beat every one of its kind shares (the Toon)
+    Bounce,
+    /// walks the path you walked a few seconds before (the Reprise)
+    Echo,
 }
 
 /// An agent's part in its squad.
@@ -834,6 +931,9 @@ pub struct EnemyDef {
     pub gait: Gait,
     /// how far a rooted beast's bite reaches (0: it does not bite)
     pub bite: i32,
+    /// what it splits into where it dies
+    pub splits: Vec<usize>,
+    pub lullaby: Option<Lullaby>,
 }
 
 // ---- the zones and their routes ---------------------------------------------
@@ -892,6 +992,10 @@ pub struct Scene {
     /// where the fog starts and is full, in metres
     pub fog_near_m: i32,
     pub fog_far_m: i32,
+    /// how far space bends away from you, in percent (zone five: the
+    /// scene curls up round you in the distance, and breathes)
+    #[serde(default)]
+    pub warp_pct: i32,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
@@ -1012,6 +1116,9 @@ pub const BRANCHES: &[&str] = &["body", "motion", "arms", "writs"];
 pub struct BossWords {
     pub name: String,
     pub title: String,
+    /// a bar of its own for each phase, by these names (the Idiot God)
+    #[serde(default)]
+    pub bars: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
@@ -1115,6 +1222,7 @@ impl Content {
                         ink: "ink".into(),
                         fog_near_m: 70,
                         fog_far_m: 520,
+                        warp_pct: 0,
                     },
                     route: RouteRules {
                         main_fights: 0,
@@ -1538,6 +1646,7 @@ fn parse_enemies(text: &str, patterns: &[Pattern]) -> Result<Vec<EnemyDef>, Stri
             "mech" => Kind::Mech,
             "double" => Kind::Double,
             "beast" => Kind::Beast,
+            "god" => Kind::God,
             k => return Err(format!("enemies: {} has no kind {k}", e.id)),
         };
         let role = match e.role.as_str() {
@@ -1563,6 +1672,11 @@ fn parse_enemies(text: &str, patterns: &[Pattern]) -> Result<Vec<EnemyDef>, Stri
             "root" => Gait::Root,
             "surge" => Gait::Surge,
             "perch" => Gait::Perch,
+            "march" => Gait::March,
+            "unseen" => Gait::Unseen,
+            "charge" => Gait::Charge,
+            "bounce" => Gait::Bounce,
+            "echo" => Gait::Echo,
             g => return Err(format!("enemies: {} has no gait {g}", e.id)),
         };
         if (kind == Kind::Beast) != (gait != Gait::None) {
@@ -1571,7 +1685,7 @@ fn parse_enemies(text: &str, patterns: &[Pattern]) -> Result<Vec<EnemyDef>, Stri
                 e.id
             ));
         }
-        let phases = if matches!(kind, Kind::Boss | Kind::Tank | Kind::Double) {
+        let phases = if matches!(kind, Kind::Boss | Kind::Tank | Kind::Double | Kind::God) {
             if e.phases.is_empty() {
                 return Err(format!("enemies: boss {} has no phases", e.id));
             }
@@ -1635,6 +1749,67 @@ fn parse_enemies(text: &str, patterns: &[Pattern]) -> Result<Vec<EnemyDef>, Stri
             }]
         };
         let list = |v: &[String]| v.iter().map(|s| find(s, &e.id)).collect::<Result<Vec<_>, _>>();
+        let pattern_of = |id: &str| {
+            patterns
+                .iter()
+                .position(|p| p.id == id)
+                .ok_or_else(|| format!("enemies: {} names no pattern {id}", e.id))
+        };
+        if (kind == Kind::God) != e.lullaby.is_some() {
+            return Err(format!("enemies: {}: a god, and only a god, has a lullaby", e.id));
+        }
+        let lullaby = match &e.lullaby {
+            None => None,
+            Some(l) => {
+                let beat = ms(l.beat_ms);
+                if beat < 4 || beat % 2 != 0 || l.verses.is_empty() {
+                    return Err(format!(
+                        "enemies: {}'s lullaby needs verses and an even beat",
+                        e.id
+                    ));
+                }
+                let mut verses = Vec::new();
+                for v in &l.verses {
+                    let mut notes = Vec::new();
+                    for [at, key] in &v.notes {
+                        if *key < 0 || *key as usize >= NOTE_KEYS.len() || *at < 0 || *at >= v.length {
+                            return Err(format!("enemies: {}'s lullaby has a note out of its verse", e.id));
+                        }
+                        notes.push((at * beat / 2, *key as usize));
+                    }
+                    if notes.is_empty() || notes.windows(2).any(|w| w[1].0 <= w[0].0) {
+                        return Err(format!("enemies: {}'s lullaby has a verse out of order", e.id));
+                    }
+                    verses.push(Verse {
+                        notes,
+                        length: v.length * beat / 2,
+                    });
+                }
+                Some(Lullaby {
+                    beat,
+                    count_in: l.count_in,
+                    pass_pct: l.pass_pct,
+                    great: ms(l.great_ms),
+                    good: ms(l.good_ms),
+                    verses,
+                    beats: l
+                        .beats
+                        .iter()
+                        .map(|b| {
+                            Ok(OnBeat {
+                                pattern: pattern_of(&b.pattern)?,
+                                every: b.every.max(1),
+                                at: b.at,
+                                from_verse: b.from_verse,
+                            })
+                        })
+                        .collect::<Result<_, String>>()?,
+                    stir: pattern_of(&l.stir)?,
+                    finale_beats: l.finale_beats,
+                    intro: ms(l.intro_ms),
+                })
+            }
+        };
         out.push(EnemyDef {
             id: e.id.clone(),
             name: e.name.clone(),
@@ -1667,6 +1842,8 @@ fn parse_enemies(text: &str, patterns: &[Pattern]) -> Result<Vec<EnemyDef>, Stri
             elite: e.elite,
             gait,
             bite: cm(e.bite_cm),
+            splits: list(&e.splits)?,
+            lullaby,
         });
     }
     Ok(out)
