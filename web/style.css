@@ -227,3 +227,5 @@ ul.rules li { margin-bottom: 6px; }
 #start-later { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
 button.big.later { background: #a9d3ea; font-size: 1rem; }
 button.big.later:hover:not(:disabled) { background: #c7e4f3; }
+
+#stopped { position: absolute; left: 50%; top: 40%; translate: -50% 0; font-size: 2rem; font-weight: 900; letter-spacing: 0.2em; color: var(--paper); text-shadow: 3px 3px 0 var(--ink); pointer-events: none; }

@@ -125,14 +125,9 @@ impl Route {
             }
             last_arch = arch.clone();
             let tier = r.main_tiers[i];
-            let elite = (!r.miniboss.is_empty() && i == r.miniboss_at)
-                .then(|| c.enemy(&r.miniboss))
-                .flatten();
-            let arch = if elite.is_some() {
-                r.miniboss_arena.clone()
-            } else {
-                arch
-            };
+            let mb = r.minibosses.iter().find(|m| m.at == i);
+            let elite = mb.and_then(|m| c.enemy(&m.enemy));
+            let arch = mb.map_or(arch, |m| m.arena.clone());
             let mut n = node(NodeKind::Fight, &arch, tier, STRIDE * (i as i32 + 1), &mut rng);
             n.encounter = Some(pick_encounter(c, zone, tier, &mut rng));
             n.elite = elite;
@@ -418,9 +413,11 @@ mod tests {
         for seed in 0..30 {
             let r = Route::build_for(&c, 2, seed, 1);
             let elites: Vec<&Node> = r.nodes.iter().filter(|n| n.elite.is_some()).collect();
-            assert_eq!(elites.len(), 1, "one mini-boss");
-            assert_eq!(elites[0].archetype, "ballroom");
-            assert!(!elites[0].detour);
+            // the Escort in the Great Hall, the Section Chief in the Ballroom
+            assert_eq!(elites.len(), 2, "two mini-bosses");
+            let rooms: Vec<&str> = elites.iter().map(|n| n.archetype.as_str()).collect();
+            assert_eq!(rooms, ["hall", "ballroom"]);
+            assert!(elites.iter().all(|n| !n.detour));
             // its guns are level 3 or 4
             for n in &r.nodes {
                 if let Some(Reward::Gun(_, l)) = n.reward {
@@ -434,8 +431,10 @@ mod tests {
                         !matches!(n.reward, Some(Reward::Gun(g, _)) if g == saw),
                         "zone {z} offers the Ripsaw"
                     );
-                    assert!(n.elite.is_none());
                 }
+                // zone two's Pioneer; none in zone one
+                let elites = r.nodes.iter().filter(|n| n.elite.is_some()).count();
+                assert_eq!(elites, z, "zone {z}");
             }
         }
         // and some house route does offer it

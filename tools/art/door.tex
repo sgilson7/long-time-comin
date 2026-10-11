@@ -1,0 +1,290 @@
+\documentclass[tikz,border=0pt]{standalone}
+\usepackage{xcolor}
+\usetikzlibrary{calc}
+% Palette: Sam_Comm_final.png by eye, and data/palette.json.
+\definecolor{ink}{HTML}{3B2340}
+\definecolor{sky}{HTML}{EFC46A}
+\definecolor{skyhi}{HTML}{F5DA92}
+\definecolor{skylow}{HTML}{E9B060}
+\definecolor{cloud}{HTML}{F2D58A}
+\definecolor{wallA}{HTML}{E88A73}
+\definecolor{wallB}{HTML}{EE9F7E}
+\definecolor{wallC}{HTML}{E47A7E}
+\definecolor{wallD}{HTML}{F0B07E}
+\definecolor{wallE}{HTML}{D9765F}
+\definecolor{wallF}{HTML}{E99A8A}
+\definecolor{greenA}{HTML}{8DBB7E}
+\definecolor{greenB}{HTML}{6FA77A}
+\definecolor{greenC}{HTML}{A9C97F}
+\definecolor{greenD}{HTML}{5E9C6A}
+\definecolor{window}{HTML}{F6E7A0}
+\definecolor{windark}{HTML}{8C5A64}
+\definecolor{metal}{HTML}{8D9A93}
+\definecolor{metaldark}{HTML}{5E6B66}
+\definecolor{wood}{HTML}{B9835A}
+\definecolor{paving}{HTML}{E2BD8C}
+\definecolor{ground}{HTML}{D3A77D}
+\definecolor{stone}{HTML}{E7C9A0}
+\definecolor{clock}{HTML}{F8EBC8}
+\definecolor{court}{HTML}{9E4F55}
+\definecolor{courtdark}{HTML}{6E3542}
+\definecolor{goldtrim}{HTML}{F2B53A}
+\definecolor{paper}{HTML}{F6E7C4}
+\definecolor{paperdark}{HTML}{E3CC98}
+\definecolor{violet}{HTML}{7B2FF7}
+\definecolor{magenta}{HTML}{FF2E88}
+\definecolor{cyan}{HTML}{13CFE3}
+\definecolor{gold}{HTML}{FFB000}
+\definecolor{coat}{HTML}{2F4858}
+\definecolor{coatdark}{HTML}{22323F}
+\definecolor{trim}{HTML}{F26B38}
+\definecolor{skin}{HTML}{E0AC69}
+\definecolor{hair}{HTML}{3B2340}
+\definecolor{gun}{HTML}{3E3A46}
+\definecolor{robe}{HTML}{2D2240}
+\definecolor{bossface}{HTML}{F8EBC8}
+\definecolor{eye}{HTML}{FF2E88}
+\definecolor{red}{HTML}{B3262E}
+\definecolor{heart}{HTML}{FF4F6D}
+\definecolor{jump}{HTML}{8DE36B}
+\definecolor{lamp}{HTML}{FFE6A3}
+\definecolor{night}{HTML}{4A3357}
+\definecolor{nightsky}{HTML}{6B4A6E}
+\definecolor{icesky}{HTML}{A7C4E2}
+\definecolor{icefog}{HTML}{8FAFD2}
+\definecolor{icesnow}{HTML}{EEF5F9}
+\definecolor{icesnowdark}{HTML}{CFDDE7}
+\definecolor{icewhite}{HTML}{E4F1F8}
+\definecolor{iceblue}{HTML}{A9D3EA}
+\definecolor{icedeep}{HTML}{6FA9D2}
+\definecolor{iceglow}{HTML}{8FE3FF}
+\definecolor{icerock}{HTML}{5E6E82}
+\definecolor{icerockdark}{HTML}{3F4C5F}
+\definecolor{icered}{HTML}{D94A3A}
+\definecolor{hull}{HTML}{A8392F}
+\definecolor{hulldark}{HTML}{6C2A27}
+\definecolor{icemetal}{HTML}{8A97A6}
+\definecolor{canvas}{HTML}{E9C47C}
+\definecolor{auroragreen}{HTML}{5CF2B0}
+\definecolor{aurorapink}{HTML}{F27AD0}
+\definecolor{cobalt}{HTML}{1F4FFF}
+\definecolor{ember}{HTML}{FF6A1A}
+\definecolor{witnessrobe}{HTML}{1E2742}
+\definecolor{witnessice}{HTML}{CDEBFA}
+\definecolor{navy}{HTML}{1C2A44}
+\definecolor{water}{HTML}{2C6690}
+\definecolor{dawn}{HTML}{F7C89A}
+\definecolor{housesky}{HTML}{1C2440}
+\definecolor{housenight}{HTML}{2A3358}
+\definecolor{paperwall}{HTML}{7A2E3A}
+\definecolor{paperwall2}{HTML}{2F5A4A}
+\definecolor{panel}{HTML}{5A3424}
+\definecolor{hwood}{HTML}{8A4F2E}
+\definecolor{hwooddark}{HTML}{4E2A1C}
+\definecolor{marble}{HTML}{E9DFC9}
+\definecolor{marbledark}{HTML}{3D3436}
+\definecolor{brass}{HTML}{E0A93E}
+\definecolor{candle}{HTML}{FFD27A}
+\definecolor{moon}{HTML}{9FC6FF}
+\definecolor{carpet}{HTML}{9C2F3C}
+\definecolor{cream}{HTML}{F1E6CC}
+\definecolor{labwhite}{HTML}{DCE7E6}
+\definecolor{labfluid}{HTML}{7CFFB2}
+\definecolor{grassnight}{HTML}{2E4A3A}
+\definecolor{hedge}{HTML}{1F3A2C}
+\definecolor{glass}{HTML}{BFEFFF}
+\definecolor{suit}{HTML}{33363D}
+\definecolor{suitdark}{HTML}{1E2026}
+\definecolor{shirt}{HTML}{EDEDE6}
+\definecolor{agentskin}{HTML}{D8C3A8}
+\definecolor{shades}{HTML}{0E0F12}
+\definecolor{tankhull}{HTML}{3B4249}
+\definecolor{tankplate}{HTML}{5A646F}
+\definecolor{tanktread}{HTML}{22262B}
+\definecolor{tankweak}{HTML}{FF7A1A}
+\definecolor{tankeye}{HTML}{FFF3B0}
+\definecolor{tankiris}{HTML}{FF4A3A}
+\definecolor{halo}{HTML}{FFC94A}
+\definecolor{scarlet}{HTML}{FF2E3A}
+\definecolor{chalk}{HTML}{FFF6DA}
+\definecolor{lime}{HTML}{B6FF3A}
+\definecolor{sawsteel}{HTML}{E8F0F5}
+\definecolor{dusk}{HTML}{E8A27A}
+\definecolor{duskhi}{HTML}{F6C9A0}
+\definecolor{dusklow}{HTML}{B07A8C}
+\definecolor{astone}{HTML}{B9A79A}
+\definecolor{astonedark}{HTML}{7D6C68}
+\definecolor{arock}{HTML}{8A7A80}
+\definecolor{amoss}{HTML}{7FA06A}
+\definecolor{asnow}{HTML}{F4EDF0}
+\definecolor{doorlight}{HTML}{FFE9A8}
+\definecolor{flesh}{HTML}{3E2A5C}
+\definecolor{fleshdark}{HTML}{1A1028}
+\definecolor{eldglow}{HTML}{B6FF6A}
+\definecolor{void}{HTML}{05030A}
+\definecolor{violetdeep}{HTML}{9B5DE5}
+% One ink for every outline (the TikZ house style and the game's ink pass).
+\newcommand{\Ink}{1.1pt}
+\tikzset{inked/.style={draw=ink, line width=\Ink, line join=round, line cap=round}}
+\begin{document}
+\begin{tikzpicture}
+\clip (0,0) rectangle (32,18);
+\fill[dusk] (0,0) rectangle (32,18);
+\fill[duskhi] (0,6.3) rectangle (32,9.9);
+\fill[dusklow] (0,0) rectangle (32,5.4);
+\filldraw[inked,fill=void] (-1,17.8) .. controls (3,12) and (15,11) .. (21,17.8) -- cycle;
+\filldraw[inked,fill=fleshdark] (10.552,14.236) circle (0.655);
+\filldraw[inked,fill=chalk] (10.552,14.236) ellipse (0.295 and 0.183);
+\filldraw[inked,fill=eldglow] (10.552,14.236) circle (0.105);
+\filldraw[inked,fill=void] (10.552,14.236) circle (0.046);
+\filldraw[inked,fill=flesh] (10.834,15.379) circle (1.559);
+\filldraw[inked,fill=flesh] (11.479,14.024) circle (1.431);
+\filldraw[inked,fill=chalk] (11.479,14.024) ellipse (0.644 and 0.401);
+\filldraw[inked,fill=eldglow] (11.479,14.024) circle (0.229);
+\filldraw[inked,fill=void] (11.479,14.024) circle (0.1);
+\filldraw[inked,fill=fleshdark] (12.554,17.21) circle (0.967);
+\filldraw[inked,fill=flesh] (12.642,17.422) circle (1.586);
+\filldraw[inked,fill=chalk] (12.642,17.422) ellipse (0.714 and 0.444);
+\filldraw[inked,fill=eldglow] (12.642,17.422) circle (0.254);
+\filldraw[inked,fill=void] (12.642,17.422) circle (0.111);
+\filldraw[inked,fill=flesh] (2.112,16.879) circle (1.536);
+\filldraw[inked,fill=fleshdark] (9.847,15.867) circle (0.993);
+\filldraw[inked,fill=chalk] (9.847,15.867) ellipse (0.447 and 0.278);
+\filldraw[inked,fill=eldglow] (9.847,15.867) circle (0.159);
+\filldraw[inked,fill=void] (9.847,15.867) circle (0.07);
+\filldraw[inked,fill=flesh] (10.501,16.317) circle (1.204);
+\filldraw[inked,fill=flesh] (11.055,15.67) circle (1.46);
+\filldraw[inked,fill=chalk] (11.055,15.67) ellipse (0.657 and 0.409);
+\filldraw[inked,fill=eldglow] (11.055,15.67) circle (0.234);
+\filldraw[inked,fill=void] (11.055,15.67) circle (0.102);
+\filldraw[inked,fill=fleshdark] (6.078,16.472) circle (0.701);
+\filldraw[inked,fill=flesh] (9.785,15.84) circle (1.163);
+\filldraw[inked,fill=chalk] (9.785,15.84) ellipse (0.524 and 0.326);
+\filldraw[inked,fill=eldglow] (9.785,15.84) circle (0.186);
+\filldraw[inked,fill=void] (9.785,15.84) circle (0.081);
+\filldraw[inked,fill=flesh] (12.213,13.875) circle (1.424);
+\filldraw[inked,fill=fleshdark] (9.061,17.308) circle (0.638);
+\filldraw[inked,fill=chalk] (9.061,17.308) ellipse (0.287 and 0.179);
+\filldraw[inked,fill=eldglow] (9.061,17.308) circle (0.102);
+\filldraw[inked,fill=void] (9.061,17.308) circle (0.045);
+\filldraw[inked,fill=flesh] (9.868,15.174) circle (1.535);
+\filldraw[inked,fill=flesh] (15.892,17.456) circle (1.444);
+\filldraw[inked,fill=chalk] (15.892,17.456) ellipse (0.65 and 0.404);
+\filldraw[inked,fill=eldglow] (15.892,17.456) circle (0.231);
+\filldraw[inked,fill=void] (15.892,17.456) circle (0.101);
+\filldraw[inked,fill=fleshdark] (15.416,17.049) circle (1.475);
+\filldraw[inked,fill=flesh] (13.02,18.012) circle (1.546);
+\filldraw[inked,fill=chalk] (13.02,18.012) ellipse (0.696 and 0.433);
+\filldraw[inked,fill=eldglow] (13.02,18.012) circle (0.247);
+\filldraw[inked,fill=void] (13.02,18.012) circle (0.108);
+\filldraw[inked,fill=flesh] (6.349,14.973) circle (1.105);
+\filldraw[inked,fill=fleshdark] (9.266,16.666) circle (0.993);
+\filldraw[inked,fill=chalk] (9.266,16.666) ellipse (0.447 and 0.278);
+\filldraw[inked,fill=eldglow] (9.266,16.666) circle (0.159);
+\filldraw[inked,fill=void] (9.266,16.666) circle (0.069);
+\filldraw[inked,fill=flesh] (4.698,17.792) circle (1.466);
+\filldraw[inked,fill=flesh] (9.055,16.837) circle (1.246);
+\filldraw[inked,fill=chalk] (9.055,16.837) ellipse (0.561 and 0.349);
+\filldraw[inked,fill=eldglow] (9.055,16.837) circle (0.199);
+\filldraw[inked,fill=void] (9.055,16.837) circle (0.087);
+\filldraw[inked,fill=fleshdark] (15.479,17.433) circle (1.201);
+\filldraw[inked,fill=flesh] (7.541,16.521) circle (1.299);
+\filldraw[inked,fill=chalk] (7.541,16.521) ellipse (0.585 and 0.364);
+\filldraw[inked,fill=eldglow] (7.541,16.521) circle (0.208);
+\filldraw[inked,fill=void] (7.541,16.521) circle (0.091);
+\filldraw[inked,fill=flesh] (12.812,15.611) circle (0.75);
+\filldraw[inked,fill=fleshdark] (1.642,16.929) circle (0.993);
+\filldraw[inked,fill=chalk] (1.642,16.929) ellipse (0.447 and 0.278);
+\filldraw[inked,fill=eldglow] (1.642,16.929) circle (0.159);
+\filldraw[inked,fill=void] (1.642,16.929) circle (0.07);
+\filldraw[inked,fill=flesh] (15.096,16.85) circle (1.309);
+\filldraw[inked,fill=flesh] (7.186,14.761) circle (1.344);
+\filldraw[inked,fill=chalk] (7.186,14.761) ellipse (0.605 and 0.376);
+\filldraw[inked,fill=eldglow] (7.186,14.761) circle (0.215);
+\filldraw[inked,fill=void] (7.186,14.761) circle (0.094);
+\filldraw[inked,fill=fleshdark] (11.954,14.616) circle (1.324);
+\filldraw[inked,fill=flesh] (3.747,15.885) circle (1.027);
+\filldraw[inked,fill=chalk] (3.747,15.885) ellipse (0.462 and 0.287);
+\filldraw[inked,fill=eldglow] (3.747,15.885) circle (0.164);
+\filldraw[inked,fill=void] (3.747,15.885) circle (0.072);
+\filldraw[inked,fill=flesh] (4.863,16.617) circle (1.352);
+\filldraw[inked,fill=fleshdark] (7.242,14.534) circle (1.46);
+\filldraw[inked,fill=chalk] (7.242,14.534) ellipse (0.657 and 0.409);
+\filldraw[inked,fill=eldglow] (7.242,14.534) circle (0.234);
+\filldraw[inked,fill=void] (7.242,14.534) circle (0.102);
+\filldraw[inked,fill=flesh] (5.909,15.053) circle (1.02);
+\filldraw[inked,fill=flesh] (12.366,15.014) circle (1.449);
+\filldraw[inked,fill=chalk] (12.366,15.014) ellipse (0.652 and 0.406);
+\filldraw[inked,fill=eldglow] (12.366,15.014) circle (0.232);
+\filldraw[inked,fill=void] (12.366,15.014) circle (0.101);
+\filldraw[inked,fill=fleshdark] (17.325,17.216) circle (1.484);
+\filldraw[inked,fill=void] (10,14.4) circle (2.4);
+\filldraw[inked,fill=chalk,line width=0.6pt] (12.22,14.4) -- (12.58,14.4) -- (11.5,14.4) -- cycle;
+\filldraw[inked,fill=chalk,line width=0.6pt] (12.075,15.221) -- (12.435,15.221) -- (11.41,14.913) -- cycle;
+\filldraw[inked,fill=chalk,line width=0.6pt] (11.659,15.943) -- (12.019,15.943) -- (11.149,15.364) -- cycle;
+\filldraw[inked,fill=chalk,line width=0.6pt] (11.02,16.478) -- (11.38,16.478) -- (10.75,15.699) -- cycle;
+\filldraw[inked,fill=chalk,line width=0.6pt] (10.237,16.764) -- (10.597,16.764) -- (10.26,15.877) -- cycle;
+\filldraw[inked,fill=chalk,line width=0.6pt] (9.403,16.764) -- (9.763,16.764) -- (9.74,15.877) -- cycle;
+\filldraw[inked,fill=chalk,line width=0.6pt] (8.62,16.478) -- (8.98,16.478) -- (9.25,15.699) -- cycle;
+\filldraw[inked,fill=chalk,line width=0.6pt] (7.981,15.943) -- (8.341,15.943) -- (8.851,15.364) -- cycle;
+\filldraw[inked,fill=chalk,line width=0.6pt] (7.565,15.221) -- (7.925,15.221) -- (8.59,14.913) -- cycle;
+\filldraw[inked,fill=chalk,line width=0.6pt] (7.42,14.4) -- (7.78,14.4) -- (8.5,14.4) -- cycle;
+\filldraw[inked,fill=chalk,line width=0.6pt] (7.565,13.579) -- (7.925,13.579) -- (8.59,13.887) -- cycle;
+\filldraw[inked,fill=chalk,line width=0.6pt] (7.981,12.857) -- (8.341,12.857) -- (8.851,13.436) -- cycle;
+\filldraw[inked,fill=chalk,line width=0.6pt] (8.62,12.322) -- (8.98,12.322) -- (9.25,13.101) -- cycle;
+\filldraw[inked,fill=chalk,line width=0.6pt] (9.403,12.036) -- (9.763,12.036) -- (9.74,12.923) -- cycle;
+\filldraw[inked,fill=chalk,line width=0.6pt] (10.237,12.036) -- (10.597,12.036) -- (10.26,12.923) -- cycle;
+\filldraw[inked,fill=chalk,line width=0.6pt] (11.02,12.322) -- (11.38,12.322) -- (10.75,13.101) -- cycle;
+\filldraw[inked,fill=chalk,line width=0.6pt] (11.659,12.857) -- (12.019,12.857) -- (11.149,13.436) -- cycle;
+\filldraw[inked,fill=chalk,line width=0.6pt] (12.075,13.579) -- (12.435,13.579) -- (11.41,13.887) -- cycle;
+\fill[eldglow, opacity=0.07] (10,14.4) circle (5.5);
+\filldraw[inked,fill=arock] (-0.5,0) -- (-0.5,4.2) .. controls (6,6.2) and (12,6.6) .. (18,5.8) .. controls (24,5.0) and (28,4.2) .. (32.5,3.8) -- (32.5,0) -- cycle;
+\filldraw[inked,fill=astone] (0.5,4.543) -- (1.3,4.543) .. controls (1.524,6.03) and (1.324,6.688) .. (1.024,6.688) .. controls (0.624,6.688) and (0.4,6.03) .. cycle;
+\filldraw[inked,fill=astonedark,line width=0.6pt] (0.7,4.543) .. controls (0.75,3.643) and (0.85,3.443) .. (0.8,3.143) .. controls (0.65,3.443) and (0.6,3.843) .. cycle;
+\filldraw[inked,fill=astonedark,line width=0.6pt] (1.1,4.543) .. controls (1.15,3.643) and (1.25,3.443) .. (1.2,3.143) .. controls (1.05,3.443) and (1,3.843) .. cycle;
+\filldraw[inked,fill=astone] (2.4,5.258) -- (3.2,5.258) .. controls (3.71,6.751) and (3.51,7.412) .. (3.21,7.412) .. controls (2.81,7.412) and (2.3,6.751) .. cycle;
+\filldraw[inked,fill=astonedark,line width=0.6pt] (2.6,5.258) .. controls (2.65,4.358) and (2.75,4.158) .. (2.7,3.858) .. controls (2.55,4.158) and (2.5,4.558) .. cycle;
+\filldraw[inked,fill=astonedark,line width=0.6pt] (3,5.258) .. controls (3.05,4.358) and (3.15,4.158) .. (3.1,3.858) .. controls (2.95,4.158) and (2.9,4.558) .. cycle;
+\filldraw[inked,fill=astone] (4.3,4.935) -- (5.1,4.935) .. controls (5.309,6.806) and (5.109,7.721) .. (4.809,7.721) .. controls (4.409,7.721) and (4.2,6.806) .. cycle;
+\filldraw[inked,fill=astonedark,line width=0.6pt] (4.5,4.935) .. controls (4.55,4.035) and (4.65,3.835) .. (4.6,3.535) .. controls (4.45,3.835) and (4.4,4.235) .. cycle;
+\filldraw[inked,fill=astonedark,line width=0.6pt] (4.9,4.935) .. controls (4.95,4.035) and (5.05,3.835) .. (5,3.535) .. controls (4.85,3.835) and (4.8,4.235) .. cycle;
+\filldraw[inked,fill=astone] (6.2,4.872) -- (7,4.872) .. controls (7.332,6.419) and (7.132,7.118) .. (6.832,7.118) .. controls (6.432,7.118) and (6.1,6.419) .. cycle;
+\filldraw[inked,fill=astonedark,line width=0.6pt] (6.4,4.872) .. controls (6.45,3.972) and (6.55,3.772) .. (6.5,3.472) .. controls (6.35,3.772) and (6.3,4.172) .. cycle;
+\filldraw[inked,fill=astonedark,line width=0.6pt] (6.8,4.872) .. controls (6.85,3.972) and (6.95,3.772) .. (6.9,3.472) .. controls (6.75,3.772) and (6.7,4.172) .. cycle;
+\filldraw[inked,fill=astone] (8.1,4.536) -- (8.9,4.536) .. controls (9.29,6.042) and (9.09,6.712) .. (8.79,6.712) .. controls (8.39,6.712) and (8,6.042) .. cycle;
+\filldraw[inked,fill=astonedark,line width=0.6pt] (8.3,4.536) .. controls (8.35,3.636) and (8.45,3.436) .. (8.4,3.136) .. controls (8.25,3.436) and (8.2,3.836) .. cycle;
+\filldraw[inked,fill=astonedark,line width=0.6pt] (8.7,4.536) .. controls (8.75,3.636) and (8.85,3.436) .. (8.8,3.136) .. controls (8.65,3.436) and (8.6,3.836) .. cycle;
+\filldraw[inked,fill=astone] (10,4.923) -- (10.8,4.923) .. controls (11.348,6.523) and (11.148,7.256) .. (10.848,7.256) .. controls (10.448,7.256) and (9.9,6.523) .. cycle;
+\filldraw[inked,fill=astonedark,line width=0.6pt] (10.2,4.923) .. controls (10.25,4.023) and (10.35,3.823) .. (10.3,3.523) .. controls (10.15,3.823) and (10.1,4.223) .. cycle;
+\filldraw[inked,fill=astonedark,line width=0.6pt] (10.6,4.923) .. controls (10.65,4.023) and (10.75,3.823) .. (10.7,3.523) .. controls (10.55,3.823) and (10.5,4.223) .. cycle;
+\filldraw[inked,fill=astone] (11.9,5.158) -- (12.7,5.158) .. controls (13.248,7.03) and (13.048,7.945) .. (12.748,7.945) .. controls (12.348,7.945) and (11.8,7.03) .. cycle;
+\filldraw[inked,fill=astonedark,line width=0.6pt] (12.1,5.158) .. controls (12.15,4.258) and (12.25,4.058) .. (12.2,3.758) .. controls (12.05,4.058) and (12,4.458) .. cycle;
+\filldraw[inked,fill=astonedark,line width=0.6pt] (12.5,5.158) .. controls (12.55,4.258) and (12.65,4.058) .. (12.6,3.758) .. controls (12.45,4.058) and (12.4,4.458) .. cycle;
+\filldraw[inked,fill=astone] (13.8,4.854) -- (14.6,4.854) .. controls (15.064,6.372) and (14.864,7.05) .. (14.564,7.05) .. controls (14.164,7.05) and (13.7,6.372) .. cycle;
+\filldraw[inked,fill=astonedark,line width=0.6pt] (14,4.854) .. controls (14.05,3.954) and (14.15,3.754) .. (14.1,3.454) .. controls (13.95,3.754) and (13.9,4.154) .. cycle;
+\filldraw[inked,fill=astonedark,line width=0.6pt] (14.4,4.854) .. controls (14.45,3.954) and (14.55,3.754) .. (14.5,3.454) .. controls (14.35,3.754) and (14.3,4.154) .. cycle;
+\filldraw[inked,fill=astone] (15.7,4.985) -- (16.5,4.985) .. controls (16.888,6.475) and (16.688,7.135) .. (16.388,7.135) .. controls (15.988,7.135) and (15.6,6.475) .. cycle;
+\filldraw[inked,fill=astonedark,line width=0.6pt] (15.9,4.985) .. controls (15.95,4.085) and (16.05,3.885) .. (16,3.585) .. controls (15.85,3.885) and (15.8,4.285) .. cycle;
+\filldraw[inked,fill=astonedark,line width=0.6pt] (16.3,4.985) .. controls (16.35,4.085) and (16.45,3.885) .. (16.4,3.585) .. controls (16.25,3.885) and (16.2,4.285) .. cycle;
+\filldraw[inked,fill=astonedark] (4.6,5.8) rectangle (4.9,8.6);
+\filldraw[inked,fill=astonedark] (6.1,5.8) rectangle (6.4,8.6);
+\filldraw[inked,fill=astone] (4.5,8.6) rectangle (6.5,8.95);
+\fill[doorlight, opacity=0.8] (4.9,5.8) rectangle (6.1,8.6);
+\filldraw[inked,fill=coatdark] (7.977,9.38) -- (8.193,9.38) -- (8.622,10.28) -- (8.43,10.28) -- cycle;
+\filldraw[inked,fill=hair] (7.935,9.356) -- (8.271,9.356) -- (8.304,9.488) -- (7.968,9.488) -- cycle;
+\filldraw[inked,fill=coatdark] (8.577,9.14) -- (8.793,9.14) -- (8.886,10.28) -- (8.694,10.28) -- cycle;
+\filldraw[inked,fill=hair] (8.535,9.116) -- (8.871,9.116) -- (8.904,9.248) -- (8.568,9.248) -- cycle;
+\filldraw[inked,fill=coat] (8.031,9.74) -- (9.039,9.74) -- (9.039,10.46) -- (8.391,10.46) -- cycle;
+\filldraw[inked,fill=coat] (8.376,10.4) -- (9.024,10.4) -- (9.246,11.144) -- (8.526,11.144) -- cycle;
+\filldraw[inked,fill=trim] (8.364,10.4) -- (9.036,10.4) -- (9.06,10.496) -- (8.388,10.496) -- cycle;
+\filldraw[inked,fill=trim] (8.736,11.12) .. controls (8.205,11.3) and (7.755,10.94) .. (7.266,11.144) -- (7.29,11) .. controls (7.776,10.784) and (8.205,11.06) .. (8.97,11) -- cycle;
+\filldraw[inked,fill=skin] (8.949,11.396) circle (0.24);
+\filldraw[inked,fill=hair] (8.697,11.396) arc (180:0:0.252) -- (9.093,11.42) -- (8.889,11.516) -- cycle;
+\draw[eldglow, line width=0.8pt, opacity=0.6] (8.8,11.5) -- (9.6,13.2);
+\draw[eldglow, line width=0.8pt, opacity=0.6] (8.9,11.8) -- (9.7,13.3);
+\draw[eldglow, line width=0.8pt, opacity=0.6] (9,12.1) -- (9.8,13.4);
+\draw[eldglow, line width=0.8pt, opacity=0.6] (9.1,12.4) -- (9.9,13.5);
+\draw[eldglow, line width=0.8pt, opacity=0.6] (9.2,12.7) -- (10,13.6);
+\draw[eldglow, line width=0.8pt, opacity=0.6] (9.3,13) -- (10.1,13.7);
+\end{tikzpicture}
+\end{document}

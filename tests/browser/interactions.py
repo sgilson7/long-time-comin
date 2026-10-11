@@ -6,16 +6,15 @@ shows. Expected values are worked out by hand from the data files, never
 copied from the game's own output:
 
 - story.json's sentencing has 5 lines; its indictment has 10 counts.
-- the Codex has 5 tabs (copy.json codex_tabs), 14 control rows
-  (copy.json controls), 4 guns (weapons.json) and 25 enemies (enemies.json:
-  seven and a boss in each of the three built zones, and the house's
-  mini-boss).
+- the Codex has 5 tabs (copy.json codex_tabs), 16 control rows
+  (copy.json controls), 5 guns (weapons.json) and 35 enemies (enemies.json:
+  seven and a boss in each of the four built zones, and three mini-bosses).
 - the crater's gate is open, so its label shows; the first fight's gates
   stay dark and unlabelled until its enemies are defeated.
-- upgrades.json lists 27 upgrades in 4 branches (copy.json holding_branches);
+- upgrades.json lists 30 upgrades in 4 branches (copy.json holding_branches);
   the cheapest (Constitution I) costs 8, so a new record with 0 Clemency can
   buy none of them.
-- zone.json lists 4 zones, 3 built: 1 is sealed.
+- zone.json lists 5 zones, 4 built: 1 is sealed.
 - a run starts in the arrival node, named "The Crater" in zone.json; with
   no upgrades the body has 100 health (balance.rs BASE_HEALTH), 1 jump
   (BASE_JUMPS) and 2 dashes (DASH_CHARGES).
@@ -29,7 +28,7 @@ copied from the game's own output:
 - a record with zone three open (unlocked 2) offers two; the second starts
   in "The Vestibule" of "The Glass House", and a death there is headed by
   story.json's death title for the house.
-- the test save (clicked twice, as it asks) owns all 27 upgrades and opens
+- the test save (clicked twice, as it asks) owns all 30 upgrades and opens
   the boss rush, whose first arena is the Bailiff's, "The Court of Hours".
 """
 
@@ -65,7 +64,7 @@ def run(page, check, engine):
     check(mode(page) == "holding", "then the Holding")
     cards = page.query_selector_all("#upgrades .upgrade")
     buyable = page.query_selector_all("#upgrades .upgrade:not(:disabled)")
-    check(len(cards) == 27 and len(buyable) == 0, f"27 upgrades, none affordable with 0 Clemency ({len(cards)}, {len(buyable)})")
+    check(len(cards) == 30 and len(buyable) == 0, f"30 upgrades, none affordable with 0 Clemency ({len(cards)}, {len(buyable)})")
     branches = page.query_selector_all("#upgrades .branch")
     check(len(branches) == 4, f"in four branches ({len(branches)})")
     check(page.inner_text("#m-counts") == "0 / 10", f"no count read yet ({page.inner_text('#m-counts')!r})")
@@ -78,13 +77,13 @@ def run(page, check, engine):
     check(page.is_visible("#codex"), "the Codex opens from the Holding")
     tabs = page.query_selector_all("#codex-tabs .tab")
     rows = page.query_selector_all("#codex-body table.stats tr")
-    check(len(tabs) == 5 and len(rows) == 14, f"5 tabs, 14 control rows ({len(tabs)}, {len(rows)})")
+    check(len(tabs) == 5 and len(rows) == 16, f"5 tabs, 16 control rows ({len(tabs)}, {len(rows)})")
     click(page, "#codex-tabs .tab:nth-child(2)")
     guns = page.query_selector_all("#codex-body .codex-card")
-    check(len(guns) == 4, f"four guns ({len(guns)})")
+    check(len(guns) == 5, f"five guns ({len(guns)})")
     click(page, "#codex-tabs .tab:nth-child(3)")
     foes = page.query_selector_all("#codex-body .codex-card")
-    check(len(foes) == 25, f"twenty-five enemies ({len(foes)})")
+    check(len(foes) == 35, f"thirty-five enemies ({len(foes)})")
     body = page.inner_text("#codex-body")
     check("{" not in body, "no unfilled placeholder in the Codex")
     click(page, "#codex-close")
@@ -208,7 +207,7 @@ def run(page, check, engine):
     click(page, "#test-save")
     page.wait_for_timeout(300)
     owned = page.query_selector_all("#upgrades .upgrade.owned")
-    check(len(owned) == 27, f"the test save owns every upgrade ({len(owned)})")
+    check(len(owned) == 30, f"the test save owns every upgrade ({len(owned)})")
     check(page.is_visible("#start-rush"), "and opens the boss rush")
     click(page, "#start-rush")
     check(mode(page) == "play", f"the rush plays ({mode(page)})")

@@ -163,6 +163,8 @@ pub enum AltKind {
     Cluster,
     /// every lodged blade bursts and comes back
     Detonate,
+    /// every round left in the cylinder, one after another, a little wild
+    Fan,
 }
 
 /// A gun's second fire, at level 1; each level above adds `ALT_LEVEL_PCT`.
@@ -215,6 +217,11 @@ struct GunLevelFile {
     teeth: i32,
     #[serde(default)]
     recall_ms: i32,
+    /// a revolver's cylinder, and the time to load one round into it
+    #[serde(default)]
+    mag: i32,
+    #[serde(default)]
+    shell_ms: i32,
 }
 
 /// One level of one gun, in simulation units.
@@ -231,6 +238,9 @@ pub struct GunLevel {
     pub splash: i32,
     pub pierce: i32,
     pub saw: Option<SawLevel>,
+    /// rounds in the cylinder (0: no reloading), and ticks to load one
+    pub mag: i32,
+    pub shell: i32,
 }
 
 /// A saw gun's level: blades that lodge in what they hit and rev while
@@ -563,6 +573,9 @@ struct AttackFile {
     /// a tank's attack fired from every cannon at once
     #[serde(default)]
     cannons: bool,
+    /// as its windup ends, time stops this long for all but its caster
+    #[serde(default)]
+    stop_ms: i32,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -656,6 +669,10 @@ pub enum Kind {
     Agent,
     /// the Executor: a tracked tank, hurt only in its weak points
     Tank,
+    /// a mech after Iron Vector's: glides, quick-boosts, ascends
+    Mech,
+    /// the Defendant: moves as you do, and stops time
+    Double,
 }
 
 /// An agent's part in its squad.
@@ -688,6 +705,7 @@ pub struct Attack {
     pub lock: i32,
     pub indirect: bool,
     pub cannons: bool,
+    pub stop: i32,
 }
 
 /// Which part of a tank a weak point or cannon is on.
@@ -768,14 +786,17 @@ pub struct RouteRules {
     /// the levels a gun on a near and on a deep side path has
     #[serde(default = "two_three")]
     pub weapon_levels: [i32; 2],
-    /// a mini-boss fought alone in its own arena, on main fight
-    /// `miniboss_at` (from 0); none in zones one and two
+    /// mini-bosses, each fought alone in its own arena on a main fight
     #[serde(default)]
-    pub miniboss: String,
-    #[serde(default)]
-    pub miniboss_at: usize,
-    #[serde(default)]
-    pub miniboss_arena: String,
+    pub minibosses: Vec<Miniboss>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+pub struct Miniboss {
+    pub enemy: String,
+    /// the main fight it takes, counted from 0
+    pub at: usize,
+    pub arena: String,
 }
 
 fn two_three() -> [i32; 2] {
@@ -875,6 +896,9 @@ pub struct Upgrade {
     pub icon: String,
     /// the Holding's column it stands in
     pub branch: String,
+    /// a boss that must have been beaten before it can be bought
+    #[serde(default)]
+    pub unlock: String,
 }
 
 /// The rewards a side path or the Antechamber can hold.
@@ -905,6 +929,8 @@ const EFFECTS: &[&str] = &[
     "conduct",
     "bail",
     "lien",
+    "stop",
+    "stop_plus",
 ];
 
 /// The Holding's columns, in order.
@@ -1033,9 +1059,7 @@ impl Content {
                         rest_rewards: Vec::new(),
                         cache_rewards: Vec::new(),
                         weapon_levels: two_three(),
-                        miniboss: String::new(),
-                        miniboss_at: 0,
-                        miniboss_arena: String::new(),
+                        minibosses: Vec::new(),
                     },
                     archetypes: Vec::new(),
                     names: z.names,
@@ -1063,9 +1087,9 @@ impl Content {
                     return Err(format!("zone {}: no archetypes", z.id));
                 }
                 find_enemy(&z.boss)?;
-                if !r.miniboss.is_empty() {
-                    find_enemy(&r.miniboss)?;
-                    if r.miniboss_at >= r.main_fights || r.miniboss_arena.is_empty() {
+                for mb in &r.minibosses {
+                    find_enemy(&mb.enemy)?;
+                    if mb.at >= r.main_fights || mb.arena.is_empty() {
                         return Err(format!(
                             "zone {}: the mini-boss needs a main fight and an arena",
                             z.id
@@ -1203,6 +1227,8 @@ fn parse_guns(text: &str, pal: &Palette) -> Result<Vec<Gun>, String> {
                 splash_radius: cm(l.splash_cm),
                 splash: l.splash,
                 pierce: l.pierce,
+                mag: l.mag.max(0),
+                shell: ms(l.shell_ms).max(1),
                 saw: (l.saws > 0).then(|| SawLevel {
                     saws: l.saws,
                     rev_damage: l.rev_damage,
@@ -1225,6 +1251,7 @@ fn parse_guns(text: &str, pal: &Palette) -> Result<Vec<Gun>, String> {
                     "slug" => AltKind::Slug,
                     "cluster" => AltKind::Cluster,
                     "detonate" => AltKind::Detonate,
+                    "fan" => AltKind::Fan,
                     k => return Err(format!("weapons: a gun has no alt fire {k}")),
                 },
                 name: w.alt.name.clone(),
@@ -1396,6 +1423,7 @@ fn parse_enemies(text: &str, patterns: &[Pattern]) -> Result<Vec<EnemyDef>, Stri
             lock: ms(a.lock_ms),
             indirect: a.indirect,
             cannons: a.cannons,
+            stop: ms(a.stop_ms),
         })
     };
     let part = |f: &PartFile, who: &str| -> Result<Part, String> {
@@ -1429,6 +1457,8 @@ fn parse_enemies(text: &str, patterns: &[Pattern]) -> Result<Vec<EnemyDef>, Stri
             "burrower" => Kind::Burrower,
             "agent" => Kind::Agent,
             "tank" => Kind::Tank,
+            "mech" => Kind::Mech,
+            "double" => Kind::Double,
             k => return Err(format!("enemies: {} has no kind {k}", e.id)),
         };
         let role = match e.role.as_str() {
@@ -1446,7 +1476,7 @@ fn parse_enemies(text: &str, patterns: &[Pattern]) -> Result<Vec<EnemyDef>, Stri
         if kind == Kind::Agent && role == Role::None {
             return Err(format!("enemies: agent {} has no role", e.id));
         }
-        let phases = if matches!(kind, Kind::Boss | Kind::Tank) {
+        let phases = if matches!(kind, Kind::Boss | Kind::Tank | Kind::Double) {
             if e.phases.is_empty() {
                 return Err(format!("enemies: boss {} has no phases", e.id));
             }
@@ -1486,8 +1516,11 @@ fn parse_enemies(text: &str, patterns: &[Pattern]) -> Result<Vec<EnemyDef>, Stri
                             k + 1
                         ));
                     }
-                    if k == last && p.survive <= 0 {
-                        return Err(format!("enemies: {} last phase has no survive_ms", e.id));
+                    if k == last && p.survive <= 0 && p.weak.is_empty() {
+                        return Err(format!(
+                            "enemies: {} last phase has nothing to break or outlast",
+                            e.id
+                        ));
                     }
                 }
             }
@@ -1565,9 +1598,13 @@ pub mod tests {
     }
 
     #[test]
-    fn the_data_files_parse_and_hold_four_guns_of_four_levels() {
+    fn the_data_files_parse_and_hold_five_guns_of_four_levels() {
         let c = content();
-        assert_eq!(c.guns.len(), 4);
+        assert_eq!(c.guns.len(), 5);
+        // the Big Iron: six rounds, the Ascent's
+        let iron = &c.guns[c.gun("big_iron")];
+        assert!(iron.levels.iter().all(|l| l.mag == 6));
+        assert_eq!(iron.from_zone, 3);
         assert!(c.guns.iter().all(|g| g.levels.len() == 4));
         // the Ripsaw is the saw gun, and only the house offers it
         let saw = &c.guns[c.gun("ripsaw")];
@@ -1719,6 +1756,41 @@ pub mod tests {
         let mut roles: Vec<Role> = three.iter().map(|&e| c.enemies[e].role).collect();
         roles.dedup();
         assert_eq!(roles.len(), 7, "{roles:?}");
+    }
+
+    #[test]
+    fn the_ascent_has_seven_assassins_none_of_whose_patterns_came_before() {
+        let c = content();
+        let earlier: Vec<usize> = (0..3)
+            .flat_map(|z| {
+                let (r, boss) = roster(&c, z);
+                r.into_iter().chain(std::iter::once(boss))
+            })
+            .chain(["chief", "pioneer", "escort"].iter().filter_map(|id| c.enemy(id)))
+            .collect();
+        let (four, boss) = roster(&c, 3);
+        assert_eq!(four.len(), 7);
+        assert!(four.iter().all(|&e| c.enemies[e].kind == Kind::Agent));
+        assert_eq!(c.enemies[boss].kind, Kind::Double);
+        let pats = |ids: &[usize]| -> Vec<usize> {
+            ids.iter()
+                .flat_map(|&e| {
+                    c.enemies[e]
+                        .phases
+                        .iter()
+                        .flat_map(|p| p.attacks.iter().map(|a| a.pattern))
+                })
+                .collect()
+        };
+        let before = pats(&earlier);
+        for p in pats(&four).into_iter().chain(pats(&[boss])) {
+            assert!(!before.contains(&p), "{} came before", c.patterns[p].id);
+        }
+        // the Defendant stops time in every phase
+        assert!(c.enemies[boss]
+            .phases
+            .iter()
+            .all(|p| p.attacks.iter().any(|a| a.stop > 0)));
     }
 
     #[test]

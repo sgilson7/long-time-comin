@@ -25,6 +25,9 @@ uniform vec4 uFocus;
 uniform vec4 uSee;
 uniform float uSeeSolid;
 uniform float uCut;
+// x: how far the summit has melted (the Idiot God's coming), y: time
+// stopped (the picture goes grey)
+uniform vec2 uFx;
 // a facade's window grid: one window to a cell this wide and tall, in
 // metres (crates/core/src/arena.rs: col_w and storey), and the window's
 // half size and its frame's, as fractions of the cell
@@ -33,6 +36,13 @@ const vec2 PANE = vec2(0.23, 0.235);
 const vec2 FRAME = vec2(0.2, 0.21);
 const float LIT = 0.45;
 out vec4 outColor;
+// the finished colour: grey while time is stopped, the eldritch tint as
+// the summit melts
+vec3 finish(vec3 c) {
+  float grey = dot(c, vec3(0.3, 0.59, 0.11));
+  c = mix(c, vec3(grey) * vec3(0.85, 0.92, 1.1), uFx.y * 0.85);
+  return mix(c, c * vec3(0.7, 0.55, 1.15) + vec3(0.05, 0.12, 0.02) * uFx.x, uFx.x * 0.6);
+}
 // Is this fragment of scenery between the camera and the player? Inside the
 // cut's core it goes; at its rim every other pixel goes, which reads as glass.
 bool seeThrough() {
@@ -69,18 +79,18 @@ void main() {
     bool lit = h < LIT;
     vec3 c = lit ? vColor.rgb * 1.2 + vec3(0.06) : uWindowDark;
     if (at.x > FRAME.x || at.y > FRAME.y) c = uInk;
-    outColor = vec4(mix(c, uFog, f * (lit ? 0.5 : 1.0)), 1.0);
+    outColor = vec4(finish(mix(c, uFog, f * (lit ? 0.5 : 1.0))), 1.0);
     return;
   }
   if (uPass > 2.5) {
     vec3 v = normalize(uEye - vWorld);
     float through = abs(dot(n, v));
     float a = pow(through, 2.2) * vColor.a * (1.0 - 0.8 * f);
-    outColor = vec4(vColor.rgb * a, 1.0);
+    outColor = vec4(finish(vColor.rgb * a), 1.0);
     return;
   }
   if (uPass > 1.5) {
-    outColor = vec4(mix(vColor.rgb, uFog, f * 0.85), 1.0);
+    outColor = vec4(finish(mix(vColor.rgb, uFog, f * 0.85)), 1.0);
     return;
   }
   vec3 base = vColor.rgb;
@@ -91,5 +101,5 @@ void main() {
   vec3 lit = base * (ambient * 0.75 + uLight * band * 0.5);
   vec3 glow = base * 1.25 + vec3(0.08);
   lit = mix(lit, glow, vColor.a);
-  outColor = vec4(mix(lit, uFog, f * (1.0 - 0.6 * vColor.a)), 1.0);
+  outColor = vec4(finish(mix(lit, uFog, f * (1.0 - 0.6 * vColor.a))), 1.0);
 }

@@ -75,6 +75,10 @@ COLOURS = {
     "shirt": "EDEDE6", "agentskin": "D8C3A8", "shades": "0E0F12", "tankhull": "3B4249", "tankplate": "5A646F",
     "tanktread": "22262B", "tankweak": "FF7A1A", "tankeye": "FFF3B0", "tankiris": "FF4A3A", "halo": "FFC94A",
     "scarlet": "FF2E3A", "chalk": "FFF6DA", "lime": "B6FF3A", "sawsteel": "E8F0F5",
+    # zone four, the Ascent, and what comes after it
+    "dusk": "E8A27A", "duskhi": "F6C9A0", "dusklow": "B07A8C", "astone": "B9A79A", "astonedark": "7D6C68",
+    "arock": "8A7A80", "amoss": "7FA06A", "asnow": "F4EDF0", "doorlight": "FFE9A8",
+    "flesh": "3E2A5C", "fleshdark": "1A1028", "eldglow": "B6FF6A", "void": "05030A", "violetdeep": "9B5DE5",
 }
 WALLS = ["wallA", "wallB", "wallC", "wallD", "wallE", "wallF"]
 GREENS = ["greenA", "greenB", "greenC", "greenD"]
@@ -494,6 +498,16 @@ def gun_art(kind):
         s += circle(9.4, 1.83, 0.2, "ink")
         s += poly([(1.2, 1.3), (2.2, 1.3), (1.8, 0.2), (0.9, 0.3)], "wood")
         s += rect(1.6, 2.8, 4.4, 3.05, "gold")
+    elif kind == "big_iron":
+        s += rect(4.6, 2.1, 9.6, 2.55, "metaldark")
+        s += rect(9.3, 2.0, 9.7, 2.65, "metaldark")
+        s += f"\\filldraw[inked,fill=gun,rounded corners=3pt] (3.0,1.6) rectangle (4.9,3.0);\n"
+        for k in range(3):
+            s += f"\\draw[ink, line width=0.8pt] {P(3.2, 1.85 + k * 0.4)} -- {P(4.7, 1.85 + k * 0.4)};\n"
+        s += poly([(2.2, 2.9), (3.1, 3.0), (3.1, 2.6), (2.6, 2.5)], "gun")
+        s += poly([(1.9, 2.0), (3.2, 1.7), (2.6, 0.2), (1.4, 0.4)], "wood")
+        s += circle(2.15, 1.2, 0.12, "goldtrim")
+        s += rect(4.8, 2.55, 9.4, 2.7, "lamp")
     elif kind == "ripsaw":
         s += poly([(0.4, 1.4), (5.6, 1.4), (5.6, 2.8), (0.4, 2.6)], "gun")
         s += poly([(1.3, 1.4), (2.2, 1.4), (1.9, 0.3), (1.0, 0.4)], "gun")
@@ -608,6 +622,11 @@ def icon(kind):
             s += f"\\filldraw[inked,fill=metal,rounded corners=3pt] {P(0.9 + k * 0.25, y)} rectangle {P(3.1 - k * 0.25, y + 0.6)};\n"
             s += circle(1.2 + k * 0.25, y + 0.3, 0.08, "ink")
             s += circle(2.8 - k * 0.25, y + 0.3, 0.08, "ink")
+    elif kind == "stop":
+        # a clock face, its hands stopped, and a hand held up before it
+        s += circle(2.0, 2.0, 1.25, "clock")
+        s += "\\draw[ink, line width=1.8pt] (2,2) -- (1.15,2.1);\n\\draw[ink, line width=1.2pt] (2,2) -- (2.95,2.1);\n"
+        s += "\\draw[violetdeep, line width=2.2pt] (2,2) circle (1.5);\n"
     elif kind == "gavel":
         s += poly([(0.9, 0.9), (2.4, 2.4), (2.1, 2.7), (0.6, 1.2)], "wood")
         s += f"\\filldraw[inked,fill=goldtrim,rotate around={{45:(2.6,2.6)}}] (1.9,2.25) rectangle (3.3,2.95);\n"
@@ -973,6 +992,57 @@ def orders():
     return s, (W, H)
 
 
+def door():
+    """The Door: the summit's circle of stones running like wax, the sky
+    torn open over it and the Idiot God pouring through, a mass of violet
+    bubbles and eyes round a black maw, and the Defendant small against
+    it, drawn up toward the mouth. The right side is the torn sky, under
+    the page's sheet."""
+    W, H = 32.0, 18.0
+    rng = random.Random(2081)
+    s = f"\\fill[dusk] (0,0) rectangle {P(W, H)};\n"
+    s += f"\\fill[duskhi] (0,{f(H * 0.35)}) rectangle {P(W, H * 0.55)};\n"
+    s += f"\\fill[dusklow] (0,0) rectangle {P(W, H * 0.3)};\n"
+    # the tear in the sky, and what is through it
+    s += f"\\filldraw[inked,fill=void] (-1,17.8) .. controls (3,12) and (15,11) .. (21,17.8) -- cycle;\n"
+    for k in range(34):
+        a = rng.uniform(0.2, math.pi - 0.2)
+        r = rng.uniform(2.0, 9.0)
+        x, y = 10 + math.cos(a) * r, 18.5 - math.sin(a) * r * 0.55
+        b = rng.uniform(0.6, 1.6)
+        s += circle(x, y, b, "flesh" if k % 3 else "fleshdark")
+        if k % 2 == 0:
+            s += f"\\filldraw[inked,fill=chalk] {P(x, y)} ellipse ({f(b * 0.45)} and {f(b * 0.28)});\n"
+            s += circle(x, y, b * 0.16, "eldglow")
+            s += circle(x, y, b * 0.07, "void")
+    # the maw, a ring of teeth round the dark
+    s += circle(10, 14.4, 2.4, "void")
+    for k in range(18):
+        a = 2 * math.pi * k / 18
+        x0, y0 = 10 + math.cos(a) * 2.4, 14.4 + math.sin(a) * 2.4
+        x1, y1 = 10 + math.cos(a) * 1.5, 14.4 + math.sin(a) * 1.5
+        s += poly([(x0 - 0.18, y0), (x0 + 0.18, y0), (x1, y1)], "chalk", ",line width=0.6pt")
+    s += f"\\fill[eldglow, opacity=0.07] (10,14.4) circle (5.5);\n"
+    # the mountain's summit, melting: stones that sag and run
+    s += f"\\filldraw[inked,fill=arock] (-0.5,0) -- (-0.5,4.2) .. controls (6,6.2) and (12,6.6) .. (18,5.8) .. controls (24,5.0) and (28,4.2) .. (32.5,3.8) -- (32.5,0) -- cycle;\n"
+    for k in range(9):
+        x = 0.5 + k * 1.9
+        h = rng.uniform(1.6, 2.6)
+        lean = rng.uniform(-0.5, 0.5)
+        top = 5.4 + rng.uniform(-0.4, 0.4)
+        s += f"\\filldraw[inked,fill=astone] {P(x, top - 0.5)} -- {P(x + 0.8, top - 0.5)} .. controls {P(x + 0.9 + lean, top + h * 0.6)} and {P(x + 0.7 + lean, top + h)} .. {P(x + 0.4 + lean, top + h)} .. controls {P(x + lean, top + h)} and {P(x - 0.1, top + h * 0.6)} .. cycle;\n"
+        for d in range(2):
+            dx = x + 0.2 + d * 0.4
+            s += f"\\filldraw[inked,fill=astonedark,line width=0.6pt] {P(dx, top - 0.5)} .. controls {P(dx + 0.05, top - 1.4)} and {P(dx + 0.15, top - 1.6)} .. {P(dx + 0.1, top - 1.9)} .. controls {P(dx - 0.05, top - 1.6)} and {P(dx - 0.1, top - 1.2)} .. cycle;\n"
+    # the Long Door, still lit, and the Defendant drawn up toward the maw
+    s += rect(4.6, 5.8, 4.9, 8.6, "astonedark") + rect(6.1, 5.8, 6.4, 8.6, "astonedark") + rect(4.5, 8.6, 6.5, 8.95, "astone")
+    s += f"\\fill[doorlight, opacity=0.8] (4.9,5.8) rectangle (6.1,8.6);\n"
+    s += defendant(8.4, 9.2, 1.2, lean=0.25, gun=False, falling=True)
+    for k in range(6):
+        s += f"\\draw[eldglow, line width=0.8pt, opacity=0.6] {P(8.8 + k * 0.1, 11.5 + k * 0.3)} -- {P(9.6 + k * 0.1, 13.2 + k * 0.1)};\n"
+    return s, (W, H)
+
+
 PICTURES = {
     "title": title,
     "sentencing": sentencing,
@@ -982,10 +1052,11 @@ PICTURES = {
     "testimony": testimony,
     "interlude_house": interlude_house,
     "orders": orders,
+    "door": door,
 }
-for g in ("carbine", "scattergun", "launcher", "ripsaw"):
+for g in ("carbine", "scattergun", "launcher", "ripsaw", "big_iron"):
     PICTURES[f"guns/{g}"] = (lambda g=g: gun_art(g))
-for k in ("heart", "jump", "speed", "gun", "parry", "hook", "dash", "gavel", "pierce", "pulse", "mend", "wall", "pound", "saw", "conduct", "trigger", "plating"):
+for k in ("heart", "jump", "speed", "gun", "parry", "hook", "dash", "gavel", "pierce", "pulse", "mend", "wall", "pound", "saw", "conduct", "trigger", "plating", "stop"):
     PICTURES[f"icons/{k}"] = (lambda k=k: icon(k))
 
 # dpi for each kind: big pictures fill a screen, icons are small

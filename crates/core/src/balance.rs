@@ -176,6 +176,30 @@ pub const TANK_RISE: i32 = int(5);
 pub const SHAKE_TICKS: i32 = secs(1, 1);
 pub const SHAKE_SIZE: i32 = ONE * 35 / 100;
 
+// ---- the Ascent ---------------------------------------------------------------
+
+/// a revolver loads after the trigger has been let be this long
+pub const RELOAD_WAIT: i32 = secs(35, 100);
+/// grab and throw: an enemy at this share of its health or less, this
+/// near and in front of you, can be lifted; the throw's speed, its damage
+/// to what it hits and the burst round it
+pub const GRAB_PCT: i32 = 50;
+pub const GRAB_REACH: i32 = ONE * 35 / 10;
+pub const GRAB_HOLD: i32 = secs(3, 1);
+pub const THROW_SPEED: i32 = per_tick(32, 1);
+pub const THROW_DAMAGE: i32 = 180;
+pub const THROW_SPLASH: i32 = 70;
+pub const THROW_RADIUS: i32 = int(4);
+/// your time stop: this long at first (after the Defendant), a second
+/// more for each Stopped Clock, and its cooldown
+pub const STOP_BASE: i32 = secs(3, 1);
+pub const STOP_PLUS: i32 = secs(1, 1);
+pub const STOP_COOLDOWN: i32 = secs(30, 1);
+/// each step along the Ascent's map is this much higher up the mountain
+pub const ASCENT_PER_STEP: i32 = int(12);
+/// the Idiot God's coming lasts this long before the revelation
+pub const ENDING_TICKS: i32 = secs(14, 1);
+
 // ---- zone two's ground ------------------------------------------------------
 
 /// an updraft vent throws a body up at this speed (about 6 m)

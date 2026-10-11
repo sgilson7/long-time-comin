@@ -20,6 +20,7 @@ use crate::mesh::Mesh;
 use crate::rng::Rng;
 use std::collections::BTreeSet;
 
+mod ascent;
 mod house;
 mod ice;
 
@@ -110,6 +111,8 @@ struct B<'a> {
     ice: bool,
     /// zone three: in wood and marble
     house: bool,
+    /// zone four: the mountain's stone
+    ascent: bool,
     panes: Vec<Pane>,
 }
 
@@ -334,7 +337,9 @@ impl<'a> B<'a> {
         let step_h = dm(4);
         let run = dm(6);
         let steps = (rise + step_h - 1) / step_h;
-        let (stone, dark) = if self.house {
+        let (stone, dark) = if self.ascent {
+            (self.c("ascent_stone"), self.c("ascent_stone_dark"))
+        } else if self.house {
             (self.c("house_marble"), self.c("house_carpet"))
         } else if self.ice {
             (self.c("ice_white"), self.c("ice_snow_dark"))
@@ -354,7 +359,9 @@ impl<'a> B<'a> {
     /// A slab's body and its trim: stone and terracotta in the city, ice
     /// and the expedition's red on the ice.
     fn slab_colours(&self) -> (Rgb, Rgb) {
-        if self.house {
+        if self.ascent {
+            (self.c("ascent_stone"), self.c("ascent_moss"))
+        } else if self.house {
             (self.c("house_marble"), self.c("house_wood"))
         } else if self.ice {
             (self.c("ice_blue"), self.c("ice_red"))
@@ -456,7 +463,9 @@ impl<'a> B<'a> {
             ) {
                 continue;
             }
-            let wall = if self.house {
+            let wall = if self.ascent {
+                self.c("ascent_stone_dark")
+            } else if self.house {
                 self.c("house_wood_dark")
             } else if self.ice {
                 self.c("ice_deep")
@@ -1738,6 +1747,12 @@ pub fn segment(a: V3, b: V3, w: i32) -> Option<Affine> {
 /// Builds the arena for an archetype of a zone. `exits` are the sides with
 /// a way on; the player enters from the south.
 pub fn build(zone: &str, kind: &str, seed: u64, exits: &[Side], pal: &Palette) -> Arena {
+    build_at(zone, kind, seed, exits, pal, 0)
+}
+
+/// The arena, `rise` up the mountain (the Ascent's arenas stand higher
+/// each step of the map; the other zones ignore it).
+pub fn build_at(zone: &str, kind: &str, seed: u64, exits: &[Side], pal: &Palette, rise: i32) -> Arena {
     let mut b = B {
         solids: Vec::new(),
         shapes: Vec::new(),
@@ -1747,6 +1762,7 @@ pub fn build(zone: &str, kind: &str, seed: u64, exits: &[Side], pal: &Palette) -
         vents: Vec::new(),
         ice: zone == "white_waste",
         house: zone == "glass_house",
+        ascent: zone == "the_ascent",
         panes: Vec::new(),
     };
     let is_court = kind == "boss";
@@ -1754,6 +1770,8 @@ pub fn build(zone: &str, kind: &str, seed: u64, exits: &[Side], pal: &Palette) -
         b.ice(kind, exits);
     } else if zone == "glass_house" {
         b.house(kind, exits);
+    } else if zone == "the_ascent" {
+        b.ascent(kind, exits, rise);
     } else if is_court {
         b.court();
         b.shape(
@@ -1889,7 +1907,8 @@ pub fn build(zone: &str, kind: &str, seed: u64, exits: &[Side], pal: &Palette) -
         },
         fountain: if kind == "rest" { Some(v3(0, 0, 0)) } else { None },
         vents: b.vents,
-        nav: (zone == "glass_house").then(|| crate::nav::Nav::build(&level, COURT_RADIUS + m(2))),
+        nav: matches!(zone, "glass_house" | "the_ascent")
+            .then(|| crate::nav::Nav::build(&level, COURT_RADIUS + m(2))),
         panes: b.panes,
         level,
     }
@@ -1982,9 +2001,15 @@ mod size {
             ("glass_house", "gallery"),
             ("glass_house", "ballroom"),
             ("glass_house", "boss"),
+            ("the_ascent", "switchback"),
+            ("the_ascent", "span"),
+            ("the_ascent", "spire"),
+            ("the_ascent", "chapel"),
+            ("the_ascent", "ledge"),
+            ("the_ascent", "boss"),
         ];
         for (zone, kind) in kinds {
-            let a = build(zone, kind, 9, &[Side::North, Side::East], &c.pal);
+            let a = build_at(zone, kind, 9, &[Side::North, Side::East], &c.pal, int(200));
             let mut b = crate::render::Batch::new([0; 3]);
             for s in &a.shapes {
                 b.shape(s);
@@ -2161,6 +2186,87 @@ mod reach {
     }
 
     #[test]
+    fn every_gate_on_the_mountain_can_be_walked_to_and_each_step_is_higher_up() {
+        let c = content();
+        for kind in [
+            "arrival",
+            "rest",
+            "switchback",
+            "span",
+            "spire",
+            "chapel",
+            "ledge",
+            "boss",
+        ] {
+            for seed in 1..=8 {
+                let a = build_at(
+                    "the_ascent",
+                    kind,
+                    seed,
+                    &[Side::North, Side::East],
+                    &c.pal,
+                    int(48),
+                );
+                let reached = walk(&a.level, a.start);
+                for (g, _) in a.gates.iter().skip(1) {
+                    let near = reached
+                        .iter()
+                        .any(|p| p.sub(*g).len_xz() < int(2) && p.y.abs() < ONE);
+                    assert!(near, "{kind} seed {seed}: the gate at {g:?} cannot be walked to");
+                }
+                assert!(
+                    a.ground_spawns.len() > 30,
+                    "{kind} seed {seed}: {} spawns",
+                    a.ground_spawns.len()
+                );
+                let nav = a.nav.as_ref().expect("the mountain has a walk grid");
+                let from = nav.nearest(a.start).unwrap();
+                let walked: BTreeSet<u32> = nav.reach(from).into_iter().collect();
+                let lost = a
+                    .ground_spawns
+                    .iter()
+                    .filter(|p| nav.nearest(**p).is_none_or(|n| !walked.contains(&n)))
+                    .count();
+                assert!(
+                    lost * 10 <= a.ground_spawns.len(),
+                    "{kind} seed {seed}: {lost} spawns off the grid"
+                );
+                if matches!(kind, "arrival" | "rest") {
+                    continue;
+                }
+                let high = reached.iter().map(|p| p.y).max().unwrap_or(0);
+                assert!(
+                    high >= int(3),
+                    "{kind} seed {seed}: nothing 3 m up can be climbed to ({high})"
+                );
+                let under = reached.iter().any(|p| {
+                    p.y <= ONE
+                        && a.level
+                            .ray(p.add(v3(0, PLAYER_HEIGHT + ONE / 10, 0)), V3::UP, int(5))
+                            .is_some()
+                });
+                assert!(under, "{kind} seed {seed}: nowhere to walk under");
+            }
+        }
+        // the plain below is further down the higher the arena stands
+        let plain = |rise: i32| {
+            let a = build_at("the_ascent", "switchback", 3, &[Side::North], &c.pal, rise);
+            a.shapes
+                .iter()
+                .filter(|s| s.mesh == Mesh::Ground)
+                .map(|s| s.at.t.y)
+                .min()
+                .unwrap()
+        };
+        assert!(
+            plain(int(96)) < plain(int(48)) - int(40),
+            "{} {}",
+            plain(int(96)),
+            plain(int(48))
+        );
+    }
+
+    #[test]
     fn nothing_solid_stands_through_a_walkway() {
         // a pillar or a stair through a deck would block the walk along it
         // or the climb to it; the reachability walk cannot see that when
@@ -2188,6 +2294,12 @@ mod reach {
             ("glass_house", "gallery"),
             ("glass_house", "ballroom"),
             ("glass_house", "boss"),
+            ("the_ascent", "switchback"),
+            ("the_ascent", "span"),
+            ("the_ascent", "spire"),
+            ("the_ascent", "chapel"),
+            ("the_ascent", "ledge"),
+            ("the_ascent", "boss"),
         ];
         for (zone, kind) in kinds {
             let a = build(zone, kind, 2, &[Side::North, Side::East], &c.pal);

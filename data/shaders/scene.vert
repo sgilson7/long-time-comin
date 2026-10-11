@@ -8,6 +8,9 @@ in vec4 iB;
 in vec4 iC;
 in vec4 iD;
 uniform mat4 uVP;
+// scenery melts as the Idiot God comes (x of uFx); bodies do not
+uniform float uCut;
+uniform vec2 uFx;
 out vec3 vWorld;
 out vec3 vNormal;
 out vec4 vColor;
@@ -15,6 +18,9 @@ out vec4 vColor;
 out vec2 vFacade;
 void main() {
   vec3 w = iA.xyz * aPos.x + iB.xyz * aPos.y + iC.xyz * aPos.z + vec3(iA.w, iB.w, iC.w);
+  float melt = uFx.x * uFx.x * uCut;
+  w.y -= melt * (18.0 + 9.0 * sin(w.x * 0.37 + w.z * 0.21));
+  w.x += melt * 3.0 * sin(w.y * 0.5 + w.z * 0.3);
   // the columns carry a non-uniform scale, so normals take the inverse
   // scale: divide each axis by its column's squared length
   vec3 n = iA.xyz * (aNormal.x / max(dot(iA.xyz, iA.xyz), 1e-8))

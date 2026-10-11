@@ -2,7 +2,9 @@
 //! the years added to the sentence, and how much of the indictment has been
 //! read. The page keeps it in the browser as JSON.
 
-use crate::balance::{BASE_HEALTH, BASE_JUMPS, DASH_CHARGES, FIRST_DEATH_GRANT, SENTENCE_BONUS_PCT};
+use crate::balance::{
+    BASE_HEALTH, BASE_JUMPS, DASH_CHARGES, FIRST_DEATH_GRANT, SENTENCE_BONUS_PCT, STOP_BASE, STOP_PLUS,
+};
 use crate::content::Content;
 use crate::player::Build;
 use serde::{Deserialize, Serialize};
@@ -30,6 +32,8 @@ pub struct Meta {
     pub bosses_beaten: i32,
     /// boss rushes finished
     pub rush_wins: i32,
+    /// the bosses beaten, by id, over every run
+    pub beaten: Vec<String>,
 }
 
 /// What a death adds to the record, for the indictment screen.
@@ -54,8 +58,13 @@ pub enum Refusal {
     Owned,
     Requires(String),
     Cost(i32),
+    /// a boss must be beaten first, by id
+    Locked(String),
     Unknown,
 }
+
+/// The boss whose defeat gives you the time stop.
+pub const TIME_STOPPER: &str = "defendant";
 
 impl Meta {
     pub fn load(text: &str, c: &Content) -> Meta {
@@ -81,6 +90,9 @@ impl Meta {
         let u = c.upgrades.iter().find(|u| u.id == id).ok_or(Refusal::Unknown)?;
         if self.owns(id) {
             return Err(Refusal::Owned);
+        }
+        if !u.unlock.is_empty() && !self.beaten.contains(&u.unlock) {
+            return Err(Refusal::Locked(u.unlock.clone()));
         }
         if !u.requires.is_empty() && !self.owns(&u.requires) {
             return Err(Refusal::Requires(u.requires.clone()));
@@ -127,9 +139,16 @@ impl Meta {
                 "precedent" => b.pierce += u.amount,
                 "bail" => b.bail += u.amount,
                 "lien" => b.lien = true,
+                "stop_plus" => b.stop_ticks += STOP_PLUS,
                 "armory" => gun_level = gun_level.max(u.amount),
                 _ => {}
             }
+        }
+        // the time stop is yours once you have beaten the one who stops it
+        if self.beaten.iter().any(|x| x == TIME_STOPPER) {
+            b.stop_ticks += STOP_BASE;
+        } else {
+            b.stop_ticks = 0;
         }
         (b, gun_level)
     }
@@ -222,6 +241,19 @@ impl Meta {
             unlocked: c.built_zones() as i32 - 1,
             bosses_beaten: c.built_zones() as i32,
             rush_wins: 0,
+            beaten: c
+                .zones
+                .iter()
+                .filter(|z| z.built)
+                .map(|z| z.boss.clone())
+                .collect(),
+        }
+    }
+
+    /// A boss beaten: kept, for what it opens.
+    pub fn beat(&mut self, boss: &str) {
+        if !self.beaten.iter().any(|b| b == boss) {
+            self.beaten.push(boss.to_string());
         }
     }
 
@@ -359,6 +391,30 @@ mod tests {
         assert_eq!(Meta::load("not json", &c), Meta::default());
         let back = Meta::load(&m.save(), &c);
         assert_eq!(back, m);
+    }
+
+    #[test]
+    fn the_stopped_clocks_wait_for_the_defendant_and_the_time_stop_comes_with_beating_it() {
+        let c = content();
+        let mut m = Meta {
+            clemency: 10_000,
+            ..Meta::default()
+        };
+        assert_eq!(
+            m.check(&c, "stopped_clock_1"),
+            Err(Refusal::Locked("defendant".into()))
+        );
+        assert_eq!(m.build(&c).0.stop_ticks, 0, "no time stop yet");
+        m.beat(TIME_STOPPER);
+        assert_eq!(m.build(&c).0.stop_ticks, STOP_BASE);
+        for id in ["stopped_clock_1", "stopped_clock_2", "stopped_clock_3"] {
+            m.buy(&c, id).unwrap();
+        }
+        assert_eq!(
+            m.build(&c).0.stop_ticks,
+            STOP_BASE + 3 * STOP_PLUS,
+            "six seconds at most"
+        );
     }
 
     #[test]

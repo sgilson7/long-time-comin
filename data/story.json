@@ -27,13 +27,14 @@
     "ADDENDUM. A juror asked how many times a person may be sent back before they become someone else. The question was struck from the record. The years were not."
   ],
   "time_served": "The court adds {years}. Your sentence now runs to {total}.",
-  "victory_title": "THE EXECUTOR'S ORDERS",
+  "victory_title": "THE DOOR",
   "victory": [
-    "The Executor settles onto its treads in the wreck of the conservatory, and its eyes close, one wheel at a time, until the house is dark and quiet and full of rain.",
-    "In the turret, behind the last of its cannons, is a steel case, and in the case are its orders. They are typed on the house's own typewriter, the one in the safe room with the sticking e. They are dated the fourteenth of March, 2081. They are signed in your hand.",
-    "Raid the house on Calder Hill. End the work. Kill whoever you must, the scientists first. And under the signature, in ink, in the handwriting you have used your whole life: Time must break. If it does not, everything else will, which will be much worse.",
-    "You read it twice. You were sent back to stop yourself. At the far end of twenty-five years, you are already stopping you.",
-    "The night of the fourteenth of March is sealed in this build. The Clemency from this run has been added to your record."
+    "You stand over yourself in the circle, and your older face looks up at you without fear. They say: I would do it again. Then the sky above the summit tears like wet paper.",
+    "It comes through all at once: a mass larger than the mountain, bubbling, blind and covered in eyes, piping to itself in a voice like a choir of flutes. The stones melt. The summit runs like wax. You are drawn up toward a mouth the size of the night.",
+    "Now you understand what the court never did. The Long Door was a ritual, not a clock. You built it to hold one evening open for one person, and it opened onto the outside instead, and the thing outside heard it, and came. You led it here. Your older self stopped time because a stopped moment was the only lock strong enough to hold it at the threshold.",
+    "The Tribunal knew only that time had stopped and that something had to be fixed. No one in your own timeline could get near the Defendant, so they reached into another timeline for a version of you more amenable to their cause. You. Nobody knew what stopping your older self would let in, except your older self, who learned to stop time to keep this reality from being eaten.",
+    "Your sin was never the stopping of time. It was the door.",
+    "The heart of the Idiot God is sealed in this build. You can now stop time yourself: press T, for 3 seconds, and up to 6 with the Stopped Clocks in the Holding. The Clemency from this run has been added to your record."
   ],
   "bosses": {
     "bailiff": {
@@ -46,7 +47,7 @@
     },
     "defendant": {
       "name": "THE DEFENDANT",
-      "title": "Sealed in this build."
+      "title": "You, older by every year the court added. You would do it again. You are about to."
     },
     "executor": {
       "name": "THE EXECUTOR",
@@ -55,12 +56,25 @@
     "chief": {
       "name": "THE SECTION CHIEF",
       "title": "He has a list of names. Yours is on it, and so is everyone you hired."
+    },
+    "azathoth": {
+      "name": "THE IDIOT GOD",
+      "title": "Sealed in this build."
+    },
+    "pioneer": {
+      "name": "THE PIONEER",
+      "title": "The expedition's walking frame. The ice took its pilot, and taught it to walk on its own."
+    },
+    "escort": {
+      "name": "THE ESCORT",
+      "title": "The Executor's little sister. It goes ahead to see that the doors are open."
     }
   },
   "death_titles": {
     "waiting_city": "THE BAILIFF COLLECTS YOU",
     "white_waste": "THE ICE GIVES YOU BACK TO THE COURT",
-    "glass_house": "THE GREY MEN RETURN YOU TO THE COURT"
+    "glass_house": "THE GREY MEN RETURN YOU TO THE COURT",
+    "the_ascent": "YOU FALL FROM THE MOUNTAIN, AND THE COURT CATCHES YOU"
   },
   "interludes": {
     "waiting_city": {
@@ -88,7 +102,20 @@
         "In the autumn of 2056 it is not a clock. Men in grey coats come up the lawn in the rain, all of them with the same face, and the first of your scientists dies at the conservatory door before anyone hears a shot. It is your house. You know every room of it. Go."
       ],
       "go": "Go home"
+    },
+    "glass_house": {
+      "title": "THE ORDERS",
+      "art": "orders",
+      "go": "Climb",
+      "lines": [
+        "The Executor settles onto its treads in the wreck of the conservatory, and its eyes close, one wheel at a time, until the house is dark and quiet and full of rain.",
+        "In the turret, behind the last of its cannons, is a steel case, and in the case are its orders. They are typed on the house's own typewriter, the one in the safe room with the sticking e. They are dated the fourteenth of March, 2081. They are signed in your hand.",
+        "Raid the house on Calder Hill. End the work. Kill whoever you must, the scientists first. And under the signature, in ink, in the handwriting you have used your whole life: Time must break. If it does not, everything else will, which will be much worse.",
+        "You read it twice. You were sent back to stop yourself. At the far end of twenty-five years, you are already stopping you.",
+        "You have thought about letting yourself die. More than once, on the long nights in the house, it seemed the cleanest way: no Defendant, no door, no evening that never ends. But the court does not allow it. Every time you fall, the Bailiff collects you and sets you on your feet again, and the years are added, and you go on.",
+        "So it seems that this version of you must kill that version of you. Fifty years have come down to one evening. On the fourteenth of March, 2081, you climb Mount Meridian toward the Observatory on its summit, where the Long Door stands in a circle of old stones, and the evening light does not move, because it is always twenty-one fourteen. Someone you trained is waiting on every terrace. They all wear your coat."
+      ]
     }
   },
-  "verdict_art": "orders"
+  "verdict_art": "door"
 }

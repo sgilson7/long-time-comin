@@ -38,10 +38,11 @@ pub fn draw(
     target: V3,
     paint: &dyn Fn(Rgb) -> Rgb,
 ) {
-    if d.kind == Kind::Tank {
-        executor(b, c, e, d, at, paint);
-    } else {
-        agent(b, c, e, d, at, alpha, target, paint);
+    match d.kind {
+        Kind::Tank => executor(b, c, e, d, at, paint),
+        Kind::Mech => mech(b, c, e, d, at, target, paint),
+        Kind::Double => double(b, c, e, d, at, target),
+        _ => agent(b, c, e, d, at, alpha, target, paint),
     }
 }
 
@@ -66,12 +67,20 @@ fn agent(
     let u = |x: i32| fx::mul(cm(x), k);
     let feet = at.sub(v3(0, d.hover, 0));
     let f = Affine::translate(feet).then(&Affine::rot_y(e.yaw));
-    let suit = paint(c.pal.c(if chief { "agent_suit_dark" } else { "agent_suit" }));
-    let dark = paint(c.pal.c("agent_suit_dark"));
-    let shirt = paint(c.pal.c("agent_shirt"));
-    let skin = paint(c.pal.c("agent_skin"));
-    let shades = c.pal.c("agent_shades");
-    let tie = c.pal.c("agent_tie");
+    // the Ascent's assassins wear your own coat, under a clock-face mask
+    let you = c.zone_of_enemy(e.def).unwrap_or(0) >= 3;
+    let suit = paint(c.pal.c(if you {
+        "player_coat"
+    } else if chief {
+        "agent_suit_dark"
+    } else {
+        "agent_suit"
+    }));
+    let dark = paint(c.pal.c(if you { "assassin_dark" } else { "agent_suit_dark" }));
+    let shirt = paint(c.pal.c(if you { "player_trim" } else { "agent_shirt" }));
+    let skin = paint(c.pal.c(if you { "clock" } else { "agent_skin" }));
+    let shades = c.pal.c(if you { "assassin_dark" } else { "agent_shades" });
+    let tie = c.pal.c(if you { "player_trim" } else { "agent_tie" });
     let aiming = matches!(e.state, State::Windup(_) | State::Casting(_) | State::Ready(_));
     // crouched behind cover while it rests there
     let crouch = e.order == Order::Cover && e.path.is_empty() && matches!(e.state, State::Rest(_));
@@ -307,7 +316,10 @@ fn executor(b: &mut Batch, c: &Content, e: &Enemy, d: &EnemyDef, at: V3, paint: 
     let plate = tone(c.pal.c("tank_plate"));
     let tread = c.pal.c("tank_tread");
     let gun = c.pal.c("tank_gun");
-    let hf = Affine::translate(at).then(&Affine::rot_y(t.hull));
+    let sc = t.scale;
+    let hf = Affine::translate(at)
+        .then(&Affine::rot_y(t.hull))
+        .then(&Affine::scale(v3(sc, sc, sc)));
     let (len, wide) = (tank::HULL_LEN, tank::HULL_WIDE);
     // the hull: a body, a sloped glacis at the front (−z is forward), an
     // engine deck behind with grilles
@@ -367,7 +379,9 @@ fn executor(b: &mut Batch, c: &Content, e: &Enemy, d: &EnemyDef, at: V3, paint: 
         }
     }
     // the turret, the long gun with its muzzle brake
-    let tf = Affine::translate(at.add(v3(0, tank::TURRET_Y, 0))).then(&Affine::rot_y(t.turret));
+    let tf = Affine::translate(at.add(v3(0, fx::mul(tank::TURRET_Y, sc), 0)))
+        .then(&Affine::rot_y(t.turret))
+        .then(&Affine::scale(v3(sc, sc, sc)));
     b.inked(
         Mesh::Cyl,
         &tf.then(&boxed(v3(0, cm(20), 0), v3(int(4), cm(120), int(4)))),
@@ -387,8 +401,8 @@ fn executor(b: &mut Batch, c: &Content, e: &Enemy, d: &EnemyDef, at: V3, paint: 
         0,
     );
     let root = at
-        .add(v3(0, tank::TURRET_Y + ONE / 2, 0))
-        .add(facing(t.turret, 0).scale(int(2)));
+        .add(v3(0, fx::mul(tank::TURRET_Y + ONE / 2, sc), 0))
+        .add(facing(t.turret, 0).scale(fx::mul(int(2), sc)));
     let mouth = tank::main_gun(e);
     rod(b, root, mouth, cm(32), gun, 0, true);
     // the muzzle brake, along the barrel
@@ -511,6 +525,251 @@ fn executor(b: &mut Batch, c: &Content, e: &Enemy, d: &EnemyDef, at: V3, paint: 
             eye(b, c, p, V3::UP, cm(45), e.age + k * 13);
         }
     }
+}
+
+/// The Pioneer: a frame after Iron Vector's, boxy legs that bend back, a
+/// core, a head with a lit visor, a rifle on each arm, missile pods on the
+/// shoulders, and boosters that burn when it quick-boosts or rises.
+fn mech(b: &mut Batch, c: &Content, e: &Enemy, d: &EnemyDef, at: V3, target: V3, paint: &dyn Fn(Rgb) -> Rgb) {
+    let k = d.radius;
+    let u = |x: i32| fx::mul(k, ONE * x / 100);
+    let primary = paint(c.pal.c("mech_primary"));
+    let second = paint(c.pal.c("mech_secondary"));
+    let dark = c.pal.c("mech_dark");
+    let glow = c.pal.c("mech_glow");
+    let feet = at.sub(v3(0, d.hover + e.lift, 0)).add(v3(0, e.lift, 0));
+    let f = Affine::translate(feet).then(&Affine::rot_y(e.yaw));
+    let hip_y = d.hover;
+    let step = fx::sin(e.age * fx::TURN / 50);
+    for side in [-1, 1] {
+        let swing = if e.lift > ONE {
+            0
+        } else {
+            fx::mul(step * side, u(20))
+        };
+        let hip = v3(side * u(40), hip_y, 0);
+        let knee = v3(side * u(48), hip_y / 2, u(30) + swing);
+        let foot = v3(side * u(50), u(6), -swing / 2);
+        rod(b, f.apply(hip), f.apply(knee), u(30), second, 0, true);
+        rod(b, f.apply(knee), f.apply(foot), u(26), primary, 0, true);
+        b.inked(
+            Mesh::Cube,
+            &f.then(&boxed(foot.add(v3(0, u(4), -u(10))), v3(u(36), u(14), u(60)))),
+            dark,
+            0,
+        );
+    }
+    let core = f.then(&Affine::translate(v3(0, hip_y + u(45), 0)));
+    b.inked(
+        Mesh::Cube,
+        &core.then(&boxed(V3::ZERO, v3(u(110), u(80), u(80)))),
+        primary,
+        0,
+    );
+    b.inked(
+        Mesh::Wedge,
+        &core.then(&boxed(v3(0, u(30), -u(45)), v3(u(90), u(30), u(20)))),
+        second,
+        0,
+    );
+    let head = core.then(&Affine::translate(v3(0, u(62), -u(10))));
+    b.inked(
+        Mesh::Cube,
+        &head.then(&boxed(V3::ZERO, v3(u(50), u(34), u(50)))),
+        second,
+        0,
+    );
+    b.push(
+        Mesh::Cube,
+        &head.then(&boxed(v3(0, 0, -u(26)), v3(u(40), u(8), u(4)))),
+        glow,
+        ONE,
+        PASS_SOLID,
+    );
+    // the arms and their rifles, toward you
+    let (aim_yaw, aim_pitch) = crate::geom::yaw_pitch_of(target.sub(at));
+    let aim = facing(aim_yaw, aim_pitch);
+    for side in [-1, 1] {
+        let shoulder = core.apply(v3(side * u(70), u(20), 0));
+        let hand = shoulder.add(aim.scale(u(60))).add(v3(0, -u(30), 0));
+        rod(b, shoulder, hand, u(24), primary, 0, true);
+        rod(b, hand, hand.add(aim.scale(u(110))), u(16), dark, 0, true);
+        // the shoulder pods
+        let pod = core.apply(v3(side * u(46), u(60), u(30)));
+        b.inked(Mesh::Cube, &boxed(pod, v3(u(36), u(30), u(50))), second, 0);
+        for j in 0..2 {
+            b.push(
+                Mesh::Cyl,
+                &boxed(
+                    pod.add(v3(side * u(6) * (j * 2 - 1), u(8), -u(26))),
+                    v3(u(10), u(4), u(10)),
+                ),
+                glow,
+                ONE / 2,
+                PASS_SOLID,
+            );
+        }
+    }
+    // the boosters, burning when it bursts or rises
+    let burn = if e.boost > 0 {
+        ONE
+    } else if e.lift > ONE / 4 {
+        ONE * 2 / 3
+    } else {
+        0
+    };
+    for side in [-1, 1] {
+        let nozzle = core.apply(v3(side * u(34), -u(10), u(48)));
+        b.inked(Mesh::Cyl, &boxed(nozzle, v3(u(26), u(30), u(26))), dark, 0);
+        if burn > 0 {
+            let flame = Affine::translate(nozzle.add(v3(0, -u(40), u(20))))
+                .then(&Affine::rot_x(fx::HALF))
+                .then(&Affine::scale(v3(u(30), fx::mul(u(110), burn), u(30))));
+            b.glow(Mesh::Cone, &flame, c.pal.c("mech_flame"), burn);
+        }
+    }
+    let charge = e.glow(c);
+    if charge > 0 {
+        let h = fx::mul(u(120), ONE + charge);
+        b.glow(
+            Mesh::Sphere,
+            &boxed(core.apply(V3::ZERO), v3(h, h, h)),
+            glow,
+            charge / 3,
+        );
+    }
+}
+
+/// The Defendant: you, older, in your coat, a ring of hours turning round
+/// you and your eyes gold; the world goes grey when you stop time.
+fn double(b: &mut Batch, c: &Content, e: &Enemy, d: &EnemyDef, at: V3, target: V3) {
+    let feet = at.sub(v3(0, d.hover + e.lift, 0)).add(v3(0, e.lift, 0));
+    let (yaw, _) = crate::geom::yaw_pitch_of(target.sub(at));
+    super::standing(b, c, feet, yaw, c.gun("big_iron").min(c.guns.len() - 1));
+    let gold = c.pal.c("gold");
+    let head = feet.add(v3(0, cm(178), 0));
+    b.push(
+        Mesh::Sphere,
+        &boxed(head.add(facing(yaw, 0).scale(cm(12))), v3(cm(14), cm(5), cm(5))),
+        gold,
+        ONE,
+        PASS_SOLID,
+    );
+    for k in 0..12 {
+        let a = fx::TURN / 12 * k + e.age * deg(2);
+        let p = feet.add(v3(
+            fx::mul(fx::cos(a), cm(120)),
+            cm(130) + fx::mul(fx::sin(a * 2), cm(10)),
+            fx::mul(fx::sin(a), cm(120)),
+        ));
+        b.inked(
+            Mesh::Cube,
+            &boxed(p, v3(cm(8), cm(18), cm(4))),
+            c.pal.c("clock"),
+            ONE / 3,
+        );
+    }
+    let charge = e.glow(c);
+    if charge > 0 {
+        let h = fx::mul(cm(260), ONE + charge);
+        b.glow(
+            Mesh::Sphere,
+            &boxed(feet.add(v3(0, cm(100), 0)), v3(h, h, h)),
+            gold,
+            charge / 3,
+        );
+    }
+    if e.boost > 0 {
+        for k in 1..4 {
+            let g = feet.sub(e.vel.scale(ONE * 3 * k)).add(v3(0, cm(90), 0));
+            b.glow(
+                Mesh::Sphere,
+                &boxed(g, v3(cm(60), cm(160), cm(60))),
+                gold,
+                ONE / (k + 1),
+            );
+        }
+    }
+}
+
+/// The Idiot God, bursting into the sky over the summit: a heaving mass of
+/// dark bubbles, more eyes than can be counted, arms turning round it, and
+/// a maw that opens and draws everything in. `k` is how far it has come.
+pub fn azathoth(b: &mut Batch, c: &Content, clock: i32, k: i32) {
+    let maw = crate::world::MAW;
+    let grow = fx::mul(k.min(ONE / 6) * 6, ONE).min(ONE);
+    let size = fx::mul(fx::int(90), grow.max(ONE / 50));
+    let flesh = c.pal.c("eldritch_flesh");
+    let dark = c.pal.c("eldritch_dark");
+    let glow = c.pal.c("eldritch_glow");
+    let s = |x: i32| fx::mul(size, ONE * x / 100);
+    // the bubbling mass
+    for n in 0..40 {
+        let a = fx::TURN / 40 * n * 7;
+        let r = s(60 + (n * 13) % 50);
+        let up = fx::sin(a * 3 + clock * deg(1) * (1 + n % 3));
+        let p = maw.add(v3(
+            fx::mul(fx::cos(a), r),
+            fx::mul(up, s(40)),
+            fx::mul(fx::sin(a), r) / 2 - s(30),
+        ));
+        let bs = s(30 + (n * 7) % 30) + fx::mul(fx::sin(clock * deg(3) + n * deg(40)), s(6));
+        b.inked(
+            Mesh::Blob,
+            &boxed(p, v3(bs, bs, bs)),
+            if n % 3 == 0 { dark } else { flesh },
+            ONE / 8,
+        );
+        if n % 2 == 0 {
+            eye(
+                b,
+                c,
+                p.add(v3(0, 0, bs / 2)),
+                v3(0, 0, ONE),
+                bs / 3,
+                clock + n * 17,
+            );
+        }
+    }
+    // the arms, turning
+    for n in 0..9 {
+        let a = fx::TURN / 9 * n + clock * deg(1) / 2;
+        let mut p = maw;
+        for j in 1..7 {
+            let q = maw.add(v3(
+                fx::mul(fx::cos(a + j * deg(20)), s(40 + 22 * j)),
+                fx::mul(fx::sin(a * 2 + j * deg(30) + clock * deg(2)), s(30)),
+                fx::mul(fx::sin(a + j * deg(20)), s(20 + 10 * j)),
+            ));
+            rod(b, p, q, s(14) - s(2) * j, dark, ONE / 10, true);
+            p = q;
+        }
+    }
+    // the maw: a ring of teeth round the dark, opening
+    let open = s(55);
+    for n in 0..24 {
+        let a = fx::TURN / 24 * n + clock * deg(1);
+        let p = maw.add(v3(fx::mul(fx::cos(a), open), fx::mul(fx::sin(a), open), s(30)));
+        let tip = maw.add(v3(
+            fx::mul(fx::cos(a), open / 2),
+            fx::mul(fx::sin(a), open / 2),
+            s(40),
+        ));
+        rod(b, p, tip, s(6), c.pal.c("clock"), 0, true);
+    }
+    b.push(
+        Mesh::Sphere,
+        &boxed(maw.add(v3(0, 0, s(25))), v3(open * 2, open * 2, s(10))),
+        c.pal.c("eldritch_void"),
+        0,
+        PASS_SOLID,
+    );
+    b.glow(
+        Mesh::Sphere,
+        &boxed(maw, v3(size * 3, size * 3, size * 2)),
+        glow,
+        ONE / 6,
+    );
 }
 
 /// An eye at `at` looking along `dir`: white, an iris, a pupil, and a
