@@ -1,5 +1,5 @@
 {
-  "_about": "Enemies. kind: turret (stands still), floater (hovers and circles at a range), walker (walks after you), moth (flies straight at you and bursts), boss. hp in health points, radius_cm the body, hover_cm the height it floats at, speed_cms, range_cm the distance it keeps, contact the damage of touching it. attacks are tried in order: pattern (patterns.json), windup_ms the glow before it fires, rest_ms after. A boss has phases instead, each starting when its health falls to from_pct. kind blinker: hovers, and as each rest ends reappears elsewhere in sight of you. kind burrower: under the floor between attacks, where it cannot be hurt. burst: a pattern fired once where it dies. zone: the zone whose Codex page lists it. kind agent (zone three): a person who walks the floors and stairs and works with its squad by role: rifle, flank, sniper, shield, grenadier, rush, command, chief (crates/core/src/squad.rs). armour_deg: shots from within this many degrees of its facing glance off. An attack's lock_ms stops its aim following you that long before it fires; indirect needs no line of sight. summon, summon_ms, summon_cap: what it calls, how often, how many of its own at most; rally_pct and rally: a larger call, once, at that health. elite: a bar of its own. kind tank (the Executor): phases list weak (the weak points to break, on the hull or the turret, at_cm in that part's frame: x right, y up, z forward; radius_cm, hp) and cannons (grown in that phase and kept, yaw_deg and pitch_deg off the part's facing); an attack with cannons: true fires from every cannon grown so far, else from the main gun. Its last phase has survive_ms instead of weak points: outlast it. hp is the weak points' total. kind mech (the Pioneer): glides round you, quick-boosts sideways, ascends and hovers. kind double (the Defendant): moves as you do; an attack's stop_ms stops time for that long, for everything but it, while it steps round you and lays its shots. A tank's last phase may have weak points instead of survive_ms: breaking them ends it (the Escort). A tank's size scales with radius_cm (the Executor's is 320).",
+  "_about": "Enemies. kind: turret (stands still), floater (hovers and circles at a range), walker (walks after you), moth (flies straight at you and bursts), boss. hp in health points, radius_cm the body, hover_cm the height it floats at, speed_cms, range_cm the distance it keeps, contact the damage of touching it. attacks are tried in order: pattern (patterns.json), windup_ms the glow before it fires, rest_ms after. A boss has phases instead, each starting when its health falls to from_pct. kind blinker: hovers, and as each rest ends reappears elsewhere in sight of you. kind burrower: under the floor between attacks, where it cannot be hurt. burst: a pattern fired once where it dies. zone: the zone whose Codex page lists it. kind agent (zone three): a person who walks the floors and stairs and works with its squad by role: rifle, flank, sniper, shield, grenadier, rush, command, chief (crates/core/src/squad.rs). armour_deg: shots from within this many degrees of its facing glance off. An attack's lock_ms stops its aim following you that long before it fires; indirect needs no line of sight. summon, summon_ms, summon_cap: what it calls, how often, how many of its own at most; rally_pct and rally: a larger call, once, at that health. elite: a bar of its own. kind tank (the Executor): phases list weak (the weak points to break, on the hull or the turret, at_cm in that part's frame: x right, y up, z forward; radius_cm, hp) and cannons (grown in that phase and kept, yaw_deg and pitch_deg off the part's facing); an attack with cannons: true fires from every cannon grown so far, else from the main gun. Its last phase has survive_ms instead of weak points: outlast it. hp is the weak points' total. kind mech (the Pioneer): glides round you, quick-boosts sideways, ascends and hovers. kind double (the Defendant): moves as you do; an attack's stop_ms stops time for that long, for everything but it, while it steps round you and lays its shots. A tank's last phase may have weak points instead of survive_ms: breaking them ends it (the Escort). A tank's size scales with radius_cm (the Executor's is 320). kind beast (zone four's creatures) moves by its gait: bound (leaps far round you in a high arc), hop (short low hops), wheel (circles high over you and dives as it winds up), root (never moves), surge (rushes along the ground in sweeping curves past you); bite_cm: a rooted beast lunges this far at you to bite (its contact damage). Each is drawn more corrupted the higher up the mountain its arena is (balance.rs CORRUPT_*).",
   "enemies": [
     {
       "id": "sentinel",
@@ -1399,6 +1399,189 @@
           "pattern": "minute",
           "windup_ms": 600,
           "rest_ms": 1300
+        }
+      ],
+      "zone": "the_ascent"
+    },
+    {
+      "id": "hart",
+      "name": "Hart",
+      "kind": "beast",
+      "hp": 220,
+      "radius_cm": 70,
+      "hover_cm": 110,
+      "speed_cms": 0,
+      "range_cm": 1300,
+      "contact": 15,
+      "clemency": 2,
+      "attacks": [
+        {
+          "pattern": "antler_tines",
+          "windup_ms": 500,
+          "rest_ms": 900
+        },
+        {
+          "pattern": "hoofbeat",
+          "windup_ms": 450,
+          "rest_ms": 1100
+        }
+      ],
+      "zone": "the_ascent",
+      "gait": "bound"
+    },
+    {
+      "id": "rook",
+      "name": "Rook",
+      "kind": "beast",
+      "hp": 90,
+      "radius_cm": 45,
+      "hover_cm": 900,
+      "speed_cms": 650,
+      "range_cm": 1200,
+      "contact": 10,
+      "clemency": 1,
+      "attacks": [
+        {
+          "pattern": "carrion_dive",
+          "windup_ms": 450,
+          "rest_ms": 900
+        },
+        {
+          "pattern": "feather_fall",
+          "windup_ms": 500,
+          "rest_ms": 1000
+        }
+      ],
+      "zone": "the_ascent",
+      "gait": "wheel"
+    },
+    {
+      "id": "toad",
+      "name": "Toad",
+      "kind": "beast",
+      "hp": 160,
+      "radius_cm": 50,
+      "hover_cm": 45,
+      "speed_cms": 0,
+      "range_cm": 1000,
+      "contact": 12,
+      "clemency": 1,
+      "attacks": [
+        {
+          "pattern": "toad_glob",
+          "windup_ms": 450,
+          "rest_ms": 900
+        },
+        {
+          "pattern": "croak",
+          "windup_ms": 500,
+          "rest_ms": 1000
+        }
+      ],
+      "zone": "the_ascent",
+      "gait": "hop"
+    },
+    {
+      "id": "gaper",
+      "name": "Gaper",
+      "kind": "beast",
+      "hp": 240,
+      "radius_cm": 80,
+      "hover_cm": 120,
+      "speed_cms": 0,
+      "range_cm": 2200,
+      "contact": 25,
+      "clemency": 2,
+      "attacks": [
+        {
+          "pattern": "gaper_seeds",
+          "windup_ms": 550,
+          "rest_ms": 1000
+        },
+        {
+          "pattern": "gaper_bloom",
+          "windup_ms": 500,
+          "rest_ms": 1100
+        }
+      ],
+      "zone": "the_ascent",
+      "gait": "root",
+      "bite_cm": 250
+    },
+    {
+      "id": "freshet",
+      "name": "Freshet",
+      "kind": "beast",
+      "hp": 260,
+      "radius_cm": 90,
+      "hover_cm": 90,
+      "speed_cms": 1100,
+      "range_cm": 900,
+      "contact": 18,
+      "clemency": 2,
+      "attacks": [
+        {
+          "pattern": "freshet_surge",
+          "windup_ms": 500,
+          "rest_ms": 1000
+        },
+        {
+          "pattern": "freshet_spray",
+          "windup_ms": 450,
+          "rest_ms": 1000
+        }
+      ],
+      "zone": "the_ascent",
+      "gait": "surge"
+    },
+    {
+      "id": "sporecap",
+      "name": "Sporecap",
+      "kind": "beast",
+      "hp": 200,
+      "radius_cm": 60,
+      "hover_cm": 60,
+      "speed_cms": 0,
+      "range_cm": 2000,
+      "contact": 10,
+      "clemency": 1,
+      "attacks": [
+        {
+          "pattern": "spore_haze",
+          "windup_ms": 600,
+          "rest_ms": 1100
+        },
+        {
+          "pattern": "spore_drift",
+          "windup_ms": 500,
+          "rest_ms": 1000
+        }
+      ],
+      "zone": "the_ascent",
+      "gait": "root",
+      "burst": "spore_burst"
+    },
+    {
+      "id": "ursine",
+      "name": "Ursine",
+      "kind": "walker",
+      "hp": 460,
+      "radius_cm": 110,
+      "hover_cm": 0,
+      "speed_cms": 380,
+      "range_cm": 500,
+      "contact": 25,
+      "clemency": 3,
+      "attacks": [
+        {
+          "pattern": "maul",
+          "windup_ms": 550,
+          "rest_ms": 900
+        },
+        {
+          "pattern": "roar",
+          "windup_ms": 650,
+          "rest_ms": 1200
         }
       ],
       "zone": "the_ascent"

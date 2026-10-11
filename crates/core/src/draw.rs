@@ -14,6 +14,7 @@ use crate::render::{boxed, mix, shade, Batch};
 use crate::world::{FxKind, PickupKind, World};
 
 mod beasts;
+mod fauna;
 mod house;
 pub use house::azathoth;
 
@@ -771,7 +772,7 @@ fn orbs(b: &mut Batch, c: &Content, w: &World, alpha: i32, cam: &crate::render::
                 .then(&Affine::scale(v3(r * 2, cm(4), r * 2)));
             b.push(Mesh::Ring, &ring, o.rgb, ONE, crate::render::PASS_SOLID);
         }
-        if o.blue {
+        if o.ward > 0 && o.ward <= w.player.build.wards().max(1) {
             // a pale rim: the Injunction breaks these
             let rim = Affine::translate(at)
                 .then(&Affine::rot_x(fx::QUARTER))
@@ -862,7 +863,7 @@ pub fn enemy(b: &mut Batch, c: &Content, e: &Enemy, alpha: i32, target: V3) {
         house::draw(b, c, e, d, at, alpha, target, &paint);
         return;
     }
-    if beasts::draw(b, c, e, d, at, s, &paint) {
+    if fauna::draw(b, c, e, d, at, s, &paint) || beasts::draw(b, c, e, d, at, s, &paint) {
         if charge > 0 && d.kind != Kind::Boss && !e.buried {
             let h = fx::mul(s, ONE + charge);
             b.glow(Mesh::Sphere, &boxed(at, v3(h, h, h)), core, charge / 2);
@@ -1015,7 +1016,7 @@ pub fn enemy(b: &mut Batch, c: &Content, e: &Enemy, alpha: i32, target: V3) {
             );
         }
         Kind::Boss => bailiff(b, c, e, at, s, paint),
-        Kind::Agent | Kind::Tank | Kind::Mech | Kind::Double => {}
+        Kind::Agent | Kind::Tank | Kind::Mech | Kind::Double | Kind::Beast => {}
     }
     // the windup: a halo that grows as the attack comes
     if charge > 0 && d.kind != Kind::Boss {

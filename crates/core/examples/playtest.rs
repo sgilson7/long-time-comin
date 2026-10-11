@@ -946,6 +946,12 @@ fn bot(c: &ltc_core::content::Content, w: &World, t: i32, stuck: bool) -> (Contr
             }
             behind = Some(e.pos.add(ltc_core::geom::facing(tk.turret, 0).scale(-int(14))));
         }
+        // lead a mover by its shot's flight
+        if e.tank.is_none() {
+            let speed = c.guns[w.held.gun].level(w.held.level).speed.max(ONE / 10);
+            let ticks = fx::div(aim_at.sub(chest).len(), speed) / ONE;
+            aim_at = aim_at.add(e.pos.sub(e.prev).scale(ticks.min(60) * ONE));
+        }
         let (y, pt) = cam_aim(w, aim_at);
         yaw = y;
         pitch = pt;
@@ -1002,7 +1008,12 @@ fn bot(c: &ltc_core::content::Content, w: &World, t: i32, stuck: bool) -> (Contr
         let f = ltc_core::geom::facing(yaw, 0);
         let coming = w.orbs.iter().any(|o| {
             let rel = o.pos.sub(chest);
-            o.blue && o.speed > 0 && rel.dot(f) > 0 && rel.len() < int(7) && o.dir.dot(rel.norm()) < -ONE / 2
+            o.ward > 0
+                && o.ward <= p.build.wards()
+                && o.speed > 0
+                && rel.dot(f) > 0
+                && rel.len() < int(7)
+                && o.dir.dot(rel.norm()) < -ONE / 2
         });
         ctl.wall_pressed = coming;
     }
@@ -1015,6 +1026,30 @@ fn bot(c: &ltc_core::content::Content, w: &World, t: i32, stuck: bool) -> (Contr
         if d > wv.radius && d - wv.radius < wv.speed * 10 && p.grounded {
             ctl.jump_pressed = true;
         }
+    }
+    // a player sees a drop: no step toward one (forward, back or sideways)
+    let level = &w.arena.level;
+    // (within a jump's carry: about 5 m at a run)
+    let drop = |dir: V3| {
+        (1..=5).any(|k| {
+            let at = p.pos.add(dir.scale(int(k)));
+            level
+                .floor_below(at.x, p.pos.y + ONE, at.z)
+                .is_none_or(|f| f < p.pos.y - int(3))
+        })
+    };
+    let fwd = ltc_core::geom::facing(yaw, 0);
+    let right = ltc_core::geom::right_of(yaw);
+    if ctl.move_z != 0 && drop(fwd.scale(ctl.move_z)) {
+        ctl.move_z = 0;
+    }
+    if ctl.move_x != 0 && drop(right.scale(ctl.move_x)) {
+        ctl.move_x = -ctl.move_x;
+    }
+    let going = v3(p.vel.x, 0, p.vel.z);
+    if going.len() > ONE / 60 && drop(going.norm()) {
+        ctl.jump_pressed = false;
+        ctl.dash_pressed = false;
     }
     (ctl, yaw, pitch)
 }

@@ -7,11 +7,11 @@ copied from the game's own output:
 
 - story.json's sentencing has 5 lines; its indictment has 10 counts.
 - the Codex has 5 tabs (copy.json codex_tabs), 16 control rows
-  (copy.json controls), 5 guns (weapons.json) and 35 enemies (enemies.json:
+  (copy.json controls), 5 guns (weapons.json) and 42 enemies (enemies.json:
   seven and a boss in each of the four built zones, and three mini-bosses).
 - the crater's gate is open, so its label shows; the first fight's gates
   stay dark and unlabelled until its enemies are defeated.
-- upgrades.json lists 30 upgrades in 4 branches (copy.json holding_branches);
+- upgrades.json lists 32 upgrades in 4 branches (copy.json holding_branches);
   the cheapest (Constitution I) costs 8, so a new record with 0 Clemency can
   buy none of them.
 - zone.json lists 5 zones, 4 built: 1 is sealed.
@@ -28,7 +28,7 @@ copied from the game's own output:
 - a record with zone three open (unlocked 2) offers two; the second starts
   in "The Vestibule" of "The Glass House", and a death there is headed by
   story.json's death title for the house.
-- the test save (clicked twice, as it asks) owns all 30 upgrades and opens
+- the test save (clicked twice, as it asks) owns all 32 upgrades and opens
   the boss rush, whose first arena is the Bailiff's, "The Court of Hours".
 """
 
@@ -64,7 +64,7 @@ def run(page, check, engine):
     check(mode(page) == "holding", "then the Holding")
     cards = page.query_selector_all("#upgrades .upgrade")
     buyable = page.query_selector_all("#upgrades .upgrade:not(:disabled)")
-    check(len(cards) == 30 and len(buyable) == 0, f"30 upgrades, none affordable with 0 Clemency ({len(cards)}, {len(buyable)})")
+    check(len(cards) == 32 and len(buyable) == 0, f"32 upgrades, none affordable with 0 Clemency ({len(cards)}, {len(buyable)})")
     branches = page.query_selector_all("#upgrades .branch")
     check(len(branches) == 4, f"in four branches ({len(branches)})")
     check(page.inner_text("#m-counts") == "0 / 10", f"no count read yet ({page.inner_text('#m-counts')!r})")
@@ -83,7 +83,7 @@ def run(page, check, engine):
     check(len(guns) == 5, f"five guns ({len(guns)})")
     click(page, "#codex-tabs .tab:nth-child(3)")
     foes = page.query_selector_all("#codex-body .codex-card")
-    check(len(foes) == 35, f"thirty-five enemies ({len(foes)})")
+    check(len(foes) == 42, f"forty-two enemies ({len(foes)})")
     body = page.inner_text("#codex-body")
     check("{" not in body, "no unfilled placeholder in the Codex")
     click(page, "#codex-close")
@@ -207,7 +207,7 @@ def run(page, check, engine):
     click(page, "#test-save")
     page.wait_for_timeout(300)
     owned = page.query_selector_all("#upgrades .upgrade.owned")
-    check(len(owned) == 30, f"the test save owns every upgrade ({len(owned)})")
+    check(len(owned) == 32, f"the test save owns every upgrade ({len(owned)})")
     check(page.is_visible("#start-rush"), "and opens the boss rush")
     click(page, "#start-rush")
     check(mode(page) == "play", f"the rush plays ({mode(page)})")

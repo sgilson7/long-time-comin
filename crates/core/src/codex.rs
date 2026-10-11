@@ -7,7 +7,7 @@
 
 use crate::balance::*;
 use crate::content::{
-    Anchor, Content, EnemyDef, Form, GunLevel, Kind, Launch, Lunge, Role, Shape, Upgrade, Volley,
+    Anchor, Content, EnemyDef, Form, Gait, GunLevel, Kind, Launch, Lunge, Role, Shape, Upgrade, Volley,
 };
 use crate::enemy::PHASE_TICKS;
 use crate::fx::{self, ONE};
@@ -225,8 +225,10 @@ pub fn volley(v: &Volley) -> String {
     if v.gold {
         text += "; gold: Objection can turn these back";
     }
-    if v.blue {
-        text += "; blue: the Injunction breaks these";
+    match v.ward {
+        0 => {}
+        1 => text += "; blue: the Injunction breaks these",
+        k => text += &format!("; the Injunction breaks these from its ward {k} (a pale rim once yours does)"),
     }
     let damage = v.damage;
     text + &format!(". {damage} damage a hit.")
@@ -297,6 +299,43 @@ fn formation(v: &Volley, size: &str, speed: &str) -> String {
 
 fn movement(d: &EnemyDef, c: &Content) -> String {
     match d.kind {
+        Kind::Beast => match d.gait {
+            Gait::Bound => format!(
+                "Stands, then every {} s leaps in a high arc ({} s in the air) to a place {} m from you, a little further round you.",
+                s(BOUND_EVERY),
+                s(BOUND_TICKS),
+                m(d.range)
+            ),
+            Gait::Hop => format!(
+                "Hops {} m every {} s, toward you until within {} m and away when closer.",
+                m(HOP_LENGTH),
+                s(HOP_EVERY),
+                m(d.range)
+            ),
+            Gait::Wheel => format!(
+                "Circles {} m over the ground at about {} m from you, at up to {} m/s; as it winds up it dives to {} m over your chest and closes to {}% of that distance.",
+                m(d.hover),
+                m(d.range),
+                mps(d.speed),
+                m(WHEEL_DIVE_OVER),
+                WHEEL_DIVE_PCT
+            ),
+            Gait::Root if d.bite > 0 => format!(
+                "Rooted where it grows. Come within {} m and it lunges {} m at you and bites ({} damage), then again every {} s while you stay.",
+                m(d.bite + d.radius + BITE_MARGIN),
+                m(d.bite),
+                d.contact,
+                s(BITE_EVERY)
+            ),
+            Gait::Root => "Rooted where it grows; it does not move.".to_string(),
+            Gait::Surge => format!(
+                "Rushes along the ground at up to {} m/s, sweeping round a circle {} m from you once every {} s.",
+                mps(d.speed),
+                m(d.range),
+                s(SURGE_PERIOD)
+            ),
+            Gait::None => String::new(),
+        },
         Kind::Turret => format!(
             "Does not move. Sits {} m above the floor and turns to face you.",
             m(d.hover)
@@ -530,7 +569,7 @@ fn enemy(d: &EnemyDef, c: &Content) -> Value {
 }
 
 /// What an upgrade does, in numbers.
-pub fn upgrade_effect(u: &Upgrade) -> String {
+pub fn upgrade_effect(u: &Upgrade, pal: &crate::content::Palette) -> String {
     let n = u.amount;
     match u.effect.as_str() {
         "max_health" => format!("+{n} maximum health (base {BASE_HEALTH})."),
@@ -562,7 +601,7 @@ pub fn upgrade_effect(u: &Upgrade) -> String {
             s(PARRY_COOLDOWN)
         ),
         "wall" => format!(
-            "R: a wall of light {} m wide and {} m tall stands {} m in front of you for {} s, turning as you turn. Every blue orb (cyan in the Waiting City, cobalt on the ice; each has a pale rim) that meets it breaks. Orbs of other colours, ground waves and enemies pass through it. {} s cooldown.",
+            "R: a wall of light {} m wide and {} m tall stands {} m in front of you for {} s, turning as you turn. Every blue orb (cyan in the Waiting City, cobalt on the ice; each has a pale rim) that meets it breaks; a Standing Order and a Permanent Injunction add further colours. Other orbs, ground waves and enemies pass through it. {} s cooldown.",
             m(WALL_HALF_WIDTH * 2),
             m(WALL_HEIGHT),
             m(WALL_AHEAD),
@@ -595,6 +634,17 @@ pub fn upgrade_effect(u: &Upgrade) -> String {
             s(WALL_PLUS_TICKS),
             s(WALL_PLUS_COOLDOWN)
         ),
+        "wall_ward" => {
+            // its amount is the ward it opens
+            let colours = pal
+                .wards
+                .get((u.amount - 1).max(0) as usize)
+                .map(|w| w.join(", "))
+                .unwrap_or_default();
+            format!(
+                "The Injunction's wall breaks one more family of orbs: {colours}, besides every colour it broke before. Those it breaks have a pale rim. Gold orbs are the parry's, and no wall breaks them."
+            )
+        }
         "appeal" => "Recess turns a second killing blow in the same run.".to_string(),
         "stop_plus" => format!(
             "Your time stop lasts {} s more (it is {} s once the Defendant is beaten, {} s with every Stopped Clock). {} s cooldown.",
@@ -695,7 +745,7 @@ fn rules(c: &Content) -> Vec<String> {
             s(GRAB_HOLD),
             m(THROW_RADIUS)
         ),
-        "On the Ascent every arena stands higher up the mountain than the last, and off its edges is a fall.".to_string(),
+        "On the Ascent every arena stands higher up the mountain than the last, and off its edges is a fall. Its creatures are corrupted by the ritual and by what is coming: the higher the arena, the more clockwork and eyes they carry.".to_string(),
         "Beating the game opens the boss rush in the Holding: each zone's boss in turn, from the Bailiff on, your health restored between them, with what the Holding gives you to start a run.".to_string(),
         format!("Rewards found in the house: guns of level III or IV, Hair Trigger (guns fire {TRIGGER_PCT}% faster; they stack) and Plating (hits do {PLATING_PCT}% less, up to {PLATING_MAX})."),
         format!("Updraft vents (glowing grates on the ice) throw you about {} m up when you stand on them. You keep your air jumps.", m(fx::div(fx::mul(VENT_SPEED, VENT_SPEED) / 2, GRAVITY))),
@@ -760,7 +810,7 @@ pub fn codex_json(c: &Content) -> String {
         .iter()
         .map(|u| {
             let needs = c.upgrades.iter().find(|o| o.id == u.requires).map(|o| o.name.clone()).unwrap_or_default();
-            json!({ "name": u.name, "cost": u.cost, "needs": needs, "effect": upgrade_effect(u), "icon": u.icon })
+            json!({ "name": u.name, "cost": u.cost, "needs": needs, "effect": upgrade_effect(u, &c.pal), "icon": u.icon })
         })
         .collect();
     json!({
@@ -822,7 +872,7 @@ mod tests {
     fn every_upgrade_and_enemy_has_a_description() {
         let c = content();
         for u in &c.upgrades {
-            assert!(!upgrade_effect(u).is_empty(), "{}", u.id);
+            assert!(!upgrade_effect(u, &c.pal).is_empty(), "{}", u.id);
         }
         let v: Value = serde_json::from_str(&codex_json(&c)).unwrap();
         assert_eq!(v["enemies"].as_array().unwrap().len(), c.enemies.len());

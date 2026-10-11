@@ -1078,12 +1078,12 @@
           "tier": 1,
           "waves": [
             [
-              "proxy",
-              "proxy"
+              "hart",
+              "toad"
             ],
             [
-              "shade",
-              "knife"
+              "rook",
+              "sporecap"
             ]
           ]
         },
@@ -1091,13 +1091,12 @@
           "tier": 1,
           "waves": [
             [
-              "proxy",
-              "sower"
+              "gaper",
+              "toad"
             ],
             [
-              "knife",
-              "knife",
-              "proxy"
+              "hart",
+              "rook"
             ]
           ]
         },
@@ -1105,12 +1104,12 @@
           "tier": 1,
           "waves": [
             [
-              "bellringer",
-              "proxy"
+              "freshet",
+              "toad"
             ],
             [
-              "shade",
-              "shade"
+              "auger",
+              "rook"
             ]
           ]
         },
@@ -1118,19 +1117,17 @@
           "tier": 2,
           "waves": [
             [
-              "proxy",
-              "proxy",
-              "watcher"
+              "hart",
+              "gaper"
             ],
             [
-              "bellringer",
-              "knife",
-              "knife"
+              "freshet",
+              "toad",
+              "toad"
             ],
             [
-              "shade",
-              "sower",
-              "proxy"
+              "ursine",
+              "rook"
             ]
           ]
         },
@@ -1138,14 +1135,17 @@
           "tier": 2,
           "waves": [
             [
-              "second",
-              "proxy",
-              "proxy"
+              "sporecap",
+              "hart"
             ],
             [
-              "sower",
-              "shade",
-              "knife"
+              "rime_kite",
+              "rook"
+            ],
+            [
+              "proxy",
+              "knife",
+              "toad"
             ]
           ]
         },
@@ -1153,19 +1153,17 @@
           "tier": 2,
           "waves": [
             [
-              "bellringer",
-              "bellringer"
+              "ursine",
+              "toad"
             ],
             [
-              "watcher",
-              "proxy",
-              "shade"
+              "gaper",
+              "rook"
             ],
             [
-              "knife",
-              "knife",
-              "knife",
-              "proxy"
+              "shardling",
+              "shardling",
+              "hart"
             ]
           ]
         },
@@ -1173,14 +1171,17 @@
           "tier": 2,
           "waves": [
             [
-              "sower",
-              "sower",
-              "proxy"
+              "freshet",
+              "freshet"
             ],
             [
-              "second",
+              "hart",
+              "rook",
+              "lantern"
+            ],
+            [
               "shade",
-              "shade"
+              "gaper"
             ]
           ]
         },
@@ -1188,22 +1189,20 @@
           "tier": 3,
           "waves": [
             [
-              "second",
-              "proxy",
-              "proxy",
-              "shade"
+              "ursine",
+              "hart",
+              "rook"
             ],
             [
-              "bellringer",
-              "watcher",
-              "sower"
+              "gaper",
+              "sporecap",
+              "freshet"
             ],
             [
-              "knife",
-              "knife",
-              "knife",
-              "proxy",
-              "proxy"
+              "auger",
+              "auger",
+              "toad",
+              "toad"
             ]
           ]
         },
@@ -1211,21 +1210,19 @@
           "tier": 3,
           "waves": [
             [
-              "watcher",
-              "watcher",
-              "bellringer"
+              "hart",
+              "hart",
+              "rook"
             ],
             [
-              "second",
-              "proxy",
-              "proxy",
-              "sower"
+              "freshet",
+              "ursine"
             ],
             [
-              "shade",
-              "shade",
-              "knife",
-              "knife"
+              "watcher",
+              "bellringer",
+              "sower",
+              "gaper"
             ]
           ]
         },
@@ -1233,20 +1230,20 @@
           "tier": 3,
           "waves": [
             [
-              "bellringer",
-              "bellringer",
-              "proxy"
+              "sporecap",
+              "gaper",
+              "toad",
+              "toad"
             ],
             [
-              "sower",
-              "sower",
-              "second"
+              "clerk",
+              "rook",
+              "rook"
             ],
             [
-              "shade",
-              "shade",
-              "shade",
-              "watcher"
+              "ursine",
+              "hart",
+              "freshet"
             ]
           ]
         },
@@ -1254,24 +1251,21 @@
           "tier": 4,
           "waves": [
             [
+              "ursine",
+              "ursine",
+              "rook"
+            ],
+            [
+              "freshet",
+              "freshet",
+              "hart",
+              "hart"
+            ],
+            [
               "second",
-              "bellringer",
               "proxy",
-              "proxy"
-            ],
-            [
-              "watcher",
-              "watcher",
-              "sower",
-              "shade"
-            ],
-            [
-              "knife",
-              "knife",
-              "knife",
-              "knife",
-              "second",
-              "proxy"
+              "gaper",
+              "sporecap"
             ]
           ]
         },
@@ -1279,23 +1273,23 @@
           "tier": 4,
           "waves": [
             [
-              "bellringer",
-              "bellringer",
-              "second"
+              "gaper",
+              "gaper",
+              "sporecap",
+              "rook"
             ],
             [
-              "proxy",
-              "proxy",
-              "proxy",
-              "watcher",
-              "sower"
+              "hart",
+              "hart",
+              "toad",
+              "toad",
+              "drifter"
             ],
             [
-              "shade",
-              "shade",
+              "ursine",
+              "freshet",
               "knife",
-              "knife",
-              "second"
+              "knife"
             ]
           ]
         }

@@ -135,6 +135,8 @@ impl Meta {
                 "grapple_plus" => b.grapple_plus = true,
                 "parry_plus" => b.parry_plus = true,
                 "wall_plus" => b.wall_plus = true,
+                // its amount is the ward it opens; the first is the wall's own
+                "wall_ward" => b.wall_ward = b.wall_ward.max(u.amount - 1),
                 "appeal" => b.appeal = true,
                 "precedent" => b.pierce += u.amount,
                 "bail" => b.bail += u.amount,
