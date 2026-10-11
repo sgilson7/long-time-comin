@@ -154,6 +154,7 @@ BREAKS = [
  ("a floor under the Penrose seam", "crates/core/src/arena/god.rs", "        self.slab(-LANE, SEAM_Z, -WELL, LANE, 0, stone);\n", "        self.slab(-LANE, WELL, -WELL, LANE, 0, stone);\n", "the_penrose_stairs_top"),
  ("room for the god", "crates/core/src/arena/god.rs", "        self.arch(0, m(12), true, m(6), m(4), bone);\n", "        self.post(0, 0, -m(40), m(3), m(10), bone);\n        self.arch(0, m(12), true, m(6), m(4), bone);\n", "the_heart_leaves_the_god_room"),
  ("the god's stairs", "crates/core/src/arena/god.rs", "        let n = ((to - from).abs() + RISE - 1) / RISE;", "        if to > from {\n            return;\n        }\n        let n = ((to - from).abs() + RISE - 1) / RISE;", "every_gate_in_the_god"),
+ ("over nothing, the last floor", "crates/core/src/world.rs", "if self.arena.level.floor_below(over.x, over.y, over.z).is_none() {", "if false {", "falling_where_there_is_no_floor"),
  ("a bar for each phase", "crates/core/src/game.rs", "\"bars_left\": bars - bar,", "\"bars_left\": bars,", "the_god_has_a_bar"),
 
 ]

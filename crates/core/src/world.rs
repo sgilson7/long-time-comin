@@ -817,10 +817,14 @@ impl World {
             }
             let deeds = self.enemies[i].step(c, &self.arena.level, chest, i);
             if self.arena.wrap > 0 && self.enemies[i].pos.y < -WRAP_BELOW {
-                // fallen off the god's floor: down again from above
-                let up = v3(0, self.arena.wrap, 0);
-                self.enemies[i].pos = self.enemies[i].pos.add(up);
-                self.enemies[i].prev = self.enemies[i].pos;
+                // fallen off the god's floor: down again from above, over
+                // the arena's middle if over nothing
+                let mut at = self.enemies[i].pos.add(v3(0, self.arena.wrap, 0));
+                if self.arena.level.floor_below(at.x, at.y, at.z).is_none() {
+                    at = v3(self.arena.centre.x, at.y, self.arena.centre.z);
+                }
+                self.enemies[i].pos = at;
+                self.enemies[i].prev = at;
             }
             if deeds.stop > 0 && self.stop.is_none() {
                 self.stop = Some(TimeStop {
@@ -2035,7 +2039,13 @@ impl World {
     fn wrap_and_seams(&mut self) {
         let p = &mut self.player;
         if self.arena.wrap > 0 && p.pos.y < -WRAP_BELOW {
-            let up = v3(0, self.arena.wrap, 0);
+            let mut up = v3(0, self.arena.wrap, 0);
+            // over nothing at all, it would fall for ever: it comes down
+            // over the last floor you stood on instead
+            let over = p.pos.add(up);
+            if self.arena.level.floor_below(over.x, over.y, over.z).is_none() {
+                up = up.add(v3(p.last_ground.x - p.pos.x, 0, p.last_ground.z - p.pos.z));
+            }
             p.pos = p.pos.add(up);
             p.prev_pos = p.prev_pos.add(up);
             p.release_grapple();
@@ -4238,6 +4248,28 @@ mod god {
         assert!(w.enemies[ahead].seen && !w.enemies[behind].seen);
         assert_eq!(w.enemies[ahead].pos, a0, "looked at, it is a statue");
         assert_ne!(w.enemies[behind].pos, b0, "behind you, it comes");
+    }
+
+    #[test]
+    fn falling_where_there_is_no_floor_at_all_comes_down_over_the_last_floor_you_stood_on() {
+        let (c, mut w) = world_in(NodeKind::Fight);
+        for _ in 0..10 {
+            step(&c, &mut w, &Controls::default());
+        }
+        let stood = w.player.last_ground;
+        // far out over the void, where no floor is under any height
+        w.player.pos = v3(int(200), int(2), int(200));
+        w.player.prev_pos = w.player.pos;
+        let mut landed = false;
+        for _ in 0..secs(8, 1) {
+            step(&c, &mut w, &Controls::default());
+            if w.player.grounded {
+                landed = true;
+                break;
+            }
+        }
+        assert!(landed, "it lands, and does not fall for ever");
+        assert!(w.player.pos.sub(stood).len_xz() < int(3), "where it last stood");
     }
 
     /// Two seams facing different ways, 20 m apart, each the other's.
