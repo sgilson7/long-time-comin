@@ -1,5 +1,5 @@
 {
-  "_about": "Orb patterns. A pattern is a list of volleys fired from the enemy's centre. Shapes: ring (count orbs around the enemy, flat unless pitch_deg), aimed (a fan of count orbs, spread_deg wide in all, toward the player), sphere (rings at pitches spread over the sky), wave (a ring along the ground: jump it). Units: speed_cms cm/s, accel_cms2 cm/s\u00b2 (negative slows), min_cms and max_cms bound the speed, curl_degs turns each orb this many degrees a second (alternate: every other orb turns the other way, which draws petals), spin_deg turns the volley between repeats (a spiral), every_ms between repeats, delay_ms before the first, size_cm the orb's radius, gold orbs can be parried with Objection. aim: a ring turns to face the player first. damage (optional) overrides the default hit damage (balance.rs ORB_DAMAGE, WAVE_DAMAGE) for that volley. Zone two's patterns use held formations (shape form): form is ring, grid, line, column, star, spiral, arc or ribbon, of count orbs (rows: a grid's rows, a star's orbs to an arm, a spiral's turns, a ribbon's rises), radius_cm across (a grid's spacing, a column's height); at places it round the enemy (self), at_cm toward you (front), round you (target) or at_cm over you (above); plane flat (in the plane through you, or level round or over you) or face (standing, facing you). Each orb hangs still for hold_ms, plus stagger_ms for each orb after the first, then flies by launch: out, in, aim (at you then), lead (at where you will be, from how you move), down, along (the line from the enemy to you), spin (round the centre), keep. Any orb may stop after stop_ms of flight, wait rehold_ms and fly again by relaunch at relaunch_cms. Colour blue (and zone one's cyan) is broken by the Injunction.",
+  "_about": "Orb patterns. A pattern is a list of volleys fired from the enemy's centre. Shapes: ring (count orbs around the enemy, flat unless pitch_deg), aimed (a fan of count orbs, spread_deg wide in all, toward the player), sphere (rings at pitches spread over the sky), wave (a ring along the ground: jump it). Units: speed_cms cm/s, accel_cms2 cm/s\u00b2 (negative slows), min_cms and max_cms bound the speed, curl_degs turns each orb this many degrees a second (alternate: every other orb turns the other way, which draws petals), spin_deg turns the volley between repeats (a spiral), every_ms between repeats, delay_ms before the first, size_cm the orb's radius, gold orbs can be parried with Objection. aim: a ring turns to face the player first. damage (optional) overrides the default hit damage (balance.rs ORB_DAMAGE, WAVE_DAMAGE) for that volley. Zone two's patterns use held formations (shape form): form is ring, grid, line, column, star, spiral, arc or ribbon, of count orbs (rows: a grid's rows, a star's orbs to an arm, a spiral's turns, a ribbon's rises), radius_cm across (a grid's spacing, a column's height); at places it round the enemy (self), at_cm toward you (front), round you (target) or at_cm over you (above); plane flat (in the plane through you, or level round or over you) or face (standing, facing you). Each orb hangs still for hold_ms, plus stagger_ms for each orb after the first, then flies by launch: out, in, aim (at you then), lead (at where you will be, from how you move), down, along (the line from the enemy to you), spin (round the centre), keep. Any orb may stop after stop_ms of flight, wait rehold_ms and fly again by relaunch at relaunch_cms. Colour blue (and zone one's cyan) is broken by the Injunction. Zone three's patterns add: bounce (walls the orb glances off before one stops it), fall_cms2 (gravity: a lobbed aimed orb arcs to land at your feet, or round them by its spread) and plant (the pattern a lobbed or shell orb fires where it lands on a solid), sweep_deg (an aimed volley's repeats sweep across this angle, one end to the other), and form lane (two walls of count orbs, length_cm long, radius_cm either side of the line to you; launch close sends them straight across, toward its middle).",
   "patterns": [
     {
       "id": "spiral_quad",
@@ -1162,6 +1162,559 @@
           "repeat": 4,
           "every_ms": 400,
           "delay_ms": 200
+        }
+      ]
+    },
+    {
+      "id": "burst_fire",
+      "volleys": [
+        {
+          "shape": "aimed",
+          "count": 1,
+          "repeat": 6,
+          "every_ms": 80,
+          "sweep_deg": 24,
+          "speed_cms": 2000,
+          "size_cm": 22,
+          "colour": "scarlet"
+        }
+      ]
+    },
+    {
+      "id": "file_fire",
+      "volleys": [
+        {
+          "shape": "form",
+          "form": "line",
+          "count": 7,
+          "radius_cm": 300,
+          "at": "front",
+          "at_cm": 200,
+          "plane": "face",
+          "hold_ms": 400,
+          "stagger_ms": 60,
+          "launch": "aim",
+          "speed_cms": 1600,
+          "size_cm": 24,
+          "colour": "chalk"
+        }
+      ]
+    },
+    {
+      "id": "ricochet_pair",
+      "volleys": [
+        {
+          "shape": "aimed",
+          "count": 2,
+          "spread_deg": 20,
+          "bounce": 2,
+          "speed_cms": 1500,
+          "size_cm": 26,
+          "colour": "blue",
+          "repeat": 3,
+          "every_ms": 150
+        }
+      ]
+    },
+    {
+      "id": "pincer_arc",
+      "volleys": [
+        {
+          "shape": "form",
+          "form": "arc",
+          "count": 9,
+          "spread_deg": 100,
+          "radius_cm": 500,
+          "at": "target",
+          "hold_ms": 700,
+          "launch": "in",
+          "speed_cms": 1100,
+          "size_cm": 28,
+          "colour": "lime"
+        }
+      ]
+    },
+    {
+      "id": "scatter_close",
+      "volleys": [
+        {
+          "shape": "aimed",
+          "count": 7,
+          "spread_deg": 50,
+          "speed_cms": 1700,
+          "size_cm": 22,
+          "colour": "scarlet",
+          "repeat": 2,
+          "every_ms": 200
+        }
+      ]
+    },
+    {
+      "id": "long_shot",
+      "volleys": [
+        {
+          "shape": "aimed",
+          "count": 1,
+          "speed_cms": 4200,
+          "size_cm": 40,
+          "colour": "scarlet",
+          "damage": 22
+        },
+        {
+          "shape": "aimed",
+          "count": 3,
+          "spread_deg": 8,
+          "speed_cms": 3000,
+          "size_cm": 24,
+          "colour": "chalk",
+          "delay_ms": 120
+        }
+      ]
+    },
+    {
+      "id": "tracer_line",
+      "volleys": [
+        {
+          "shape": "aimed",
+          "count": 1,
+          "repeat": 5,
+          "every_ms": 60,
+          "speed_cms": 3600,
+          "size_cm": 24,
+          "colour": "lime"
+        }
+      ]
+    },
+    {
+      "id": "kettle",
+      "volleys": [
+        {
+          "shape": "form",
+          "form": "lane",
+          "count": 7,
+          "length_cm": 1200,
+          "radius_cm": 300,
+          "at": "target",
+          "hold_ms": 900,
+          "launch": "close",
+          "speed_cms": 700,
+          "size_cm": 34,
+          "colour": "blue"
+        },
+        {
+          "shape": "aimed",
+          "count": 3,
+          "spread_deg": 30,
+          "speed_cms": 1300,
+          "size_cm": 28,
+          "colour": "chalk",
+          "delay_ms": 400
+        }
+      ]
+    },
+    {
+      "id": "low_ricochet",
+      "volleys": [
+        {
+          "shape": "ring",
+          "count": 12,
+          "speed_cms": 900,
+          "size_cm": 28,
+          "colour": "chalk",
+          "bounce": 1,
+          "repeat": 2,
+          "every_ms": 400,
+          "spin_deg": 12
+        }
+      ]
+    },
+    {
+      "id": "mine_ring",
+      "volleys": [
+        {
+          "shape": "form",
+          "form": "ring",
+          "count": 10,
+          "radius_cm": 150,
+          "hold_ms": 900,
+          "launch": "out",
+          "speed_cms": 800,
+          "size_cm": 30,
+          "colour": "lime"
+        }
+      ]
+    },
+    {
+      "id": "canister",
+      "volleys": [
+        {
+          "shape": "aimed",
+          "count": 3,
+          "spread_deg": 24,
+          "fall_cms2": 1800,
+          "speed_cms": 1300,
+          "size_cm": 40,
+          "colour": "lime",
+          "plant": "mine_ring"
+        }
+      ]
+    },
+    {
+      "id": "mine_cross",
+      "volleys": [
+        {
+          "shape": "form",
+          "form": "star",
+          "count": 4,
+          "rows": 3,
+          "radius_cm": 300,
+          "hold_ms": 1000,
+          "launch": "out",
+          "speed_cms": 900,
+          "size_cm": 30,
+          "colour": "scarlet"
+        }
+      ]
+    },
+    {
+      "id": "bracket_lob",
+      "volleys": [
+        {
+          "shape": "aimed",
+          "count": 2,
+          "spread_deg": 30,
+          "fall_cms2": 1800,
+          "speed_cms": 1200,
+          "size_cm": 40,
+          "colour": "scarlet",
+          "plant": "mine_cross"
+        },
+        {
+          "shape": "aimed",
+          "count": 1,
+          "fall_cms2": 1800,
+          "speed_cms": 1100,
+          "size_cm": 40,
+          "colour": "lime",
+          "plant": "mine_ring",
+          "delay_ms": 500
+        }
+      ]
+    },
+    {
+      "id": "sweep_trail",
+      "volleys": [
+        {
+          "shape": "form",
+          "form": "line",
+          "count": 9,
+          "radius_cm": 400,
+          "plane": "face",
+          "hold_ms": 300,
+          "stagger_ms": 40,
+          "launch": "aim",
+          "speed_cms": 1300,
+          "size_cm": 26,
+          "colour": "scarlet"
+        }
+      ]
+    },
+    {
+      "id": "lunge_ring",
+      "volleys": [
+        {
+          "shape": "ring",
+          "count": 12,
+          "speed_cms": 900,
+          "size_cm": 30,
+          "colour": "chalk",
+          "repeat": 2,
+          "every_ms": 250,
+          "spin_deg": 15
+        }
+      ]
+    },
+    {
+      "id": "bracket",
+      "volleys": [
+        {
+          "shape": "form",
+          "form": "lane",
+          "count": 6,
+          "length_cm": 1000,
+          "radius_cm": 250,
+          "at": "target",
+          "hold_ms": 900,
+          "launch": "close",
+          "speed_cms": 800,
+          "size_cm": 32,
+          "colour": "chalk"
+        },
+        {
+          "shape": "form",
+          "form": "ring",
+          "count": 12,
+          "radius_cm": 500,
+          "at": "target",
+          "hold_ms": 1400,
+          "launch": "in",
+          "speed_cms": 900,
+          "size_cm": 30,
+          "colour": "scarlet"
+        }
+      ]
+    },
+    {
+      "id": "net",
+      "volleys": [
+        {
+          "shape": "form",
+          "form": "grid",
+          "count": 5,
+          "rows": 4,
+          "radius_cm": 220,
+          "at": "above",
+          "at_cm": 600,
+          "hold_ms": 900,
+          "stagger_ms": 30,
+          "launch": "down",
+          "speed_cms": 1200,
+          "size_cm": 28,
+          "colour": "blue"
+        }
+      ]
+    },
+    {
+      "id": "decree",
+      "volleys": [
+        {
+          "shape": "aimed",
+          "count": 5,
+          "spread_deg": 60,
+          "repeat": 8,
+          "every_ms": 120,
+          "sweep_deg": 90,
+          "speed_cms": 1600,
+          "size_cm": 28,
+          "colour": "scarlet",
+          "bounce": 1
+        }
+      ]
+    },
+    {
+      "id": "audit",
+      "volleys": [
+        {
+          "shape": "form",
+          "form": "ring",
+          "count": 20,
+          "radius_cm": 600,
+          "at": "target",
+          "hold_ms": 1000,
+          "launch": "in",
+          "speed_cms": 900,
+          "size_cm": 32,
+          "colour": "chalk"
+        },
+        {
+          "shape": "form",
+          "form": "ring",
+          "count": 10,
+          "radius_cm": 250,
+          "at": "target",
+          "hold_ms": 1400,
+          "launch": "out",
+          "speed_cms": 1300,
+          "size_cm": 30,
+          "colour": "blue"
+        }
+      ]
+    },
+    {
+      "id": "severance",
+      "volleys": [
+        {
+          "shape": "form",
+          "form": "lane",
+          "count": 9,
+          "length_cm": 1600,
+          "radius_cm": 350,
+          "at": "target",
+          "hold_ms": 800,
+          "launch": "close",
+          "speed_cms": 1000,
+          "size_cm": 34,
+          "colour": "lime"
+        },
+        {
+          "shape": "aimed",
+          "count": 1,
+          "delay_ms": 600,
+          "speed_cms": 1200,
+          "size_cm": 46,
+          "colour": "gold",
+          "gold": true
+        }
+      ]
+    },
+    {
+      "id": "shell_burst",
+      "volleys": [
+        {
+          "shape": "form",
+          "form": "ring",
+          "count": 12,
+          "radius_cm": 120,
+          "hold_ms": 350,
+          "launch": "out",
+          "speed_cms": 1000,
+          "size_cm": 30,
+          "colour": "scarlet"
+        }
+      ]
+    },
+    {
+      "id": "shell",
+      "volleys": [
+        {
+          "shape": "aimed",
+          "count": 1,
+          "speed_cms": 2200,
+          "size_cm": 60,
+          "colour": "scarlet",
+          "damage": 24,
+          "plant": "shell_burst"
+        }
+      ]
+    },
+    {
+      "id": "coax",
+      "volleys": [
+        {
+          "shape": "aimed",
+          "count": 1,
+          "repeat": 8,
+          "every_ms": 90,
+          "sweep_deg": 30,
+          "speed_cms": 1800,
+          "size_cm": 24,
+          "colour": "chalk"
+        }
+      ]
+    },
+    {
+      "id": "mortar",
+      "volleys": [
+        {
+          "shape": "aimed",
+          "count": 3,
+          "spread_deg": 24,
+          "fall_cms2": 1600,
+          "speed_cms": 1200,
+          "size_cm": 44,
+          "colour": "lime",
+          "plant": "mine_ring"
+        }
+      ]
+    },
+    {
+      "id": "broadside",
+      "volleys": [
+        {
+          "shape": "ring",
+          "count": 8,
+          "speed_cms": 1100,
+          "size_cm": 30,
+          "colour": "blue",
+          "bounce": 1
+        }
+      ]
+    },
+    {
+      "id": "salvo",
+      "volleys": [
+        {
+          "shape": "aimed",
+          "count": 1,
+          "speed_cms": 1600,
+          "size_cm": 28,
+          "colour": "scarlet",
+          "repeat": 3,
+          "every_ms": 200
+        }
+      ]
+    },
+    {
+      "id": "chorus",
+      "volleys": [
+        {
+          "shape": "form",
+          "form": "ring",
+          "count": 6,
+          "radius_cm": 120,
+          "hold_ms": 500,
+          "launch": "out",
+          "speed_cms": 900,
+          "size_cm": 28,
+          "colour": "lime"
+        }
+      ]
+    },
+    {
+      "id": "seraph",
+      "volleys": [
+        {
+          "shape": "ring",
+          "count": 8,
+          "speed_cms": 800,
+          "size_cm": 28,
+          "colour": "chalk",
+          "repeat": 3,
+          "every_ms": 500,
+          "spin_deg": 20
+        }
+      ]
+    },
+    {
+      "id": "hosanna",
+      "volleys": [
+        {
+          "shape": "aimed",
+          "count": 1,
+          "speed_cms": 1300,
+          "size_cm": 26,
+          "colour": "scarlet",
+          "repeat": 6,
+          "every_ms": 250
+        },
+        {
+          "shape": "aimed",
+          "count": 1,
+          "speed_cms": 1100,
+          "size_cm": 44,
+          "colour": "gold",
+          "gold": true,
+          "delay_ms": 900
+        }
+      ]
+    },
+    {
+      "id": "ophanim",
+      "volleys": [
+        {
+          "shape": "form",
+          "form": "ring",
+          "count": 5,
+          "radius_cm": 150,
+          "hold_ms": 600,
+          "launch": "spin",
+          "speed_cms": 700,
+          "size_cm": 26,
+          "colour": "blue",
+          "stop_ms": 700,
+          "rehold_ms": 300,
+          "relaunch": "aim",
+          "relaunch_cms": 1200
         }
       ]
     }

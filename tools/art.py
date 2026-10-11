@@ -34,6 +34,10 @@ generator gets wrong), and where this file enforces each:
 - the Witness: a hooded robe grown into ice, one great gold eye, a crown
   of shards, arms of ice, as crates/core/src/draw/beasts.rs draws it
   (`witness`).
+- the house (zone three): its agents are all one man in a charcoal suit,
+  white shirt, black tie and dark glasses (`agent`), as
+  crates/core/src/draw/house.rs draws them; the Executor is a gunmetal
+  tank with ember weak points on its turret's back (`executor`).
 - colour is never the only cue: every shape has the plum outline.
 - repeatable: every random choice comes from a seeded generator, so the
   same script draws the same pictures.
@@ -63,6 +67,14 @@ COLOURS = {
     "icered": "D94A3A", "hull": "A8392F", "hulldark": "6C2A27", "icemetal": "8A97A6", "canvas": "E9C47C",
     "auroragreen": "5CF2B0", "aurorapink": "F27AD0", "cobalt": "1F4FFF", "ember": "FF6A1A",
     "witnessrobe": "1E2742", "witnessice": "CDEBFA", "navy": "1C2A44", "water": "2C6690", "dawn": "F7C89A",
+    # zone three, the Glass House: data/palette.json's house set
+    "housesky": "1C2440", "housenight": "2A3358", "paperwall": "7A2E3A", "paperwall2": "2F5A4A", "panel": "5A3424",
+    "hwood": "8A4F2E", "hwooddark": "4E2A1C", "marble": "E9DFC9", "marbledark": "3D3436", "brass": "E0A93E",
+    "candle": "FFD27A", "moon": "9FC6FF", "carpet": "9C2F3C", "cream": "F1E6CC", "labwhite": "DCE7E6", "labfluid": "7CFFB2",
+    "grassnight": "2E4A3A", "hedge": "1F3A2C", "glass": "BFEFFF", "suit": "33363D", "suitdark": "1E2026",
+    "shirt": "EDEDE6", "agentskin": "D8C3A8", "shades": "0E0F12", "tankhull": "3B4249", "tankplate": "5A646F",
+    "tanktread": "22262B", "tankweak": "FF7A1A", "tankeye": "FFF3B0", "tankiris": "FF4A3A", "halo": "FFC94A",
+    "scarlet": "FF2E3A", "chalk": "FFF6DA", "lime": "B6FF3A", "sawsteel": "E8F0F5",
 }
 WALLS = ["wallA", "wallB", "wallC", "wallD", "wallE", "wallF"]
 GREENS = ["greenA", "greenB", "greenC", "greenD"]
@@ -482,6 +494,19 @@ def gun_art(kind):
         s += circle(9.4, 1.83, 0.2, "ink")
         s += poly([(1.2, 1.3), (2.2, 1.3), (1.8, 0.2), (0.9, 0.3)], "wood")
         s += rect(1.6, 2.8, 4.4, 3.05, "gold")
+    elif kind == "ripsaw":
+        s += poly([(0.4, 1.4), (5.6, 1.4), (5.6, 2.8), (0.4, 2.6)], "gun")
+        s += poly([(1.3, 1.4), (2.2, 1.4), (1.9, 0.3), (1.0, 0.4)], "gun")
+        s += rect(5.6, 2.6, 8.0, 3.0, "metaldark")
+        teeth = []
+        for k in range(24):
+            a = 2 * math.pi * k / 24
+            r = 1.55 if k % 2 == 0 else 1.25
+            teeth.append((7.8 + r * math.cos(a), 1.9 + r * math.sin(a)))
+        s += poly(teeth, "sawsteel")
+        s += circle(7.8, 1.9, 0.55, "metal")
+        s += circle(7.8, 1.9, 0.18, "ink")
+        s += rect(2.0, 2.8, 4.8, 3.05, "chalk")
     else:
         s += rect(1.0, 1.4, 7.6, 2.8, "gun")
         s += circle(8.2, 2.1, 1.0, "cyan")
@@ -549,6 +574,40 @@ def icon(kind):
             s += poly([(x, y), (x + 0.18, y + 0.1), (x + 0.05, y - 0.15)], "cobalt", ",line width=0.6pt")
         s += orb(3.2, 1.5, 0.32, "ember", glow=False)
         s += "\\draw[ember, line width=1.4pt, opacity=0.7] (1.0,1.6) -- (2.8,1.5);\n"
+    elif kind == "pound":
+        # a gavel's head coming straight down onto a shockwave
+        s += f"\\filldraw[inked,fill=goldtrim] (1.3,2.3) rectangle (2.7,3.0);\n"
+        s += rect(1.85, 3.0, 2.15, 3.6, "wood")
+        s += "\\draw[ink, line width=1.6pt] (2.0,2.2) -- (2.0,1.6);\n"
+        for k, r in enumerate((0.55, 1.0, 1.45)):
+            s += f"\\draw[halo, line width={f(2.4 - k * 0.6)}pt] (2,1.2) ellipse ({f(r)} and {f(r * 0.3)});\n"
+    elif kind == "saw":
+        teeth = []
+        for k in range(20):
+            a = 2 * math.pi * k / 20
+            r = 1.55 if k % 2 == 0 else 1.2
+            teeth.append((2 + r * math.cos(a), 2 + r * math.sin(a)))
+        s += poly(teeth, "sawsteel")
+        s += circle(2.0, 2.0, 0.5, "metal")
+        s += circle(2.0, 2.0, 0.16, "ink")
+    elif kind == "conduct":
+        pts = []
+        for k in range(10):
+            a = math.pi / 2 + math.pi * k / 5
+            r = 1.4 if k % 2 == 0 else 0.6
+            pts.append((2 + r * math.cos(a), 2.1 + r * math.sin(a)))
+        s += poly(pts, "gold")
+        s += poly([(1.4, 0.4), (1.9, 0.4), (2.0, 1.0), (1.5, 1.0)], "carpet")
+        s += poly([(2.1, 0.4), (2.6, 0.4), (2.5, 1.0), (2.0, 1.0)], "carpet")
+    elif kind == "trigger":
+        s += "\\draw[ink, line width=2.4pt] (2.0,1.6) circle (1.0);\n"
+        s += poly([(2.2, 3.3), (1.4, 1.9), (2.0, 1.9), (1.7, 0.7), (2.7, 2.3), (2.1, 2.3)], "gold")
+    elif kind == "plating":
+        for k in range(3):
+            y = 2.6 - k * 0.75
+            s += f"\\filldraw[inked,fill=metal,rounded corners=3pt] {P(0.9 + k * 0.25, y)} rectangle {P(3.1 - k * 0.25, y + 0.6)};\n"
+            s += circle(1.2 + k * 0.25, y + 0.3, 0.08, "ink")
+            s += circle(2.8 - k * 0.25, y + 0.3, 0.08, "ink")
     elif kind == "gavel":
         s += poly([(0.9, 0.9), (2.4, 2.4), (2.1, 2.7), (0.6, 1.2)], "wood")
         s += f"\\filldraw[inked,fill=goldtrim,rotate around={{45:(2.6,2.6)}}] (1.9,2.25) rectangle (3.3,2.95);\n"
@@ -727,6 +786,193 @@ def testimony():
     return s, (W, H)
 
 
+# ---- zone three ---------------------------------------------------------------
+
+def agent(x, y, s, umbrella=False):
+    """One of the Continuance's men: a charcoal suit, a white shirt, a black
+    tie, dark glasses, the same face as every other. (x, y) between the
+    feet; s scales a 2.0-tall figure."""
+    def T(px, py):
+        return (x + px * s, y + py * s)
+    out = ""
+    for lx in (-0.14, 0.14):
+        out += poly([T(lx - 0.09, 0), T(lx + 0.09, 0), T(lx + 0.07, 0.95), T(lx - 0.07, 0.95)], "suitdark")
+        out += poly([T(lx - 0.11, -0.02), T(lx + 0.15, -0.02), T(lx + 0.15, 0.07), T(lx - 0.11, 0.07)], "shades")
+    out += poly([T(-0.3, 0.85), T(0.3, 0.85), T(0.32, 1.62), T(-0.32, 1.62)], "suit")
+    out += poly([T(-0.1, 1.62), T(0.1, 1.62), T(0, 1.3)], "shirt")
+    out += poly([T(-0.03, 1.58), T(0.03, 1.58), T(0.05, 1.12), T(0, 1.05), T(-0.05, 1.12)], "shades")
+    for sx in (-1, 1):
+        out += poly([T(sx * 0.3, 1.6), T(sx * 0.42, 1.55), T(sx * 0.38, 0.95), T(sx * 0.28, 0.98)], "suit")
+    hx, hy = T(0, 1.82)
+    out += circle(hx, hy, 0.19 * s, "agentskin")
+    out += f"\\filldraw[inked,fill=shades] {P(hx - 0.2 * s, hy + 0.02 * s)} arc (180:0:{f(0.2 * s)}) -- cycle;\n"
+    out += rect(hx - 0.16 * s, hy - 0.04 * s, hx + 0.16 * s, hy + 0.04 * s, "shades")
+    if umbrella:
+        ux, uy = T(0.38, 1.0)
+        out += line((ux, uy), (ux, uy + 1.5 * s), lw=1.2)
+        out += f"\\filldraw[inked,fill=shades] {P(ux - 0.75 * s, uy + 1.45 * s)} arc (180:0:{f(0.75 * s)}) -- cycle;\n"
+    return out
+
+
+def rain(rng, W, H, n=120):
+    s = ""
+    for _ in range(n):
+        x, y = rng.uniform(0, W), rng.uniform(0, H)
+        s += f"\\draw[moon, line width=0.6pt, opacity=0.55] {P(x, y)} -- {P(x - 0.25, y - 0.9)};\n"
+    return s
+
+
+def mansion(rng, x0, y0, w, h):
+    """The house on Calder Hill: a long front of lit windows, a roof of
+    gables and chimneys, the glass conservatory on its right."""
+    s = rect(x0, y0, x0 + w, y0 + h, "marbledark")
+    s += rect(x0 - 0.2, y0 + h, x0 + w + 0.2, y0 + h + 0.35, "hwooddark")
+    for k in range(5):
+        gx = x0 + w * (k + 0.5) / 5
+        s += poly([(gx - 1.3, y0 + h + 0.35), (gx + 1.3, y0 + h + 0.35), (gx, y0 + h + 2.1)], "hwooddark")
+        s += rect(gx + 0.5, y0 + h + 0.9, gx + 0.85, y0 + h + 2.4, "marbledark")
+    for j in range(3):
+        for i in range(int(w / 1.1)):
+            wx = x0 + 0.35 + i * 1.1
+            wy = y0 + 0.5 + j * h / 3.2
+            lit = rng.random() < 0.7
+            fill = "candle" if lit else "housenight"
+            s += f"\\filldraw[inked,line width=0.7pt,fill={fill}] {P(wx, wy)} rectangle {P(wx + 0.55, wy + h / 4.6)};\n"
+            s += f"\\draw[inked,line width=0.5pt] {P(wx + 0.275, wy)} -- {P(wx + 0.275, wy + h / 4.6)};\n"
+            if lit and rng.random() < 0.35:
+                s += f"\\fill[labfluid, opacity=0.5] {P(wx + 0.05, wy + 0.05)} rectangle {P(wx + 0.5, wy + h / 4.6 - 0.05)};\n"
+    # the door, lit
+    dx = x0 + w * 0.45
+    s += f"\\filldraw[inked,fill=candle] {P(dx, y0)} -- {P(dx, y0 + 1.4)} arc (180:0:0.45) -- {P(dx + 0.9, y0)} -- cycle;\n"
+    # the conservatory: a glass wing with ribs
+    cx = x0 + w
+    s += f"\\filldraw[inked,fill=glass,fill opacity=0.55] {P(cx, y0)} rectangle {P(cx + 3.6, y0 + h * 0.75)};\n"
+    s += f"\\filldraw[inked,fill=glass,fill opacity=0.55] {P(cx, y0 + h * 0.75)} -- {P(cx + 1.8, y0 + h * 1.05)} -- {P(cx + 3.6, y0 + h * 0.75)} -- cycle;\n"
+    for k in range(7):
+        rx = cx + k * 0.6
+        s += f"\\draw[ink, line width=0.7pt] {P(rx, y0)} -- {P(rx, y0 + h * 0.75)};\n"
+    s += f"\\fill[candle, opacity=0.25] {P(cx + 0.1, y0 + 0.1)} rectangle {P(cx + 3.5, y0 + h * 0.7)};\n"
+    return s
+
+
+def interlude_house():
+    """What the Witness saw: the house on Calder Hill in the rain at
+    night, ten years of laboratories lit in its windows, and up the lawn,
+    in a line, the grey men with one face, under black umbrellas. The right
+    side is lawn and rain, under the page's sheet."""
+    W, H = 32.0, 18.0
+    rng = random.Random(2056)
+    s = f"\\fill[housesky] (0,0) rectangle {P(W, H)};\n"
+    s += f"\\fill[housenight] (0,{f(H * 0.55)}) rectangle {P(W, H * 0.8)};\n"
+    s += f"\\filldraw[inked,fill=moon] (27.5,15.6) circle (1.1);\n"
+    s += f"\\fill[moon, opacity=0.18] (27.5,15.6) circle (2.4);\n"
+    for (cx, cy, cs) in [(6, 16.2, 1.4), (15, 16.8, 1.1), (22, 15.8, 1.2)]:
+        s += cloud(cx, cy, cs, fill="housenight")
+    # the hill and the house on it
+    s += f"\\filldraw[inked,fill=grassnight] (-0.5,0) -- (-0.5,6.8) .. controls (6,8.2) and (14,8.0) .. (20,6.4) .. controls (25,5.2) and (29,4.8) .. (32.5,4.6) -- (32.5,0) -- cycle;\n"
+    s += mansion(rng, 2.0, 7.4, 10.0, 4.6)
+    for k in range(6):
+        tx = 0.6 + k * 2.6 + rng.uniform(-0.4, 0.4)
+        if 1.5 < tx < 16.5:
+            continue
+        s += f"\\filldraw[inked,fill=hedge] {P(tx, 6.9)} circle (0.9);\n"
+    # a path down the lawn, and the grey men coming up it in a line
+    s += f"\\fill[marbledark, opacity=0.5] (6.5,7.4) -- (7.6,7.4) -- (16,0) -- (12.5,0) -- cycle;\n"
+    for k in range(7):
+        t = k / 6
+        ax = 8.2 + t * 7.0
+        ay = 6.4 - t * 6.0
+        s += agent(ax, ay, 0.85 + t * 0.9, umbrella=True)
+    # one scientist's lab coat on the steps, fallen
+    s += poly([(6.8, 7.45), (7.7, 7.45), (7.9, 7.65), (6.6, 7.7)], "labwhite")
+    s += rain(rng, W, H, 160)
+    return s, (W, H)
+
+
+def executor(x, y, s, eyes=True, closed=True):
+    """The Executor seen side on, muzzle to the left: two treads, a hull, a
+    turret with its long gun, ember weak points on the turret's back, the
+    cannons it grew and (eyes) the eyes of its last phase, shut."""
+    def T(px, py):
+        return (x + px * s, y + py * s)
+    out = ""
+    out += f"\\filldraw[inked,fill=tanktread,rounded corners=4pt] {P(*T(-4.2, 0))} rectangle {P(*T(4.2, 1.3))};\n"
+    for k in range(7):
+        out += circle(*T(-3.6 + k * 1.2, 0.65), 0.45 * s, "tankplate")
+    out += poly([T(-4.5, 1.3), T(4.3, 1.3), T(4.3, 2.4), T(-3.4, 2.4)], "tankhull")
+    out += poly([T(-2.0, 2.4), T(2.2, 2.4), T(2.6, 3.6), T(-1.6, 3.6)], "tankplate")
+    out += rect(*T(-8.0, 2.85), *T(-1.9, 3.2), "tanktread")
+    out += rect(*T(-8.4, 2.75), *T(-7.7, 3.3), "tanktread")
+    for (wx, wy) in ((2.3, 2.9), (2.4, 3.3)):
+        out += f"\\fill[tankweak, opacity=0.35] {P(*T(wx, wy))} circle ({f(0.45 * s)});\n"
+        out += circle(*T(wx, wy), 0.2 * s, "tankweak")
+    # the cannons it grew, out of the hull and up the turret like wings
+    for k in range(6):
+        a = math.radians(40 + k * 18)
+        bx, by = T(0.6, 3.5)
+        tx, ty = bx + math.cos(a) * 3.2 * s, by + math.sin(a) * 3.2 * s
+        out += line((bx, by), (tx, ty), lw=3.0 * s, colour="tanktread")
+        out += circle(tx, ty, 0.25 * s, "halo")
+        if eyes:
+            out += f"\\filldraw[inked,fill=tankeye] {P(tx, ty + 0.5 * s)} ellipse ({f(0.32 * s)} and {f((0.05 if closed else 0.2) * s)});\n"
+    for k in range(4):
+        a = math.radians(160 - k * 22)
+        bx, by = T(-0.4, 3.4)
+        tx, ty = bx + math.cos(a) * 2.6 * s, by + math.sin(a) * 2.6 * s
+        out += line((bx, by), (tx, ty), lw=2.6 * s, colour="tanktread")
+    if eyes:
+        for k in range(5):
+            ex, ey = T(-3.0 + k * 1.5, 1.85)
+            out += f"\\filldraw[inked,fill=tankeye] {P(ex, ey)} ellipse ({f(0.34 * s)} and {f((0.05 if closed else 0.22) * s)});\n"
+        out += f"\\draw[halo, line width={f(2.2 * s)}pt] {P(*T(0.3, 7.6))} ellipse ({f(1.8 * s)} and {f(0.45 * s)});\n"
+    return out
+
+
+def orders():
+    """The Executor's orders: the conservatory wrecked, its glass on the
+    floor, rain through the broken roof, the Executor settled with its eyes
+    shut, and the Defendant reading the typed sheet signed in their own
+    hand. The right side is the house's wall, under the page's sheet."""
+    W, H = 32.0, 18.0
+    rng = random.Random(2081)
+    s = f"\\fill[housesky] (0,0) rectangle {P(W, H)};\n"
+    # the glass wall's iron frame, its panes gone, the lawn beyond
+    s += f"\\fill[grassnight] (0,0) rectangle (32,6.5);\n"
+    for k in range(10):
+        s += f"\\filldraw[inked,fill=hedge] {P(rng.uniform(0, 30), rng.uniform(5.5, 7.0))} circle ({f(rng.uniform(0.6, 1.3))});\n"
+    for k in range(9):
+        x0 = k * 2.4
+        s += f"\\draw[tanktread, line width=2.2pt] {P(x0, 0)} -- {P(x0, 16)};\n"
+        if rng.random() < 0.45:
+            # a broken pane's teeth hanging from the frame
+            s += f"\\filldraw[inked,fill=glass,fill opacity=0.5,line width=0.6pt] {P(x0, 12)} -- {P(x0 + 2.4, 12)} -- {P(x0 + 1.9, 11.2)} -- {P(x0 + 1.3, 11.7)} -- {P(x0 + 0.7, 10.9)} -- cycle;\n"
+    for y in (4.0, 8.0, 12.0, 16.0):
+        s += f"\\draw[tanktread, line width=2.2pt] (0,{f(y)}) -- (21,{f(y)});\n"
+    # the floor: marble, shards of glass across it
+    s += poly([(-0.5, -0.5), (W + 0.5, -0.5), (W + 0.5, 3.0), (-0.5, 3.0)], "marble")
+    for i in range(16):
+        s += f"\\fill[marbledark] {P(i * 2.0, 0)} rectangle {P(i * 2.0 + 1.0, 1.5)};\n"
+        s += f"\\fill[marbledark] {P(i * 2.0 + 1.0, 1.5)} rectangle {P(i * 2.0 + 2.0, 3.0)};\n"
+    for _ in range(40):
+        x, y = rng.uniform(0, 22), rng.uniform(0.2, 2.8)
+        a = rng.uniform(0, math.pi)
+        r = rng.uniform(0.15, 0.45)
+        s += poly([(x, y), (x + math.cos(a) * r, y + math.sin(a) * r * 0.4), (x + math.cos(a + 1.9) * r, y + 0.08)], "glass", ",fill opacity=0.8,line width=0.5pt")
+    s += executor(8.8, 2.0, 1.1)
+    # the Defendant, reading
+    ds, dx = 1.8, 15.6
+    s += defendant(dx, 1.2, ds, gun=False)
+    hx, hy = dx + 0.45 * ds, 1.2 + 1.45 * ds
+    s += line((dx + 0.25 * ds, 1.2 + 1.5 * ds), (hx, hy), lw=4.0, colour="coat")
+    s += f"\\filldraw[inked,fill=cream,rotate around={{-12:{P(hx, hy)}}}] {P(hx - 0.1, hy - 0.2)} rectangle {P(hx + 1.3, hy + 1.5)};\n"
+    for k in range(5):
+        y0 = hy + 1.25 - k * 0.22
+        s += f"\\draw[ink, line width=0.6pt, rotate around={{-12:{P(hx, hy)}}}] {P(hx + 0.1, y0)} -- {P(hx + 1.1, y0)};\n"
+    s += f"\\draw[ink, line width=1.0pt, rotate around={{-12:{P(hx, hy)}}}] {P(hx + 0.15, hy + 0.05)} .. controls {P(hx + 0.4, hy + 0.35)} and {P(hx + 0.6, hy - 0.1)} .. {P(hx + 1.0, hy + 0.15)};\n"
+    s += rain(rng, 21.0, H, 110)
+    return s, (W, H)
+
+
 PICTURES = {
     "title": title,
     "sentencing": sentencing,
@@ -734,10 +980,12 @@ PICTURES = {
     "verdict": verdict,
     "interlude": interlude,
     "testimony": testimony,
+    "interlude_house": interlude_house,
+    "orders": orders,
 }
-for g in ("carbine", "scattergun", "launcher"):
+for g in ("carbine", "scattergun", "launcher", "ripsaw"):
     PICTURES[f"guns/{g}"] = (lambda g=g: gun_art(g))
-for k in ("heart", "jump", "speed", "gun", "parry", "hook", "dash", "gavel", "pierce", "pulse", "mend", "wall"):
+for k in ("heart", "jump", "speed", "gun", "parry", "hook", "dash", "gavel", "pierce", "pulse", "mend", "wall", "pound", "saw", "conduct", "trigger", "plating"):
     PICTURES[f"icons/{k}"] = (lambda k=k: icon(k))
 
 # dpi for each kind: big pictures fill a screen, icons are small

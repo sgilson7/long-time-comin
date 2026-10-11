@@ -60,7 +60,7 @@
   "callout_fell": "FELL: RETURNED TO THE LAST FLOOR",
   "callout_fountain": "HEALTH RESTORED",
   "callout_phase": "THE COURT RECONVENES",
-  "callout_boss_down": "THE BAILIFF FALLS",
+  "callout_boss_down": "{name} FALLS",
   "callout_gun": "{gun}",
   "callout_health": "MAX HEALTH +{n}",
   "callout_speed": "SPEED +{n}%",
@@ -88,7 +88,7 @@
     ],
     [
       "Left mouse (hold)",
-      "Fire the gun you carry."
+      "Fire the gun you carry. The Ripsaw throws a blade on each click and, held, revs the blades it has lodged."
     ],
     [
       "Space",
@@ -113,6 +113,10 @@
     [
       "R",
       "Injunction, once bought: a wall {wall_width} m wide for {wall_time} s that breaks blue orbs."
+    ],
+    [
+      "C (in the air)",
+      "Ground pound, once Gavel Drop is bought: straight down at {pound_speed} m/s, a shockwave of {pound_damage} damage within {pound_radius} m where you land, and a bounce back up."
     ],
     [
       "Tab or M",
@@ -193,5 +197,37 @@
   "interlude_next": "Sail north",
   "hud_wall": "Wall (R)",
   "hint_landing": "The expedition's cache: walk to one of the two rewards ahead and press E; the other is lost. Glowing grates are updraft vents: stand on one and it throws you up.",
-  "build_wall": "the Injunction"
+  "build_wall": "the Injunction",
+  "callout_trigger": "HAIR TRIGGER: GUNS FIRE FASTER",
+  "callout_plating": "PLATING: HITS DO LESS",
+  "reward_trigger": "Hair Trigger",
+  "reward_plating": "Plating",
+  "callout_weak": "WEAK POINT BROKEN",
+  "callout_survive": "IT CANNOT BE HURT NOW. OUTLAST IT.",
+  "callout_call": "MORE OF THEM",
+  "callout_crash": "THROUGH THE GLASS",
+  "hud_pound": "Pound (C)",
+  "hud_saws": "Blades {n} of {max}",
+  "hud_survive": "Outlast it: {n} s",
+  "build_pound": "Gavel Drop",
+  "hint_vestibule": "The scientists' cache: walk to one of the two rewards ahead and press E; the other is lost. The grey men take cover and work together: watch your back, and break their crossfire.",
+  "hint_tank": "Its hull and turret turn shots aside. Get behind it and break the glowing weak points.",
+  "holding_branches": [
+    [
+      "body",
+      "Body"
+    ],
+    [
+      "motion",
+      "Motion"
+    ],
+    [
+      "arms",
+      "Arms"
+    ],
+    [
+      "writs",
+      "Writs"
+    ]
+  ]
 }

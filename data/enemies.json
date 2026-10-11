@@ -1,5 +1,5 @@
 {
-  "_about": "Enemies. kind: turret (stands still), floater (hovers and circles at a range), walker (walks after you), moth (flies straight at you and bursts), boss. hp in health points, radius_cm the body, hover_cm the height it floats at, speed_cms, range_cm the distance it keeps, contact the damage of touching it. attacks are tried in order: pattern (patterns.json), windup_ms the glow before it fires, rest_ms after. A boss has phases instead, each starting when its health falls to from_pct. kind blinker: hovers, and as each rest ends reappears elsewhere in sight of you. kind burrower: under the floor between attacks, where it cannot be hurt. burst: a pattern fired once where it dies. zone: the zone whose Codex page lists it.",
+  "_about": "Enemies. kind: turret (stands still), floater (hovers and circles at a range), walker (walks after you), moth (flies straight at you and bursts), boss. hp in health points, radius_cm the body, hover_cm the height it floats at, speed_cms, range_cm the distance it keeps, contact the damage of touching it. attacks are tried in order: pattern (patterns.json), windup_ms the glow before it fires, rest_ms after. A boss has phases instead, each starting when its health falls to from_pct. kind blinker: hovers, and as each rest ends reappears elsewhere in sight of you. kind burrower: under the floor between attacks, where it cannot be hurt. burst: a pattern fired once where it dies. zone: the zone whose Codex page lists it. kind agent (zone three): a person who walks the floors and stairs and works with its squad by role: rifle, flank, sniper, shield, grenadier, rush, command, chief (crates/core/src/squad.rs). armour_deg: shots from within this many degrees of its facing glance off. An attack's lock_ms stops its aim following you that long before it fires; indirect needs no line of sight. summon, summon_ms, summon_cap: what it calls, how often, how many of its own at most; rally_pct and rally: a larger call, once, at that health. elite: a bar of its own. kind tank (the Executor): phases list weak (the weak points to break, on the hull or the turret, at_cm in that part's frame: x right, y up, z forward; radius_cm, hp) and cannons (grown in that phase and kept, yaw_deg and pitch_deg off the part's facing); an attack with cannons: true fires from every cannon grown so far, else from the main gun. Its last phase has survive_ms instead of weak points: outlast it. hp is the weak points' total.",
   "enemies": [
     {
       "id": "sentinel",
@@ -526,6 +526,698 @@
               "pattern": "recital",
               "windup_ms": 500,
               "rest_ms": 950
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "greyman",
+      "name": "Grey Man",
+      "kind": "agent",
+      "role": "rifle",
+      "hp": 110,
+      "radius_cm": 55,
+      "hover_cm": 95,
+      "speed_cms": 420,
+      "range_cm": 1400,
+      "contact": 6,
+      "clemency": 1,
+      "attacks": [
+        {
+          "pattern": "burst_fire",
+          "windup_ms": 450,
+          "rest_ms": 1300
+        },
+        {
+          "pattern": "file_fire",
+          "windup_ms": 500,
+          "rest_ms": 1400
+        },
+        {
+          "pattern": "ricochet_pair",
+          "windup_ms": 450,
+          "rest_ms": 1300
+        }
+      ],
+      "zone": "glass_house"
+    },
+    {
+      "id": "outrider",
+      "name": "Outrider",
+      "kind": "agent",
+      "role": "flank",
+      "hp": 90,
+      "radius_cm": 55,
+      "hover_cm": 95,
+      "speed_cms": 650,
+      "range_cm": 900,
+      "contact": 6,
+      "clemency": 1,
+      "attacks": [
+        {
+          "pattern": "pincer_arc",
+          "windup_ms": 450,
+          "rest_ms": 1200
+        },
+        {
+          "pattern": "scatter_close",
+          "windup_ms": 350,
+          "rest_ms": 1100
+        }
+      ],
+      "zone": "glass_house"
+    },
+    {
+      "id": "marksman",
+      "name": "Marksman",
+      "kind": "agent",
+      "role": "sniper",
+      "hp": 90,
+      "radius_cm": 55,
+      "hover_cm": 95,
+      "speed_cms": 380,
+      "range_cm": 2600,
+      "contact": 6,
+      "clemency": 2,
+      "attacks": [
+        {
+          "pattern": "long_shot",
+          "windup_ms": 1200,
+          "rest_ms": 1600,
+          "lock_ms": 450
+        },
+        {
+          "pattern": "tracer_line",
+          "windup_ms": 1000,
+          "rest_ms": 1500,
+          "lock_ms": 400
+        }
+      ],
+      "zone": "glass_house"
+    },
+    {
+      "id": "warder",
+      "name": "Warder",
+      "kind": "agent",
+      "role": "shield",
+      "hp": 280,
+      "radius_cm": 70,
+      "hover_cm": 95,
+      "speed_cms": 330,
+      "range_cm": 600,
+      "contact": 14,
+      "clemency": 2,
+      "attacks": [
+        {
+          "pattern": "kettle",
+          "windup_ms": 650,
+          "rest_ms": 1200
+        },
+        {
+          "pattern": "low_ricochet",
+          "windup_ms": 550,
+          "rest_ms": 1300
+        }
+      ],
+      "zone": "glass_house",
+      "armour_deg": 60
+    },
+    {
+      "id": "sapper",
+      "name": "Sapper",
+      "kind": "agent",
+      "role": "grenadier",
+      "hp": 120,
+      "radius_cm": 55,
+      "hover_cm": 95,
+      "speed_cms": 400,
+      "range_cm": 1600,
+      "contact": 6,
+      "clemency": 2,
+      "attacks": [
+        {
+          "pattern": "canister",
+          "windup_ms": 550,
+          "rest_ms": 1500,
+          "indirect": true
+        },
+        {
+          "pattern": "bracket_lob",
+          "windup_ms": 600,
+          "rest_ms": 1700,
+          "indirect": true
+        }
+      ],
+      "zone": "glass_house"
+    },
+    {
+      "id": "cleaner",
+      "name": "Cleaner",
+      "kind": "agent",
+      "role": "rush",
+      "hp": 130,
+      "radius_cm": 55,
+      "hover_cm": 95,
+      "speed_cms": 600,
+      "range_cm": 200,
+      "contact": 18,
+      "clemency": 1,
+      "attacks": [
+        {
+          "pattern": "sweep_trail",
+          "windup_ms": 350,
+          "rest_ms": 1100
+        },
+        {
+          "pattern": "lunge_ring",
+          "windup_ms": 300,
+          "rest_ms": 1000
+        }
+      ],
+      "zone": "glass_house"
+    },
+    {
+      "id": "handler",
+      "name": "Handler",
+      "kind": "agent",
+      "role": "command",
+      "hp": 160,
+      "radius_cm": 55,
+      "hover_cm": 95,
+      "speed_cms": 360,
+      "range_cm": 1800,
+      "contact": 6,
+      "clemency": 3,
+      "attacks": [
+        {
+          "pattern": "bracket",
+          "windup_ms": 650,
+          "rest_ms": 1500
+        },
+        {
+          "pattern": "net",
+          "windup_ms": 600,
+          "rest_ms": 1400
+        }
+      ],
+      "zone": "glass_house"
+    },
+    {
+      "id": "chief",
+      "name": "The Section Chief",
+      "kind": "agent",
+      "role": "chief",
+      "hp": 1800,
+      "radius_cm": 80,
+      "hover_cm": 110,
+      "speed_cms": 260,
+      "range_cm": 1600,
+      "contact": 15,
+      "clemency": 12,
+      "attacks": [
+        {
+          "pattern": "decree",
+          "windup_ms": 700,
+          "rest_ms": 1300
+        },
+        {
+          "pattern": "audit",
+          "windup_ms": 800,
+          "rest_ms": 1400
+        },
+        {
+          "pattern": "severance",
+          "windup_ms": 700,
+          "rest_ms": 1400
+        }
+      ],
+      "zone": "glass_house",
+      "elite": true,
+      "summon": [
+        "greyman",
+        "greyman",
+        "outrider"
+      ],
+      "summon_ms": 9000,
+      "summon_cap": 6,
+      "rally_pct": 50,
+      "rally": [
+        "greyman",
+        "greyman",
+        "greyman",
+        "warder",
+        "sapper",
+        "cleaner"
+      ]
+    },
+    {
+      "id": "executor",
+      "name": "The Executor",
+      "kind": "tank",
+      "hp": 2240,
+      "radius_cm": 320,
+      "hover_cm": 0,
+      "speed_cms": 520,
+      "range_cm": 1400,
+      "contact": 30,
+      "clemency": 55,
+      "attacks": [],
+      "zone": "glass_house",
+      "phases": [
+        {
+          "attacks": [
+            {
+              "pattern": "shell",
+              "windup_ms": 900,
+              "rest_ms": 1100
+            },
+            {
+              "pattern": "coax",
+              "windup_ms": 500,
+              "rest_ms": 900,
+              "cannons": true
+            },
+            {
+              "pattern": "mortar",
+              "windup_ms": 700,
+              "rest_ms": 1200
+            }
+          ],
+          "weak": [
+            {
+              "on": "turret",
+              "at_cm": [
+                90,
+                40,
+                -210
+              ],
+              "radius_cm": 60,
+              "hp": 320
+            },
+            {
+              "on": "turret",
+              "at_cm": [
+                -90,
+                40,
+                -210
+              ],
+              "radius_cm": 60,
+              "hp": 320
+            }
+          ],
+          "cannons": [
+            {
+              "on": "turret",
+              "at_cm": [
+                60,
+                30,
+                260
+              ]
+            },
+            {
+              "on": "turret",
+              "at_cm": [
+                -60,
+                30,
+                260
+              ]
+            }
+          ]
+        },
+        {
+          "attacks": [
+            {
+              "pattern": "broadside",
+              "windup_ms": 700,
+              "rest_ms": 1000,
+              "cannons": true
+            },
+            {
+              "pattern": "shell",
+              "windup_ms": 800,
+              "rest_ms": 900
+            },
+            {
+              "pattern": "coax",
+              "windup_ms": 500,
+              "rest_ms": 900,
+              "cannons": true
+            }
+          ],
+          "weak": [
+            {
+              "on": "turret",
+              "at_cm": [
+                0,
+                110,
+                -200
+              ],
+              "radius_cm": 60,
+              "hp": 300
+            },
+            {
+              "on": "hull",
+              "at_cm": [
+                150,
+                70,
+                -400
+              ],
+              "radius_cm": 60,
+              "hp": 260
+            },
+            {
+              "on": "hull",
+              "at_cm": [
+                -150,
+                70,
+                -400
+              ],
+              "radius_cm": 60,
+              "hp": 260
+            }
+          ],
+          "cannons": [
+            {
+              "on": "hull",
+              "at_cm": [
+                240,
+                60,
+                150
+              ],
+              "yaw_deg": 90
+            },
+            {
+              "on": "hull",
+              "at_cm": [
+                -240,
+                60,
+                150
+              ],
+              "yaw_deg": -90
+            },
+            {
+              "on": "hull",
+              "at_cm": [
+                240,
+                60,
+                -150
+              ],
+              "yaw_deg": 90
+            },
+            {
+              "on": "hull",
+              "at_cm": [
+                -240,
+                60,
+                -150
+              ],
+              "yaw_deg": -90
+            }
+          ]
+        },
+        {
+          "attacks": [
+            {
+              "pattern": "salvo",
+              "windup_ms": 600,
+              "rest_ms": 900,
+              "cannons": true
+            },
+            {
+              "pattern": "chorus",
+              "windup_ms": 650,
+              "rest_ms": 1000,
+              "cannons": true
+            },
+            {
+              "pattern": "shell",
+              "windup_ms": 700,
+              "rest_ms": 900
+            }
+          ],
+          "weak": [
+            {
+              "on": "turret",
+              "at_cm": [
+                0,
+                200,
+                -140
+              ],
+              "radius_cm": 55,
+              "hp": 260
+            },
+            {
+              "on": "turret",
+              "at_cm": [
+                0,
+                300,
+                -140
+              ],
+              "radius_cm": 55,
+              "hp": 260
+            },
+            {
+              "on": "turret",
+              "at_cm": [
+                0,
+                400,
+                -140
+              ],
+              "radius_cm": 55,
+              "hp": 260
+            }
+          ],
+          "cannons": [
+            {
+              "on": "turret",
+              "at_cm": [
+                0,
+                150,
+                -60
+              ],
+              "yaw_deg": -150
+            },
+            {
+              "on": "turret",
+              "at_cm": [
+                0,
+                210,
+                -60
+              ],
+              "yaw_deg": -90
+            },
+            {
+              "on": "turret",
+              "at_cm": [
+                0,
+                270,
+                -60
+              ],
+              "yaw_deg": -30
+            },
+            {
+              "on": "turret",
+              "at_cm": [
+                0,
+                330,
+                -60
+              ],
+              "yaw_deg": 30
+            },
+            {
+              "on": "turret",
+              "at_cm": [
+                0,
+                390,
+                -60
+              ],
+              "yaw_deg": 90
+            },
+            {
+              "on": "turret",
+              "at_cm": [
+                0,
+                450,
+                -60
+              ],
+              "yaw_deg": 150
+            }
+          ]
+        },
+        {
+          "survive_ms": 40000,
+          "attacks": [
+            {
+              "pattern": "seraph",
+              "windup_ms": 500,
+              "rest_ms": 700,
+              "cannons": true
+            },
+            {
+              "pattern": "hosanna",
+              "windup_ms": 400,
+              "rest_ms": 600,
+              "cannons": true
+            },
+            {
+              "pattern": "ophanim",
+              "windup_ms": 500,
+              "rest_ms": 800,
+              "cannons": true
+            }
+          ],
+          "cannons": [
+            {
+              "on": "turret",
+              "at_cm": [
+                0,
+                250,
+                350
+              ],
+              "pitch_deg": 10
+            },
+            {
+              "on": "turret",
+              "at_cm": [
+                247,
+                250,
+                247
+              ],
+              "yaw_deg": 45,
+              "pitch_deg": 10
+            },
+            {
+              "on": "turret",
+              "at_cm": [
+                350,
+                250,
+                0
+              ],
+              "yaw_deg": 90,
+              "pitch_deg": 10
+            },
+            {
+              "on": "turret",
+              "at_cm": [
+                247,
+                250,
+                -247
+              ],
+              "yaw_deg": 135,
+              "pitch_deg": 10
+            },
+            {
+              "on": "turret",
+              "at_cm": [
+                0,
+                250,
+                -350
+              ],
+              "yaw_deg": 180,
+              "pitch_deg": 10
+            },
+            {
+              "on": "turret",
+              "at_cm": [
+                -247,
+                250,
+                -247
+              ],
+              "yaw_deg": 225,
+              "pitch_deg": 10
+            },
+            {
+              "on": "turret",
+              "at_cm": [
+                -350,
+                250,
+                0
+              ],
+              "yaw_deg": 270,
+              "pitch_deg": 10
+            },
+            {
+              "on": "turret",
+              "at_cm": [
+                -247,
+                250,
+                247
+              ],
+              "yaw_deg": 315,
+              "pitch_deg": 10
+            },
+            {
+              "on": "hull",
+              "at_cm": [
+                157,
+                40,
+                389
+              ],
+              "yaw_deg": 22
+            },
+            {
+              "on": "hull",
+              "at_cm": [
+                386,
+                40,
+                164
+              ],
+              "yaw_deg": 67
+            },
+            {
+              "on": "hull",
+              "at_cm": [
+                389,
+                40,
+                -157
+              ],
+              "yaw_deg": 112
+            },
+            {
+              "on": "hull",
+              "at_cm": [
+                164,
+                40,
+                -386
+              ],
+              "yaw_deg": 157
+            },
+            {
+              "on": "hull",
+              "at_cm": [
+                -157,
+                40,
+                -389
+              ],
+              "yaw_deg": 202
+            },
+            {
+              "on": "hull",
+              "at_cm": [
+                -386,
+                40,
+                -164
+              ],
+              "yaw_deg": 247
+            },
+            {
+              "on": "hull",
+              "at_cm": [
+                -389,
+                40,
+                157
+              ],
+              "yaw_deg": 292
+            },
+            {
+              "on": "hull",
+              "at_cm": [
+                -164,
+                40,
+                386
+              ],
+              "yaw_deg": 337
             }
           ]
         }

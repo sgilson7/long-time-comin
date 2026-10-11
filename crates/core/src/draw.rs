@@ -14,6 +14,7 @@ use crate::render::{boxed, mix, shade, Batch};
 use crate::world::{FxKind, PickupKind, World};
 
 mod beasts;
+mod house;
 
 fn dm(x: i32) -> i32 {
     ONE * x / 10
@@ -59,10 +60,19 @@ pub fn world(
     // enemies in a heavy black line, so their shapes stand out from the
     // warm city behind them
     b.bold = true;
+    let chest = w.player.chest();
     for e in w.enemies.iter().filter(|e| e.alive()) {
-        enemy(b, c, e, alpha);
+        enemy(b, c, e, alpha, chest);
     }
     b.bold = false;
+    // the Conservatory's glass, until it breaks
+    let glass = c.pal.c("glass");
+    for (k, p) in w.arena.panes.iter().enumerate() {
+        let broken = w.broken.get(k).is_some_and(|t| *t != 0 && w.tick >= *t);
+        if !broken {
+            b.glow(Mesh::Cube, &boxed(p.centre, p.size), glass, ONE / 3);
+        }
+    }
     orbs(b, c, w, alpha, cam);
     if let Some(wall) = w.wall() {
         injunction(b, c, &wall, w.player.wall_left);
@@ -73,6 +83,40 @@ pub fn world(
         match s.kind {
             crate::weapons::ShotKind::Bullet => {
                 rod(b, tail, at, s.radius * 2, s.rgb, ONE, false);
+            }
+            crate::weapons::ShotKind::Saw => {
+                // a spinning blade, its teeth round its rim
+                let spin = w.tick * deg(40);
+                let r = s.radius * 2;
+                let disc = Affine::translate(at)
+                    .then(&Affine::rot_y(spin))
+                    .then(&Affine::rot_z(deg(70)));
+                b.inked(
+                    Mesh::Cyl,
+                    &disc.then(&Affine::scale(v3(r, cm(4), r))),
+                    s.rgb,
+                    ONE / 3,
+                );
+                for k in 0..8 {
+                    let a = fx::TURN / 8 * k;
+                    let tooth = disc
+                        .then(&Affine::translate(v3(
+                            fx::mul(fx::cos(a), r / 2),
+                            0,
+                            fx::mul(fx::sin(a), r / 2),
+                        )))
+                        .then(&Affine::rot_y(-a))
+                        .then(&Affine::scale(v3(cm(6), cm(4), cm(10))));
+                    b.push(Mesh::Wedge, &tooth, s.rgb, ONE / 2, crate::render::PASS_SOLID);
+                }
+                if s.lodged.is_some() && w.revving > 0 {
+                    b.glow(
+                        Mesh::Sphere,
+                        &boxed(at, v3(r * 2, r * 2, r * 2)),
+                        c.pal.c("spark"),
+                        ONE / 3,
+                    );
+                }
             }
             _ => {
                 let r = s.radius * 2;
@@ -139,6 +183,27 @@ pub fn world(
             FxKind::Flash => {
                 let s = fx::mul(e.size, ONE - k / 2);
                 b.glow(Mesh::Sphere, &boxed(e.pos, v3(s, s, s)), e.rgb, (ONE - k) / 2);
+            }
+            FxKind::Ring => {
+                let s = fx::mul(e.size, k.max(ONE / 10));
+                b.push(
+                    Mesh::Ring,
+                    &boxed(e.pos, v3(s, dm(3), s)),
+                    e.rgb,
+                    ONE - k,
+                    crate::render::PASS_SOLID,
+                );
+                b.glow(Mesh::Cyl, &boxed(e.pos, v3(s, dm(6), s)), e.rgb, (ONE - k) / 3);
+            }
+            FxKind::Shard => {
+                // a pane's piece, tumbling as it falls
+                let spin = e.age * deg(9) + e.size;
+                let a = Affine::translate(e.pos)
+                    .then(&Affine::rot_y(spin))
+                    .then(&Affine::rot_x(spin / 2))
+                    .then(&Affine::scale(v3(e.size, e.size, cm(3))));
+                // pale and lit, so it reads against the dark room
+                b.push(Mesh::Cube, &a, e.rgb, (ONE - k) / 2, crate::render::PASS_SOLID);
             }
         }
     }
@@ -269,6 +334,18 @@ pub fn player(b: &mut Batch, c: &Content, p: &Player, gun: usize, alpha: i32) {
             );
         }
     }
+    if p.pounding {
+        // the drop: a column of light above, the gavel's fall
+        for k in 1..4 {
+            let g = feet.add(v3(0, dm(9) + dm(8) * k, 0));
+            b.glow(
+                Mesh::Sphere,
+                &boxed(g, v3(dm(7), dm(14), dm(7))),
+                c.pal.c("pound"),
+                ONE / (k + 1),
+            );
+        }
+    }
     if p.parry_window > 0 {
         let at = feet.add(v3(0, PLAYER_CHEST, 0));
         let r = PARRY_REACH * 2;
@@ -324,6 +401,34 @@ pub fn gun_model(b: &mut Batch, c: &Content, gun: usize, hand: V3, yaw: i32, pit
             );
             part(b, &f, Mesh::Cube, v3(0, -cm(6), 0), v3(cm(6), dm(2), cm(8)), body);
         }
+        "ripsaw" => {
+            // a body, a guard over the front, a blade ready in it
+            part(
+                b,
+                &f,
+                Mesh::Cube,
+                v3(0, 0, -dm(2)),
+                v3(cm(10), cm(14), dm(5)),
+                body,
+            );
+            part(
+                b,
+                &f,
+                Mesh::Cube,
+                v3(0, -cm(9), 0),
+                v3(cm(6), cm(12), cm(6)),
+                body,
+            );
+            let blade = f
+                .then(&Affine::translate(v3(0, cm(6), -dm(5))))
+                .then(&Affine::rot_z(fx::QUARTER))
+                .then(&Affine::scale(v3(dm(3), cm(2), dm(3))));
+            b.inked(Mesh::Cyl, &blade, glow, ONE / 3);
+            let guard = f
+                .then(&Affine::translate(v3(0, cm(10), -dm(5))))
+                .then(&Affine::scale(v3(cm(4), cm(4), dm(3))));
+            b.inked(Mesh::Cube, &guard, shade(body, 120), 0);
+        }
         _ => {
             part(
                 b,
@@ -367,6 +472,8 @@ pub fn pickup_colour(c: &Content, k: PickupKind) -> Rgb {
         PickupKind::Pierce => "pickup_pierce",
         PickupKind::Pulse => "pickup_pulse",
         PickupKind::Mend => "pickup_mend",
+        PickupKind::Trigger => "pickup_trigger",
+        PickupKind::Plating => "pickup_plating",
     })
 }
 
@@ -459,6 +566,29 @@ pub fn pickup_icon(b: &mut Batch, c: &Content, k: PickupKind, at: V3, spin: i32,
                     col,
                     ONE / 2,
                 );
+            }
+        }
+        PickupKind::Trigger => {
+            // a trigger guard round a bolt
+            let ring = f
+                .then(&Affine::rot_z(fx::QUARTER))
+                .then(&Affine::scale(v3(dm(4), cm(6), dm(4))));
+            b.push(Mesh::Ring, &ring, col, ONE, crate::render::PASS_SOLID);
+            for k in 0..3 {
+                let bolt = f
+                    .then(&Affine::translate(v3(cm(6) * (k - 1), cm(6) * (1 - k), 0)))
+                    .then(&Affine::rot_z(deg(30)))
+                    .then(&Affine::scale(v3(cm(7), dm(2), cm(6))));
+                b.inked(Mesh::Cube, &bolt, col, ONE / 2);
+            }
+        }
+        PickupKind::Plating => {
+            // a shield of three plates
+            for k in 0..3 {
+                let plate = f
+                    .then(&Affine::translate(v3(0, dm(2) - dm(2) * k, cm(3) * (k % 2))))
+                    .then(&Affine::scale(v3(dm(5) - cm(8) * k, cm(16), cm(6))));
+                b.inked(Mesh::Cube, &plate, shade(col, 100 - 10 * k), ONE / 2);
             }
         }
         PickupKind::Gun(g, level) => {
@@ -616,7 +746,7 @@ fn injunction(b: &mut Batch, c: &Content, wall: &crate::world::WallPlane, left: 
 
 /// An enemy, by kind. It grows in as it spawns, flashes white when hit,
 /// and its core glows brighter through a windup.
-pub fn enemy(b: &mut Batch, c: &Content, e: &Enemy, alpha: i32) {
+pub fn enemy(b: &mut Batch, c: &Content, e: &Enemy, alpha: i32, target: V3) {
     let d = &c.enemies[e.def];
     let at = e.prev.lerp(e.pos, alpha);
     let grow = match e.state {
@@ -637,6 +767,10 @@ pub fn enemy(b: &mut Batch, c: &Content, e: &Enemy, alpha: i32) {
     } else {
         core
     };
+    if matches!(d.kind, Kind::Agent | Kind::Tank) {
+        house::draw(b, c, e, d, at, alpha, target, &paint);
+        return;
+    }
     if beasts::draw(b, c, e, d, at, s, &paint) {
         if charge > 0 && d.kind != Kind::Boss && !e.buried {
             let h = fx::mul(s, ONE + charge);
@@ -790,6 +924,7 @@ pub fn enemy(b: &mut Batch, c: &Content, e: &Enemy, alpha: i32) {
             );
         }
         Kind::Boss => bailiff(b, c, e, at, s, paint),
+        Kind::Agent | Kind::Tank => {}
     }
     // the windup: a halo that grows as the attack comes
     if charge > 0 && d.kind != Kind::Boss {

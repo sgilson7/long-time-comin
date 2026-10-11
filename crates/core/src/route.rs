@@ -29,6 +29,10 @@ pub enum Reward {
     Pulse,
     /// a parried orb heals you
     Mend,
+    /// guns fire faster
+    Trigger,
+    /// hits do less
+    Plating,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -50,6 +54,8 @@ pub struct Node {
     pub encounter: Option<usize>,
     /// an arrival's cache: rewards to choose one of
     pub cache: Vec<Reward>,
+    /// a mini-boss fought alone here, by enemy index
+    pub elite: Option<usize>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -88,6 +94,7 @@ impl Route {
             seed: rng.next(),
             encounter: None,
             cache: Vec::new(),
+            elite: None,
         };
         // the main path
         let mut arrival = node(NodeKind::Arrival, "arrival", 0, 0, &mut rng);
@@ -99,9 +106,14 @@ impl Route {
                 b += 1;
             }
             for k in [a, b] {
-                arrival
-                    .cache
-                    .push(reward_of(c, &r.cache_rewards[k], 2, carbine_level, &mut rng));
+                arrival.cache.push(reward_of(
+                    c,
+                    zone,
+                    &r.cache_rewards[k],
+                    r.weapon_levels[0],
+                    carbine_level,
+                    &mut rng,
+                ));
             }
         }
         nodes.push(arrival);
@@ -113,8 +125,17 @@ impl Route {
             }
             last_arch = arch.clone();
             let tier = r.main_tiers[i];
+            let elite = (!r.miniboss.is_empty() && i == r.miniboss_at)
+                .then(|| c.enemy(&r.miniboss))
+                .flatten();
+            let arch = if elite.is_some() {
+                r.miniboss_arena.clone()
+            } else {
+                arch
+            };
             let mut n = node(NodeKind::Fight, &arch, tier, STRIDE * (i as i32 + 1), &mut rng);
             n.encounter = Some(pick_encounter(c, zone, tier, &mut rng));
+            n.elite = elite;
             nodes.push(n);
         }
         let rest_step = STRIDE * (r.main_fights as i32 + 1);
@@ -122,7 +143,14 @@ impl Route {
         // the Antechamber's alternative to its fountain
         if !r.rest_rewards.is_empty() {
             let pick = &r.rest_rewards[rng.range(0, r.rest_rewards.len() as i32 - 1) as usize];
-            rest.reward = Some(reward_of(c, pick, 3, carbine_level, &mut rng));
+            rest.reward = Some(reward_of(
+                c,
+                zone,
+                pick,
+                r.weapon_levels[1],
+                carbine_level,
+                &mut rng,
+            ));
         }
         nodes.push(rest);
         nodes.push(node(NodeKind::Boss, "boss", 0, rest_step + STRIDE, &mut rng));
@@ -168,8 +196,9 @@ impl Route {
                     let pick = bag.get(d).cloned().unwrap_or_else(|| "health".to_string());
                     n.reward = Some(reward_of(
                         c,
+                        zone,
                         &pick,
-                        if deep { 3 } else { 2 },
+                        r.weapon_levels[deep as usize],
                         carbine_level,
                         &mut rng,
                     ));
@@ -200,14 +229,15 @@ impl Route {
     }
 }
 
-/// A reward by its name in zone.json; a gun is of `level`, and never a
-/// Carbine no better than the one the run started with.
-fn reward_of(c: &Content, name: &str, level: i32, carbine_level: i32, rng: &mut Rng) -> Reward {
+/// A reward by its name in zone.json; a gun is of `level`, one the zone
+/// offers, and never a Carbine no better than the one the run started with.
+fn reward_of(c: &Content, zone: usize, name: &str, level: i32, carbine_level: i32, rng: &mut Rng) -> Reward {
     match name {
         "weapon" => {
             let carbine = c.gun("carbine");
             let fits: Vec<usize> = (0..c.guns.len())
                 .filter(|&g| g != carbine || level > carbine_level)
+                .filter(|&g| c.guns[g].from_zone <= zone)
                 .collect();
             let gun = fits[rng.range(0, fits.len() as i32 - 1) as usize];
             Reward::Gun(gun, level)
@@ -217,6 +247,8 @@ fn reward_of(c: &Content, name: &str, level: i32, carbine_level: i32, rng: &mut 
         "pierce" => Reward::Pierce,
         "pulse" => Reward::Pulse,
         "mend" => Reward::Mend,
+        "trigger" => Reward::Trigger,
+        "plating" => Reward::Plating,
         _ => Reward::Health,
     }
 }
@@ -355,5 +387,42 @@ mod tests {
         }
         // zone one's crater has none
         assert!(Route::build(&c, 3).nodes[0].cache.is_empty());
+    }
+
+    #[test]
+    fn the_house_route_has_its_mini_boss_and_only_the_house_offers_the_ripsaw() {
+        let c = content();
+        let saw = c.gun("ripsaw");
+        for seed in 0..30 {
+            let r = Route::build_for(&c, 2, seed, 1);
+            let elites: Vec<&Node> = r.nodes.iter().filter(|n| n.elite.is_some()).collect();
+            assert_eq!(elites.len(), 1, "one mini-boss");
+            assert_eq!(elites[0].archetype, "ballroom");
+            assert!(!elites[0].detour);
+            // its guns are level 3 or 4
+            for n in &r.nodes {
+                if let Some(Reward::Gun(_, l)) = n.reward {
+                    assert!(l >= 3, "a house gun of level {l}");
+                }
+            }
+            for z in [0, 1] {
+                let r = Route::build_for(&c, z, seed, 1);
+                for n in &r.nodes {
+                    assert!(
+                        !matches!(n.reward, Some(Reward::Gun(g, _)) if g == saw),
+                        "zone {z} offers the Ripsaw"
+                    );
+                    assert!(n.elite.is_none());
+                }
+            }
+        }
+        // and some house route does offer it
+        let offered = (0..60).any(|seed| {
+            Route::build_for(&c, 2, seed, 1)
+                .nodes
+                .iter()
+                .any(|n| matches!(n.reward, Some(Reward::Gun(g, _)) if g == saw))
+        });
+        assert!(offered);
     }
 }

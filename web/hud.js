@@ -58,6 +58,10 @@ export function makeHud(copy, play) {
       el("h-wall").hidden = !h.wall;
       el("h-wall").classList.toggle("ready", h.wall_ready);
       el("h-wall").classList.toggle("active", h.walling);
+      el("h-pound").hidden = !h.pound;
+      el("h-pound").classList.toggle("ready", h.pound_ready);
+      el("h-pound").classList.toggle("active", h.pounding);
+      text("h-saws", h.saws);
       text("h-gun", h.gun);
       text("h-gun-level", h.gun_level);
       text("h-gun-trait", h.gun_trait);
@@ -73,6 +77,7 @@ export function makeHud(copy, play) {
         text("b-name", h.boss.name);
         text("b-title", h.boss.title);
         el("b-fill").style.width = `${h.boss.pct}%`;
+        text("b-timer", h.boss.timer);
       }
 
       el("prompt").hidden = !h.prompt;
@@ -99,7 +104,8 @@ export function makeHud(copy, play) {
       h.foes.forEach((f, k) => {
         const node = foes.children[k];
         const threat = f.threat ? " threat" : "";
-        node.className = f.edge ? `foe edge${threat}` : f.hurt ? `foe hurt${threat}` : `foe${threat}`;
+        const weak = f.weak ? " weak" : "";
+        node.className = f.edge ? `foe edge${threat}${weak}` : f.hurt || f.weak ? `foe hurt${threat}${weak}` : `foe${threat}`;
         node.style.setProperty("--c", f.colour);
         node.style.left = `${f.x}%`;
         node.style.top = `${f.y}%`;

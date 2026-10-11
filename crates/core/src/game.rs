@@ -41,6 +41,7 @@ pub const ACTIONS: &[(&str, u32)] = &[
     // set while the pointer is captured; without it the simulation holds still
     ("focus", 1 << 10),
     ("wall", 1 << 11),
+    ("pound", 1 << 12),
 ];
 
 fn bit(name: &str) -> u32 {
@@ -210,6 +211,31 @@ impl Game {
 
     pub fn content(&self) -> &Content {
         &self.c
+    }
+
+    /// Straight into node `to` of the run's map, for tools that drive the
+    /// game (the playtest harness, the screenshot script).
+    pub fn go_to(&mut self, to: usize) {
+        if self.mode == Mode::Play && self.run.as_ref().is_some_and(|r| to < r.route.nodes.len()) {
+            self.go(to);
+        }
+    }
+
+    /// Breaks every weak point the boss has open now, for tools that drive
+    /// the game (to see or measure a later phase).
+    pub fn break_weak_points(&mut self) {
+        let Some(run) = self.run.as_mut() else {
+            return;
+        };
+        let w = &mut run.world;
+        let Some(b) = w.boss else {
+            return;
+        };
+        w.enemies[b].state = crate::enemy::State::Rest(1);
+        let d = self.c.enemies[w.enemies[b].def].clone();
+        for (at, _, k) in crate::tank::weak_points(&w.enemies[b], &d) {
+            w.hurt_weak(&self.c, b, k, i32::MAX / 2, at);
+        }
     }
 
     /// The name the HUD gives a node.
@@ -718,14 +744,34 @@ impl Game {
         let gl = gun.level(w.held.level);
         let aspect = self.aspect();
         let pct = |a: i32, b: i32| a.max(0) * 100 / b.max(1);
-        let boss = w.boss.map(|b| {
+        // the boss's bar, or a mini-boss's: a tank's shows what is left of
+        // its phase's weak points, or of the time to outlast it
+        let boss = w.boss.or(w.elite.filter(|&k| w.enemies[k].alive())).map(|b| {
             let e = &w.enemies[b];
-            let words = c.story.bosses.get(&c.enemies[e.def].id);
+            let d = &c.enemies[e.def];
+            let words = c.story.bosses.get(&d.id);
+            let (pct, timer) = match e.tank.as_ref() {
+                Some(t) if t.survive > 0 => {
+                    let total = d.phases[e.phase].survive.max(1);
+                    let secs = (t.survive + TICKS_PER_SECOND - 1) / TICKS_PER_SECOND;
+                    (
+                        t.survive * 100 / total,
+                        c.say("hud_survive").replace("{n}", &secs.to_string()),
+                    )
+                }
+                Some(t) => {
+                    let total: i32 = d.phases[e.phase].weak.iter().map(|w| w.hp).sum();
+                    let left: i32 = t.weak.iter().map(|h| (*h).max(0)).sum();
+                    (left * 100 / total.max(1), String::new())
+                }
+                None => (e.health_pct(), String::new()),
+            };
             json!({
                 "name": words.map(|x| x.name.clone()).unwrap_or_default(),
                 "title": words.map(|x| x.title.clone()).unwrap_or_default(),
-                "pct": e.health_pct(),
+                "pct": pct,
                 "phase": e.phase + 1,
+                "timer": timer,
             })
         });
         let gates: Vec<Value> = w
@@ -766,7 +812,10 @@ impl Game {
         });
         // hints show for a few seconds, then get out of the way
         let fresh = |since: i32| w.tick - since < HINT_TICKS;
+        let house = c.zones[run.zone].id == "glass_house";
         let hint = match node.kind {
+            NodeKind::Arrival if house => c.say("hint_vestibule"),
+            NodeKind::Boss if house && w.tick > secs(4, 1) && fresh(secs(4, 1)) => c.say("hint_tank"),
             NodeKind::Arrival if !node.cache.is_empty() => c.say("hint_landing"),
             NodeKind::Arrival => c.say("hint_arrival"),
             NodeKind::Rest => c.say("hint_rest"),
@@ -787,8 +836,9 @@ impl Game {
             .map(|n| json!({ "seq": n.seq, "sound": n.sound, "text": n.text }))
             .collect();
         let enemies = w.alive_enemies() + w.waves_left.iter().map(|v| v.len()).sum::<usize>();
-        // the boss has its own bar; every other enemy gets a marker
-        let foes: Vec<Value> = w
+        // the boss has its own bar; every other enemy gets a marker, and
+        // so does each of a tank's weak points
+        let mut foes: Vec<Value> = w
             .enemies
             .iter()
             .enumerate()
@@ -804,6 +854,21 @@ impl Game {
                 m
             })
             .collect();
+        if let Some(b) = w.boss {
+            let e = &w.enemies[b];
+            let d = &c.enemies[e.def];
+            if let Some(t) = e.tank.as_ref().filter(|_| e.hurtable()) {
+                for (at, r, k) in crate::tank::weak_points(e, d) {
+                    let total = d.phases[e.phase].weak[k].hp.max(1);
+                    let mut m = self.marker(at, r, t.weak[k].max(0) * 100 / total);
+                    m["threat"] = json!(false);
+                    m["weak"] = json!(true);
+                    m["colour"] = json!(hex(c.pal.c("tank_weak")));
+                    foes.push(m);
+                }
+            }
+        }
+        let gl_saw = gl.saw;
         // the arc toward the last hit's source, fading
         let hit = (w.hit_age < HIT_ARC_TICKS).then(|| {
             let m = self.marker(w.hit_from, 0, 100);
@@ -823,6 +888,16 @@ impl Game {
         }
         if p.build.mend {
             perks.push(c.say("reward_mend"));
+        }
+        if p.build.trigger > 0 {
+            perks.push(format!("{} ×{}", c.say("reward_trigger"), p.build.trigger));
+        }
+        if p.build.plating > 0 {
+            perks.push(format!(
+                "{} ×{}",
+                c.say("reward_plating"),
+                p.build.plating.min(PLATING_MAX)
+            ));
         }
         let story = self
             .story
@@ -851,7 +926,11 @@ impl Game {
             "parry": p.build.parry,
             "parry_ready": p.build.parry && p.parry_cooldown == 0,
             "parrying": p.parry_window > 0,
-            "recess": p.recess_left,
+            "recess": p.recess_left > 0,
+            "pound": p.build.pound > 0,
+            "pound_ready": p.build.pound > 0 && p.pound_cooldown == 0 && !p.pounding,
+            "pounding": p.pounding,
+            "saws": gl_saw.map(|s| c.say("hud_saws").replace("{n}", &(s.saws - w.held.saws_out).max(0).to_string()).replace("{max}", &s.saws.to_string())).unwrap_or_default(),
             "boss": boss,
             "zone": c.zones[run.zone].name,
             "year": c.zones[run.zone].year,
@@ -928,6 +1007,8 @@ impl Game {
             Reward::Pierce => self.c.say("reward_pierce"),
             Reward::Pulse => self.c.say("reward_pulse"),
             Reward::Mend => self.c.say("reward_mend"),
+            Reward::Trigger => self.c.say("reward_trigger"),
+            Reward::Plating => self.c.say("reward_plating"),
         }
     }
 
@@ -943,6 +1024,8 @@ impl Game {
             PickupKind::Pierce => c.say("reward_pierce"),
             PickupKind::Pulse => c.say("reward_pulse"),
             PickupKind::Mend => c.say("reward_mend"),
+            PickupKind::Trigger => c.say("reward_trigger"),
+            PickupKind::Plating => c.say("reward_plating"),
         }
     }
 
@@ -960,6 +1043,8 @@ impl Game {
             Reward::Pierce => "pierce",
             Reward::Pulse => "pulse",
             Reward::Mend => "mend",
+            Reward::Trigger => "trigger",
+            Reward::Plating => "plating",
         }
     }
 
@@ -987,9 +1072,22 @@ impl Game {
                     Err(Refusal::Cost(n)) => c.say("why_cost").replace("{n}", &n.to_string()),
                     Err(Refusal::Unknown) => String::new(),
                 };
+                // how many upgrades stand above it in its branch
+                let mut depth = 0;
+                let mut need = u.requires.clone();
+                while let Some(up) = c.upgrades.iter().find(|x| x.id == need) {
+                    depth += 1;
+                    need = up.requires.clone();
+                    if depth > 8 {
+                        break;
+                    }
+                }
                 json!({
                     "id": u.id,
                     "name": u.name,
+                    "branch": u.branch,
+                    "depth": depth,
+                    "needs": c.upgrades.iter().find(|x| x.id == u.requires).map(|x| x.name.clone()).unwrap_or_default(),
                     "text": crate::codex::upgrade_effect(u),
                     "cost": u.cost,
                     "icon": u.icon,
@@ -1031,7 +1129,9 @@ impl Game {
                 "recess": build.recess,
                 "gun": format!("{} {}", c.guns[c.gun("carbine")].name, roman(gun_level)),
                 "wall": build.wall,
+                "pound": build.pound > 0,
             },
+            "branches": c.copy_rows("holding_branches").into_iter().map(|(id, name)| json!({ "id": id, "name": name })).collect::<Vec<_>>(),
             "zones": c.zones.iter().map(|z| json!({
                 "name": z.name,
                 "year": z.year,
@@ -1092,6 +1192,7 @@ impl Game {
                 "newest": self.crossing_count.clone().unwrap_or_default(),
                 "next": c.zones.get(z + 1).map(|n| format!("{}, {}", n.name, n.year)).unwrap_or_default(),
                 "art": words.map(|w| w.art.clone()).unwrap_or_default(),
+                "go": words.map(|w| w.go.clone()).filter(|g| !g.is_empty()).unwrap_or_else(|| c.say("interlude_next")),
             });
         }
         if let Some(rd) = &self.reading {
@@ -1146,6 +1247,8 @@ pub fn controls(held: u32, pressed: u32) -> Controls {
         parry_pressed: hit("parry"),
         interact_pressed: hit("interact"),
         wall_pressed: hit("wall"),
+        pound_pressed: hit("pound"),
+        fire_pressed: hit("fire"),
     }
 }
 
@@ -1166,8 +1269,19 @@ pub fn play_camera(w: &World, alpha: i32) -> Camera {
     let dist = level
         .ray(pivot, back, CAMERA_BACK + CAMERA_MARGIN)
         .map_or(CAMERA_BACK, |h| (h.t - CAMERA_MARGIN).max(ONE * 3 / 10));
+    // the Executor's arrival and its blows shake the view
+    let shake = if w.shake > 0 {
+        let k = fx::mul(SHAKE_SIZE, fx::div(w.shake * ONE, SHAKE_TICKS * ONE));
+        v3(
+            fx::mul(fx::sin(w.tick * fx::deg(97)), k),
+            fx::mul(fx::sin(w.tick * fx::deg(131) + fx::QUARTER), k),
+            fx::mul(fx::sin(w.tick * fx::deg(73)), k),
+        )
+    } else {
+        V3::ZERO
+    };
     Camera {
-        eye: pivot.add(back.scale(dist)),
+        eye: pivot.add(back.scale(dist)).add(shake),
         fwd,
         fov: FOV,
     }
@@ -1316,7 +1430,7 @@ pub(crate) mod tests {
     }
 
     #[test]
-    fn felling_the_bailiff_crosses_to_the_ice_and_felling_the_witness_reads_the_verdict() {
+    fn felling_each_boss_crosses_to_the_next_zone_and_felling_the_executor_reads_the_verdict() {
         let mut g = game_with(r#"{"seen_intro": true}"#);
         g.begin();
         g.start_run();
@@ -1344,28 +1458,46 @@ pub(crate) mod tests {
         let h: Value = serde_json::from_str(&g.hud_json()).unwrap();
         assert_eq!(h["zone"], "The White Waste");
         assert_eq!(h["node"], "The Landing");
+        // the Witness: it says what it saw, and the run goes home
         fell_the_boss(&mut g);
+        assert_eq!(g.mode, Mode::Interlude, "the Witness does not end the run");
+        let s: Value = serde_json::from_str(&g.screen_json()).unwrap();
+        assert_eq!(s["interlude"]["title"], "WHAT THE WITNESS SAW");
+        assert_eq!(s["interlude"]["go"], "Go home");
+        assert_eq!(g.meta.unlocked, 2);
+        g.continue_run();
+        let run = g.run.as_ref().unwrap();
+        assert_eq!(run.zone, 2);
+        let h: Value = serde_json::from_str(&g.hud_json()).unwrap();
+        assert_eq!(h["zone"], "The Glass House");
+        assert_eq!(h["node"], "The Vestibule");
+        // the Executor: its last phase outlasted
+        let boss = g.run.as_ref().unwrap().route.boss();
+        g.go(boss);
+        frames(&mut g, 120, 0);
+        let run = g.run.as_mut().unwrap();
+        let b = run.world.boss.expect("the Executor came");
+        assert_eq!(g.c.enemies[run.world.enemies[b].def].id, "executor");
+        let last = g.c.enemies[run.world.enemies[b].def].phases.len() - 1;
+        run.world.enemies[b].phase = last;
+        run.world.enemies[b].state = crate::enemy::State::Rest(1000);
+        run.world.enemies[b].tank.as_mut().unwrap().survive = 2;
+        run.world.player.iframes = 100_000;
+        frames(&mut g, 400, 0);
         assert_eq!(g.mode, Mode::Won);
         assert_eq!(g.meta.wins, 1);
-        assert_eq!(
-            c_of(&g).enemies[g.run.as_ref().unwrap().world.enemies[0].def].id,
-            "witness"
-        );
-        // both bosses' Clemency banked: 25 and 40 in zone.json
-        assert!(g.meta.clemency >= 65, "{}", g.meta.clemency);
+        // all three bosses' Clemency banked: 25, 40 and 55 in zone.json
+        assert!(g.meta.clemency >= 120, "{}", g.meta.clemency);
         let s: Value = serde_json::from_str(&g.screen_json()).unwrap();
         assert_eq!(s["verdict"]["title"], g.c.story.victory_title.as_str());
         g.to_holding();
         assert_eq!(g.mode, Mode::Holding);
-        // and a run may now start on the ice
+        // and a run may now start on the ice or in the house
         let s: Value = serde_json::from_str(&g.screen_json()).unwrap();
         assert_eq!(s["starts"][0]["zone"], 1);
-        g.start_run_at(1);
-        assert_eq!(g.run.as_ref().unwrap().zone, 1);
-    }
-
-    fn c_of(g: &Game) -> &Content {
-        &g.c
+        assert_eq!(s["starts"][1]["zone"], 2);
+        g.start_run_at(2);
+        assert_eq!(g.run.as_ref().unwrap().zone, 2);
     }
 
     #[test]
@@ -1459,8 +1591,8 @@ pub(crate) mod tests {
     fn at_an_arenas_start_the_camera_stands_in_front_of_the_shut_gate() {
         // the shut gate you came in by stands at the south edge; a camera
         // behind it would show nothing but its back (SECOND-ORDER Z1)
-        for zone in [0, 1] {
-            let mut g = game_with(r#"{"seen_intro": true, "unlocked": 1}"#);
+        for zone in [0, 1, 2] {
+            let mut g = game_with(r#"{"seen_intro": true, "unlocked": 2}"#);
             g.begin();
             g.start_run_at(zone);
             let first = g.run.as_ref().unwrap().route.nodes[0].next[0];

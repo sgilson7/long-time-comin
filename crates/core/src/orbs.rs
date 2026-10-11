@@ -54,6 +54,13 @@ pub struct Orb {
     pub rehold: Option<Rehold>,
     /// ticks flown since it last set off
     pub flown: i32,
+    /// walls it may still glance off
+    pub bounce: i32,
+    /// gravity on it, per tick per tick
+    pub fall: i32,
+    /// the pattern it fires where it lands, and whether it has landed
+    pub plant: Option<usize>,
+    pub landed: bool,
 }
 
 impl Orb {
@@ -83,6 +90,10 @@ impl Orb {
             go: speed,
             rehold: None,
             flown: 0,
+            bounce: 0,
+            fall: 0,
+            plant: None,
+            landed: false,
         }
     }
 
@@ -129,15 +140,19 @@ pub fn fire(
     let rgb = pal.c(&v.colour);
     let (aim_yaw, aim_pitch) = yaw_pitch_of(target.sub(origin));
     let spin = v.spin.wrapping_mul(repeat);
-    let mut push = |dir: V3, curl: i32| {
+    let mut push_at = |dir: V3, curl: i32, speed: i32| {
         out.orbs.push(Orb {
             pos: origin,
             prev: origin,
             dir,
-            speed: v.speed,
+            speed,
             accel: v.accel,
             min_speed: v.min_speed,
-            max_speed: v.max_speed.max(v.speed),
+            max_speed: if v.fall > 0 {
+                speed * 4
+            } else {
+                v.max_speed.max(speed)
+            },
             curl,
             radius: v.size,
             rgb,
@@ -151,9 +166,13 @@ pub fn fire(
             launch: Launch::Keep,
             hub: origin,
             axis: V3::UP,
-            go: v.speed,
+            go: speed,
             rehold: v.rehold,
             flown: 0,
+            bounce: v.bounce,
+            fall: v.fall,
+            plant: v.plant,
+            landed: false,
         })
     };
     let curl_of = |i: i32| {
@@ -176,17 +195,38 @@ pub fn fire(
             for i in 0..v.count {
                 let theta = base + fx::TURN / v.count * i;
                 let dir = along.scale(fx::cos(theta)).add(across.scale(fx::sin(theta)));
-                push(dir.norm(), curl_of(i));
+                push_at(dir.norm(), curl_of(i), v.speed);
             }
         }
         Shape::Aimed => {
+            // a sweeping burst turns from one end of its sweep to the other
+            // over its repeats
+            let sweep = if v.sweep != 0 && v.repeat > 1 {
+                -v.sweep / 2 + v.sweep / (v.repeat - 1) * repeat
+            } else {
+                0
+            };
             for i in 0..v.count {
                 let off = if v.count == 1 {
                     0
                 } else {
                     -v.spread / 2 + v.spread * i / (v.count - 1)
                 };
-                push(facing(aim_yaw + off + spin, aim_pitch), curl_of(i));
+                let yaw = aim_yaw + off + spin + sweep;
+                if v.fall > 0 {
+                    // lobbed: an arc that comes down at your feet, or
+                    // round them by the spread
+                    let feet = target.sub(v3(0, PLAYER_CHEST, 0));
+                    let flat = v3(feet.x - origin.x, 0, feet.z - origin.z).len_xz();
+                    let ticks = (fx::div(flat, v.speed.max(1)) / ONE).max(12);
+                    let rise = feet.y - origin.y;
+                    // the speed up that lands it after `ticks` under `fall`
+                    let up = rise / ticks + v.fall * ticks / 2;
+                    let vel = facing(yaw, 0).scale(v.speed).add(v3(0, up, 0));
+                    push_at(vel.norm(), curl_of(i), vel.len());
+                } else {
+                    push_at(facing(yaw, aim_pitch), curl_of(i), v.speed);
+                }
             }
         }
         Shape::Sphere => {
@@ -200,7 +240,7 @@ pub fn fire(
                 let n = (fx::mul(v.count * ONE, fx::cos(pitch)) / ONE).max(3);
                 let base = spin + fx::TURN / n / 2 * (r % 2);
                 for i in 0..n {
-                    push(facing(base + fx::TURN / n * i, pitch), curl_of(i));
+                    push_at(facing(base + fx::TURN / n * i, pitch), curl_of(i), v.speed);
                 }
             }
         }
@@ -313,6 +353,22 @@ fn formation(v: &Volley, origin: V3, target: V3, repeat: i32, owner: usize, rgb:
                 spots.push(at(base + fx::mul(fx::TURN * v.rows, f), fx::mul(r, f)));
             }
         }
+        Form::Lane => {
+            // two walls along the line to you, `radius` either side of it
+            let along_line = facing(aim_yaw, 0);
+            let step = |k: i32| {
+                if n <= 1 {
+                    0
+                } else {
+                    -v.length / 2 + v.length / (n - 1) * k
+                }
+            };
+            for side in [-1, 1] {
+                for i in 0..n {
+                    spots.push(hub.add(across.scale(r * side)).add(along_line.scale(step(i))));
+                }
+            }
+        }
         Form::Arc => {
             for i in 0..n {
                 let off = if n <= 1 {
@@ -325,6 +381,8 @@ fn formation(v: &Volley, origin: V3, target: V3, repeat: i32, owner: usize, rgb:
         }
     }
     let along = to.norm();
+    // a lane closes across its line; every other shape keeps its plane
+    let axis = if v.form == Form::Lane { across } else { axis };
     spots
         .into_iter()
         .enumerate()
@@ -359,6 +417,10 @@ fn formation(v: &Volley, origin: V3, target: V3, repeat: i32, owner: usize, rgb:
                 go: v.speed,
                 rehold: v.rehold,
                 flown: 0,
+                bounce: v.bounce,
+                fall: v.fall,
+                plant: v.plant,
+                landed: false,
             }
         })
         .collect()
@@ -384,6 +446,13 @@ impl Orb {
             }
             Launch::Down => v3(0, -ONE, 0),
             Launch::Spin => self.axis.cross(self.pos.sub(self.hub)).norm(),
+            Launch::Close => {
+                if self.pos.sub(self.hub).dot(self.axis) > 0 {
+                    self.axis.neg()
+                } else {
+                    self.axis
+                }
+            }
         };
         if d != V3::ZERO {
             self.dir = d;
@@ -433,11 +502,36 @@ impl Orb {
         if self.accel != 0 {
             self.speed = (self.speed + self.accel).clamp(self.min_speed, self.max_speed);
         }
+        if self.fall != 0 {
+            let v = self.dir.scale(self.speed).add(v3(0, -self.fall, 0));
+            self.speed = v.len();
+            if self.speed > 0 {
+                self.dir = v.norm();
+            }
+        }
         self.pos = self.pos.add(self.dir.scale(self.speed));
-        self.age < ORB_LIFE
-            && self.pos.y > -fx::int(4)
-            && self.pos.len_xz() < fx::int(160)
-            && !level.sphere_hits(self.pos, self.radius / 2)
+        let alive = self.age < ORB_LIFE && self.pos.y > -fx::int(4) && self.pos.len_xz() < fx::int(160);
+        if !alive {
+            return false;
+        }
+        if level.sphere_hits(self.pos, self.radius / 2) {
+            if self.bounce > 0 {
+                if let Some(axis) = glance(level, self.prev, self.pos, self.radius / 2) {
+                    // off the face it met, back where it was
+                    self.bounce -= 1;
+                    match axis {
+                        0 => self.dir.x = -self.dir.x,
+                        1 => self.dir.y = -self.dir.y,
+                        _ => self.dir.z = -self.dir.z,
+                    }
+                    self.pos = self.prev;
+                    return true;
+                }
+            }
+            self.landed = true;
+            return false;
+        }
+        true
     }
 
     /// Does the orb touch a body standing at `feet`? The body is a capsule:
@@ -449,6 +543,36 @@ impl Orb {
         let nearest = v3(feet.x, self.pos.y.clamp(lo, hi), feet.z);
         within(self.pos, nearest, r)
     }
+}
+
+/// The axis of the face an orb moving from `prev` met at `pos`: the one
+/// along which `prev` was furthest outside the solid it now touches.
+fn glance(level: &Level, prev: V3, pos: V3, r: i32) -> Option<usize> {
+    let mut best: Option<(i32, usize)> = None;
+    level.each_near(
+        v3(pos.x - r, pos.y - r, pos.z - r),
+        v3(pos.x + r, pos.y + r, pos.z + r),
+        |s| {
+            if !within(s.nearest(pos), pos, r) {
+                return;
+            }
+            let out = [
+                (s.min.x - prev.x).max(prev.x - s.max.x),
+                (s.min.y - prev.y).max(prev.y - s.max.y),
+                (s.min.z - prev.z).max(prev.z - s.max.z),
+            ];
+            let (k, d) = out
+                .iter()
+                .enumerate()
+                .max_by_key(|(_, d)| **d)
+                .map(|(k, d)| (k, *d))
+                .unwrap_or((0, 0));
+            if best.is_none_or(|(b, _)| d > b) {
+                best = Some((d, k));
+            }
+        },
+    );
+    best.map(|(_, k)| k)
 }
 
 /// `|a − b| < r`, without a square root.
@@ -774,6 +898,111 @@ mod tests {
         assert!(blue.iter().any(|b| *b) && blue.iter().any(|b| !*b));
         for v in c.patterns.iter().flat_map(|p| &p.volleys) {
             assert_eq!(v.blue, v.colour == "cyan" || v.colour == "blue", "{}", v.colour);
+        }
+    }
+
+    #[test]
+    fn a_ricochet_glances_off_a_wall_and_comes_back() {
+        let l = Level::new(vec![
+            crate::level::Solid::new(
+                v3(-fx::int(40), -ONE, -fx::int(40)),
+                v3(fx::int(40), 0, fx::int(40)),
+            ),
+            crate::level::Solid::new(
+                v3(-fx::int(5), 0, -fx::int(11)),
+                v3(fx::int(5), fx::int(5), -fx::int(10)),
+            ),
+        ]);
+        let mut o = Orb::new(v3(0, ONE, 0), v3(0, 0, -ONE), ONE / 4, ONE / 4, [0; 3], 10);
+        o.bounce = 1;
+        let mut alive = 0;
+        for _ in 0..200 {
+            if !o.step(&l, V3::ZERO, V3::ZERO) {
+                break;
+            }
+            alive += 1;
+        }
+        assert!(o.dir.z > 0, "it came back off the wall: {:?}", o.dir);
+        assert!(alive > 60, "and flew on");
+        // without a bounce the wall stops it
+        let mut o = Orb::new(v3(0, ONE, 0), v3(0, 0, -ONE), ONE / 4, ONE / 4, [0; 3], 10);
+        let mut n = 0;
+        while o.step(&l, V3::ZERO, V3::ZERO) {
+            n += 1;
+        }
+        assert!(n < 45 && o.landed, "{n}");
+    }
+
+    #[test]
+    fn a_lobbed_canister_comes_down_by_your_feet() {
+        let p = pattern("canister");
+        let v = &p[0];
+        let l = open_floor();
+        let feet = v3(fx::int(12), 0, -fx::int(9));
+        let chest = feet.add(v3(0, PLAYER_CHEST, 0));
+        let pal = crate::content::tests::content().pal;
+        let s = fire(v, v3(0, ONE, 0), chest, 0, 0, &pal, &l);
+        assert_eq!(s.orbs.len() as i32, v.count);
+        for (k, mut o) in s.orbs.into_iter().enumerate() {
+            while o.step(&l, chest, V3::ZERO) {}
+            assert!(o.landed, "it landed");
+            let off = o.pos.sub(feet).len_xz();
+            // the middle one at your feet, the others round them by the spread
+            let near = if k as i32 == v.count / 2 {
+                ONE * 3 / 2
+            } else {
+                fx::int(4)
+            };
+            assert!(off < near, "{k}: {off}");
+            assert!(o.plant.is_some());
+        }
+    }
+
+    #[test]
+    fn a_sweeping_burst_turns_from_one_end_to_the_other() {
+        let p = pattern("burst_fire");
+        let v = &p[0];
+        let l = open_floor();
+        let pal = crate::content::tests::content().pal;
+        let target = v3(0, ONE, -fx::int(20));
+        let yaw = |k: i32| yaw_pitch_of(fire(v, v3(0, ONE, 0), target, k, 0, &pal, &l).orbs[0].dir).0;
+        let (first, last) = (fx::wrap(yaw(0)), fx::wrap(yaw(v.repeat - 1)));
+        assert!(
+            (fx::wrap(first - last).abs() - v.sweep).abs() < fx::deg(1),
+            "{first} {last}"
+        );
+        assert!(
+            fx::wrap(first).abs() < v.sweep && fx::wrap(last).abs() < v.sweep,
+            "centred on you"
+        );
+    }
+
+    #[test]
+    fn a_lanes_walls_stand_either_side_of_you_and_close_across() {
+        let p = pattern("kettle");
+        let v = &p[0];
+        let l = open_floor();
+        let pal = crate::content::tests::content().pal;
+        // the enemy north of you: the lane runs north to south
+        let target = v3(0, PLAYER_CHEST, 0);
+        let mut s = fire(v, v3(0, ONE, -fx::int(15)), target, 0, 0, &pal, &l);
+        assert_eq!(s.orbs.len() as i32, v.count * 2);
+        assert!(
+            s.orbs.iter().all(|o| (o.pos.x.abs() - v.radius).abs() < ONE / 10),
+            "either side"
+        );
+        for o in s.orbs.iter_mut() {
+            for _ in 0..v.hold + 2 {
+                o.step(&l, target, V3::ZERO);
+            }
+            // each flies across toward the middle line
+            assert!(
+                o.dir.x.signum() == -o.pos.x.signum() || o.pos.x.abs() < ONE / 2,
+                "{:?} {:?}",
+                o.pos,
+                o.dir
+            );
+            assert!(o.dir.z.abs() < ONE / 10);
         }
     }
 }

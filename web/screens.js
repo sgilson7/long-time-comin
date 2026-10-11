@@ -140,6 +140,7 @@ export function makeScreens(game, copy, changed, startAt) {
       if (b.parry) body.push(copy.build_parry);
       if (b.recess) body.push(copy.build_recess);
       if (b.wall) body.push(copy.build_wall);
+      if (b.pound) body.push(copy.build_pound);
       el("m-build").replaceChildren(...body.map((t) => make("li", "", t)));
       el("start-later").replaceChildren(
         ...s.starts.map((st) => {
@@ -149,21 +150,42 @@ export function makeScreens(game, copy, changed, startAt) {
         }),
       );
 
-      const shop = el("upgrades");
-      shop.replaceChildren(
-        ...s.upgrades.map((u) => {
-          const card = make("button", `upgrade ${u.owned ? "owned" : ""} ${u.can ? "can" : ""}`);
-          card.dataset.id = u.id;
-          const icon = make("img", "icon");
-          icon.src = `art/icons/${u.icon}.png`;
-          icon.alt = "";
-          const label = u.owned ? copy.owned : u.can ? copy.buy.replace("{n}", u.cost) : u.why;
-          card.append(icon, make("h4", "", u.name), make("p", "", u.text), make("span", "cost", label));
-          card.disabled = !u.can;
-          card.addEventListener("click", () => {
-            if (game.buy(u.id)) changed();
-          });
-          return card;
+      // the shop as a tree: a column for each branch, each upgrade under
+      // the one it needs
+      const card = (u) => {
+        const node = make("button", `upgrade ${u.owned ? "owned" : ""} ${u.can ? "can" : ""}`);
+        node.dataset.id = u.id;
+        node.style.setProperty("--depth", u.depth);
+        const icon = make("img", "icon");
+        icon.src = `art/icons/${u.icon}.png`;
+        icon.alt = "";
+        const label = u.owned ? copy.owned : u.can ? copy.buy.replace("{n}", u.cost) : u.why;
+        node.append(icon, make("h4", "", u.name), make("p", "", u.text), make("span", "cost", label));
+        node.disabled = !u.can;
+        node.addEventListener("click", () => {
+          if (game.buy(u.id)) changed();
+        });
+        return node;
+      };
+      // each upgrade after the one it needs, deepest last
+      const ordered = (list) => {
+        const out = [];
+        const place = (needs) => {
+          for (const u of list.filter((x) => x.needs === needs)) {
+            out.push(u);
+            place(u.name);
+          }
+        };
+        place("");
+        for (const u of list) if (!out.includes(u)) out.push(u);
+        return out;
+      };
+      el("upgrades").replaceChildren(
+        ...s.branches.map((b) => {
+          const column = make("div", "branch");
+          column.append(make("h3", "", b.name));
+          column.append(...ordered(s.upgrades.filter((u) => u.branch === b.id)).map(card));
+          return column;
         }),
       );
 
@@ -231,6 +253,7 @@ export function makeScreens(game, copy, changed, startAt) {
       el("l-newest").textContent = v.newest;
       el("l-newest").hidden = !v.newest;
       el("l-next").textContent = v.next;
+      el("interlude-next").textContent = v.go;
     },
 
     dead(s) {

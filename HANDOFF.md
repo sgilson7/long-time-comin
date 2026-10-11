@@ -14,7 +14,7 @@ Long Time Comin' is a Builder project built in one session on 2026-10-10 from `B
 ## What exists
 
 - **Core** (`crates/core/src`): `player` (run, up to four jumps, dash, grapple, parry, health), `orbs` (volleys and their orbs and waves), `weapons`, `enemy` (five kinds, the Bailiff's phases), `arena` (the seeded builder for seven archetypes and the court), `level` (boxes, grid, rays), `route` (the zone graph), `meta` (the record), `world` (one arena's tick), `draw`, `render` (four passes: solid, facade, ink, glow), `game` (modes, clock, camera, HUD and screen JSON), `content`, `balance`. `fx`, `geom`, `rng`, `mesh` are Food Truck Circus's, with Ring, Blob, Panel and Facade meshes added.
-- **Data**: 3 guns of 3 levels, 47 patterns (23 of them zone two's), 16 enemies (seven and a boss in each built zone), two built zones with their routes and encounters (16 and 12), 12 upgrades, the palette, the story (sentencing, 10 counts, addenda, an interlude, the verdict), copy, controls, sounds, display, shaders.
+- **Data**: 4 guns of 4 levels, 77 patterns (23 zone two's, 30 zone three's), 25 enemies (seven and a boss in each built zone, and the house's mini-boss), three built zones with their routes and encounters (16, 12, 12), 27 upgrades in four branches, the palette, the story (sentencing, 10 counts, addenda, two interludes, the verdict), copy, controls, sounds, display, shaders.
 - **Page**: `app.js` (loop and modes), `hud.js`, `screens.js` (sentencing, Holding, map, indictment, verdict), `sound.js`, Iron Vector's `input.js`, and `gl.js` (Iron Vector's, with the passes).
 - **Art**: `tools/art.py` → `web/art/` (title, sentencing, indictment, verdict, 3 guns, 8 icons), TikZ kept in `tools/art/`.
 - **Probes** (ignored tests): `crates/core/tests/run_probe.rs` runs a scripted player through whole routes; `crates/core/tests/draw_cost.rs` prints each scene's instances and vertices.
@@ -39,12 +39,28 @@ A subagent played seven runs through the playtest harness (`cargo run --release 
 - **Art:** `interlude.png`, `testimony.png` (the verdict), `icons/wall.png`.
 - **Harness:** `record <json>` starts from a saved record, `start 1` starts on the ice, `north` leaves the interlude, `tap wall`; the autopilot raises the wall at blue orbs.
 
+## Round 5 (2026-10-11): the Glass House
+
+**Checked:** `./scripts/check.sh` passed locally on 2026-10-11 before the pull request (fmt, clippy, 150 core and 11 boundary tests, the wasm build and audit, the browser check in Chromium, Firefox and WebKit). The 31 new breaks in `scripts/break_tests.py` were run locally and each failed its test (B3). **Live:** see the end of this section. `BRIEF.md` has the request; `PLAN.md` (Round 5) the design; `SECOND-ORDER.md` rows R5, M1 to M15, B3 and T7 what was chosen and found.
+
+- **Story.** The Witness's interlude (WHAT THE WITNESS SAW) carries the run home to the house on Calder Hill in 2056; the verdict is now the Executor's orders, signed by the Defendant. Zone four (2081) stays sealed.
+- **The house** (`crates/core/src/arena/house.rs`): nine rooms, walled and roofed 15 m up. `arena.nav` holds each house room's walk grid (`nav.rs`), `arena.panes` the Conservatory's glass.
+- **Agents** (`enemy.rs` kind `agent`, `squad.rs`): seven roles; cover and peeking, crossfire and pincer timing, rings while a Handler lives, flanking to your back. New pattern mechanics in `orbs.rs`: `bounce`, `fall`/`plant`, `sweep`, the `lane` form and `Launch::Close`.
+- **The Section Chief** (elite, in the Ballroom on main fight four): calls agents (`summon`, `rally` in `enemies.json`; `world.rs` `calls_step`).
+- **The Executor** (`tank.rs`, kind `tank`): drive and turret, armour and weak points per phase, cannons grown per phase, a fourth phase outlasted; the glass breaks in `world.rs` `glass_step`. Models in `crates/core/src/draw/house.rs`.
+- **The ground pound** (`player.rs`, key C, action bit 1<<12) and **the Ripsaw** (`weapons.rs`, `ShotKind::Saw`, `Lodge`; the rev in `world.rs` `saws_step`).
+- **Upgrades and rewards**: level IV guns, Hair Trigger and Plating, fifteen new upgrades; the Holding draws its tree by `branch` (`upgrades.json`, copy `holding_branches`).
+- **Art**: `interlude_house.png`, `orders.png` (the verdict), `guns/ripsaw.png`, icons `pound`, `saw`, `conduct`, `trigger`, `plating`.
+- **Harness**: `goto <node>|boss` and `break` (via `Game::go_to` and `Game::break_weak_points`); it reports who hurt you after each command.
+- **Fixed on the way**: an orb's hit never reached the page's notes, so the hurt sound and a Recess's callout played only for falls (M12).
+
 ## What remains
 
 - Sam's playtest (`TRIAGE.md`). Every feel and balance number is the agent's guess (SECOND-ORDER T1); the probe shows the curve (no wins with no upgrades, about half with 62 Clemency of upgrades), not whether it is fun (T2, P2).
 - Sam's reading of the story's words (T3).
-- Zones three and four and the final boss are sealed. `zone.json` lists them; a third zone needs its entry in `zone.json` (scene, route, archetypes, names, encounters), a builder in `arena.rs`'s style, its enemies and an interlude in `story.json`.
-- Not built: music, a sensitivity setting, enemy pathfinding (walkers walk straight and turn at walls).
+- Zone four (2081) and the final boss are sealed. `zone.json` lists it; it needs its entry in `zone.json` (scene, route, archetypes, names, encounters), a builder in `arena.rs`'s style, its enemies and an interlude in `story.json` (the house's, keyed `glass_house`).
+- Sam's playtest of zone three (T7), and whether the Executor moves as the Atlas of Tyr does (M2).
+- Not built: music, a sensitivity setting, pathfinding for zones one and two's walkers (they walk straight and turn at walls; the house's agents walk a grid).
 
 ## What the next session must not assume
 

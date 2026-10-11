@@ -103,6 +103,79 @@ pub const WALL_AHEAD: i32 = ONE * 18 / 10;
 pub const WALL_HALF_WIDTH: i32 = ONE * 24 / 10;
 pub const WALL_HEIGHT: i32 = ONE * 34 / 10;
 
+// ---- the ground pound (Gavel Drop) -------------------------------------------
+
+/// in the air, C drops you straight down this fast
+pub const POUND_SPEED: i32 = per_tick(34, 1);
+/// the shockwave where you land: its reach and its damage, and Gavel II's
+pub const POUND_RADIUS: i32 = ONE * 55 / 10;
+pub const POUND_DAMAGE: i32 = 45;
+pub const POUND_PLUS_RADIUS: i32 = ONE * 75 / 10;
+pub const POUND_PLUS_DAMAGE: i32 = 80;
+/// the bounce carries you this far over the height you dropped from, and
+/// at least this far over the floor
+pub const POUND_OVER: i32 = ONE * 12 / 10;
+pub const POUND_MIN_BOUNCE: i32 = int(3);
+pub const POUND_COOLDOWN: i32 = secs(2, 1);
+/// no hit lands while you drop, nor this long after the landing
+pub const POUND_IFRAMES: i32 = secs(1, 4);
+
+// ---- rewards and upgrades added with the house ---------------------------------
+
+/// Hair Trigger: each one makes guns fire this many percent faster
+pub const TRIGGER_PCT: i32 = 15;
+/// Plating: each one takes this many percent off every hit, up to two
+pub const PLATING_PCT: i32 = 20;
+pub const PLATING_MAX: i32 = 2;
+/// the Writ of Reach II: the hook reaches further and is back sooner
+pub const GRAPPLE_PLUS_RANGE: i32 = int(16);
+pub const GRAPPLE_PLUS_COOLDOWN: i32 = secs(1, 2);
+/// Objection II: a longer parry, back sooner
+pub const PARRY_PLUS_WINDOW: i32 = secs(45, 100);
+pub const PARRY_PLUS_COOLDOWN: i32 = secs(6, 10);
+/// Injunction II: the wall stands longer, back sooner
+pub const WALL_PLUS_TICKS: i32 = secs(8, 10);
+pub const WALL_PLUS_COOLDOWN: i32 = secs(3, 1);
+/// Good Conduct: this many percent more Clemency earned
+pub const CONDUCT_PCT: i32 = 15;
+/// Bail: this much more health when an arena is cleared
+pub const BAIL_HEAL: i32 = 15;
+
+// ---- the house's agents and the Executor ----------------------------------------
+
+/// an agent turns to face where it walks or aims at most this fast
+pub const AGENT_TURN: i32 = deg(9);
+/// a shield turns slower, so you can get round it: 72° a second, slower
+/// than you run round it at its range
+pub const SHIELD_TURN: i32 = deg(6) / 5;
+/// a step an agent climbs; a drop it will take
+pub const AGENT_STEP: i32 = ONE * 6 / 10;
+pub const AGENT_DROP: i32 = int(6);
+/// an agent gives up on reaching a place after this long and takes another
+pub const AGENT_GIVE_UP: i32 = secs(6, 1);
+/// the place an agent steps out to fire from is this near its cover
+pub const PEEK_REACH: i32 = int(3);
+/// you see what is within this angle of where you face; a flanker goes
+/// further round than it
+pub const VIEW_HALF: i32 = deg(55);
+/// a crossfire's two agents stand at least this far apart round you
+pub const CROSSFIRE_APART: i32 = deg(90);
+/// partners in a crossfire or a ring wait for each other at most this long
+pub const SYNC_WAIT: i32 = secs(5, 2);
+/// a Handler alive cuts every agent's rest by this many percent
+pub const COMMAND_PCT: i32 = 30;
+/// the Executor: how fast its hull and turret turn, its ram, its contact
+/// push, and how far it rises in its last phase
+pub const TANK_TURN: i32 = deg(1);
+pub const TANK_TURRET_TURN: i32 = deg(2) / 5;
+pub const TANK_ACCEL: i32 = per_tick2(5, 1);
+pub const TANK_RAM_SPEED: i32 = per_tick(15, 1);
+pub const TANK_PUSH: i32 = per_tick(14, 1);
+pub const TANK_RISE: i32 = int(5);
+/// the screen shakes this long, this far, when it comes through the glass
+pub const SHAKE_TICKS: i32 = secs(1, 1);
+pub const SHAKE_SIZE: i32 = ONE * 35 / 100;
+
 // ---- zone two's ground ------------------------------------------------------
 
 /// an updraft vent throws a body up at this speed (about 6 m)

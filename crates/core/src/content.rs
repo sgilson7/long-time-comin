@@ -121,6 +121,9 @@ struct WeaponFile {
     blurb: String,
     colour: String,
     levels: Vec<GunLevelFile>,
+    /// the first zone (by index) whose side paths offer it
+    #[serde(default)]
+    from_zone: usize,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -135,6 +138,18 @@ struct GunLevelFile {
     splash_cm: i32,
     splash: i32,
     pierce: i32,
+    // a saw gun: how many blades, what a rev does, how much a blade
+    // deals before it comes back, and how long it takes to come back
+    #[serde(default)]
+    saws: i32,
+    #[serde(default)]
+    rev_damage: i32,
+    #[serde(default)]
+    rev_ms: i32,
+    #[serde(default)]
+    teeth: i32,
+    #[serde(default)]
+    recall_ms: i32,
 }
 
 /// One level of one gun, in simulation units.
@@ -150,6 +165,22 @@ pub struct GunLevel {
     pub splash_radius: i32,
     pub splash: i32,
     pub pierce: i32,
+    pub saw: Option<SawLevel>,
+}
+
+/// A saw gun's level: blades that lodge in what they hit and rev while
+/// the trigger is held.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SawLevel {
+    /// blades out at once
+    pub saws: i32,
+    /// damage a lodged blade deals each `rev_every` ticks while revving
+    pub rev_damage: i32,
+    pub rev_every: i32,
+    /// the damage a blade deals in all before it comes back
+    pub teeth: i32,
+    /// ticks until a spent blade can be thrown again
+    pub recall: i32,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -159,6 +190,7 @@ pub struct Gun {
     pub blurb: String,
     pub colour: String,
     pub levels: Vec<GunLevel>,
+    pub from_zone: usize,
 }
 
 impl Gun {
@@ -252,6 +284,18 @@ struct VolleyFile {
     relaunch: String,
     #[serde(default)]
     relaunch_cms: i32,
+    // the house's: ricochets, lobbed orbs that plant a pattern where they
+    // land, a burst that sweeps, a lane's length
+    #[serde(default)]
+    bounce: i32,
+    #[serde(default)]
+    fall_cms2: i32,
+    #[serde(default)]
+    plant: String,
+    #[serde(default)]
+    sweep_deg: i32,
+    #[serde(default)]
+    length_cm: i32,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -283,6 +327,9 @@ pub enum Form {
     Arc,
     /// `count` across like a line, rising and falling `rows` times
     Ribbon,
+    /// two walls of `count` orbs each, either side of the line to you,
+    /// `radius` out from it and `length` long, open at both ends
+    Lane,
 }
 
 /// Where a formation is placed.
@@ -316,6 +363,8 @@ pub enum Launch {
     Along,
     /// round the formation's centre, in its plane
     Spin,
+    /// straight across to the formation's middle line: a lane's walls close
+    Close,
 }
 
 /// A second hold: after `stop` ticks of flight the orb stops, waits
@@ -371,6 +420,16 @@ pub struct Volley {
     pub stagger: i32,
     pub launch: Launch,
     pub rehold: Option<Rehold>,
+    /// walls it glances off before a wall stops it
+    pub bounce: i32,
+    /// gravity on it, per tick per tick: a lobbed orb
+    pub fall: i32,
+    /// the pattern a lobbed orb fires where it lands
+    pub plant: Option<usize>,
+    /// an aimed volley's repeats sweep across this angle, one end to the other
+    pub sweep: i32,
+    /// a lane's walls' length
+    pub length: i32,
 }
 
 impl Volley {
@@ -383,6 +442,7 @@ impl Volley {
     pub fn orbs(&self) -> i32 {
         match (self.shape, self.form) {
             (Shape::Form, Form::Grid | Form::Star) => self.count * self.rows,
+            (Shape::Form, Form::Lane) => self.count * 2,
             _ => self.count,
         }
     }
@@ -398,6 +458,7 @@ fn launch_of(s: &str, who: &str) -> Result<Launch, String> {
         "down" => Launch::Down,
         "along" => Launch::Along,
         "spin" => Launch::Spin,
+        "close" => Launch::Close,
         x => return Err(format!("patterns: {who} has no launch {x}")),
     })
 }
@@ -427,13 +488,49 @@ struct AttackFile {
     pattern: String,
     windup_ms: i32,
     rest_ms: i32,
+    /// the aim stops following you this long before it fires
+    #[serde(default)]
+    lock_ms: i32,
+    /// fired over cover: it needs no line of sight
+    #[serde(default)]
+    indirect: bool,
+    /// a tank's attack fired from every cannon at once
+    #[serde(default)]
+    cannons: bool,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct PartFile {
+    /// "hull" or "turret"
+    on: String,
+    /// in the part's frame: x right, y up, z forward, cm
+    at_cm: [i32; 3],
+    #[serde(default)]
+    radius_cm: i32,
+    #[serde(default)]
+    hp: i32,
+    /// a cannon's aim off the part's facing, degrees
+    #[serde(default)]
+    yaw_deg: i32,
+    #[serde(default)]
+    pitch_deg: i32,
 }
 
 #[derive(Debug, Clone, Deserialize)]
 struct PhaseFile {
+    #[serde(default)]
     from_pct: i32,
+    #[serde(default)]
     summons: Vec<String>,
     attacks: Vec<AttackFile>,
+    /// a tank's phase: the weak points it opens, the cannons it grows,
+    /// and, for its last, how long you must outlast it
+    #[serde(default)]
+    weak: Vec<PartFile>,
+    #[serde(default)]
+    cannons: Vec<PartFile>,
+    #[serde(default)]
+    survive_ms: i32,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -454,6 +551,28 @@ struct EnemyFile {
     /// a pattern fired once where it dies
     #[serde(default)]
     burst: String,
+    /// an agent's part in its squad
+    #[serde(default)]
+    role: String,
+    /// shots from within this many degrees of its facing do nothing
+    #[serde(default)]
+    armour_deg: i32,
+    /// it calls these while it lives, one batch each `summon_ms`, while
+    /// fewer than `summon_cap` of its own are up; below `rally_pct` health
+    /// it calls `rally` once
+    #[serde(default)]
+    summon: Vec<String>,
+    #[serde(default)]
+    summon_ms: i32,
+    #[serde(default)]
+    summon_cap: i32,
+    #[serde(default)]
+    rally_pct: i32,
+    #[serde(default)]
+    rally: Vec<String>,
+    /// a bar of its own on the HUD
+    #[serde(default)]
+    elite: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -467,6 +586,32 @@ pub enum Kind {
     Blinker,
     /// under the floor between attacks, where it cannot be hurt
     Burrower,
+    /// a person: walks the floors, takes cover, works with its squad
+    Agent,
+    /// the Executor: a tracked tank, hurt only in its weak points
+    Tank,
+}
+
+/// An agent's part in its squad.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Role {
+    None,
+    /// takes cover, steps out to fire; a partner in a crossfire
+    Rifle,
+    /// goes to your back
+    Flank,
+    /// keeps far and high, aims with a sight line
+    Sniper,
+    /// carries a shield and walks at you
+    Shield,
+    /// lobs over cover
+    Grenadier,
+    /// runs straight at you
+    Rush,
+    /// while it lives the squad rests less and rings you
+    Command,
+    /// the Section Chief: stays back and calls agents
+    Chief,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -474,6 +619,28 @@ pub struct Attack {
     pub pattern: usize,
     pub windup: i32,
     pub rest: i32,
+    pub lock: i32,
+    pub indirect: bool,
+    pub cannons: bool,
+}
+
+/// Which part of a tank a weak point or cannon is on.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum On {
+    Hull,
+    Turret,
+}
+
+/// A weak point or a cannon on a tank, in its part's frame (Q16 metres:
+/// x right, y up, z forward).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Part {
+    pub on: On,
+    pub at: [i32; 3],
+    pub radius: i32,
+    pub hp: i32,
+    pub yaw: i32,
+    pub pitch: i32,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -481,6 +648,9 @@ pub struct Phase {
     pub from_pct: i32,
     pub summons: Vec<usize>,
     pub attacks: Vec<Attack>,
+    pub weak: Vec<Part>,
+    pub cannons: Vec<Part>,
+    pub survive: i32,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -499,6 +669,15 @@ pub struct EnemyDef {
     pub phases: Vec<Phase>,
     /// the pattern it fires once where it dies
     pub burst: Option<usize>,
+    pub role: Role,
+    /// half the angle in front of it that shots glance off; 0 for none
+    pub armour: i32,
+    pub summon: Vec<usize>,
+    pub summon_every: i32,
+    pub summon_cap: i32,
+    pub rally_pct: i32,
+    pub rally: Vec<usize>,
+    pub elite: bool,
 }
 
 // ---- the zones and their routes ---------------------------------------------
@@ -520,6 +699,21 @@ pub struct RouteRules {
     /// expedition cache); none in zone one
     #[serde(default)]
     pub cache_rewards: Vec<String>,
+    /// the levels a gun on a near and on a deep side path has
+    #[serde(default = "two_three")]
+    pub weapon_levels: [i32; 2],
+    /// a mini-boss fought alone in its own arena, on main fight
+    /// `miniboss_at` (from 0); none in zones one and two
+    #[serde(default)]
+    pub miniboss: String,
+    #[serde(default)]
+    pub miniboss_at: usize,
+    #[serde(default)]
+    pub miniboss_arena: String,
+}
+
+fn two_three() -> [i32; 2] {
+    [2, 3]
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
@@ -613,10 +807,14 @@ pub struct Upgrade {
     pub effect: String,
     pub amount: i32,
     pub icon: String,
+    /// the Holding's column it stands in
+    pub branch: String,
 }
 
 /// The rewards a side path or the Antechamber can hold.
-pub const REWARDS: &[&str] = &["weapon", "jump", "health", "speed", "pierce", "pulse", "mend"];
+pub const REWARDS: &[&str] = &[
+    "weapon", "jump", "health", "speed", "pierce", "pulse", "mend", "trigger", "plating",
+];
 
 /// The palette names whose orbs count as blue: the Injunction breaks them.
 pub const BLUE: &[&str] = &["cyan", "blue"];
@@ -631,7 +829,20 @@ const EFFECTS: &[&str] = &[
     "recess",
     "armory",
     "wall",
+    "pound",
+    "pound_plus",
+    "grapple_plus",
+    "parry_plus",
+    "wall_plus",
+    "appeal",
+    "precedent",
+    "conduct",
+    "bail",
+    "lien",
 ];
+
+/// The Holding's columns, in order.
+pub const BRANCHES: &[&str] = &["body", "motion", "arms", "writs"];
 
 // ---- story -----------------------------------------------------------------
 
@@ -666,6 +877,9 @@ pub struct Interlude {
     pub lines: Vec<String>,
     /// its picture, web/art/<art>.png
     pub art: String,
+    /// the button that goes on into the next zone
+    #[serde(default)]
+    pub go: String,
 }
 
 // ---- everything ------------------------------------------------------------
@@ -752,6 +966,10 @@ impl Content {
                         clemency_boss: 0,
                         rest_rewards: Vec::new(),
                         cache_rewards: Vec::new(),
+                        weapon_levels: two_three(),
+                        miniboss: String::new(),
+                        miniboss_at: 0,
+                        miniboss_arena: String::new(),
                     },
                     archetypes: Vec::new(),
                     names: z.names,
@@ -779,6 +997,15 @@ impl Content {
                     return Err(format!("zone {}: no archetypes", z.id));
                 }
                 find_enemy(&z.boss)?;
+                if !r.miniboss.is_empty() {
+                    find_enemy(&r.miniboss)?;
+                    if r.miniboss_at >= r.main_fights || r.miniboss_arena.is_empty() {
+                        return Err(format!(
+                            "zone {}: the mini-boss needs a main fight and an arena",
+                            z.id
+                        ));
+                    }
+                }
                 for name in [
                     &scene.sky,
                     &scene.fog,
@@ -812,6 +1039,9 @@ impl Content {
         for u in &upgrades.upgrades {
             if !EFFECTS.contains(&u.effect.as_str()) {
                 return Err(format!("upgrades: {} has no effect {}", u.id, u.effect));
+            }
+            if !BRANCHES.contains(&u.branch.as_str()) {
+                return Err(format!("upgrades: {} is in no branch {}", u.id, u.branch));
             }
             if !u.requires.is_empty() && !upgrades.upgrades.iter().any(|o| o.id == u.requires) {
                 return Err(format!("upgrades: {} requires unknown {}", u.id, u.requires));
@@ -907,6 +1137,13 @@ fn parse_guns(text: &str, pal: &Palette) -> Result<Vec<Gun>, String> {
                 splash_radius: cm(l.splash_cm),
                 splash: l.splash,
                 pierce: l.pierce,
+                saw: (l.saws > 0).then(|| SawLevel {
+                    saws: l.saws,
+                    rev_damage: l.rev_damage,
+                    rev_every: ms(l.rev_ms).max(1),
+                    teeth: l.teeth.max(1),
+                    recall: ms(l.recall_ms),
+                }),
             })
             .collect();
         out.push(Gun {
@@ -915,6 +1152,7 @@ fn parse_guns(text: &str, pal: &Palette) -> Result<Vec<Gun>, String> {
             blurb: w.blurb,
             colour: w.colour,
             levels,
+            from_zone: w.from_zone,
         });
     }
     Ok(out)
@@ -923,6 +1161,7 @@ fn parse_guns(text: &str, pal: &Palette) -> Result<Vec<Gun>, String> {
 fn parse_patterns(text: &str, pal: &Palette) -> Result<Vec<Pattern>, String> {
     let f: PatternsFile = serde_json::from_str(text).map_err(|e| format!("patterns: {e}"))?;
     let mut out = Vec::new();
+    let mut plants: Vec<(usize, usize, String)> = Vec::new();
     for p in f.patterns {
         let mut volleys = Vec::new();
         for v in p.volleys {
@@ -950,6 +1189,7 @@ fn parse_patterns(text: &str, pal: &Palette) -> Result<Vec<Pattern>, String> {
                 "spiral" => Form::Spiral,
                 "arc" => Form::Arc,
                 "ribbon" => Form::Ribbon,
+                "lane" => Form::Lane,
                 s => return Err(format!("patterns: {} has no form {s}", p.id)),
             };
             let anchor = match v.at.as_str() {
@@ -979,6 +1219,9 @@ fn parse_patterns(text: &str, pal: &Palette) -> Result<Vec<Pattern>, String> {
             } else {
                 None
             };
+            if form == Form::Lane && v.length_cm <= 0 {
+                return Err(format!("patterns: {} is a lane with no length_cm", p.id));
+            }
             if shape == Shape::Form && v.radius_cm <= 0 && form != Form::Column {
                 return Err(format!("patterns: {} is a formation with no radius_cm", p.id));
             }
@@ -1025,9 +1268,29 @@ fn parse_patterns(text: &str, pal: &Palette) -> Result<Vec<Pattern>, String> {
                 stagger: ms(v.stagger_ms),
                 launch,
                 rehold,
+                bounce: v.bounce.max(0),
+                fall: cms2(v.fall_cms2),
+                plant: None,
+                sweep: fx::deg(v.sweep_deg),
+                length: cm(v.length_cm),
             });
+            plants.push((out.len(), volleys.len() - 1, v.plant.clone()));
         }
         out.push(Pattern { id: p.id, volleys });
+    }
+    // a lobbed orb's pattern, by name, once every pattern is known
+    for (p, v, name) in plants {
+        if name.is_empty() {
+            continue;
+        }
+        let k = out
+            .iter()
+            .position(|q| q.id == name)
+            .ok_or_else(|| format!("patterns: {} plants no pattern {name}", out[p].id))?;
+        if k == p {
+            return Err(format!("patterns: {name} plants itself"));
+        }
+        out[p].volleys[v].plant = Some(k);
     }
     Ok(out)
 }
@@ -1044,7 +1307,29 @@ fn parse_enemies(text: &str, patterns: &[Pattern]) -> Result<Vec<EnemyDef>, Stri
             pattern,
             windup: ms(a.windup_ms),
             rest: ms(a.rest_ms),
+            lock: ms(a.lock_ms),
+            indirect: a.indirect,
+            cannons: a.cannons,
         })
+    };
+    let part = |f: &PartFile, who: &str| -> Result<Part, String> {
+        Ok(Part {
+            on: match f.on.as_str() {
+                "hull" => On::Hull,
+                "turret" => On::Turret,
+                x => return Err(format!("enemies: {who} has a part on no {x}")),
+            },
+            at: [cm(f.at_cm[0]), cm(f.at_cm[1]), cm(f.at_cm[2])],
+            radius: cm(f.radius_cm),
+            hp: f.hp,
+            yaw: fx::deg(f.yaw_deg),
+            pitch: fx::deg(f.pitch_deg),
+        })
+    };
+    let find = |s: &str, who: &str| {
+        ids.iter()
+            .position(|i| i == s)
+            .ok_or_else(|| format!("enemies: {who} summons unknown {s}"))
     };
     let mut out = Vec::new();
     for e in &f.enemies {
@@ -1056,9 +1341,26 @@ fn parse_enemies(text: &str, patterns: &[Pattern]) -> Result<Vec<EnemyDef>, Stri
             "boss" => Kind::Boss,
             "blinker" => Kind::Blinker,
             "burrower" => Kind::Burrower,
+            "agent" => Kind::Agent,
+            "tank" => Kind::Tank,
             k => return Err(format!("enemies: {} has no kind {k}", e.id)),
         };
-        let phases = if kind == Kind::Boss {
+        let role = match e.role.as_str() {
+            "" => Role::None,
+            "rifle" => Role::Rifle,
+            "flank" => Role::Flank,
+            "sniper" => Role::Sniper,
+            "shield" => Role::Shield,
+            "grenadier" => Role::Grenadier,
+            "rush" => Role::Rush,
+            "command" => Role::Command,
+            "chief" => Role::Chief,
+            r => return Err(format!("enemies: {} has no role {r}", e.id)),
+        };
+        if kind == Kind::Agent && role == Role::None {
+            return Err(format!("enemies: agent {} has no role", e.id));
+        }
+        let phases = if matches!(kind, Kind::Boss | Kind::Tank) {
             if e.phases.is_empty() {
                 return Err(format!("enemies: boss {} has no phases", e.id));
             }
@@ -1067,11 +1369,7 @@ fn parse_enemies(text: &str, patterns: &[Pattern]) -> Result<Vec<EnemyDef>, Stri
                 let summons = p
                     .summons
                     .iter()
-                    .map(|s| {
-                        ids.iter()
-                            .position(|i| i == s)
-                            .ok_or_else(|| format!("enemies: {} summons unknown {s}", e.id))
-                    })
+                    .map(|s| find(s, &e.id))
                     .collect::<Result<Vec<_>, _>>()?;
                 ps.push(Phase {
                     from_pct: p.from_pct,
@@ -1081,7 +1379,31 @@ fn parse_enemies(text: &str, patterns: &[Pattern]) -> Result<Vec<EnemyDef>, Stri
                         .iter()
                         .map(|a| attack(a, &e.id))
                         .collect::<Result<_, _>>()?,
+                    weak: p.weak.iter().map(|w| part(w, &e.id)).collect::<Result<_, _>>()?,
+                    cannons: p
+                        .cannons
+                        .iter()
+                        .map(|w| part(w, &e.id))
+                        .collect::<Result<_, _>>()?,
+                    survive: ms(p.survive_ms),
                 });
+            }
+            if kind == Kind::Tank {
+                // every phase but the last opens weak points to break; the
+                // last is outlasted
+                let last = ps.len() - 1;
+                for (k, p) in ps.iter().enumerate() {
+                    if k < last && (p.weak.is_empty() || p.weak.iter().any(|w| w.hp <= 0 || w.radius <= 0)) {
+                        return Err(format!(
+                            "enemies: {} phase {} has no weak point to break",
+                            e.id,
+                            k + 1
+                        ));
+                    }
+                    if k == last && p.survive <= 0 {
+                        return Err(format!("enemies: {} last phase has no survive_ms", e.id));
+                    }
+                }
             }
             ps
         } else {
@@ -1093,8 +1415,12 @@ fn parse_enemies(text: &str, patterns: &[Pattern]) -> Result<Vec<EnemyDef>, Stri
                     .iter()
                     .map(|a| attack(a, &e.id))
                     .collect::<Result<_, _>>()?,
+                weak: Vec::new(),
+                cannons: Vec::new(),
+                survive: 0,
             }]
         };
+        let list = |v: &[String]| v.iter().map(|s| find(s, &e.id)).collect::<Result<Vec<_>, _>>();
         out.push(EnemyDef {
             id: e.id.clone(),
             name: e.name.clone(),
@@ -1117,6 +1443,14 @@ fn parse_enemies(text: &str, patterns: &[Pattern]) -> Result<Vec<EnemyDef>, Stri
                         .ok_or_else(|| format!("enemies: {} bursts into no pattern {}", e.id, e.burst))?,
                 )
             },
+            role,
+            armour: fx::deg(e.armour_deg),
+            summon: list(&e.summon)?,
+            summon_every: ms(e.summon_ms),
+            summon_cap: e.summon_cap,
+            rally_pct: e.rally_pct,
+            rally: list(&e.rally)?,
+            elite: e.elite,
         });
     }
     Ok(out)
@@ -1145,13 +1479,17 @@ pub mod tests {
     }
 
     #[test]
-    fn the_data_files_parse_and_hold_three_guns_of_three_levels() {
+    fn the_data_files_parse_and_hold_four_guns_of_four_levels() {
         let c = content();
-        assert_eq!(c.guns.len(), 3);
-        assert!(c.guns.iter().all(|g| g.levels.len() == 3));
+        assert_eq!(c.guns.len(), 4);
+        assert!(c.guns.iter().all(|g| g.levels.len() == 4));
+        // the Ripsaw is the saw gun, and only the house offers it
+        let saw = &c.guns[c.gun("ripsaw")];
+        assert!(saw.levels.iter().all(|l| l.saw.is_some()));
+        assert_eq!(saw.from_zone, 2);
         // the Carbine fires every 105 ms: 6.3 ticks, rounded to 6
         assert_eq!(c.guns[0].level(1).rate, 6);
-        assert_eq!(c.guns[0].level(9), c.guns[0].level(3));
+        assert_eq!(c.guns[0].level(9), c.guns[0].level(4));
     }
 
     #[test]
@@ -1262,5 +1600,47 @@ pub mod tests {
         f.zone = Box::leak(bad.into_boxed_str());
         let e = Content::parse(&f).unwrap_err();
         assert!(e.contains("ice_ink_missing"), "{e}");
+    }
+
+    #[test]
+    fn the_house_has_seven_new_people_none_of_whose_patterns_came_before() {
+        let c = content();
+        let (one, _) = roster(&c, 0);
+        let (two, _) = roster(&c, 1);
+        let (three, boss) = roster(&c, 2);
+        assert_eq!(three.len(), 7);
+        assert!(
+            three.iter().all(|&e| c.enemies[e].kind == Kind::Agent),
+            "all of them people"
+        );
+        assert_eq!(c.enemies[boss].kind, Kind::Tank);
+        let pats = |ids: &[usize]| -> Vec<usize> {
+            ids.iter()
+                .flat_map(|&e| {
+                    c.enemies[e]
+                        .phases
+                        .iter()
+                        .flat_map(|p| p.attacks.iter().map(|a| a.pattern))
+                })
+                .collect()
+        };
+        let before: Vec<usize> = pats(&one).into_iter().chain(pats(&two)).collect();
+        let chief = c.enemy("chief").unwrap();
+        for p in pats(&three).into_iter().chain(pats(&[boss, chief])) {
+            assert!(!before.contains(&p), "{} came before", c.patterns[p].id);
+        }
+        // the roles a squad needs are all there
+        let mut roles: Vec<Role> = three.iter().map(|&e| c.enemies[e].role).collect();
+        roles.dedup();
+        assert_eq!(roles.len(), 7, "{roles:?}");
+    }
+
+    #[test]
+    fn a_tank_phase_with_nothing_to_break_is_refused() {
+        let mut f = files();
+        let bad = f.enemies.replacen("\"weak\"", "\"weak_gone\"", 1);
+        f.enemies = Box::leak(bad.into_boxed_str());
+        let e = Content::parse(&f).unwrap_err();
+        assert!(e.contains("no weak point"), "{e}");
     }
 }

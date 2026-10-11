@@ -6,7 +6,7 @@
 //! Units shown: metres, seconds, metres a second, degrees, health points.
 
 use crate::balance::*;
-use crate::content::{Anchor, Content, EnemyDef, Form, GunLevel, Kind, Launch, Shape, Upgrade, Volley};
+use crate::content::{Anchor, Content, EnemyDef, Form, GunLevel, Kind, Launch, Role, Shape, Upgrade, Volley};
 use crate::enemy::PHASE_TICKS;
 use crate::fx::{self, ONE};
 use serde_json::{json, Value};
@@ -82,6 +82,9 @@ fn numbers() -> Vec<(&'static str, String)> {
         ("wall_time", s(WALL_TICKS)),
         ("wall_width", m(WALL_HALF_WIDTH * 2)),
         ("pickup_reach", m(PICKUP_REACH)),
+        ("pound_speed", mps(POUND_SPEED)),
+        ("pound_damage", POUND_DAMAGE.to_string()),
+        ("pound_radius", m(POUND_RADIUS)),
     ]
 }
 
@@ -235,6 +238,7 @@ fn launch_words(l: Launch) -> &'static str {
         Launch::Down => "straight down",
         Launch::Along => "along the line from the enemy to where you were",
         Launch::Spin => "round the shape's centre",
+        Launch::Close => "straight across toward the lane's middle",
     }
 }
 
@@ -250,6 +254,11 @@ fn formation(v: &Volley, size: &str, speed: &str) -> String {
         Form::Spiral => format!("a spiral of {} {size}, {} turns out to {r} m", v.count, v.rows),
         Form::Arc => format!("an arc of {} {size} across {}° at {r} m", v.count, deg(v.spread)),
         Form::Ribbon => format!("a wavy line of {} {size} {} m long", v.count, m(v.radius * 2)),
+        Form::Lane => format!(
+            "two walls of {} {size}, {} m long, {r} m either side of the line to you",
+            v.count,
+            m(v.length)
+        ),
     };
     let plane = if v.flat {
         "lying flat"
@@ -309,6 +318,74 @@ fn movement(d: &EnemyDef, c: &Content) -> String {
             m(d.range),
             s(crate::enemy::BURROW_LINGER)
         ),
+        Kind::Agent => {
+            let walk = format!("Walks and runs the floors and stairs at up to {} m/s.", mps(d.speed));
+            let part = match d.role {
+                Role::Rifle => "Takes cover out of your sight, beside something tall, and steps out to fire. It waits for a partner at least 90° round you from it and fires with it on the same tick.",
+                Role::Flank => "Goes round to your back, past the edge of what you can see from where you face, and fires with a partner in front of you when it gets there.",
+                Role::Sniper => "Takes the highest place it can walk to that sees you from far off. A red line shows where it aims; the aim stops following you just before it fires.",
+                Role::Shield => "Carries a shield and walks at you. Shots that meet it from in front glance off; shoot it from the side, from behind or from well above.",
+                Role::Grenadier => "Takes cover and lobs over it: it needs no line to you.",
+                Role::Rush => "Runs straight at you and hurts on touch.",
+                Role::Command => "Keeps behind the others. While it lives every agent rests less, and three or more agents ready together fire at once from round you.",
+                Role::Chief => "Keeps back behind its men and calls more of them.",
+                Role::None => "",
+            };
+            let mut words = format!("{walk} {part}");
+            if !d.summon.is_empty() {
+                let calls: Vec<String> = d.summon.iter().map(|&i| c.enemies[i].name.clone()).collect();
+                words += &format!(
+                    " Every {} s it calls {}, while fewer than {} it called are up.",
+                    s(d.summon_every),
+                    calls.join(", "),
+                    d.summon_cap
+                );
+            }
+            if !d.rally.is_empty() {
+                words += &format!(" At {}% health it calls {} more at once.", d.rally_pct, d.rally.len());
+            }
+            if !d.summon.is_empty() {
+                words += " When it falls, those it called withdraw; they are worth no Clemency.";
+            }
+            if d.armour > 0 {
+                words += &format!(" Its shield covers {}° in front of it.", deg(d.armour * 2));
+            }
+            words
+        }
+        Kind::Tank => {
+            let phases: Vec<String> = d
+                .phases
+                .iter()
+                .enumerate()
+                .map(|(k, p)| {
+                    if p.survive > 0 {
+                        format!(
+                            "phase {}: it grows {} more cannons, rises and cannot be hurt; outlast it for {} s",
+                            k + 1,
+                            p.cannons.len(),
+                            s(p.survive)
+                        )
+                    } else {
+                        let hp: Vec<String> = p.weak.iter().map(|w| w.hp.to_string()).collect();
+                        format!(
+                            "phase {}: {} cannons grown, {} weak points ({} health)",
+                            k + 1,
+                            p.cannons.len(),
+                            p.weak.len(),
+                            hp.join(", ")
+                        )
+                    }
+                })
+                .collect();
+            format!(
+                "A tracked tank. It turns on the spot, drives at up to {} m/s, backs off when you are close, and rams at {} m/s when you stand in front of it in the open. Touching it hurts and throws you clear. Its turret turns at {}°/s. Shots glance off its hull and turret: only its glowing weak points take damage, and breaking every weak point of a phase starts the next. {}. At each change it clears every orb and cannot be hurt for {} s.",
+                mps(d.speed),
+                mps(TANK_RAM_SPEED),
+                degs(TANK_TURRET_TURN),
+                phases.join("; "),
+                s(PHASE_TICKS)
+            )
+        }
         Kind::Boss => {
             let changes: Vec<String> = d
                 .phases
@@ -428,6 +505,40 @@ pub fn upgrade_effect(u: &Upgrade) -> String {
             s(WALL_TICKS),
             s(WALL_COOLDOWN)
         ),
+        "pound" => format!(
+            "C in the air: drop straight down at {} m/s. Landing sends a shockwave along the floor that deals {POUND_DAMAGE} damage to every enemy and weak point within {} m, then bounces you back up to {} m over the height you dropped from (at least {} m over the floor), with your air jumps back. You cannot be hit while you drop, nor for {} s after landing. {} s cooldown.",
+            mps(POUND_SPEED),
+            m(POUND_RADIUS),
+            m(POUND_OVER),
+            m(POUND_MIN_BOUNCE),
+            s(POUND_IFRAMES),
+            s(POUND_COOLDOWN)
+        ),
+        "pound_plus" => format!("The ground pound's shockwave deals {POUND_PLUS_DAMAGE} damage within {} m.", m(POUND_PLUS_RADIUS)),
+        "grapple_plus" => format!(
+            "The hook reaches {} m further ({} m) and is ready again {} s after it lets go.",
+            m(GRAPPLE_PLUS_RANGE),
+            m(GRAPPLE_RANGE + GRAPPLE_PLUS_RANGE),
+            s(GRAPPLE_PLUS_COOLDOWN)
+        ),
+        "parry_plus" => format!(
+            "The parry lasts {} s and is ready again after {} s.",
+            s(PARRY_PLUS_WINDOW),
+            s(PARRY_PLUS_COOLDOWN)
+        ),
+        "wall_plus" => format!(
+            "The Injunction's wall stands {} s and is ready again after {} s.",
+            s(WALL_PLUS_TICKS),
+            s(WALL_PLUS_COOLDOWN)
+        ),
+        "appeal" => "Recess turns a second killing blow in the same run.".to_string(),
+        "precedent" => format!("Every run starts with Piercing Rounds: shots pass through {n} more enemy."),
+        "conduct" => format!("+{n}% to all Clemency earned."),
+        "bail" => format!("Clearing an arena restores {n} more health ({} in all).", HEAL_ON_CLEAR + n),
+        "lien" => format!(
+            "A Ripsaw {} waits where every run arrives, and where every later zone begins. Press E by it to take it in place of your gun.",
+            crate::world::roman(crate::world::LIEN_LEVEL)
+        ),
         _ => String::new(),
     }
 }
@@ -467,7 +578,13 @@ fn rules(c: &Content) -> Vec<String> {
         format!("A gun on the floor is taken with E within {} m. Your old gun is left in its place.", m(PICKUP_REACH)),
         format!("Clemency: {}; plus each enemy's own value. You keep it all when you die. Dying mid-fight credits that fight's share for each of its enemies you killed. Your first death adds a grant of {FIRST_DEATH_GRANT}. Each 10 years of sentence add {SENTENCE_BONUS_PCT}% to all Clemency earned.", clemency.join("; ")),
         "Beating a zone's boss does not end the run: after an interlude the run goes on into the next zone, with your health restored and everything you carry kept. Once a zone's boss has been beaten, a run can also start at the next zone, from the Holding.".to_string(),
-        "Zone two's arrival holds a cache of two rewards: press E at one to take it; the other is lost.".to_string(),
+        "Zone two's and zone three's arrivals hold a cache of two rewards: press E at one to take it; the other is lost.".to_string(),
+        format!(
+            "In the house, people take cover: they hide where you cannot see them and step out to fire. Two who are ready wait for each other and fire on the same tick when they stand at least {}° apart round you; with a Handler alive, three or more fire at once from round you, and all of them rest {COMMAND_PCT}% less. One waits at most {} s.",
+            deg(CROSSFIRE_APART),
+            s(SYNC_WAIT)
+        ),
+        format!("Rewards found in the house: guns of level III or IV, Hair Trigger (guns fire {TRIGGER_PCT}% faster; they stack) and Plating (hits do {PLATING_PCT}% less, up to {PLATING_MAX})."),
         format!("Updraft vents (glowing grates on the ice) throw you about {} m up when you stand on them. You keep your air jumps.", m(fx::div(fx::mul(VENT_SPEED, VENT_SPEED) / 2, GRAVITY))),
         "Some attacks place their orbs in a shape and hold them still before they fly: a held orb is smaller, with a ring round it, and swells to full size just before it moves. Held orbs hurt to touch.".to_string(),
         format!("Each death reads the next count of the indictment and adds years to the sentence: 1 for the first death, 2 for the second, and so on. The first run to reach a tier {FAR_TIER} fight, and the first win, each read a count too."),

@@ -13,11 +13,12 @@
 //! and surfaces to attack.
 
 use crate::balance::*;
-use crate::content::{Content, EnemyDef, Kind, Pattern};
+use crate::content::{Content, EnemyDef, Kind, Pattern, Role};
 use crate::fx::{self, int, ONE};
 use crate::geom::{facing, v3, yaw_pitch_of, V3};
 use crate::level::Level;
 use crate::orbs::{self, Salvo};
+use crate::tank::{self, Treads};
 
 /// A new enemy takes this long to appear, and cannot be hurt or fire meanwhile.
 pub const SPAWN_TICKS: i32 = secs(4, 5);
@@ -43,6 +44,26 @@ pub enum State {
     Casting(i32),
     Rest(i32),
     Changing(i32),
+    /// an agent out of its rest, at its place, waiting (ticks so far) for
+    /// its squad to fire with it
+    Ready(i32),
+}
+
+/// What the squad has told an agent to do with its rest.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Order {
+    /// nothing yet: ask the squad
+    None,
+    /// hide at a place out of your sight; step out to fire
+    Cover,
+    /// go round to your back
+    Flank,
+    /// a high place, far off
+    High,
+    /// at you
+    Rush,
+    /// stand where it is
+    Hold,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -72,6 +93,26 @@ pub struct Enemy {
     pub buried: bool,
     /// ticks a surfaced burrower stays up after its attack
     pub linger: i32,
+    // an agent: the places it is walking through, its order, where it
+    // steps out to fire from, and how long it has been walking
+    pub path: Vec<V3>,
+    pub order: Order,
+    pub peek: Option<V3>,
+    pub walked: i32,
+    /// it waits in `Ready` for partners before it winds up
+    pub sync: bool,
+    /// percent off its rests (a Handler's command)
+    pub haste: i32,
+    /// the aim, frozen before a locked attack fires
+    pub locked: Option<V3>,
+    /// the walk cycle, for drawing legs
+    pub stride: i32,
+    /// the enemy that called it, if one did, and a caller's clock
+    pub summoned_by: Option<usize>,
+    pub summon_timer: i32,
+    pub rallied: bool,
+    /// the Executor's treads, turret and weak points
+    pub tank: Option<Box<Treads>>,
 }
 
 /// What an enemy did this tick that the world must act on.
@@ -110,6 +151,18 @@ impl Enemy {
             unseen: 0,
             buried: false,
             linger: 0,
+            path: Vec::new(),
+            order: Order::None,
+            peek: None,
+            walked: 0,
+            sync: false,
+            haste: 0,
+            locked: None,
+            stride: 0,
+            summoned_by: None,
+            summon_timer: 0,
+            rallied: false,
+            tank: (d.kind == Kind::Tank).then(|| Box::new(Treads::new(d))),
         }
     }
 
@@ -119,6 +172,11 @@ impl Enemy {
 
     pub fn hurtable(&self) -> bool {
         self.alive() && !self.buried && !matches!(self.state, State::Spawning(_) | State::Changing(_))
+    }
+
+    /// An agent's feet, from its centre.
+    pub fn feet(&self, d: &EnemyDef) -> V3 {
+        self.pos.sub(v3(0, d.hover, 0))
     }
 
     /// Takes damage; true if this blow killed it.
@@ -164,7 +222,9 @@ impl Enemy {
         self.flash = (self.flash + 1).min(100);
         let to = target.sub(self.pos);
         let (aim_yaw, _) = yaw_pitch_of(to);
-        self.yaw = fx::lerp_angle(self.yaw, aim_yaw, ONE / 8);
+        if !matches!(d.kind, Kind::Agent | Kind::Tank) {
+            self.yaw = fx::lerp_angle(self.yaw, aim_yaw, ONE / 8);
+        }
 
         if let State::Spawning(t) = self.state {
             self.state = if t > 1 {
@@ -188,6 +248,19 @@ impl Enemy {
             return deeds;
         }
 
+        if d.kind == Kind::Tank {
+            tank::drive(self, level, target, d.speed);
+            if let Some(t) = self.tank.as_mut() {
+                // its last phase is outlasted
+                if t.survive > 0 {
+                    t.survive -= 1;
+                    if t.survive == 0 {
+                        self.hp = 0;
+                        return deeds;
+                    }
+                }
+            }
+        }
         // a boss changes phase the moment its health crosses the line
         if d.kind == Kind::Boss {
             let next = self.phase + 1;
@@ -201,7 +274,9 @@ impl Enemy {
             }
         }
 
-        self.locomote(d, level, target, to);
+        if d.kind != Kind::Tank {
+            self.locomote(d, level, target, to);
+        }
         self.unseen = if self.sees(level, target) {
             0
         } else {
@@ -215,6 +290,9 @@ impl Enemy {
             return deeds;
         };
         let pattern: &Pattern = &c.patterns[attack.pattern];
+        if d.kind == Kind::Agent {
+            return self.agent_cycle(c, d, level, target, me, &attack, deeds);
+        }
         if d.kind == Kind::Burrower && !self.buried && matches!(self.state, State::Rest(_)) {
             // up after its attack for a moment, then under again
             self.linger -= 1;
@@ -260,23 +338,123 @@ impl Enemy {
                 State::Casting(0)
             }
             State::Casting(t) => {
-                for v in &pattern.volleys {
-                    let since = t - v.delay;
-                    if since < 0 {
-                        continue;
-                    }
-                    let k = if v.every > 0 { since / v.every } else { since };
-                    let on_beat = v.every == 0 || since % v.every == 0;
-                    if on_beat && k < v.repeat {
-                        let s = orbs::fire(v, self.muzzle(d), target, k, me, &c.pal, level);
-                        deeds.salvo.orbs.extend(s.orbs);
-                        deeds.salvo.waves.extend(s.waves);
-                    }
-                }
+                let from = if attack.cannons {
+                    tank::muzzles(self, d)
+                } else if d.kind == Kind::Tank {
+                    vec![tank::main_gun(self)]
+                } else {
+                    vec![self.muzzle(d)]
+                };
+                self.cast(c, pattern, t, &from, target, me, level, &mut deeds);
                 if t >= pattern.length() {
                     self.attack += 1;
                     self.linger = BURROW_LINGER;
                     State::Rest(attack.rest)
+                } else {
+                    State::Casting(t + 1)
+                }
+            }
+            s => s,
+        };
+        deeds
+    }
+
+    /// The volleys of a pattern that fire on tick `t` of its cast, from
+    /// each of `from`.
+    #[allow(clippy::too_many_arguments)]
+    fn cast(
+        &self,
+        c: &Content,
+        pattern: &Pattern,
+        t: i32,
+        from: &[V3],
+        target: V3,
+        me: usize,
+        level: &Level,
+        deeds: &mut Deeds,
+    ) {
+        for v in &pattern.volleys {
+            let since = t - v.delay;
+            if since < 0 {
+                continue;
+            }
+            let k = if v.every > 0 { since / v.every } else { since };
+            let on_beat = v.every == 0 || since % v.every == 0;
+            if on_beat && k < v.repeat {
+                for &at in from {
+                    let s = orbs::fire(v, at, target, k, me, &c.pal, level);
+                    deeds.salvo.orbs.extend(s.orbs);
+                    deeds.salvo.waves.extend(s.waves);
+                }
+            }
+        }
+    }
+
+    /// An agent's attack cycle. Its rest is spent walking where the squad
+    /// sent it; as the rest ends it steps out to where it can see you, and
+    /// either winds up or (`sync`) waits for its partners, whom the squad
+    /// starts together. A locked attack stops following you before it fires.
+    #[allow(clippy::too_many_arguments)]
+    fn agent_cycle(
+        &mut self,
+        c: &Content,
+        d: &EnemyDef,
+        level: &Level,
+        target: V3,
+        me: usize,
+        attack: &crate::content::Attack,
+        mut deeds: Deeds,
+    ) -> Deeds {
+        let pattern = &c.patterns[attack.pattern];
+        let walking = !self.path.is_empty() && self.walked < AGENT_GIVE_UP;
+        self.state = match self.state {
+            State::Rest(t) if t > 1 => State::Rest(t - 1),
+            // still on its way: the rest waits for it
+            State::Rest(_) if walking => State::Rest(1),
+            State::Rest(_) => {
+                let sees = self.sees(level, target);
+                let feet = self.feet(d);
+                match self.peek.take() {
+                    // step out to where it can see you first (if it got to
+                    // its cover: a peek from elsewhere is no use)
+                    Some(p) if !sees && !attack.indirect && p.dist(feet) <= PEEK_REACH * 2 => {
+                        self.path = vec![p];
+                        self.walked = 0;
+                        State::Rest(1)
+                    }
+                    _ if self.sync => State::Ready(0),
+                    _ => State::Windup(attack.windup.max(1)),
+                }
+            }
+            State::Ready(t) if t >= SYNC_WAIT => State::Windup(attack.windup.max(1)),
+            State::Ready(t) => State::Ready(t + 1),
+            State::Windup(t) if t > 1 => {
+                if t == attack.lock {
+                    self.locked = Some(target);
+                }
+                State::Windup(t - 1)
+            }
+            State::Windup(_) if !attack.indirect && !self.held_fire && !self.sees(level, target) => {
+                self.held_fire = true;
+                self.order = Order::None;
+                State::Rest((attack.rest / 2).max(secs(1, 4)))
+            }
+            State::Windup(_) => {
+                self.held_fire = false;
+                if attack.lock > 0 && self.locked.is_none() {
+                    self.locked = Some(target);
+                }
+                State::Casting(0)
+            }
+            State::Casting(t) => {
+                let aim = self.locked.unwrap_or(target);
+                let from = [self.muzzle(d)];
+                self.cast(c, pattern, t, &from, aim, me, level, &mut deeds);
+                if t >= pattern.length() {
+                    self.attack += 1;
+                    self.locked = None;
+                    self.order = Order::None;
+                    State::Rest((attack.rest * (100 - self.haste) / 100).max(1))
                 } else {
                     State::Casting(t + 1)
                 }
@@ -339,9 +517,89 @@ impl Enemy {
         len == 0 || level.ray(self.pos, to.norm(), len).is_none()
     }
 
-    /// Where the orbs leave from: the body's centre, or a walker's chest.
-    pub fn muzzle(&self, _d: &EnemyDef) -> V3 {
+    /// Where the orbs leave from: the body's centre, or an agent's gun.
+    pub fn muzzle(&self, d: &EnemyDef) -> V3 {
+        if d.kind == Kind::Agent {
+            return self
+                .pos
+                .add(v3(0, d.radius / 2, 0))
+                .add(facing(self.yaw, 0).scale(d.radius));
+        }
         self.pos
+    }
+
+    /// An agent walks its path: toward the next place, one axis at a time
+    /// as a body does, climbing steps and dropping off edges; it faces
+    /// where it walks, or you while it aims.
+    fn walk(&mut self, d: &EnemyDef, level: &Level, target: V3) {
+        let feet = self.feet(d);
+        let aiming = matches!(self.state, State::Windup(_) | State::Casting(_) | State::Ready(_));
+        let speed = if d.role == Role::Rush && !aiming {
+            d.speed * 3 / 2
+        } else if aiming {
+            0
+        } else {
+            d.speed
+        };
+        while let Some(&next) = self.path.first() {
+            if v3(next.x - feet.x, 0, next.z - feet.z).len_xz() < ONE / 4 {
+                self.path.remove(0);
+            } else {
+                break;
+            }
+        }
+        let mut wish = V3::ZERO;
+        if let Some(&next) = self.path.first() {
+            wish = v3(next.x - feet.x, 0, next.z - feet.z).clamp_len(speed);
+            self.walked += 1;
+        } else if d.role == Role::Rush && !aiming {
+            // in the open, straight at you
+            wish = v3(target.x - feet.x, 0, target.z - feet.z).clamp_len(speed);
+        }
+        self.vel = v3(wish.x, self.vel.y, wish.z);
+        // as narrow as the walk grid assumes, so it goes where its path does
+        let r = PLAYER_RADIUS * 3 / 4;
+        for axis in 0..2 {
+            let mut next = self.pos;
+            if axis == 0 {
+                next.x += self.vel.x;
+            } else {
+                next.z += self.vel.z;
+            }
+            let f = next.sub(v3(0, d.hover, 0));
+            let free = !level.blocked(
+                v3(next.x - r, f.y + AGENT_STEP, next.z - r),
+                v3(next.x + r, f.y + d.hover + d.radius, next.z + r),
+            );
+            if free {
+                self.pos = next;
+            }
+        }
+        // stand on the floor under the feet, or fall to it
+        let f = self.feet(d);
+        let ground = level.floor_below(f.x, f.y + AGENT_STEP, f.z).unwrap_or(f.y);
+        if ground >= f.y - ONE / 20 {
+            self.pos.y = fx::approach(self.pos.y, ground + d.hover, ONE / 5);
+            self.vel.y = 0;
+        } else {
+            self.vel.y = (self.vel.y - GRAVITY).max(-MAX_FALL);
+            self.pos.y = (self.pos.y + self.vel.y).max(ground + d.hover);
+        }
+        let moved = v3(self.vel.x, 0, self.vel.z);
+        self.stride = (self.stride + fx::mul(moved.len_xz(), fx::TURN / 3)) & (fx::TURN - 1);
+        let look = if aiming || moved == V3::ZERO {
+            target.sub(self.pos)
+        } else {
+            moved
+        };
+        let (want, _) = yaw_pitch_of(look);
+        let rate = if d.role == Role::Shield {
+            SHIELD_TURN
+        } else {
+            AGENT_TURN
+        };
+        let turn = fx::wrap(want - self.yaw).clamp(-rate, rate);
+        self.yaw = fx::wrap(self.yaw + turn);
     }
 
     fn locomote(&mut self, d: &EnemyDef, level: &Level, target: V3, to: V3) {
@@ -350,7 +608,8 @@ impl Enemy {
         let towards = flat.norm();
         let side = v3(-towards.z, 0, towards.x).scale(self.orbit * ONE);
         match d.kind {
-            Kind::Turret => {}
+            Kind::Turret | Kind::Tank => {}
+            Kind::Agent => self.walk(d, level, target),
             Kind::Blinker => {
                 // a slow bob where it stands; it moves by blinking
                 let ground = level.floor_below(self.pos.x, self.pos.y, self.pos.z).unwrap_or(0);
