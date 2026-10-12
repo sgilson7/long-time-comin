@@ -400,14 +400,18 @@ impl Game {
     }
 
     /// Chumbles alone, for testing: downstairs, with everything bought
-    /// (the test save's body and Carbine). Winning, dying or abandoning
-    /// returns to the Holding and changes nothing on the record.
-    pub fn practice_chumbles(&mut self) {
+    /// (the test save's body and Carbine), from his bar `bar` (0 is the
+    /// first, with his scream). Winning, dying or abandoning returns to
+    /// the Holding and changes nothing on the record.
+    pub fn practice_chumbles(&mut self, bar: usize) {
         let Some(home) = self.c.mission_zone() else {
             return;
         };
         let (build, gun_level) = Meta::everything(&self.c).build(&self.c);
         self.practice_at(home, build, gun_level);
+        if let Some(run) = self.run.as_mut().filter(|r| r.practice && r.zone == home) {
+            run.world.from_bar = bar;
+        }
     }
 
     /// A practice: zone `zone`'s boss alone, with this body.
@@ -1599,6 +1603,8 @@ impl Game {
             "rush": m.rush_open(),
             "mission": m.mission_open(c),
             "mission_wins": m.mission_wins,
+            // the bars the Chumbles practice may begin from
+            "chumbles_bars": c.mission_zone().and_then(|z| c.story.bosses.get(&c.zones[z].boss)).map(|b| b.bars.clone()).unwrap_or_default(),
         });
         if let Some(run) = &self.run {
             let r = &run.route;
@@ -2301,7 +2307,7 @@ pub(crate) mod tests {
         let mut g = game_with(r#"{"seen_intro": true}"#);
         g.begin();
         let before = g.meta.clone();
-        g.practice_chumbles();
+        g.practice_chumbles(0);
         assert_eq!(g.mode, Mode::Play);
         let run = g.run.as_ref().unwrap();
         assert_eq!(Some(run.zone), g.c.mission_zone());
@@ -2319,6 +2325,35 @@ pub(crate) mod tests {
         g.abandon();
         assert_eq!(g.mode, Mode::Holding);
         assert_eq!(g.meta, before, "the record untouched");
+    }
+
+    #[test]
+    fn the_chumbles_practice_can_begin_at_any_bar() {
+        let mut g = game_with(r#"{"seen_intro": true}"#);
+        g.begin();
+        let s: Value = serde_json::from_str(&g.screen_json()).unwrap();
+        let bars = s["chumbles_bars"].as_array().unwrap().len();
+        let home = g.c.mission_zone().unwrap();
+        let d =
+            g.c.enemies
+                .iter()
+                .find(|d| d.kind == crate::content::Kind::Cat)
+                .unwrap()
+                .clone();
+        assert_eq!(bars, d.phases.len(), "a button for each of his bars");
+        for bar in 1..bars {
+            g.practice_chumbles(bar);
+            frames(&mut g, 300, 0);
+            let w = &g.run.as_ref().unwrap().world;
+            let e = &w.enemies[w.boss.expect("Chumbles came")];
+            assert_eq!(e.phase, bar, "begun at bar {bar}");
+            assert_eq!(e.size, ONE, "grown already");
+            assert!(e.health_pct() <= d.phases[bar].from_pct);
+            assert!(e.health_pct() > d.phases[bar].from_pct - 10, "on the bar's line");
+            assert_eq!(g.run.as_ref().unwrap().zone, home);
+            g.pause();
+            g.abandon();
+        }
     }
 
     #[test]

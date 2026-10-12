@@ -174,6 +174,9 @@ BREAKS = [
  ("last: a cat's phases have gaits", "crates/core/src/content.rs", "                if (kind == Kind::Cat) != !p.gait.is_empty() {", "                if false {", "a_cats_phases"),
  ("last: no remix of a remix", "crates/core/src/content.rs", "            if out[k].remix.is_some() {", "            if false {", "a_remix_must_name"),
  ("practice: Chumbles maxed out", "crates/core/src/game.rs", "        let (build, gun_level) = Meta::everything(&self.c).build(&self.c);", "        let (build, gun_level) = self.meta.build(&self.c);", "the_chumbles_practice"),
+ ("practice: Chumbles from any bar", "crates/core/src/world.rs", "            let bar = self.from_bar.min(d.phases.len().max(1) - 1);", "            let bar = 0 * self.from_bar.min(d.phases.len().max(1) - 1);", "can_begin_at_any_bar"),
+ ("practice: a later bar, grown", "crates/core/src/world.rs", "                e.size = ONE;\n                e.pos.y = feet + d.hover;", "                e.pos.y = feet + d.hover;", "can_begin_at_any_bar"),
+ ("practice: the bars offered", "crates/core/src/game.rs", ".map(|b| b.bars.clone()).unwrap_or_default(),", ".map(|b| b.bars[1..].to_vec()).unwrap_or_default(),", "can_begin_at_any_bar"),
  ("practice: only a god is lulled", "crates/core/src/game.rs", "            if sings && e.floor_hp > 0 && w.song.is_none() {", "            if e.floor_hp > 0 && w.song.is_none() {", "the_chumbles_practice"),
 
  # Chumbles drawn

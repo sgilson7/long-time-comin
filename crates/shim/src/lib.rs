@@ -130,9 +130,10 @@ impl Game {
         self.inner.start_rush()
     }
 
-    /// Chumbles alone with everything, for testing; nothing is kept.
-    pub fn practice_chumbles(&mut self) {
-        self.inner.practice_chumbles()
+    /// Chumbles alone with everything, from bar `bar`, for testing;
+    /// nothing is kept.
+    pub fn practice_chumbles(&mut self, bar: u32) {
+        self.inner.practice_chumbles(bar as usize)
     }
 
     /// The last mission, once the Idiot God sleeps.

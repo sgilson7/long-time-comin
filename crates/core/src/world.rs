@@ -212,6 +212,9 @@ pub struct World {
     /// the last mission: the Defendant's fall breaks reality instead of
     /// letting the god in (it is asleep, sung to by the first of you)
     pub mission: bool,
+    /// a practice that begins partway through the boss: the bar (0 first)
+    /// it arrives at
+    pub from_bar: usize,
 }
 
 /// The sounds of the lullaby's five notes, on the trumpet and on the
@@ -321,6 +324,7 @@ impl World {
             fed: 0,
             remix: false,
             mission: false,
+            from_bar: 0,
         };
         w.broken = vec![0; w.arena.panes.len()];
         if let Some(def) = node.elite {
@@ -564,6 +568,18 @@ impl World {
         ) && !d.elite
         {
             self.boss = Some(self.enemies.len());
+            // a practice from a later bar: the boss arrives grown, its
+            // health on that bar's line, so it crosses into the bar at once
+            // (with its callout and summons)
+            let bar = self.from_bar.min(d.phases.len().max(1) - 1);
+            if bar > 0 {
+                e.phase = bar - 1;
+                e.hp = e.max_hp * d.phases[bar].from_pct / 100;
+                let feet = e.pos.y - fx::mul(d.hover, e.size);
+                e.size = ONE;
+                e.pos.y = feet + d.hover;
+                e.prev = e.pos;
+            }
         }
         if d.elite {
             self.elite = Some(self.enemies.len());

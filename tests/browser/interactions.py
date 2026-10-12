@@ -229,8 +229,12 @@ def run(page, check, engine):
     check(mode(page) == "holding", f"abandoning the practice returns to the Holding ({mode(page)})")
     check(page.inner_text("#m-deaths") == deaths, f"and counts no death ({page.inner_text('#m-deaths')!r})")
     # the other faint mark: Chumbles, with everything bought
+    check(page.is_hidden("#chumbles-bars"), "his bars wait behind the paw")
     click(page, "#try-chumbles")
-    check(mode(page) == "play", f"the Chumbles practice plays ({mode(page)})")
+    bars = page.query_selector_all("#chumbles-bars button")
+    check(len(bars) == 5 and page.is_visible("#chumbles-bars"), f"the paw offers his five bars ({len(bars)})")
+    click(page, "#chumbles-bars button:nth-child(4)")
+    check(mode(page) == "play", f"the Chumbles practice plays from a later bar ({mode(page)})")
     page.wait_for_timeout(500)
     check(page.text_content("#h-zone") == HOME, f"at home ({page.text_content('#h-zone')!r})")
     page.keyboard.press("Escape")
