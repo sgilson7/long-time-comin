@@ -444,6 +444,23 @@ impl Game {
         self.enter();
     }
 
+    /// The last mission, straight at home (its bedroom), for tools that
+    /// drive the game (to see or measure Chumbles' house and fight).
+    pub fn mission_home(&mut self) {
+        let Some(home) = self.c.mission_zone() else {
+            return;
+        };
+        self.start_mission();
+        let Some(run) = self.run.as_mut() else {
+            return;
+        };
+        run.briefed = true;
+        run.zone = self.c.mission_break();
+        self.mode = Mode::Interlude;
+        self.continue_run();
+        debug_assert_eq!(self.run.as_ref().map(|r| r.zone), Some(home));
+    }
+
     /// The zone a run goes on to after zone `zone`'s boss: the next, but on
     /// the last mission home after the fourth.
     fn next_zone(&self, zone: usize, mission: bool) -> usize {
