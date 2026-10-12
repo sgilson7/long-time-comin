@@ -18,7 +18,7 @@ A third-person bullet-hell roguelike that runs in the browser. You committed a c
 - **Mini-bosses**: the Pioneer (a mech after Iron Vector's) on the ice, the Escort (a small Executor) and the Section Chief in the house.
 - **Grab and throw** (G): lift an enemy at half health or less and throw it into the others.
 - **The Big Iron**: a six-shot hand cannon, heavy and slow, loaded one shell at a time; its second fire fans the hammer.
-- **The Holding** lays its 32 upgrades out as a tree in four branches (Body, Motion, Arms, Writs). Once the game is beaten it offers a **boss rush**: each zone's boss, one after another. A **test save** button loads a record with everything bought and every zone open.
+- **The Holding** lays its 32 upgrades out as a tree in four branches (Body, Motion, Arms, Writs). Once the game is beaten it offers a **boss rush**: each zone's boss, one after another. A **test save** button loads a record with everything bought and every zone open. A faint ♪ under the credits starts the Idiot God's lullaby at once, for practice: winning, dying or abandoning it returns to the Holding and changes nothing on the record.
 - **The route** has four bosses and then a final one, the Idiot God, at the heart of zone five.
 
 ## Controls
