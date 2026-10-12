@@ -130,6 +130,11 @@ impl Game {
         self.inner.start_rush()
     }
 
+    /// Chumbles alone with everything, for testing; nothing is kept.
+    pub fn practice_chumbles(&mut self) {
+        self.inner.practice_chumbles()
+    }
+
     /// The last mission, once the Idiot God sleeps.
     pub fn start_mission(&mut self) {
         self.inner.start_mission()

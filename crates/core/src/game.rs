@@ -278,9 +278,11 @@ impl Game {
         };
         let w = &mut run.world;
         if let Some(b) = w.boss {
-            let last = self.c.enemies[w.enemies[b].def].phases.len().max(1) - 1;
+            let d = &self.c.enemies[w.enemies[b].def];
+            let last = d.phases.len().max(1) - 1;
+            let sings = d.lullaby.is_some();
             let e = &mut w.enemies[b];
-            if e.floor_hp > 0 && w.song.is_none() {
+            if sings && e.floor_hp > 0 && w.song.is_none() {
                 e.phase = last;
                 e.state = crate::enemy::State::Rest(10);
                 e.hp = e.floor_hp;
@@ -393,11 +395,26 @@ impl Game {
     /// body. Winning, dying or abandoning returns to the Holding and
     /// changes nothing on the record.
     pub fn practice_lullaby(&mut self) {
+        let (build, gun_level) = self.meta.build(&self.c);
+        self.practice_at(self.c.built_zones() - 1, build, gun_level);
+    }
+
+    /// Chumbles alone, for testing: downstairs, with everything bought
+    /// (the test save's body and Carbine). Winning, dying or abandoning
+    /// returns to the Holding and changes nothing on the record.
+    pub fn practice_chumbles(&mut self) {
+        let Some(home) = self.c.mission_zone() else {
+            return;
+        };
+        let (build, gun_level) = Meta::everything(&self.c).build(&self.c);
+        self.practice_at(home, build, gun_level);
+    }
+
+    /// A practice: zone `zone`'s boss alone, with this body.
+    fn practice_at(&mut self, zone: usize, build: crate::player::Build, gun_level: i32) {
         if !matches!(self.mode, Mode::Holding | Mode::Dead | Mode::Won) {
             return;
         }
-        let zone = self.c.built_zones() - 1;
-        let (build, gun_level) = self.meta.build(&self.c);
         let route = Route::rush(zone, self.meta.run_seed());
         let player = Player::new(V3::ZERO, 0, build);
         let held = Held::new(self.c.gun("carbine"), gun_level);
@@ -2277,6 +2294,31 @@ pub(crate) mod tests {
         let ring = g.c.patterns.iter().position(|p| p.id == "ring_16").unwrap();
         let e = &w.enemies[0];
         assert_eq!(g.c.patterns[e.pattern_of(&g.c, ring)].id, "remix_ring_16");
+    }
+
+    #[test]
+    fn the_chumbles_practice_fights_him_with_everything_and_leaves_the_record_alone() {
+        let mut g = game_with(r#"{"seen_intro": true}"#);
+        g.begin();
+        let before = g.meta.clone();
+        g.practice_chumbles();
+        assert_eq!(g.mode, Mode::Play);
+        let run = g.run.as_ref().unwrap();
+        assert_eq!(Some(run.zone), g.c.mission_zone());
+        let (most, _) = Meta::everything(&g.c).build(&g.c);
+        assert_eq!(run.world.player.build.max_health, most.max_health, "maxed out");
+        frames(&mut g, 300, 0);
+        let run = g.run.as_ref().unwrap();
+        let b = run.world.boss.expect("Chumbles came");
+        assert_eq!(
+            run.world.enemies[b].phase, 0,
+            "from his first bar, not fed at once"
+        );
+        assert!(run.world.fed == 0);
+        g.pause();
+        g.abandon();
+        assert_eq!(g.mode, Mode::Holding);
+        assert_eq!(g.meta, before, "the record untouched");
     }
 
     #[test]

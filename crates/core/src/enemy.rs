@@ -159,7 +159,7 @@ pub struct Enemy {
     /// how big it is, Q16 of its full size: Chumbles screams and grows
     /// (everything else is always ONE)
     pub size: i32,
-    /// on the last mission: it fires its patterns' remixes, and rests less
+    /// on the last mission: it fires its patterns' remixes
     pub remix: bool,
 }
 
@@ -303,15 +303,6 @@ impl Enemy {
         match (self.remix, c.patterns[pattern].remix) {
             (true, Some(k)) => k,
             _ => pattern,
-        }
-    }
-
-    /// Its rest after an attack: shorter on the last mission.
-    fn rest_of(&self, rest: i32) -> i32 {
-        if self.remix {
-            (rest * REMIX_REST_PCT / 100).max(1)
-        } else {
-            rest
         }
     }
 
@@ -533,7 +524,7 @@ impl Enemy {
                     self.attack += 1;
                     self.linger = BURROW_LINGER;
                     self.lunge = Lunge::None;
-                    State::Rest(self.rest_of(attack.rest))
+                    State::Rest(attack.rest)
                 } else {
                     State::Casting(t + 1)
                 }
@@ -624,7 +615,7 @@ impl Enemy {
                     self.attack += 1;
                     self.locked = None;
                     self.order = Order::None;
-                    State::Rest(self.rest_of((attack.rest * (100 - self.haste) / 100).max(1)))
+                    State::Rest((attack.rest * (100 - self.haste) / 100).max(1))
                 } else {
                     State::Casting(t + 1)
                 }

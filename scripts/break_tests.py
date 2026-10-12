@@ -173,6 +173,8 @@ BREAKS = [
  ("last: the cat walks out", "crates/core/src/world.rs", "        let walked = fx::mul(GUIDE_SPEED, (self.tick - GUIDE_WAIT).max(0) * ONE);", "        let walked = 0;", "the_cat_walks_out"),
  ("last: a cat's phases have gaits", "crates/core/src/content.rs", "                if (kind == Kind::Cat) != !p.gait.is_empty() {", "                if false {", "a_cats_phases"),
  ("last: no remix of a remix", "crates/core/src/content.rs", "            if out[k].remix.is_some() {", "            if false {", "a_remix_must_name"),
+ ("practice: Chumbles maxed out", "crates/core/src/game.rs", "        let (build, gun_level) = Meta::everything(&self.c).build(&self.c);", "        let (build, gun_level) = self.meta.build(&self.c);", "the_chumbles_practice"),
+ ("practice: only a god is lulled", "crates/core/src/game.rs", "            if sings && e.floor_hp > 0 && w.song.is_none() {", "            if e.floor_hp > 0 && w.song.is_none() {", "the_chumbles_practice"),
 ]
 
 

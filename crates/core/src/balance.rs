@@ -406,13 +406,11 @@ pub const ORB_HIT_PCT: i32 = 62;
 // ---- the last mission ---------------------------------------------------
 
 /// On the last mission (new game plus) a fight lets this many enemies up
-/// at once, sends this much more of each wave (percent), sends the next
-/// wave when this few of the last are left, and every enemy rests this
-/// percent of its rest between attacks.
+/// at once, sends this much more of each wave (percent), and sends the
+/// next wave when this few of the last are left.
 pub const REMIX_MAX_ALIVE: usize = 22;
 pub const REMIX_EXTRA_PCT: i32 = 50;
 pub const REMIX_REMAINDER: i32 = 3;
-pub const REMIX_REST_PCT: i32 = 80;
 /// Chumbles: how big he is before his scream (Q16 of his full size), and
 /// how long the scream takes, as he grows
 pub const CAT_SMALL: i32 = ONE / 3;

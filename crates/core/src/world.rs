@@ -401,8 +401,9 @@ impl World {
     }
 
     /// The last mission (new game plus): each wave of a fight sends half
-    /// as many again (more of its own kinds, in order), its enemies fire
-    /// their remixes and rest less, and more of them are up at once.
+    /// as many again (more of its own kinds, in order), the next wave
+    /// comes before the last is quite done, more are up at once, and the
+    /// enemies fire their remixes.
     pub fn remix(&mut self) {
         self.remix = true;
         if self.kind != NodeKind::Fight || self.elite.is_some() {
