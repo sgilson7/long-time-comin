@@ -111,12 +111,12 @@ BREAKS = [
  ("corruption by height", "crates/core/src/world.rs", "        e.corrupt = self.corrupt;", "        e.corrupt = CORRUPT_LEAST;", "more_corrupted_the_higher"),
  ("a beast's body clears the floor", "crates/core/src/enemy.rs", "let body = d.radius.min(d.hover * 9 / 10).max(ONE / 10);", "let body = d.radius;", "a_toad_hops"),
 
- ("a mini-boss is not the zone's boss", "crates/core/src/world.rs", "if matches!(d.kind, Kind::Boss | Kind::Tank | Kind::Double | Kind::God) && !d.elite {", "if matches!(d.kind, Kind::Boss | Kind::Tank | Kind::Double) {", "the_escort_is_a_smaller"),
+ ("a mini-boss is not the zone's boss", "crates/core/src/world.rs", "            Kind::Boss | Kind::Tank | Kind::Double | Kind::God | Kind::Cat\n        ) && !d.elite", "            Kind::Boss | Kind::Tank | Kind::Double | Kind::God | Kind::Cat\n        )", "the_escort_is_a_smaller"),
  # round ten: the Great Horned, big waves
  ("the owl perches high", "crates/core/src/enemy.rs", "Some(v3(p.x, f + PERCH_HEIGHT, p.z))", "Some(v3(p.x, f, p.z))", "the_great_horned_perches"),
  ("the owl swoops through you", "crates/core/src/enemy.rs", "self.fly_to(target.add(way.scale(SWOOP_PAST)), SWOOP_SPEED);", "self.fly_to(self.perches[self.perch], SWOOP_SPEED);", "the_great_horned_perches"),
  ("the owl holds fire in flight", "crates/core/src/enemy.rs", "self.state = State::Rest(t.max(2));", "self.state = State::Rest(t);", "the_great_horned_holds"),
- ("fifteen at most", "crates/core/src/world.rs", "MAX_ALIVE.saturating_sub(self.alive_enemies())", "usize::MAX", "never_more_than_fifteen"),
+ ("fifteen at most", "crates/core/src/world.rs", "        most.saturating_sub(self.alive_enemies())", "        usize::MAX - most", "never_more_than_fifteen"),
  ("the big wave comes in as room is made", "crates/core/src/world.rs", "                let n = self.room().min(self.waves_left[0].len());\n                let more", "                let n = 0;\n                let more", "never_more_than_fifteen"),
 
     # round eleven: the Idiot God
@@ -134,7 +134,7 @@ BREAKS = [
  ("orbs through seams", "crates/core/src/world.rs", "if let Some(k) = seams.iter().position(|s| s.crossed(o.prev, o.pos)) {", "if let Some(k) = seams.iter().position(|s| s.crossed(o.prev, o.pos) && false) {", "an_orb_through_a_seam"),
  ("the Reprise's trail", "crates/core/src/world.rs", "e.trail = trail;", "e.trail = trail.map(|_| V3::ZERO);", "a_reprise_walks"),
  ("the Etching, a statue", "crates/core/src/enemy.rs", "if self.seen || dist < d.radius {", "if dist < d.radius {", "an_etching_moves_and_fires"),
- ("the Etching holds its fire", "crates/core/src/enemy.rs", "        if d.gait == Gait::Unseen && self.seen {\n            return deeds;", "        if d.gait == Gait::Unseen && self.seen && false {\n            return deeds;", "an_etching_moves_and_fires"),
+ ("the Etching holds its fire", "crates/core/src/enemy.rs", "        if d.kind == Kind::Beast && d.gait == Gait::Unseen && self.seen {\n            return deeds;", "        if d.kind == Kind::Beast && d.gait == Gait::Unseen && self.seen && false {\n            return deeds;", "an_etching_moves_and_fires"),
  ("the gaze", "crates/core/src/world.rs", "dir.dot(fwd) >= look", "dir.dot(fwd) >= ONE * 2", "an_etching_you_look_at"),
  ("the Render charges straight", "crates/core/src/enemy.rs", "let next = self.pos.add(self.bite_dir.scale(d.speed));", "let next = self.pos.add(flat.norm().scale(d.speed));", "a_render_turns_on_the_spot"),
  ("the Render turns on the spot", "crates/core/src/enemy.rs", "self.yaw = fx::wrap(self.yaw + off.clamp(-CHARGE_TURN, CHARGE_TURN));", "self.yaw = want;", "a_render_turns_on_the_spot"),
@@ -167,7 +167,7 @@ BREAKS = [
  ("last: remixed patterns", "crates/core/src/enemy.rs", "            (true, Some(k)) => k,", "            (true, Some(_)) => pattern,", "the_last_missions_fights"),
  ("last: the scream cannot be hurt", "crates/core/src/enemy.rs", "                    State::Changing(CAT_SCREAM + 1)", "                    State::Rest(1)", "chumbles_screams"),
  ("last: a gait a bar", "crates/core/src/enemy.rs", "            d.phases[self.phase.min(d.phases.len() - 1)].gait", "            d.gait", "each_of_chumbles_bars"),
- ("last: the cat knows the perches", "crates/core/src/world.rs", "            e.perches = self.arena.perches.iter().map(|p| p.add(v3(0, d.hover, 0))).collect();", "", "each_of_chumbles_bars"),
+ ("last: the cat knows the perches", "crates/core/src/world.rs", "                .map(|p| p.add(v3(0, d.hover, 0)))\n                .collect();", "                .map(|p| p.add(v3(0, d.hover, 0)))\n                .take(0)\n                .collect();", "each_of_chumbles_bars"),
  ("last: fed, he sleeps", "crates/core/src/world.rs", "        if self.fed >= CAT_FED_TICKS {", "        if self.fed >= CAT_FED_TICKS * 1000 {", "fed_he_shrinks"),
  ("last: reality breaks", "crates/core/src/world.rs", "        if self.mission {\n            let p = &mut self.player;", "        if false {\n            let p = &mut self.player;", "the_defendants_fall_breaks_reality"),
  ("last: the cat walks out", "crates/core/src/world.rs", "        let walked = fx::mul(GUIDE_SPEED, (self.tick - GUIDE_WAIT).max(0) * ONE);", "        let walked = 0;", "the_cat_walks_out"),
