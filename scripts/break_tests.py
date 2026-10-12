@@ -160,6 +160,11 @@ BREAKS = [
  # the lullaby practice
  ("practice: straight to the song", "crates/core/src/game.rs", "                Outcome::Playing => self.lull(),", "                Outcome::Playing => {}", "the_lullaby_practice"),
  ("practice: nothing on the record", "crates/core/src/game.rs", "            if self.run.as_ref().is_some_and(|r| r.practice) {\n                self.end_practice();", "            if false {\n                self.end_practice();", "the_lullaby_practice"),
+
+ # Chumbles drawn
+ ("cat: feet on the floor at any size", "crates/core/src/draw/cat.rs", "let floor = v3(at.x, at.y - fx::mul(d.hover, e.size), at.z);", "let floor = v3(at.x, at.y - d.hover, at.z);", "small_he_is_a_third"),
+ ("cat: as big as his sphere", "crates/core/src/draw/cat.rs", "let scale = fx::mul(e.size, fx::div(d.radius, MODEL_RADIUS));", "let scale = fx::mul(e.size, fx::div(d.radius, MODEL_RADIUS)) / 2;", "chumbles_fills_the_sphere"),
+ ("cat: asleep in a loaf", "crates/core/src/draw/cat.rs", "        return loaf(age);", "        return stand();", "asleep_his_eyes_are_shut"),
 ]
 
 

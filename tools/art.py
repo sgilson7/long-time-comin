@@ -22,6 +22,9 @@ generator gets wrong), and where this file enforces each:
 - the clock: every clock in the game is stopped at 21:14, the minute of
   the Stilling (story.json, count IV): `clock` draws the hour hand at
   277 degrees and the minute hand at 84 degrees, clockwise from twelve.
+  The one exception is the ending's tower, far off through Chumbles'
+  window: it reads 21:15, one minute on (`clock(..., minute=15)`: the hour
+  hand at 277.5 degrees, the minute hand at 90).
 - the orbs: violet, magenta and cyan hurt; gold ones are the ones Objection
   parries, and only gold orbs carry the gold ring (`orb(..., gold=True)`),
   as in the game.
@@ -42,6 +45,13 @@ generator gets wrong), and where this file enforces each:
   drawn grey inside it as the game greys time stopped; its eyes are shut;
   the Defendant plays a brass trumpet at the edge of the god's heart
   (`lullaby`).
+- Chumbles (the last mission): a long-haired lynx-point cat, cream with a
+  white ruff and chest, grey-blue points (mask, ears, legs, a plumed
+  tail), darker ear tips and a darker mask round big blue eyes, tabby
+  lines on the forehead, a pink nose, white whiskers (`chumbles_face`,
+  `chumbles_loaf`). In `waking` he looks down from very close through the
+  summit breaking like a plate; in `chumbles` he sleeps in a loaf on the
+  sofa in the sun, eyes shut, beside the empty treat bag.
 - colour is never the only cue: every shape has the plum outline.
 - repeatable: every random choice comes from a seeded generator, so the
   same script draws the same pictures.
@@ -87,6 +97,13 @@ COLOURS = {
     "godsky": "3A1458", "godfog": "2A0C40", "godflesh": "7A3A6E", "godfleshpale": "C27BA8", "godstone": "6E6A9A",
     "godstonedark": "433F70", "dancer": "B98AE0", "stilled": "D8D2E8", "seam": "FFE27A", "trumpet": "E8B84A",
     "trumpetdark": "9A6A1A",
+    # the last mission: home on a Saturday morning (data/palette.json's
+    # home_* set) and Chumbles, a long-haired lynx-point cat (cat_*)
+    "catcream": "EADCC4", "catwhite": "FAF7F1", "catpoint": "8C8490", "catpointdark": "514956", "catpointlight": "B9AFB2",
+    "cattabby": "6E6676", "cateye": "5FA0DA", "catpupil": "141018", "catnose": "DC8F8F", "catear": "E3AFAA",
+    "treat": "B8743A", "treatbag": "C8553D", "treatbagdark": "8E3A2C", "sofa": "5E7A8A", "sofadark": "3E5664",
+    "sunlight": "FFF6E2", "homewall": "EDE2CE", "homewindow": "FFF2C8", "hometrim": "FBF7EE", "ceiling": "F7E2B0",
+    "homefloor": "B98A5E", "homefloordark": "8A6240", "morningsky": "CFE3EE", "summitsky": "2A1830",
 }
 WALLS = ["wallA", "wallB", "wallC", "wallD", "wallE", "wallF"]
 GREENS = ["greenA", "greenB", "greenC", "greenD"]
@@ -149,13 +166,14 @@ def cloud(x, y, s, fill="cloud"):
     return out
 
 
-def clock(x, y, r, fill="clock"):
+def clock(x, y, r, fill="clock", minute=14):
     """A clock face stopped at 21:14: the hour hand at 277°, the minute
-    hand at 84°, clockwise from twelve."""
+    hand at 84°, clockwise from twelve. Only the ending's tower passes
+    minute=15 (21:15: the hour hand at 277.5°, the minute hand at 90°)."""
     s = circle(x, y, r, fill)
     s += f"\\draw[ink, line width=1.6pt] {P(x, y)} circle ({f(r * 0.86)});\n"
     s += f"\\foreach \\k in {{0,...,11}} {{ \\fill[ink] ($({f(x)},{f(y)})+(\\k*30:{f(r * 0.74)})$) circle ({f(r * 0.06)}); }}\n"
-    for deg, length, w in [(277, 0.5, 3.2), (84, 0.72, 2.2)]:
+    for deg, length, w in [(270 + minute * 0.5, 0.5, 3.2), (minute * 6, 0.72, 2.2)]:
         a = math.radians(90 - deg)
         s += line((x, y), (x + math.cos(a) * r * length, y + math.sin(a) * r * length), lw=w)
     s += circle(x, y, r * 0.07, "ink")
@@ -216,11 +234,11 @@ def roof(rng, x, y, w):
     return s
 
 
-def clocktower(x, y0, w, h):
+def clocktower(x, y0, w, h, minute=14):
     s = rect(x, y0, x + w, y0 + h, "stone")
     s += rect(x - 0.25, y0 + h, x + w + 0.25, y0 + h + 0.35, "wallE")
     s += rect(x - 0.1, y0 + h + 0.35, x + w + 0.1, y0 + h + w * 1.05, "stone")
-    s += clock(x + w / 2, y0 + h + 0.35 + w * 0.52, w * 0.4)
+    s += clock(x + w / 2, y0 + h + 0.35 + w * 0.52, w * 0.4, minute=minute)
     s += poly([(x - 0.3, y0 + h + w * 1.05), (x + w + 0.3, y0 + h + w * 1.05), (x + w / 2, y0 + h + w * 1.05 + w * 0.9)], "wallE")
     for j in range(int(h / 1.2)):
         s += rect(x + w * 0.4, y0 + 0.6 + j * 1.2, x + w * 0.6, y0 + 1.1 + j * 1.2, "windark", lw=0.7)
@@ -1128,6 +1146,349 @@ def lullaby():
     return s, (W, H)
 
 
+# ---- the last mission ---------------------------------------------------------
+
+def smooth(points, fill, extra="", ink=True):
+    """A closed curve through the points, inked (or only filled)."""
+    pts = " ".join(P(x, y) for x, y in points)
+    if ink:
+        return f"\\filldraw[inked,fill={fill}{extra}] plot[smooth cycle, tension=0.7] coordinates {{{pts}}};\n"
+    return f"\\fill[{fill}{extra}] plot[smooth cycle, tension=0.7] coordinates {{{pts}}};\n"
+
+
+def fluff(cx, cy, rx, ry, n, depth, a0=0.0, a1=360.0, shape=None):
+    """Points round an ellipse with a long-haired edge: every other point
+    pushed out by depth (a fraction of the radius). shape(angle) scales the
+    radius by direction, for cheeks that flare."""
+    pts = []
+    for k in range(n + 1 if a1 - a0 < 360 else n):
+        a = math.radians(a0 + (a1 - a0) * k / n)
+        m = (1 + depth) if k % 2 == 0 else 1.0
+        if shape:
+            m *= shape(a)
+        pts.append((cx + math.cos(a) * rx * m, cy + math.sin(a) * ry * m))
+    return pts
+
+
+def chumbles_face(x, y, s, asleep=False):
+    """Chumbles' head, face on: grey-blue ears with pink insides, dark tips
+    and white tufts; a fluffy head, the darker lynx-point mask round big
+    blue eyes (or shut, asleep), tabby lines on his forehead, a pink nose,
+    a white muzzle and chin, white whiskers. (x, y) is the middle of his
+    face; s scales a head 2.5 wide."""
+    def T(px, py):
+        return (x + px * s, y + py * s)
+
+    def Ts(points):
+        return [T(px, py) for px, py in points]
+
+    def lerp(a, b, t):
+        return (a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t)
+
+    k = s / 3.0  # line widths follow the size
+    out = ""
+    # the ears, behind the head
+    for side in (-1, 1):
+        b0, b1, tip = (side * 1.3, 0.2), (side * 0.18, 0.95), (side * 1.08, 1.86)
+        out += poly(Ts([b0, b1, tip]), "catpoint", f",line width={f(1.6 * k)}pt")
+        out += poly(Ts([lerp(b0, tip, 0.68), tip, lerp(b1, tip, 0.68)]), "catpointdark", f",line width={f(1.2 * k)}pt")
+        mid = ((b0[0] + b1[0]) / 2, (b0[1] + b1[1]) / 2 + 0.05)
+        out += poly(Ts([lerp(mid, b0, 0.55), lerp(mid, tip, 0.62), lerp(mid, b1, 0.55)]), "catear", f",line width={f(0.9 * k)}pt")
+        # white tufts out of the ear, and the lynx tip
+        for j in range(4):
+            ox = mid[0] + side * (0.12 * j - 0.18)
+            out += f"\\draw[catwhite, line width={f(1.6 * k)}pt, line cap=round] {P(*T(ox, mid[1] - 0.05))} .. controls {P(*T(ox + side * 0.05, mid[1] + 0.35))} .. {P(*T(ox - side * (0.1 - 0.05 * j), mid[1] + 0.55 + 0.08 * j))};\n"
+        out += poly(Ts([(tip[0] - 0.06, tip[1] - 0.05), (tip[0] + side * 0.02, tip[1] + 0.14), (tip[0] + 0.06, tip[1] - 0.05)]), "catpointdark", f",line width={f(0.8 * k)}pt")
+    # the head: fluffy, its cheeks flaring at the bottom
+    head = fluff(0, 0.05, 1.28, 1.05, 44, 0.05,
+                 shape=lambda a: 1 + 0.22 * max(0.0, -math.sin(a)) * abs(math.cos(a)) ** 0.6 + (0.06 if math.sin(a) < 0.2 else 0))
+    out += poly(Ts(head), "catpointlight", f",line width={f(1.6 * k)}pt")
+    # cream cheeks low on each side
+    out += smooth(Ts([(0, -0.25), (0.6, -0.12), (1.1, -0.2), (1.38, -0.5), (1.0, -0.82), (0.4, -0.98), (0, -1.0), (-0.4, -0.98), (-1.0, -0.82), (-1.38, -0.5), (-1.1, -0.2), (-0.6, -0.12)]), "catcream", ink=False)
+    # the mask: over the eyes, down the nose
+    out += smooth(Ts([(0, 0.98), (0.4, 0.86), (0.85, 0.6), (1.06, 0.3), (0.9, -0.02), (0.48, -0.12), (0.24, -0.42), (-0.24, -0.42), (-0.48, -0.12), (-0.9, -0.02), (-1.06, 0.3), (-0.85, 0.6), (-0.4, 0.86)]), "catpoint", ink=False)
+    # tabby lines on the forehead
+    for j, dx in enumerate((-0.27, -0.09, 0.09, 0.27)):
+        out += f"\\draw[cattabby, line width={f(2.4 * k)}pt, line cap=round] {P(*T(dx, 0.9 - 0.04 * abs(j - 1.5)))} .. controls {P(*T(dx + 0.02, 0.75))} .. {P(*T(dx * 0.7, 0.55))};\n"
+    for side in (-1, 1):
+        out += f"\\draw[cattabby, line width={f(2.0 * k)}pt, line cap=round] {P(*T(side * 0.55, 0.8))} .. controls {P(*T(side * 0.48, 0.68))} .. {P(*T(side * 0.5, 0.58))};\n"
+    # the eyes, set in the darker patches of the mask
+    for side in (-1, 1):
+        ex, ey = T(side * 0.5, 0.26)
+        tilt = side * 12
+        pw, ph = (0.36, 0.22) if asleep else (0.42, 0.32)
+        out += f"\\fill[catpointdark, opacity=0.85, rotate around={{{tilt}:{P(ex, ey)}}}] {P(ex, ey)} ellipse ({f(pw * s)} and {f(ph * s)});\n"
+        out += f"\\fill[catpointdark, opacity=0.85, rotate around={{{tilt}:{P(ex, ey)}}}] {P(ex + side * 0.3 * s, ey + 0.02 * s)} ellipse ({f(0.25 * s)} and {f(0.1 * s)});\n"
+        # the pale line under each eye, as his has
+        if not asleep:
+            out += f"\\draw[catwhite, line width={f(2.2 * k)}pt, line cap=round] {P(*T(side * 0.2, 0.0))} .. controls {P(*T(side * 0.5, -0.06))} .. {P(*T(side * 0.82, 0.14))};\n"
+        if asleep:
+            out += f"\\draw[ink, line width={f(2.4 * k)}pt, line cap=round] {P(*T(side * 0.22, 0.27))} .. controls {P(*T(side * 0.42, 0.12))} and {P(*T(side * 0.62, 0.14))} .. {P(*T(side * 0.8, 0.33))};\n"
+        else:
+            out += f"\\filldraw[inked,line width={f(1.8 * k)}pt,fill=cateye,rotate around={{{tilt}:{P(ex, ey)}}}] {P(ex, ey)} ellipse ({f(0.31 * s)} and {f(0.25 * s)});\n"
+            out += f"\\fill[catpupil] {P(ex, ey)} ellipse ({f(0.075 * s)} and {f(0.2 * s)});\n"
+            out += f"\\fill[white] {P(ex - 0.1 * s, ey + 0.09 * s)} circle ({f(0.065 * s)});\n"
+            out += f"\\fill[white, opacity=0.6] {P(ex + 0.12 * s, ey - 0.1 * s)} circle ({f(0.03 * s)});\n"
+    # the muzzle: white pads and chin, the pink nose, the mouth
+    out += smooth(Ts([(0, -0.32), (0.28, -0.36), (0.45, -0.52), (0.36, -0.72), (0.12, -0.8), (0, -0.92), (-0.12, -0.8), (-0.36, -0.72), (-0.45, -0.52), (-0.28, -0.36)]), "catwhite", ink=False)
+    out += poly(Ts([(-0.15, -0.26), (0.15, -0.26), (0.03, -0.42), (-0.03, -0.42)]), "catnose", f",line width={f(1.3 * k)}pt")
+    out += f"\\draw[ink, line width={f(1.3 * k)}pt, line cap=round] {P(*T(0, -0.42))} -- {P(*T(0, -0.52))} .. controls {P(*T(-0.04, -0.6))} and {P(*T(-0.16, -0.62))} .. {P(*T(-0.22, -0.55))};\n"
+    out += f"\\draw[ink, line width={f(1.3 * k)}pt, line cap=round] {P(*T(0, -0.52))} .. controls {P(*T(0.04, -0.6))} and {P(*T(0.16, -0.62))} .. {P(*T(0.22, -0.55))};\n"
+    # white whiskers, each with a fine ink edge so they read on white
+    for side in (-1, 1):
+        for j in range(3):
+            bx, by = T(side * 0.3, -0.5 - j * 0.07)
+            ex, ey = T(side * (1.75 - j * 0.1), -0.35 - j * 0.28)
+            mx, my = T(side * 1.1, -0.36 - j * 0.12)
+            for col, lw in (("ink", 2.0), ("catwhite", 1.1)):
+                out += f"\\draw[{col}, line width={f(lw * k)}pt, line cap=round] {P(bx, by)} .. controls {P(mx, my)} .. {P(ex, ey)};\n"
+    return out
+
+
+def chumbles_ruff(x, y, s):
+    """The white ruff under his chin and down his chest."""
+    pts = fluff(x, y - 0.95 * s, 1.55 * s, 1.25 * s, 30, 0.1)
+    return poly(pts, "catwhite", f",line width={f(1.6 * s / 3)}pt")
+
+
+def chumbles_tail(points, s):
+    """A plumed grey tail along a path: one band, thick in the middle, its
+    outer edge long-haired, darker at the tip."""
+    n = len(points)
+    outer, inner = [], []
+    for i, (px, py) in enumerate(points):
+        a = points[min(n - 1, i + 1)]
+        b = points[max(0, i - 1)]
+        tx, ty = a[0] - b[0], a[1] - b[1]
+        d = math.hypot(tx, ty) or 1
+        nx, ny = -ty / d, tx / d
+        t = i / (n - 1)
+        w = s * (0.1 + 0.27 * math.sin(math.pi * min(1.0, 0.04 + t * 0.92)))
+        hair = 1.2 if i % 2 == 0 else 1.0
+        outer.append((px + nx * w * hair, py + ny * w * hair))
+        hair = 1.12 if i % 2 == 1 else 1.0
+        inner.append((px - nx * w * hair, py - ny * w * hair))
+    ex, ey = points[-1]
+    tip = (ex + (points[-1][0] - points[-2][0]) * 0.8, ey + (points[-1][1] - points[-2][1]) * 0.8)
+    band = outer + [tip] + inner[::-1]
+    out = smooth(band, "catpoint", f",line width={f(1.4 * s / 3)}pt")
+    # the darker tip
+    m = int(n * 0.78)
+    out += f"\\begin{{scope}}\\clip plot[smooth cycle, tension=0.7] coordinates {{{' '.join(P(*q) for q in band)}}};\n"
+    out += smooth(outer[m:] + [tip] + inner[m:][::-1], "catpointdark", ink=False)
+    out += "\\end{scope}\n"
+    # a few long hairs of the plume, lighter
+    for i in range(4, n - 4, 5):
+        out += f"\\draw[catpointlight, line width={f(1.4 * s / 3)}pt, line cap=round] {P(*points[i])} .. controls {P(*points[i + 1])} .. {P(*outer[i + 2])};\n"
+    return out
+
+
+def chumbles_loaf(x, y, s):
+    """Chumbles asleep in a loaf: a cream body, the back shading grey,
+    white ruff, paws tucked, the plumed tail curled round the front, his
+    head turned to the viewer with its eyes shut. (x, y) is where his
+    chest meets the cushion; s scales his head."""
+    def T(px, py):
+        return (x + px * s, y + py * s)
+    k = s / 3.0
+    out = ""
+    # the body, long behind him to the right, a loaf on the cushion
+    body = fluff(1.35 * s + x, 0.95 * s + y, 2.85 * s, 1.15 * s, 48, 0.035,
+                 shape=lambda a: 1.0 if math.sin(a) > -0.2 else 0.92)
+    out += poly(body, "catcream", f",line width={f(1.6 * k)}pt")
+    out += f"\\begin{{scope}}\\clip {' -- '.join(P(*p) for p in body)} -- cycle;\n"
+    out += f"\\fill[catpointlight, opacity=0.75] {P(*T(1.6, 2.6))} ellipse ({f(2.6 * s)} and {f(0.8 * s)});\n"
+    out += "\\end{scope}\n"
+    # a hind leg's haunch, the fur lines of the flank
+    out += f"\\draw[ink, line width={f(1.2 * k)}pt] {P(*T(2.6, 0.2))} .. controls {P(*T(2.3, 1.3))} and {P(*T(3.4, 1.6))} .. {P(*T(3.9, 0.9))};\n"
+    for j in range(3):
+        out += f"\\draw[catpointlight, line width={f(1.6 * k)}pt, line cap=round] {P(*T(1.0 + j * 0.6, 1.25 - j * 0.05))} -- {P(*T(1.25 + j * 0.6, 0.95 - j * 0.05))};\n"
+    # the ruff and the paws tucked under it
+    out += chumbles_ruff(*T(0, 2.3), s * 0.8)
+    # the tail, round the front of him
+    keys = [(4.1, 1.05), (3.75, 0.4), (2.2, 0.22), (0.4, 0.25), (-0.75, 0.48), (-1.1, 1.0)]
+    path = []
+    for j in range(len(keys) - 1):
+        p0, p1, p2, p3 = keys[max(0, j - 1)], keys[j], keys[j + 1], keys[min(len(keys) - 1, j + 2)]
+        for i in range(7):
+            u = i / 7
+            # Catmull-Rom through the keys
+            path.append(T(*[0.5 * (2 * p1[c] + (-p0[c] + p2[c]) * u + (2 * p0[c] - 5 * p1[c] + 4 * p2[c] - p3[c]) * u * u + (-p0[c] + 3 * p1[c] - 3 * p2[c] + p3[c]) * u ** 3) for c in (0, 1)]))
+    path.append(T(*keys[-1]))
+    out += chumbles_tail(path, s)
+    # his head, a little down and turned to us, eyes shut
+    out += f"\\begin{{scope}}[rotate around={{-6:{P(*T(0, 2.45))}}}]\n" + chumbles_face(*T(0, 2.45), s * 0.95, asleep=True) + "\\end{scope}\n"
+    return out
+
+
+def summit_night(rng, W, H):
+    """The summit under a night that never ends: the deep sky, stars, the
+    clock hung in it at 21:14, and the circle of standing stones."""
+    s = f"\\fill[night] (0,0) rectangle {P(W, H)};\n"
+    s += f"\\fill[summitsky] (0,{f(H * 0.62)}) rectangle {P(W, H)};\n"
+    s += f"\\fill[nightsky] (0,0) rectangle {P(W, H * 0.4)};\n"
+    s += f"\\fill[dusklow, opacity=0.7] (0,{f(H * 0.3)}) rectangle {P(W, H * 0.4)};\n"
+    for _ in range(90):
+        sx, sy = rng.uniform(0, W), rng.uniform(H * 0.35, H)
+        s += f"\\fill[chalk, opacity={f(rng.uniform(0.5, 1.0))}] {P(sx, sy)} circle ({f(rng.uniform(0.03, 0.09))});\n"
+    s += f"\\fill[chalk, opacity=0.15] (3.8,14.0) circle (2.3);\n"
+    s += clock(3.8, 14.0, 1.5)
+    # the hill and the ring of stones on it
+    s += f"\\filldraw[inked,fill=arock] (-0.5,0) -- (-0.5,5.4) .. controls (7,7.0) and (16,7.2) .. (24,6.0) .. controls (28,5.4) and (31,5.0) .. (32.5,4.8) -- (32.5,0) -- cycle;\n"
+    stones = []
+    for i in range(14):
+        a = 2 * math.pi * i / 14 + 0.2
+        stones.append((math.sin(a), a))
+    for depth, a in sorted(stones, reverse=True):
+        px = 11.5 + math.cos(a) * 10.5
+        py = 4.6 + depth * 1.6
+        sc = 1.0 - depth * 0.3
+        w, h = 1.0 * sc, rng.uniform(2.2, 3.0) * sc
+        lean = rng.uniform(-0.15, 0.15)
+        s += f"\\filldraw[inked,fill=astone] {P(px - w / 2, py)} -- {P(px + w / 2, py)} -- {P(px + w / 2 + lean, py + h * 0.85)} .. controls {P(px + w / 2 + lean, py + h)} and {P(px - w / 2 + lean, py + h)} .. {P(px - w / 2 + lean, py + h * 0.85)} -- cycle;\n"
+        s += f"\\fill[astonedark, opacity=0.7] {P(px + w * 0.15, py)} -- {P(px + w / 2, py)} -- {P(px + w / 2 + lean, py + h * 0.85)} -- {P(px + w * 0.15 + lean, py + h * 0.85)} -- cycle;\n"
+    s += f"\\fill[night, opacity=0.35] (0,0) rectangle {P(W, H)};\n"
+    return s
+
+
+def waking():
+    """Waking: the summit comes apart like a dropped plate. Its stones,
+    stars and stopped clock break into shards, each a little out of place,
+    with white light in the cracks; through the hole in the middle, a sunny
+    bedroom ceiling and Chumbles looking down from very close, sitting on
+    your chest. The right side is under the page's sheet."""
+    W, H = 32.0, 18.0
+    rng = random.Random(2115)
+    cx, cy, rx, ry = 11.0, 9.2, 6.4, 7.6
+    scene = summit_night(random.Random(2114), W, H)
+    # the shards: rays out from the hole, broken into rings
+    n = 11
+    rings = [1.0, 1.55, 2.3, 6.0]
+    angles = [2 * math.pi * i / n + rng.uniform(-0.18, 0.18) for i in range(n)]
+    V = [[None] * len(rings) for _ in range(n)]
+    for i, a in enumerate(angles):
+        for j, r in enumerate(rings):
+            aj = a + rng.uniform(-0.08, 0.08) * (j > 0)
+            rj = r * (rng.uniform(0.9, 1.08) if j < 3 else 1)
+            V[i][j] = (cx + math.cos(aj) * rx * rj, cy + math.sin(aj) * ry * rj)
+    # a jagged point on each edge of the hole
+    mids = []
+    for i in range(n):
+        a, b = V[i][0], V[(i + 1) % n][0]
+        m = rng.uniform(0.35, 0.65)
+        px, py = a[0] + (b[0] - a[0]) * m, a[1] + (b[1] - a[1]) * m
+        pull = rng.uniform(-0.12, 0.12)
+        mids.append((cx + (px - cx) * (1 + pull), cy + (py - cy) * (1 + pull)))
+    hole = []
+    for i in range(n):
+        hole += [V[i][0], mids[i]]
+    hole_path = " -- ".join(P(*p) for p in hole) + " -- cycle"
+    s = f"\\fill[white] (0,0) rectangle {P(W, H)};\n"
+    # the bedroom through the hole: a warm ceiling in the morning, a light,
+    # and Chumbles
+    s += f"\\begin{{scope}}\\clip {hole_path};\n"
+    s += f"\\fill[ceiling] (0,0) rectangle {P(W, H)};\n"
+    for k in range(3):
+        x0 = 13.0 + k * 2.6
+        s += f"\\fill[sunlight, opacity=0.55] {P(x0, 18)} -- {P(x0 + 1.4, 18)} -- {P(x0 - 6.0, 0)} -- {P(x0 - 7.8, 0)} -- cycle;\n"
+    s += f"\\fill[white, opacity=0.5] (11.1,15.3) circle (1.6);\n"
+    s += f"\\filldraw[inked,fill=hometrim] (11.1,15.3) ellipse (1.0 and 0.55);\n"
+    s += f"\\filldraw[inked,fill=homewindow,line width=0.8pt] (11.1,15.3) ellipse (0.6 and 0.3);\n"
+    # his shoulders, the ruff, and his face, very close
+    fx, fy, fs = cx + 0.1, cy - 1.7, 3.4
+    s += poly(fluff(fx, fy - 4.5, 7.0, 3.6, 40, 0.04), "catcream", ",line width=1.6pt")
+    s += chumbles_ruff(fx, fy, fs)
+    s += chumbles_face(fx, fy, fs)
+    s += "\\end{scope}\n"
+    # the light in the cracks
+    s += f"\\draw[white, line width=6pt, line join=round, opacity=0.8] {hole_path};\n"
+    # the shards, each pushed out from the hole and turned a little
+    for i in range(n):
+        for j in range(len(rings) - 1):
+            i2 = (i + 1) % n
+            if j == 0:
+                pts = [V[i][0], mids[i], V[i2][0], V[i2][1], V[i][1]]
+            else:
+                pts = [V[i][j], V[i2][j], V[i2][j + 1], V[i][j + 1]]
+            mx = sum(p[0] for p in pts) / len(pts)
+            my = sum(p[1] for p in pts) / len(pts)
+            dx, dy = (mx - cx) / rx, (my - cy) / ry
+            d = math.hypot(dx, dy) or 1
+            push = [rng.uniform(0.35, 0.6), rng.uniform(0.18, 0.3), rng.uniform(0.08, 0.14)][j]
+            turn = rng.uniform(-1, 1) * [5.0, 2.5, 1.0][j]
+            path = " -- ".join(P(*p) for p in pts) + " -- cycle"
+            tf = f"shift={{({f(dx / d * push)},{f(dy / d * push)})}}, rotate around={{{f(turn)}:{P(mx, my)}}}"
+            s += f"\\begin{{scope}}[{tf}]\n\\begin{{scope}}\\clip {path};\n{scene}\\end{{scope}}\n"
+            s += f"\\draw[ink, line width=1.8pt, line join=round] {path};\n"
+            s += f"\\draw[white, line width=0.8pt, opacity=0.5, line join=round] {path};\n\\end{{scope}}\n"
+    return s, (W, H)
+
+
+def chumbles():
+    """The ending: Chumbles asleep in a loaf in the sun on the blue-grey
+    sofa, eyes shut, tail curled round, the treat bag empty on its side
+    and treats left by it; morning light through the window, and very far
+    off through it a clock tower reading 21:15. The right side is the
+    room, under the page's sheet."""
+    W, H = 32.0, 18.0
+    rng = random.Random(2215)
+    s = f"\\fill[homewall] (0,0) rectangle {P(W, H)};\n"
+    # the window, and the town very far off through it
+    wx0, wy0, wx1, wy1 = 2.2, 9.6, 12.4, 17.0
+    s += rect(wx0 - 0.35, wy0 - 0.35, wx1 + 0.35, wy1 + 0.35, "hometrim", lw=1.4)
+    s += f"\\begin{{scope}}\\clip {P(wx0, wy0)} rectangle {P(wx1, wy1)};\n"
+    s += f"\\fill[morningsky] {P(wx0, wy0)} rectangle {P(wx1, wy1)};\n"
+    s += f"\\fill[homewindow] {P(wx0, wy0)} rectangle {P(wx1, wy0 + 2.6)};\n"
+    s += cloud(5.0, 15.6, 0.55, fill="hometrim")
+    s += cloud(10.6, 16.2, 0.4, fill="hometrim")
+    x = wx0 - 0.3
+    while x < wx1:
+        w, h = rng.uniform(0.35, 0.7), rng.uniform(0.5, 1.4)
+        s += f"\\filldraw[ink,line width=0.5pt,fill={rng.choice(WALLS)}] {P(x, wy0)} rectangle {P(x + w, wy0 + 1.2 + h)};\n"
+        x += w + 0.02
+    # the clock tower, small, its clock one minute on
+    tx, tw, th = 8.1, 0.95, 1.9
+    s += f"\\filldraw[ink,line width=0.5pt,fill=stone] {P(tx, wy0)} rectangle {P(tx + tw, wy0 + th)};\n"
+    s += f"\\filldraw[ink,line width=0.5pt,fill=stone] {P(tx - 0.08, wy0 + th)} rectangle {P(tx + tw + 0.08, wy0 + th + tw * 1.3)};\n"
+    s += clock(tx + tw / 2, wy0 + th + tw * 0.65, tw * 0.48, minute=15)
+    s += f"\\filldraw[ink,line width=0.5pt,fill=wallE] {P(tx - 0.12, wy0 + th + tw * 1.3)} -- {P(tx + tw + 0.12, wy0 + th + tw * 1.3)} -- {P(tx + tw / 2, wy0 + th + tw * 2.3)} -- cycle;\n"
+    s += "\\end{scope}\n"
+    s += line(((wx0 + wx1) / 2, wy0), ((wx0 + wx1) / 2, wy1), lw=4, colour="hometrim")
+    s += line((wx0, (wy0 + wy1) / 2), (wx1, (wy0 + wy1) / 2), lw=4, colour="hometrim")
+    s += f"\\draw[ink, line width=1.1pt] {P(wx0, wy0)} rectangle {P(wx1, wy1)};\n"
+    # the floor
+    s += rect(-0.5, -0.5, W + 0.5, 2.2, "homefloor")
+    for k in range(1, 4):
+        s += line((-0.5, k * 0.55), (W + 0.5, k * 0.55), lw=0.7, colour="homefloordark")
+    # the sofa: its back, cushions, seat, and arm
+    s += f"\\filldraw[inked,fill=sofa,rounded corners=10pt] (-1,3.0) rectangle (27,10.2);\n"
+    for k in range(3):
+        s += f"\\filldraw[inked,fill=sofa,rounded corners=8pt] {P(1.4 + k * 8.2, 5.0)} rectangle {P(9.4 + k * 8.2, 9.8)};\n"
+    s += f"\\filldraw[inked,fill=sofa,rounded corners=8pt] (-1,1.4) rectangle (27,5.4);\n"
+    s += line((-1, 4.2), (27, 4.2), lw=1.0, colour="sofadark")
+    s += f"\\filldraw[inked,fill=sofadark] (1.0,0.2) rectangle (1.6,1.4);\n\\filldraw[inked,fill=sofadark] (24.4,0.2) rectangle (25.0,1.4);\n"
+    s += f"\\filldraw[inked,fill=sofa,rounded corners=10pt] (-1,1.2) rectangle (2.2,7.4);\n"
+    # the sunlight: shafts from the window, a bright patch on the seat
+    s += f"\\fill[sunlight, opacity=0.28] {P(wx0, wy1)} -- {P(wx1, wy1)} -- (22.5,5.4) -- (9.5,5.4) -- cycle;\n"
+    for k in range(3):
+        x0 = 4.6 + k * 3.4
+        s += f"\\fill[sunlight, opacity=0.22] {P(x0, wy1)} -- {P(x0 + 1.3, wy1)} -- {P(x0 + 12.2, 5.4)} -- {P(x0 + 10.6, 5.4)} -- cycle;\n"
+    s += f"\\fill[homewindow, opacity=0.75] (9.0,5.4) -- (22.6,5.4) -- (21.4,3.0) -- (7.6,3.0) -- cycle;\n"
+    # the empty treat bag on its side, and the treats left
+    bx, by = 5.4, 4.6
+    s += f"\\filldraw[inked,fill=treatbag] {P(bx, by)} -- {P(bx + 2.6, by - 0.15)} -- {P(bx + 2.9, by + 0.35)} -- {P(bx + 2.7, by + 0.9)} -- {P(bx + 2.95, by + 1.5)} -- {P(bx + 0.4, by + 1.75)} -- {P(bx + 0.1, by + 1.2)} -- {P(bx - 0.15, by + 0.6)} -- cycle;\n"
+    s += f"\\filldraw[inked,fill=treatbagdark] {P(bx + 2.6, by - 0.15)} -- {P(bx + 3.25, by + 0.05)} -- {P(bx + 3.0, by + 0.6)} -- {P(bx + 3.3, by + 1.15)} -- {P(bx + 2.95, by + 1.5)} -- {P(bx + 2.7, by + 0.9)} -- {P(bx + 2.9, by + 0.35)} -- cycle;\n"
+    s += f"\\draw[ink, line width=0.8pt] {P(bx + 0.9, by + 0.2)} -- {P(bx + 1.2, by + 1.1)};\n\\draw[ink, line width=0.8pt] {P(bx + 1.9, by + 1.5)} -- {P(bx + 1.6, by + 0.9)};\n"
+    s += f"\\filldraw[inked,fill=hometrim,line width=0.7pt] {P(bx + 1.0, by + 0.9)} .. controls {P(bx + 1.4, by + 1.25)} and {P(bx + 1.8, by + 1.25)} .. {P(bx + 2.1, by + 0.95)} -- {P(bx + 2.35, by + 1.15)} -- {P(bx + 2.35, by + 0.75)} -- {P(bx + 2.1, by + 0.95)} .. controls {P(bx + 1.8, by + 0.65)} and {P(bx + 1.4, by + 0.65)} .. cycle;\n"
+    for (tx_, ty_, rot) in ((bx + 3.9, by - 0.05, 20), (bx + 4.7, by + 0.25, -35), (bx + 3.6, by - 0.6, 70)):
+        s += f"\\filldraw[inked,fill=treat,line width=0.8pt,rotate around={{{rot}:{P(tx_, ty_)}}}] {P(tx_, ty_)} ellipse (0.22 and 0.15);\n"
+    # Chumbles, in the sun
+    s += chumbles_loaf(12.6, 4.75, 1.55)
+    # a last warmth over everything
+    s += f"\\fill[sunlight, opacity=0.12] (0,0) rectangle {P(W, H)};\n"
+    return s, (W, H)
+
+
 PICTURES = {
     "title": title,
     "sentencing": sentencing,
@@ -1139,6 +1500,8 @@ PICTURES = {
     "orders": orders,
     "door": door,
     "lullaby": lullaby,
+    "waking": waking,
+    "chumbles": chumbles,
 }
 for g in ("carbine", "scattergun", "launcher", "ripsaw", "big_iron"):
     PICTURES[f"guns/{g}"] = (lambda g=g: gun_art(g))
