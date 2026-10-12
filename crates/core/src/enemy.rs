@@ -154,8 +154,13 @@ pub struct Enemy {
     /// the world's clock, so a beat can be shared (the Toons)
     pub beat: i32,
     /// it cannot be brought below this (the Idiot God, which is sung to
-    /// sleep, not killed)
+    /// sleep, not killed; Chumbles, who is fed)
     pub floor_hp: i32,
+    /// how big it is, Q16 of its full size: Chumbles screams and grows
+    /// (everything else is always ONE)
+    pub size: i32,
+    /// on the last mission: it fires its patterns' remixes
+    pub remix: bool,
 }
 
 /// What an enemy did this tick that the world must act on.
@@ -173,6 +178,9 @@ pub struct Deeds {
     /// a burrower came up or went down this tick
     pub surfaced: bool,
     pub dove: bool,
+    /// a cat began its scream this tick, or finished growing
+    pub scream: bool,
+    pub grown: bool,
 }
 
 impl Enemy {
@@ -230,7 +238,13 @@ impl Enemy {
             seen: false,
             trail: None,
             beat: 0,
-            floor_hp: if d.kind == Kind::God { 1 } else { 0 },
+            floor_hp: if matches!(d.kind, Kind::God | Kind::Cat) {
+                1
+            } else {
+                0
+            },
+            size: if d.kind == Kind::Cat { CAT_SMALL } else { ONE },
+            remix: false,
         }
     }
 
@@ -274,6 +288,24 @@ impl Enemy {
         }
     }
 
+    /// How it moves now: a cat by its phase's gait, a beast by its own.
+    pub fn gait(&self, d: &EnemyDef) -> Gait {
+        if d.kind == Kind::Cat {
+            d.phases[self.phase.min(d.phases.len() - 1)].gait
+        } else {
+            d.gait
+        }
+    }
+
+    /// The pattern it fires for an attack's: on the last mission, the
+    /// pattern's remix when it has one.
+    pub fn pattern_of(&self, c: &Content, pattern: usize) -> usize {
+        match (self.remix, c.patterns[pattern].remix) {
+            (true, Some(k)) => k,
+            _ => pattern,
+        }
+    }
+
     fn current_attack<'a>(&self, c: &'a Content) -> Option<&'a crate::content::Attack> {
         let d = &c.enemies[self.def];
         let attacks = &d.phases[self.phase.min(d.phases.len() - 1)].attacks;
@@ -290,7 +322,7 @@ impl Enemy {
         self.flash = (self.flash + 1).min(100);
         let to = target.sub(self.pos);
         let (aim_yaw, _) = yaw_pitch_of(to);
-        if !matches!(d.kind, Kind::Agent | Kind::Tank) && d.gait != Gait::Charge {
+        if !matches!(d.kind, Kind::Agent | Kind::Tank) && self.gait(d) != Gait::Charge {
             self.yaw = fx::lerp_angle(self.yaw, aim_yaw, ONE / 8);
         }
 
@@ -303,8 +335,36 @@ impl Enemy {
                     self.dive(level, target);
                     deeds.dove = true;
                 }
-                State::Rest(secs(1, 2) + (me as i32 % 4) * secs(1, 5))
+                // a cat goes straight into its scream
+                if d.kind == Kind::Cat && self.size < ONE {
+                    deeds.scream = true;
+                    State::Changing(CAT_SCREAM + 1)
+                } else {
+                    State::Rest(secs(1, 2) + (me as i32 % 4) * secs(1, 5))
+                }
             };
+            return deeds;
+        }
+        if d.kind == Kind::Cat && self.size < ONE && self.hp == self.max_hp {
+            // the scream: it grows to its full size, and cannot be hurt
+            // or fire meanwhile; its feet stay on the floor
+            let t = match self.state {
+                State::Changing(t) => t - 1,
+                _ => {
+                    deeds.scream = true;
+                    CAT_SCREAM
+                }
+            };
+            let feet = self.pos.y - fx::mul(d.hover, self.size);
+            self.size = CAT_SMALL + (ONE - CAT_SMALL) / CAT_SCREAM * (CAT_SCREAM - t);
+            self.state = State::Changing(t.max(1));
+            if t <= 0 {
+                self.size = ONE;
+                self.state = State::Rest(secs(1, 2));
+                deeds.grown = true;
+            }
+            self.pos.y = feet + fx::mul(d.hover, self.size);
+            self.prev = self.pos;
             return deeds;
         }
         if let State::Changing(t) = self.state {
@@ -330,7 +390,7 @@ impl Enemy {
             }
         }
         // a boss changes phase the moment its health crosses the line
-        if matches!(d.kind, Kind::Boss | Kind::Double | Kind::God) {
+        if matches!(d.kind, Kind::Boss | Kind::Double | Kind::God | Kind::Cat) {
             let next = self.phase + 1;
             if next < d.phases.len() && self.health_pct() <= d.phases[next].from_pct {
                 self.phase = next;
@@ -354,7 +414,8 @@ impl Enemy {
             return deeds;
         }
         // an Etching looked at is a statue: it neither moves nor fires
-        if d.gait == Gait::Unseen && self.seen {
+        // (a cat in the dark only stops moving)
+        if d.kind == Kind::Beast && d.gait == Gait::Unseen && self.seen {
             return deeds;
         }
         // a Toon waits for the beat, so it fires as it lands
@@ -368,7 +429,7 @@ impl Enemy {
         }
 
         // a percher holds its fire while it flies
-        if d.gait == Gait::Perch && self.flying > 0 {
+        if self.gait(d) == Gait::Perch && self.flying > 0 {
             if let State::Rest(t) = self.state {
                 self.state = State::Rest(t.max(2));
             }
@@ -379,7 +440,7 @@ impl Enemy {
         let Some(attack) = self.current_attack(c).cloned() else {
             return deeds;
         };
-        let pattern: &Pattern = &c.patterns[attack.pattern];
+        let pattern: &Pattern = &c.patterns[self.pattern_of(c, attack.pattern)];
         if d.kind == Kind::Agent {
             return self.agent_cycle(c, d, level, target, me, &attack, deeds);
         }
@@ -505,7 +566,7 @@ impl Enemy {
         attack: &crate::content::Attack,
         mut deeds: Deeds,
     ) -> Deeds {
-        let pattern = &c.patterns[attack.pattern];
+        let pattern = &c.patterns[self.pattern_of(c, attack.pattern)];
         let walking = !self.path.is_empty() && self.walked < AGENT_GIVE_UP;
         self.state = match self.state {
             State::Rest(t) if t > 1 => State::Rest(t - 1),
@@ -640,9 +701,10 @@ impl Enemy {
         let ground = |p: V3| level.floor_below(p.x, p.y + ONE, p.z);
         // what it collides with: its body, kept clear of the floor it sits on
         let body = d.radius.min(d.hover * 9 / 10).max(ONE / 10);
-        match d.gait {
+        let gait = self.gait(d);
+        match gait {
             Gait::Bound | Gait::Hop => {
-                let hop = d.gait == Gait::Hop;
+                let hop = gait == Gait::Hop;
                 if self.leap > 0 {
                     // in the air: on along its arc
                     self.leap -= 1;
@@ -1226,6 +1288,13 @@ impl Enemy {
                 let _ = (dist, side);
             }
             Kind::Mech | Kind::Double => self.skirmish(d, level, target),
+            Kind::Cat => {
+                // a pounce carries it over you; otherwise its phase's gait
+                if !self.lunge_step(d, level) {
+                    self.beast(d, level, target);
+                }
+                let _ = (dist, side);
+            }
             Kind::Agent => self.walk(d, level, target),
             Kind::Beast => self.beast(d, level, target),
             Kind::Blinker => {

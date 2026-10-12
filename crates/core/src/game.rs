@@ -88,6 +88,10 @@ struct Run {
     /// the lullaby alone, for testing: the god put to its song as it
     /// comes, and nothing kept on the record
     practice: bool,
+    /// the last mission: zones one to four in one go, harder (new game
+    /// plus), then home; and whether its brief has been read
+    mission: bool,
+    briefed: bool,
 }
 
 impl Run {
@@ -274,9 +278,11 @@ impl Game {
         };
         let w = &mut run.world;
         if let Some(b) = w.boss {
-            let last = self.c.enemies[w.enemies[b].def].phases.len().max(1) - 1;
+            let d = &self.c.enemies[w.enemies[b].def];
+            let last = d.phases.len().max(1) - 1;
+            let sings = d.lullaby.is_some();
             let e = &mut w.enemies[b];
-            if e.floor_hp > 0 && w.song.is_none() {
+            if sings && e.floor_hp > 0 && w.song.is_none() {
                 e.phase = last;
                 e.state = crate::enemy::State::Rest(10);
                 e.hp = e.floor_hp;
@@ -334,7 +340,7 @@ impl Game {
         let player = Player::new(V3::ZERO, 0, build);
         let held = Held::new(self.c.gun("carbine"), gun_level);
         let start = route.start();
-        let world = self.world_for(&route, start, player, held, 0);
+        let world = self.world_for(&route, start, player, held, 0, false);
         self.run = Some(Run {
             zone,
             route,
@@ -346,6 +352,8 @@ impl Game {
             counted: false,
             rush: false,
             practice: false,
+            mission: false,
+            briefed: true,
         });
         self.reading = None;
         self.mode = Mode::Play;
@@ -362,7 +370,7 @@ impl Game {
         let route = Route::rush(0, self.meta.run_seed());
         let player = Player::new(V3::ZERO, 0, build);
         let held = Held::new(self.c.gun("carbine"), gun_level);
-        let world = self.world_for(&route, 0, player, held, 0);
+        let world = self.world_for(&route, 0, player, held, 0, false);
         self.run = Some(Run {
             zone: 0,
             route,
@@ -374,6 +382,8 @@ impl Game {
             counted: false,
             rush: true,
             practice: false,
+            mission: false,
+            briefed: true,
         });
         self.reading = None;
         self.mode = Mode::Play;
@@ -385,15 +395,30 @@ impl Game {
     /// body. Winning, dying or abandoning returns to the Holding and
     /// changes nothing on the record.
     pub fn practice_lullaby(&mut self) {
+        let (build, gun_level) = self.meta.build(&self.c);
+        self.practice_at(self.c.built_zones() - 1, build, gun_level);
+    }
+
+    /// Chumbles alone, for testing: downstairs, with everything bought
+    /// (the test save's body and Carbine). Winning, dying or abandoning
+    /// returns to the Holding and changes nothing on the record.
+    pub fn practice_chumbles(&mut self) {
+        let Some(home) = self.c.mission_zone() else {
+            return;
+        };
+        let (build, gun_level) = Meta::everything(&self.c).build(&self.c);
+        self.practice_at(home, build, gun_level);
+    }
+
+    /// A practice: zone `zone`'s boss alone, with this body.
+    fn practice_at(&mut self, zone: usize, build: crate::player::Build, gun_level: i32) {
         if !matches!(self.mode, Mode::Holding | Mode::Dead | Mode::Won) {
             return;
         }
-        let zone = self.c.built_zones() - 1;
-        let (build, gun_level) = self.meta.build(&self.c);
         let route = Route::rush(zone, self.meta.run_seed());
         let player = Player::new(V3::ZERO, 0, build);
         let held = Held::new(self.c.gun("carbine"), gun_level);
-        let world = self.world_for(&route, 0, player, held, 0);
+        let world = self.world_for(&route, 0, player, held, 0, false);
         self.run = Some(Run {
             zone,
             route,
@@ -405,10 +430,61 @@ impl Game {
             counted: false,
             rush: false,
             practice: true,
+            mission: false,
+            briefed: true,
         });
         self.reading = None;
         self.mode = Mode::Play;
         self.enter();
+    }
+
+    /// The last mission, once the Idiot God sleeps: the brief first, then
+    /// a run from the crater through the fourth zone's boss in one go, its
+    /// fights larger and remixed (new game plus), and then home.
+    pub fn start_mission(&mut self) {
+        if !matches!(self.mode, Mode::Holding | Mode::Dead | Mode::Won) || !self.meta.mission_open(&self.c) {
+            return;
+        }
+        self.start_run_at(0);
+        let Some(run) = self.run.as_mut() else {
+            return;
+        };
+        run.mission = true;
+        run.briefed = false;
+        let (route, start) = (run.route.clone(), run.at);
+        let player = run.world.player.clone();
+        let held = run.world.held;
+        let w = self.world_for(&route, start, player, held, 0, true);
+        let run = self.run.as_mut().unwrap();
+        run.world = w;
+        self.mode = Mode::Interlude;
+        self.enter();
+    }
+
+    /// The last mission, straight at home (its bedroom), for tools that
+    /// drive the game (to see or measure Chumbles' house and fight).
+    pub fn mission_home(&mut self) {
+        let Some(home) = self.c.mission_zone() else {
+            return;
+        };
+        self.start_mission();
+        let Some(run) = self.run.as_mut() else {
+            return;
+        };
+        run.briefed = true;
+        run.zone = self.c.mission_break();
+        self.mode = Mode::Interlude;
+        self.continue_run();
+        debug_assert_eq!(self.run.as_ref().map(|r| r.zone), Some(home));
+    }
+
+    /// The zone a run goes on to after zone `zone`'s boss: the next, but on
+    /// the last mission home after the fourth.
+    fn next_zone(&self, zone: usize, mission: bool) -> usize {
+        match self.c.mission_zone() {
+            Some(home) if mission && zone == self.c.mission_break() => home,
+            _ => zone + 1,
+        }
     }
 
     /// The end of a practice: back to the Holding, the record untouched.
@@ -429,7 +505,15 @@ impl Game {
         }
     }
 
-    fn world_for(&self, route: &Route, at: usize, player: Player, held: Held, seq: u32) -> World {
+    fn world_for(
+        &self,
+        route: &Route,
+        at: usize,
+        player: Player,
+        held: Held,
+        seq: u32,
+        mission: bool,
+    ) -> World {
         let node = &route.nodes[at];
         let exits: Vec<Exit> = node
             .next
@@ -450,6 +534,10 @@ impl Game {
             self.meta.run_seed() ^ at as u64,
         );
         w.seq = seq;
+        if mission {
+            w.mission = true;
+            w.remix();
+        }
         w
     }
 
@@ -492,11 +580,22 @@ impl Game {
         if self.mode != Mode::Interlude {
             return;
         }
+        if self.run.as_ref().is_some_and(|r| !r.briefed) {
+            // the last mission's brief read: into the crater
+            let run = self.run.as_ref().unwrap();
+            let name = self.node_name(&run.route.nodes[run.at]);
+            let run = self.run.as_mut().unwrap();
+            run.briefed = true;
+            run.world.note("enter", name);
+            self.mode = Mode::Play;
+            self.enter();
+            return;
+        }
         let Some(mut run) = self.run.take() else {
             return;
         };
         run.earned += run.world.earned;
-        let zone = run.zone + 1;
+        let zone = self.next_zone(run.zone, run.mission);
         let (_, gun_level) = self.meta.build(&self.c);
         let route = Route::build_for(
             &self.c,
@@ -509,7 +608,7 @@ impl Game {
         let held = run.world.held;
         let seq = run.world.seq;
         let start = route.start();
-        run.world = self.world_for(&route, start, player, held, seq);
+        run.world = self.world_for(&route, start, player, held, seq, run.mission);
         run.route = route;
         run.zone = zone;
         run.at = start;
@@ -655,7 +754,25 @@ impl Game {
                 self.meta.beat(&boss);
                 run.earned += self.c.zones[run.zone].route.clemency_boss;
                 run.cleared += 1;
-                let next = run.zone + 1;
+                let (mission, zone) = (run.mission, run.zone);
+                let next = self.next_zone(zone, mission);
+                let run = self.run.as_mut().unwrap();
+                if mission {
+                    if Some(run.zone) == self.c.mission_zone() {
+                        // Chumbles is fed: the last mission is won
+                        let (total, cleared) = (run.total(), run.cleared);
+                        let banked = self.meta.record_mission(&self.c, total, cleared);
+                        self.last = (banked, cleared);
+                        self.win_count = None;
+                        self.mode = Mode::Won;
+                        return;
+                    }
+                    // on, through the interlude, with nothing unlocked
+                    self.meta.bosses_beaten += 1;
+                    run.world.outcome = Outcome::Playing;
+                    self.mode = Mode::Interlude;
+                    return;
+                }
                 if run.rush {
                     if next < self.c.built_zones() {
                         // straight on to the next boss, healed
@@ -665,7 +782,7 @@ impl Game {
                         let held = run.world.held;
                         let seq = run.world.seq;
                         let route = Route::rush(next, self.meta.run_seed() ^ next as u64);
-                        let w = self.world_for(&route, 0, player, held, seq);
+                        let w = self.world_for(&route, 0, player, held, seq, false);
                         let run = self.run.as_mut().unwrap();
                         run.world = w;
                         run.route = route;
@@ -707,7 +824,7 @@ impl Game {
         let player = run.world.player.clone();
         let held = run.world.held;
         let seq = run.world.seq;
-        run.world = self.world_for(&run.route, to, player, held, seq);
+        run.world = self.world_for(&run.route, to, player, held, seq, run.mission);
         let name = self.node_name(&run.route.nodes[to]);
         run.world.note("enter", name);
         // the first run to reach the zone's hardest fights hears a count
@@ -1038,8 +1155,12 @@ impl Game {
         let learning = w.song.as_ref().is_some_and(|s| {
             s.asleep == 0 && matches!(s.part, crate::song::Part::Intro | crate::song::Part::Listen)
         });
+        let home = c.zones[run.zone].mission;
+        let first = run.mission && run.zone == 0 && run.at == run.route.start();
         let hint = match node.kind {
             NodeKind::Boss if learning => c.say("hint_song"),
+            NodeKind::Arrival if first && fresh(0) => c.say("hint_mission"),
+            NodeKind::Arrival if home => c.say("hint_cat"),
             NodeKind::Arrival if god && fresh(0) => c.say("hint_gullet"),
             NodeKind::Arrival if house => c.say("hint_vestibule"),
             NodeKind::Boss if house && w.tick > secs(4, 1) && fresh(secs(4, 1)) => c.say("hint_tank"),
@@ -1463,7 +1584,7 @@ impl Game {
                 "pound": build.pound > 0,
             },
             "branches": c.copy_rows("holding_branches").into_iter().map(|(id, name)| json!({ "id": id, "name": name })).collect::<Vec<_>>(),
-            "zones": c.zones.iter().map(|z| json!({
+            "zones": c.zones.iter().filter(|z| !z.mission).map(|z| json!({
                 "name": z.name,
                 "year": z.year,
                 "built": z.built,
@@ -1476,6 +1597,8 @@ impl Game {
             })).collect::<Vec<_>>(),
             "guns": c.guns.iter().map(|g| json!({ "id": g.id, "name": g.name, "blurb": g.blurb })).collect::<Vec<_>>(),
             "rush": m.rush_open(),
+            "mission": m.mission_open(c),
+            "mission_wins": m.mission_wins,
         });
         if let Some(run) = &self.run {
             let r = &run.route;
@@ -1517,12 +1640,20 @@ impl Game {
         }
         if self.mode == Mode::Interlude {
             let z = self.run.as_ref().map_or(0, |r| r.zone);
-            let words = c.story.interludes.get(&c.zones[z].id);
+            let mission = self.run.as_ref().is_some_and(|r| r.mission);
+            let briefing = self.run.as_ref().is_some_and(|r| !r.briefed);
+            // the last mission's own words: its brief, then its interludes
+            let words = match (&c.story.mission, briefing) {
+                (Some(ms), true) => Some(&ms.brief),
+                (Some(ms), false) if mission => ms.interludes.get(&c.zones[z].id),
+                _ => c.story.interludes.get(&c.zones[z].id),
+            };
+            let next = if briefing { z } else { self.next_zone(z, mission) };
             s["interlude"] = json!({
                 "title": words.map(|w| w.title.clone()).unwrap_or_default(),
                 "lines": words.map(|w| w.lines.clone()).unwrap_or_default(),
                 "newest": self.crossing_count.clone().unwrap_or_default(),
-                "next": c.zones.get(z + 1).map(|n| format!("{}, {}", n.name, n.year)).unwrap_or_default(),
+                "next": c.zones.get(next).map(|n| format!("{}, {}", n.name, n.year)).unwrap_or_default(),
                 "art": words.map(|w| w.art.clone()).unwrap_or_default(),
                 "go": words.map(|w| w.go.clone()).filter(|g| !g.is_empty()).unwrap_or_else(|| c.say("interlude_next")),
             });
@@ -1550,7 +1681,17 @@ impl Game {
             });
         }
         let rushed = self.run.as_ref().is_some_and(|r| r.rush);
-        if self.mode == Mode::Won && rushed {
+        let mission = self.run.as_ref().is_some_and(|r| r.mission);
+        if let (Mode::Won, true, Some(ms)) = (self.mode, mission, &c.story.mission) {
+            s["verdict"] = json!({
+                "art": ms.verdict_art,
+                "title": ms.victory_title,
+                "lines": ms.victory,
+                "newest": "",
+                "clemency": self.last.0,
+                "cleared": self.last.1,
+            });
+        } else if self.mode == Mode::Won && rushed {
             s["verdict"] = json!({
                 "art": c.story.verdict_art,
                 "title": c.say("rush_title"),
@@ -2042,6 +2183,142 @@ pub(crate) mod tests {
         assert_eq!(g.mode, Mode::Holding);
         let after = (g.meta.deaths, g.meta.clemency, g.meta.years, g.meta.rush_wins);
         assert_eq!(before, after, "the record untouched");
+    }
+
+    #[test]
+    fn the_last_mission_opens_once_the_god_sleeps_and_runs_one_to_four_then_home() {
+        let mut g = game_with(r#"{"seen_intro": true, "wins": 1, "beaten": ["bailiff", "witness"]}"#);
+        g.begin();
+        g.start_mission();
+        assert_eq!(g.mode, Mode::Holding, "not before the Idiot God sleeps");
+        let s: Value = serde_json::from_str(&g.screen_json()).unwrap();
+        assert_eq!(s["mission"], false);
+        g.meta.beat("azathoth");
+        let s: Value = serde_json::from_str(&g.screen_json()).unwrap();
+        assert_eq!(s["mission"], true);
+        let unlocked = g.meta.unlocked;
+        // the brief first, on the interlude's screen
+        g.start_mission();
+        assert_eq!(g.mode, Mode::Interlude);
+        let s: Value = serde_json::from_str(&g.screen_json()).unwrap();
+        assert_eq!(s["interlude"]["title"], "THE LAST SENTENCE");
+        g.continue_run();
+        assert_eq!(g.mode, Mode::Play);
+        let run = g.run.as_ref().unwrap();
+        assert_eq!((run.zone, run.world.kind), (0, NodeKind::Arrival));
+        assert!(
+            run.world.mission && run.world.remix,
+            "new game plus from the crater"
+        );
+        let mut words = Vec::new();
+        for zone in 0..4 {
+            assert_eq!(g.run.as_ref().unwrap().zone, zone);
+            let boss = g.run.as_ref().unwrap().route.boss();
+            g.go(boss);
+            run_down_the_boss(&mut g);
+            assert_eq!(
+                g.mode,
+                Mode::Interlude,
+                "zone {zone}'s boss does not end the mission"
+            );
+            let s: Value = serde_json::from_str(&g.screen_json()).unwrap();
+            words.push(s["interlude"]["title"].as_str().unwrap().to_string());
+            g.continue_run();
+        }
+        assert_eq!(
+            words,
+            [
+                "THE YEARS AGAIN",
+                "THE KEY AGAIN",
+                "THE ORDERS AGAIN",
+                "REALITY BREAKS"
+            ]
+        );
+        assert_eq!(g.meta.unlocked, unlocked, "the mission opens no later start");
+        // home: the bedroom, the landing, downstairs
+        let run = g.run.as_ref().unwrap();
+        assert_eq!(Some(run.zone), g.c.mission_zone(), "after the summit, home");
+        assert_eq!(g.name_of(&run.route.nodes[run.at]), "Your Bedroom");
+        assert!(run.world.guide(&g.c).is_some(), "the cat leads the way out");
+        let boss = run.route.boss();
+        g.go(boss);
+        frames(&mut g, 120, 0);
+        let run = g.run.as_mut().unwrap();
+        let b = run.world.boss.expect("Chumbles came");
+        assert_eq!(g.c.enemies[run.world.enemies[b].def].id, "chumbles");
+        // fed: his last bar empty
+        run.world.player.iframes = 1_000_000;
+        let last = g.c.enemies[run.world.enemies[b].def].phases.len() - 1;
+        let e = &mut run.world.enemies[b];
+        e.size = ONE;
+        e.phase = last;
+        e.state = crate::enemy::State::Rest(1000);
+        e.hp = 2;
+        e.hurt(5);
+        for _ in 0..CAT_FED_TICKS + ENDING_TICKS {
+            frames(&mut g, 1, 0);
+            if g.mode != Mode::Play {
+                break;
+            }
+        }
+        assert_eq!(g.mode, Mode::Won);
+        assert_eq!(g.meta.mission_wins, 1);
+        let s: Value = serde_json::from_str(&g.screen_json()).unwrap();
+        assert_eq!(s["verdict"]["title"], "BREAKFAST");
+    }
+
+    #[test]
+    fn the_last_missions_fights_send_half_as_many_again_and_fire_remixes() {
+        let mut g = game_with(r#"{"seen_intro": true, "beaten": ["azathoth"]}"#);
+        g.begin();
+        g.start_mission();
+        g.continue_run();
+        let first = g.run.as_ref().unwrap().route.nodes[0].next[0];
+        g.go(first);
+        let run = g.run.as_ref().unwrap();
+        let node = &run.route.nodes[run.at];
+        let plain: Vec<usize> = g.c.zones[0].encounters[node.encounter.unwrap()]
+            .waves
+            .iter()
+            .map(|w| w.len())
+            .collect();
+        let remixed: Vec<usize> = run.world.waves_left.iter().map(|w| w.len()).collect();
+        let want: Vec<usize> = plain
+            .iter()
+            .map(|n| n + (n * 50).div_euclid(100) + (n % 2))
+            .collect();
+        assert_eq!(remixed, want, "half as many again, rounded up");
+        frames(&mut g, 300, 0);
+        let w = &g.run.as_ref().unwrap().world;
+        assert!(!w.enemies.is_empty() && w.enemies.iter().all(|e| e.remix));
+        let ring = g.c.patterns.iter().position(|p| p.id == "ring_16").unwrap();
+        let e = &w.enemies[0];
+        assert_eq!(g.c.patterns[e.pattern_of(&g.c, ring)].id, "remix_ring_16");
+    }
+
+    #[test]
+    fn the_chumbles_practice_fights_him_with_everything_and_leaves_the_record_alone() {
+        let mut g = game_with(r#"{"seen_intro": true}"#);
+        g.begin();
+        let before = g.meta.clone();
+        g.practice_chumbles();
+        assert_eq!(g.mode, Mode::Play);
+        let run = g.run.as_ref().unwrap();
+        assert_eq!(Some(run.zone), g.c.mission_zone());
+        let (most, _) = Meta::everything(&g.c).build(&g.c);
+        assert_eq!(run.world.player.build.max_health, most.max_health, "maxed out");
+        frames(&mut g, 300, 0);
+        let run = g.run.as_ref().unwrap();
+        let b = run.world.boss.expect("Chumbles came");
+        assert_eq!(
+            run.world.enemies[b].phase, 0,
+            "from his first bar, not fed at once"
+        );
+        assert!(run.world.fed == 0);
+        g.pause();
+        g.abandon();
+        assert_eq!(g.mode, Mode::Holding);
+        assert_eq!(g.meta, before, "the record untouched");
     }
 
     #[test]

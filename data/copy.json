@@ -283,5 +283,17 @@
   "song_key_4": "F",
   "song_great": "GREAT",
   "song_good": "GOOD",
-  "song_miss": "MISS"
+  "song_miss": "MISS",
+  "start_mission": "The last sentence",
+  "mission_note": "From the crater to the summit in one go, harder than before. Then home.",
+  "callout_scream_out": "CHUMBLES WANTS TO GO OUTSIDE",
+  "callout_scream_treats": "CHUMBLES WANTS TREATS",
+  "callout_grown": "HE IS NOT GETTING ANY SMALLER",
+  "callout_fed": "TREATS. FINALLY.",
+  "callout_fed_asleep": "CHUMBLES IS ASLEEP",
+  "callout_break": "REALITY BREAKS",
+  "hint_mission": "The last sentence: every fight sends half as many again, more of them at once, and some fire their remixes. There is no going back to the Holding until the end.",
+  "hint_cat": "Follow him downstairs.",
+  "try_chumbles": "🐾",
+  "try_chumbles_title": "Practise Chumbles with everything bought (nothing is kept)"
 }

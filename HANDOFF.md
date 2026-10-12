@@ -144,3 +144,9 @@ Live: PR #8 passed both workflows (check 38179829228, breaks 38179829239, after 
 ## Round 12 (2026-10-11): the lullaby practice
 
 A faint ♪ at the foot of the Holding starts the Idiot God's lullaby at once (`Game::practice_lullaby`, SECOND-ORDER R12). Nothing from it is kept on the record. `./scripts/check.sh` passed (BUILDER CHECK PASSED, the browser check in Chromium, Firefox and WebKit now clicks the ♪ and abandons it); the two new breaks each fail their test.
+
+## Round 13 (2026-10-12): the last sentence, and Chumbles
+
+The last mission (PLAN.md Round 13; SECOND-ORDER R13, Q44 to Q51, B11, B12, T13), opened by putting the Idiot God to sleep: zones one to four in one go as new game plus, reality breaking at the summit, and the home zone (`zone.json` `home`, marked `mission`): the bedroom, the landing, and Chumbles downstairs (kind `cat`, five bars each with its own gait). The house is `arena/home.rs` and Chumbles `draw/cat.rs`, each built by a subagent in its own worktree and merged; the two story pictures are `waking` and `chumbles`. A faint 🐾 in the Holding fights him with everything bought, nothing kept. The playtest harness gains `mission`, `home` and `testsave`.
+
+`./scripts/check.sh` passed before the merge to main (BUILDER CHECK PASSED; 227 core tests, the browser check in Chromium, Firefox and WebKit, which now plays the 🐾 and opens the mission's brief). The round's 22 new breaks each fail their test (B11, B12); four older breaks whose lines this round changed were repointed.

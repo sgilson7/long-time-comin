@@ -14,6 +14,7 @@ use crate::render::{boxed, mix, shade, Batch};
 use crate::world::{FxKind, PickupKind, World};
 
 mod beasts;
+mod cat;
 mod fauna;
 mod god;
 mod house;
@@ -65,9 +66,16 @@ pub fn world(
     // warm city behind them
     b.bold = true;
     let chest = w.player.chest();
-    for e in w.enemies.iter().filter(|e| e.alive()) {
+    // Chumbles stays where he is once fed, asleep
+    for e in w
+        .enemies
+        .iter()
+        .filter(|e| e.alive() || c.enemies[e.def].kind == Kind::Cat)
+    {
         let d = &c.enemies[e.def];
-        if d.kind == Kind::God {
+        if d.kind == Kind::Cat {
+            cat::chumbles(b, c, e, d, e.prev.lerp(e.pos, alpha), w.fed);
+        } else if d.kind == Kind::God {
             // how far the lullaby has put it down
             let verses = d.lullaby.as_ref().map_or(1, |l| l.verses.len().max(1)) as i32;
             let sleep = w
@@ -89,8 +97,13 @@ pub fn world(
         }
     }
     orbs(b, c, w, alpha, cam);
-    if w.ending > 0 {
+    if w.ending > 0 && !w.mission {
         house::azathoth(b, c, clock, w.melt());
+    }
+    // the cat in the bedroom, walking out of the door ahead of you
+    if let Some((at, yaw, walked)) = w.guide(c) {
+        let radius = c.enemy("chumbles").map_or(ONE, |k| c.enemies[k].radius);
+        cat::guide(b, c, at, yaw, walked, CAT_SMALL, radius);
     }
     // a revolver loading: the cylinder swung out, a shell going in
     let gl = c.guns[w.held.gun].level(w.held.level);
@@ -888,11 +901,13 @@ pub fn enemy(b: &mut Batch, c: &Content, e: &Enemy, alpha: i32, target: V3) {
         house::draw(b, c, e, d, at, alpha, target, &paint);
         return;
     }
-    if d.kind == Kind::God {
-        // drawn at the Heart by `world`, with how far it sleeps
+    if matches!(d.kind, Kind::God | Kind::Cat) {
+        // drawn by `world`: the god at the Heart, with how far it sleeps;
+        // Chumbles with how far he is fed
         return;
     }
     if god::draw(b, c, e, d, at, s, &paint)
+        || cat::draw(b, c, e, d, at, s, &paint)
         || fauna::draw(b, c, e, d, at, s, &paint)
         || beasts::draw(b, c, e, d, at, s, &paint)
     {
@@ -1048,7 +1063,7 @@ pub fn enemy(b: &mut Batch, c: &Content, e: &Enemy, alpha: i32, target: V3) {
             );
         }
         Kind::Boss => bailiff(b, c, e, at, s, paint),
-        Kind::Agent | Kind::Tank | Kind::Mech | Kind::Double | Kind::Beast | Kind::God => {}
+        Kind::Agent | Kind::Tank | Kind::Mech | Kind::Double | Kind::Beast | Kind::God | Kind::Cat => {}
     }
     // the windup: a halo that grows as the attack comes
     if charge > 0 && d.kind != Kind::Boss {

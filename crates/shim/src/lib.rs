@@ -130,6 +130,16 @@ impl Game {
         self.inner.start_rush()
     }
 
+    /// Chumbles alone with everything, for testing; nothing is kept.
+    pub fn practice_chumbles(&mut self) {
+        self.inner.practice_chumbles()
+    }
+
+    /// The last mission, once the Idiot God sleeps.
+    pub fn start_mission(&mut self) {
+        self.inner.start_mission()
+    }
+
     /// The lullaby alone, for testing; the record is left as it was.
     pub fn practice_lullaby(&mut self) {
         self.inner.practice_lullaby()

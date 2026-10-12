@@ -307,6 +307,9 @@ struct PatternsFile {
 struct PatternFile {
     id: String,
     volleys: Vec<VolleyFile>,
+    /// the pattern fired in its place on the last mission (new game plus)
+    #[serde(default)]
+    remix: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -565,6 +568,8 @@ fn launch_of(s: &str, who: &str) -> Result<Launch, String> {
 pub struct Pattern {
     pub id: String,
     pub volleys: Vec<Volley>,
+    /// the pattern fired in its place on the last mission, by index
+    pub remix: Option<usize>,
 }
 
 impl Pattern {
@@ -638,6 +643,9 @@ struct PhaseFile {
     cannons: Vec<PartFile>,
     #[serde(default)]
     survive_ms: i32,
+    /// a cat's phase: how it moves in it
+    #[serde(default)]
+    gait: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -794,6 +802,9 @@ pub enum Kind {
     /// the Idiot God: phases as a boss's, each its own bar; when the last
     /// empties it does not die, and the lullaby begins
     God,
+    /// Chumbles: screams and grows, then a phase a bar, each with its own
+    /// gait; when the last bar empties he is fed, and the mission is won
+    Cat,
 }
 
 /// How a beast moves.
@@ -902,6 +913,8 @@ pub struct Phase {
     pub weak: Vec<Part>,
     pub cannons: Vec<Part>,
     pub survive: i32,
+    /// how a cat moves in this phase (Gait::None for every other boss)
+    pub gait: Gait,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -1006,6 +1019,9 @@ struct ZoneFileEntry {
     year: String,
     built: bool,
     boss: String,
+    /// reached only on the last mission, after the fourth zone's boss
+    #[serde(default)]
+    mission: bool,
     #[serde(default)]
     scene: Option<Scene>,
     #[serde(default)]
@@ -1037,6 +1053,8 @@ pub struct Zone {
     pub year: String,
     pub built: bool,
     pub boss: String,
+    /// reached only on the last mission
+    pub mission: bool,
     pub scene: Scene,
     pub route: RouteRules,
     pub archetypes: Vec<String>,
@@ -1139,6 +1157,21 @@ pub struct Story {
     /// read between a zone's boss and the next zone, by the zone just left
     #[serde(default)]
     pub interludes: BTreeMap<String, Interlude>,
+    /// the last mission's words
+    #[serde(default)]
+    pub mission: Option<Mission>,
+}
+
+/// The last mission's words: what is read before it, between its zones
+/// (by the zone just left; the fourth's is where reality breaks), and at
+/// its end.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+pub struct Mission {
+    pub brief: Interlude,
+    pub interludes: BTreeMap<String, Interlude>,
+    pub victory_title: String,
+    pub victory: Vec<String>,
+    pub verdict_art: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
@@ -1215,6 +1248,7 @@ impl Content {
                     year: z.year,
                     built: false,
                     boss: z.boss,
+                    mission: z.mission,
                     scene: Scene {
                         sky: "sky".into(),
                         fog: "fog".into(),
@@ -1293,6 +1327,7 @@ impl Content {
                 year: z.year,
                 built: z.built,
                 boss: z.boss,
+                mission: z.mission,
                 scene,
                 route,
                 archetypes: z.archetypes,
@@ -1365,9 +1400,21 @@ impl Content {
         self.enemies.iter().position(|e| e.id == id)
     }
 
-    /// The zones a run can be in, in order.
+    /// The zones a run can be in, in order (the last mission's own zone,
+    /// which follows them in the file, is not one).
     pub fn built_zones(&self) -> usize {
-        self.zones.iter().take_while(|z| z.built).count()
+        self.zones.iter().take_while(|z| z.built && !z.mission).count()
+    }
+
+    /// The last mission's own zone, by index, once it is built.
+    pub fn mission_zone(&self) -> Option<usize> {
+        self.zones.iter().position(|z| z.built && z.mission)
+    }
+
+    /// The zone whose boss the last mission breaks off at: the zone
+    /// before the one the game ends in.
+    pub fn mission_break(&self) -> usize {
+        self.built_zones().saturating_sub(2)
     }
 
     /// The zone an enemy belongs to, by index, if one lists it.
@@ -1460,6 +1507,7 @@ fn parse_patterns(text: &str, pal: &Palette) -> Result<Vec<Pattern>, String> {
     let f: PatternsFile = serde_json::from_str(text).map_err(|e| format!("patterns: {e}"))?;
     let mut out = Vec::new();
     let mut plants: Vec<(usize, usize, String)> = Vec::new();
+    let mut remixes: Vec<(usize, String)> = Vec::new();
     for p in f.patterns {
         let mut volleys = Vec::new();
         for v in p.volleys {
@@ -1575,7 +1623,12 @@ fn parse_patterns(text: &str, pal: &Palette) -> Result<Vec<Pattern>, String> {
             });
             plants.push((out.len(), volleys.len() - 1, v.plant.clone()));
         }
-        out.push(Pattern { id: p.id, volleys });
+        remixes.push((out.len(), p.remix.clone()));
+        out.push(Pattern {
+            id: p.id,
+            volleys,
+            remix: None,
+        });
     }
     // a lobbed orb's pattern, by name, once every pattern is known
     for (p, v, name) in plants {
@@ -1590,6 +1643,30 @@ fn parse_patterns(text: &str, pal: &Palette) -> Result<Vec<Pattern>, String> {
             return Err(format!("patterns: {name} plants itself"));
         }
         out[p].volleys[v].plant = Some(k);
+    }
+    // a remix, by name: another pattern, which is not itself remixed
+    for (p, name) in remixes {
+        if name.is_empty() {
+            continue;
+        }
+        let k = out
+            .iter()
+            .position(|q| q.id == name)
+            .ok_or_else(|| format!("patterns: {} remixes as no pattern {name}", out[p].id))?;
+        if k == p {
+            return Err(format!("patterns: {name} remixes as itself"));
+        }
+        out[p].remix = Some(k);
+    }
+    for p in &out {
+        if let Some(k) = p.remix {
+            if out[k].remix.is_some() {
+                return Err(format!(
+                    "patterns: {}'s remix {} is remixed again",
+                    p.id, out[k].id
+                ));
+            }
+        }
     }
     Ok(out)
 }
@@ -1654,6 +1731,7 @@ fn parse_enemies(text: &str, patterns: &[Pattern]) -> Result<Vec<EnemyDef>, Stri
             "double" => Kind::Double,
             "beast" => Kind::Beast,
             "god" => Kind::God,
+            "cat" => Kind::Cat,
             k => return Err(format!("enemies: {} has no kind {k}", e.id)),
         };
         let role = match e.role.as_str() {
@@ -1671,28 +1749,34 @@ fn parse_enemies(text: &str, patterns: &[Pattern]) -> Result<Vec<EnemyDef>, Stri
         if kind == Kind::Agent && role == Role::None {
             return Err(format!("enemies: agent {} has no role", e.id));
         }
-        let gait = match e.gait.as_str() {
-            "" => Gait::None,
-            "bound" => Gait::Bound,
-            "hop" => Gait::Hop,
-            "wheel" => Gait::Wheel,
-            "root" => Gait::Root,
-            "surge" => Gait::Surge,
-            "perch" => Gait::Perch,
-            "march" => Gait::March,
-            "unseen" => Gait::Unseen,
-            "charge" => Gait::Charge,
-            "bounce" => Gait::Bounce,
-            "echo" => Gait::Echo,
-            g => return Err(format!("enemies: {} has no gait {g}", e.id)),
+        let gait_of = |g: &str| -> Result<Gait, String> {
+            Ok(match g {
+                "" => Gait::None,
+                "bound" => Gait::Bound,
+                "hop" => Gait::Hop,
+                "wheel" => Gait::Wheel,
+                "root" => Gait::Root,
+                "surge" => Gait::Surge,
+                "perch" => Gait::Perch,
+                "march" => Gait::March,
+                "unseen" => Gait::Unseen,
+                "charge" => Gait::Charge,
+                "bounce" => Gait::Bounce,
+                "echo" => Gait::Echo,
+                g => return Err(format!("enemies: {} has no gait {g}", e.id)),
+            })
         };
+        let gait = gait_of(&e.gait)?;
         if (kind == Kind::Beast) != (gait != Gait::None) {
             return Err(format!(
                 "enemies: {}: a beast, and only a beast, has a gait",
                 e.id
             ));
         }
-        let phases = if matches!(kind, Kind::Boss | Kind::Tank | Kind::Double | Kind::God) {
+        let phases = if matches!(
+            kind,
+            Kind::Boss | Kind::Tank | Kind::Double | Kind::God | Kind::Cat
+        ) {
             if e.phases.is_empty() {
                 return Err(format!("enemies: boss {} has no phases", e.id));
             }
@@ -1718,7 +1802,14 @@ fn parse_enemies(text: &str, patterns: &[Pattern]) -> Result<Vec<EnemyDef>, Stri
                         .map(|w| part(w, &e.id))
                         .collect::<Result<_, _>>()?,
                     survive: ms(p.survive_ms),
+                    gait: gait_of(&p.gait)?,
                 });
+                if (kind == Kind::Cat) != !p.gait.is_empty() {
+                    return Err(format!(
+                        "enemies: {}: a cat's phases, and only a cat's, have a gait",
+                        e.id
+                    ));
+                }
             }
             if kind == Kind::Tank {
                 // every phase but the last opens weak points to break; the
@@ -1753,6 +1844,7 @@ fn parse_enemies(text: &str, patterns: &[Pattern]) -> Result<Vec<EnemyDef>, Stri
                 weak: Vec::new(),
                 cannons: Vec::new(),
                 survive: 0,
+                gait: Gait::None,
             }]
         };
         let list = |v: &[String]| v.iter().map(|s| find(s, &e.id)).collect::<Result<Vec<_>, _>>();
@@ -1914,6 +2006,52 @@ pub mod tests {
         f.patterns = Box::leak(bad.into_boxed_str());
         let e = Content::parse(&f).unwrap_err();
         assert!(e.contains("ultraviolet"), "{e}");
+    }
+
+    #[test]
+    fn a_remix_must_name_another_pattern_that_is_not_remixed_again() {
+        let c = content();
+        let quad = &c.patterns[c.patterns.iter().position(|p| p.id == "spiral_quad").unwrap()];
+        assert_eq!(c.patterns[quad.remix.unwrap()].id, "remix_spiral_quad");
+        let mut f = files();
+        let bad = f.patterns.replacen(
+            "\"remix\": \"remix_spiral_quad\"",
+            "\"remix\": \"spiral_quad\"",
+            1,
+        );
+        f.patterns = Box::leak(bad.into_boxed_str());
+        let e = Content::parse(&f).unwrap_err();
+        assert!(e.contains("remixes as itself"), "{e}");
+        let mut f = files();
+        let chained = f
+            .patterns
+            .replacen("\"remix\": \"remix_ring_16\"", "\"remix\": \"spiral_quad\"", 1);
+        f.patterns = Box::leak(chained.into_boxed_str());
+        let e = Content::parse(&f).unwrap_err();
+        assert!(e.contains("remixed again"), "{e}");
+    }
+
+    #[test]
+    fn a_cats_phases_and_only_a_cats_have_a_gait_and_the_last_mission_has_its_own_zone() {
+        let c = content();
+        let cat = &c.enemies[c.enemy("chumbles").unwrap()];
+        assert_eq!(cat.kind, Kind::Cat);
+        assert_eq!(cat.phases.len(), 5);
+        assert!(cat.phases.iter().all(|p| p.gait != Gait::None));
+        let home = c.mission_zone().expect("home");
+        assert_eq!(c.zones[home].boss, "chumbles");
+        assert_eq!(c.built_zones(), 5, "home is not one of the zones a run crosses");
+        assert_eq!(c.zones[c.mission_break()].id, "the_ascent");
+        let mut f = files();
+        let bad = f.enemies.replacen(
+            "\"from_pct\": 80,\n          \"gait\": \"bound\"",
+            "\"from_pct\": 80,\n          \"gait\": \"\"",
+            1,
+        );
+        assert_ne!(bad, f.enemies, "the text to break is there");
+        f.enemies = Box::leak(bad.into_boxed_str());
+        let e = Content::parse(&f).unwrap_err();
+        assert!(e.contains("a cat's phases"), "{e}");
     }
 
     #[test]

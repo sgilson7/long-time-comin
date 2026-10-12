@@ -33,6 +33,9 @@ Commands (several per call, run in order; time is in seconds of game time):
   buy <upgrade_id>          spend Clemency
   start [zone]              start a run (from the Holding); 'start 1' starts on the ice once the Bailiff is beaten
   north                     from the interlude after a zone's boss into the next zone
+  mission                   start the last mission (from the Holding, once the Idiot God sleeps): its brief, then 'north'
+  home                      the last mission straight in its bedroom (a measuring shortcut, not play)
+  testsave                  the Holding's test save: every upgrade, every boss beaten
   codex [guns|enemies|upgrades|rules|controls]   the in-game Codex text
   map                       the run's route: nodes, rewards, where you are
   hold <keys> <s>           hold keys for s seconds. keys: w a s d fire (any mix, e.g. 'hold w d fire 1.5')
@@ -219,6 +222,28 @@ impl Harness {
             "fell" => {
                 self.need_play()?;
                 self.g.fell_boss();
+            }
+            "mission" => {
+                if mode != Mode::Holding && mode != Mode::Dead && mode != Mode::Won {
+                    return Err(format!("mission only from the Holding (now {mode:?})"));
+                }
+                self.g.to_holding();
+                self.g.start_mission();
+                if self.g.mode() != Mode::Interlude {
+                    return Err("the last mission is not open yet".into());
+                }
+            }
+            "home" => {
+                self.g.to_holding();
+                self.g.mission_home();
+                if self.g.mode() != Mode::Play {
+                    return Err("the last mission is not open yet".into());
+                }
+                self.last_hp = self.g.world().map_or(0, |w| w.player.health);
+            }
+            "testsave" => {
+                self.g.to_holding();
+                self.g.test_save();
             }
             "north" => {
                 if mode != Mode::Interlude {

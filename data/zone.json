@@ -1,5 +1,5 @@
 {
-  "_about": "The zones of the route, in order. A built zone has a scene (palette names for its sky, fog, light, unlit windows and ink, and where its fog starts and is full), a route, archetypes, names and encounters; a sealed zone only its name, year and boss. A run's graph is made from a zone's route by a seeded roll (crates/core/src/route.rs): the main path is arrival, main_fights fights, the rest and the boss; between main fights, detours of 1 to detour_max nodes rejoin the next main node, and a detour's last node holds a reward drawn from rewards. Encounters are listed by tier; a main fight's tier is in main_tiers, a detour's is one higher. clemency is what the court grants per node cleared. rest_rewards: the rest node offers one of these beside its fountain, and you take one or the other. cache_rewards: the arrival offers two of these, and you take one (none when empty). weapon_levels: the level of a gun on a near and on a deep side path (2 and 3 unless given). minibosses: enemies each fought alone, in its arena, on main fight at (counted from 0).",
+  "_about": "The zones of the route, in order. A built zone has a scene (palette names for its sky, fog, light, unlit windows and ink, and where its fog starts and is full), a route, archetypes, names and encounters; a sealed zone only its name, year and boss. A run's graph is made from a zone's route by a seeded roll (crates/core/src/route.rs): the main path is arrival, main_fights fights, the rest and the boss; between main fights, detours of 1 to detour_max nodes rejoin the next main node, and a detour's last node holds a reward drawn from rewards. Encounters are listed by tier; a main fight's tier is in main_tiers, a detour's is one higher. clemency is what the court grants per node cleared. rest_rewards: the rest node offers one of these beside its fountain, and you take one or the other. cache_rewards: the arrival offers two of these, and you take one (none when empty). weapon_levels: the level of a gun on a near and on a deep side path (2 and 3 unless given). minibosses: enemies each fought alone, in its arena, on main fight at (counted from 0). mission: a zone reached only on the last mission (new game plus, opened by putting the Idiot God to sleep), after the fourth zone's boss; it is not one of the zones a run is counted through, and it is listed last.",
   "zones": [
     {
       "id": "waiting_city",
@@ -2000,6 +2000,58 @@
           ]
         }
       ]
+    },
+    {
+      "id": "home",
+      "name": "Home",
+      "year": "Saturday morning",
+      "built": true,
+      "mission": true,
+      "boss": "chumbles",
+      "scene": {
+        "sky": "home_sky",
+        "fog": "home_fog",
+        "light": "home_light",
+        "window_dark": "home_window_dark",
+        "ink": "home_ink",
+        "fog_near_m": 60,
+        "fog_far_m": 260
+      },
+      "route": {
+        "main_fights": 0,
+        "main_tiers": [],
+        "detours_min": 0,
+        "detours_max": 0,
+        "detour_max": 0,
+        "rewards": [],
+        "clemency_main": 0,
+        "clemency_detour": 0,
+        "clemency_boss": 300,
+        "rest_rewards": [
+          "trigger",
+          "plating",
+          "pierce",
+          "pulse",
+          "mend",
+          "health"
+        ],
+        "cache_rewards": [],
+        "weapon_levels": [
+          3,
+          4
+        ],
+        "minibosses": []
+      },
+      "archetypes": [
+        "landing"
+      ],
+      "names": {
+        "arrival": "Your Bedroom",
+        "rest": "The Landing",
+        "boss": "Downstairs",
+        "landing": "The Landing"
+      },
+      "encounters": []
     }
   ]
 }
