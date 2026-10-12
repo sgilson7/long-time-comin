@@ -126,6 +126,15 @@ async function start() {
       engage();
     }),
   );
+  // a faint mark under the credits: the lullaby alone, for testing
+  el("try-lullaby").title = copy.try_lullaby_title;
+  el("try-lullaby").addEventListener(
+    "click",
+    act(() => {
+      game.practice_lullaby();
+      engage();
+    }),
+  );
   el("engage-btn").addEventListener("click", act(engage));
   el("resume").addEventListener(
     "click",

@@ -157,6 +157,9 @@ BREAKS = [
  ("over nothing, the last floor", "crates/core/src/world.rs", "if self.arena.level.floor_below(over.x, over.y, over.z).is_none() {", "if false {", "falling_where_there_is_no_floor"),
  ("a bar for each phase", "crates/core/src/game.rs", "\"bars_left\": bars - bar,", "\"bars_left\": bars,", "the_god_has_a_bar"),
 
+ # the lullaby practice
+ ("practice: straight to the song", "crates/core/src/game.rs", "                Outcome::Playing => self.lull(),", "                Outcome::Playing => {}", "the_lullaby_practice"),
+ ("practice: nothing on the record", "crates/core/src/game.rs", "            if self.run.as_ref().is_some_and(|r| r.practice) {\n                self.end_practice();", "            if false {\n                self.end_practice();", "the_lullaby_practice"),
 ]
 
 

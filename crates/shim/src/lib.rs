@@ -130,6 +130,11 @@ impl Game {
         self.inner.start_rush()
     }
 
+    /// The lullaby alone, for testing; the record is left as it was.
+    pub fn practice_lullaby(&mut self) {
+        self.inner.practice_lullaby()
+    }
+
     /// The test save: a record with everything.
     pub fn test_save(&mut self) {
         self.inner.test_save()

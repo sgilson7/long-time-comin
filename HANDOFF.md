@@ -140,3 +140,7 @@ Live: PR #8 passed both workflows (check 38179829228, breaks 38179829239, after 
 - That CI's Chromium is fast: it draws on SwiftShader. The walk to the first gate waits up to 120 s, and instance count is what costs there (G7).
 - That `scripts/serve.py` survives a rebuild: `build.sh` deletes `dist/`.
 - That a newly built native program will start on this Mac (Z13). If `cargo test` or the harness sits with no CPU time, check `syspolicyd` (`ps -o time,%cpu,command -p $(pgrep syspolicyd)`); `sudo killall syspolicyd` restarts it. Until then CI runs the tests on a pull request, and `scripts/break_tests.py` runs there through `breaks.yml`.
+
+## Round 12 (2026-10-11): the lullaby practice
+
+A faint ♪ at the foot of the Holding starts the Idiot God's lullaby at once (`Game::practice_lullaby`, SECOND-ORDER R12). Nothing from it is kept on the record. `./scripts/check.sh` passed (BUILDER CHECK PASSED, the browser check in Chromium, Firefox and WebKit now clicks the ♪ and abandons it); the two new breaks each fail their test.

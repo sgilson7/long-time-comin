@@ -29,6 +29,8 @@ copied from the game's own output:
 - a record with zone three open (unlocked 2) offers two; the second starts
   in "The Vestibule" of "The Glass House", and a death there is headed by
   story.json's death title for the house.
+- the faint practice mark in the Holding starts in the last zone of
+  zone.json, and abandoning it returns to the Holding with no death added.
 - the test save (clicked twice, as it asks) owns all 32 upgrades and opens
   the boss rush, whose first arena is the Bailiff's, "The Court of Hours".
 """
@@ -39,6 +41,7 @@ import pathlib
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 COPY = json.loads((ROOT / "data" / "copy.json").read_text())
 STORY = json.loads((ROOT / "data" / "story.json").read_text())
+LAST_ZONE = json.loads((ROOT / "data" / "zone.json").read_text())["zones"][-1]["name"]
 
 
 def click(page, selector):
@@ -203,6 +206,21 @@ def run(page, check, engine):
     # the test save, then the boss rush it opens
     click(page, "#dead-next")
     check(mode(page) == "holding", f"back in the Holding ({mode(page)})")
+    # the faint practice mark: the god's song at once, the record untouched
+    deaths = page.inner_text("#m-deaths")
+    click(page, "#try-lullaby")
+    check(mode(page) == "play", f"the lullaby practice plays ({mode(page)})")
+    page.wait_for_timeout(500)
+    check(page.text_content("#h-zone") == LAST_ZONE, f"inside the god ({page.text_content('#h-zone')!r})")
+    page.keyboard.press("Escape")
+    page.wait_for_timeout(300)
+    if mode(page) == "play":
+        page.keyboard.press("Escape")
+        page.wait_for_timeout(300)
+    click(page, "#abandon")
+    click(page, "#abandon")
+    check(mode(page) == "holding", f"abandoning the practice returns to the Holding ({mode(page)})")
+    check(page.inner_text("#m-deaths") == deaths, f"and counts no death ({page.inner_text('#m-deaths')!r})")
     check(page.is_hidden("#start-rush"), "no boss rush before the game is beaten")
     click(page, "#test-save")
     click(page, "#test-save")

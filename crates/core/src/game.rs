@@ -85,6 +85,9 @@ struct Run {
     counted: bool,
     /// a boss rush: each zone's boss in turn, nothing between
     rush: bool,
+    /// the lullaby alone, for testing: the god put to its song as it
+    /// comes, and nothing kept on the record
+    practice: bool,
 }
 
 impl Run {
@@ -342,6 +345,7 @@ impl Game {
             cleared: 0,
             counted: false,
             rush: false,
+            practice: false,
         });
         self.reading = None;
         self.mode = Mode::Play;
@@ -369,10 +373,50 @@ impl Game {
             cleared: 0,
             counted: false,
             rush: true,
+            practice: false,
         });
         self.reading = None;
         self.mode = Mode::Play;
         self.enter();
+    }
+
+    /// The lullaby alone, for testing: the last zone's boss arena, the god
+    /// brought to its song as soon as it arrives, with the record's own
+    /// body. Winning, dying or abandoning returns to the Holding and
+    /// changes nothing on the record.
+    pub fn practice_lullaby(&mut self) {
+        if !matches!(self.mode, Mode::Holding | Mode::Dead | Mode::Won) {
+            return;
+        }
+        let zone = self.c.built_zones() - 1;
+        let (build, gun_level) = self.meta.build(&self.c);
+        let route = Route::rush(zone, self.meta.run_seed());
+        let player = Player::new(V3::ZERO, 0, build);
+        let held = Held::new(self.c.gun("carbine"), gun_level);
+        let world = self.world_for(&route, 0, player, held, 0);
+        self.run = Some(Run {
+            zone,
+            route,
+            at: 0,
+            visited: vec![0],
+            world,
+            earned: 0,
+            cleared: 0,
+            counted: false,
+            rush: false,
+            practice: true,
+        });
+        self.reading = None;
+        self.mode = Mode::Play;
+        self.enter();
+    }
+
+    /// The end of a practice: back to the Holding, the record untouched.
+    fn end_practice(&mut self) {
+        self.run = None;
+        self.reading = None;
+        self.mode = Mode::Holding;
+        self.build_scene();
     }
 
     /// The test save: a record with everything, in the Holding.
@@ -434,7 +478,11 @@ impl Game {
     /// Gives up the run: the court counts it as a death.
     pub fn abandon(&mut self) {
         if matches!(self.mode, Mode::Paused | Mode::Map) {
-            self.die();
+            if self.run.as_ref().is_some_and(|r| r.practice) {
+                self.end_practice();
+            } else {
+                self.die();
+            }
         }
     }
 
@@ -573,8 +621,19 @@ impl Game {
         let Some(run) = self.run.as_mut() else {
             return;
         };
+        let practice = run.practice;
         let cam = play_camera(&run.world, ONE);
         run.world.tick(&self.c, ctl, cam.eye, cam.fwd);
+        if practice {
+            match run.world.outcome {
+                Outcome::Playing => self.lull(),
+                _ => self.end_practice(),
+            }
+            return;
+        }
+        let Some(run) = self.run.as_mut() else {
+            return;
+        };
         let node = &run.route.nodes[run.at];
         let rules = &self.c.zones[run.zone].route;
         if run.world.cleared && !run.counted && node.kind == NodeKind::Fight {
@@ -1941,6 +2000,48 @@ pub(crate) mod tests {
             !h["song"]["notes"].as_array().unwrap().is_empty(),
             "notes on the staff"
         );
+    }
+
+    #[test]
+    fn the_lullaby_practice_starts_at_the_song_and_leaves_the_record_alone() {
+        let mut g = game_with(r#"{"seen_intro": true}"#);
+        g.begin();
+        let before = (g.meta.deaths, g.meta.clemency, g.meta.years, g.meta.rush_wins);
+        g.practice_lullaby();
+        assert_eq!(g.mode, Mode::Play);
+        assert_eq!(g.run.as_ref().unwrap().zone, g.c.built_zones() - 1);
+        frames(&mut g, 120, 0);
+        let h: Value = serde_json::from_str(&g.hud_json()).unwrap();
+        assert_eq!(h["boss"]["timer"], "THE LULLABY", "straight to the song");
+        assert!(h["song"].is_object());
+        // dying in it: back to the Holding, no count read
+        g.run.as_mut().unwrap().world.player.health = 0;
+        frames(&mut g, 2, 0);
+        assert_eq!(g.mode, Mode::Holding);
+        assert!(g.run.is_none());
+        // winning it: the same
+        g.practice_lullaby();
+        frames(&mut g, 120, 0);
+        let run = g.run.as_mut().unwrap();
+        run.world.player.iframes = 1_000_000;
+        // the song played through to its end
+        let song = run.world.song.as_mut().expect("the song began");
+        song.part = crate::song::Part::Asleep;
+        song.clock = 0;
+        for _ in 0..ENDING_TICKS * 2 {
+            frames(&mut g, 1, 0);
+            if g.mode != Mode::Play {
+                break;
+            }
+        }
+        assert_eq!(g.mode, Mode::Holding);
+        // abandoning it: the same
+        g.practice_lullaby();
+        g.pause();
+        g.abandon();
+        assert_eq!(g.mode, Mode::Holding);
+        let after = (g.meta.deaths, g.meta.clemency, g.meta.years, g.meta.rush_wins);
+        assert_eq!(before, after, "the record untouched");
     }
 
     #[test]

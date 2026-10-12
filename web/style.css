@@ -30,6 +30,8 @@ button:disabled { opacity: 0.55; cursor: default; }
 button.big { font-size: 1.25rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; padding: 12px 26px; background: var(--salmon); }
 button.big:hover:not(:disabled) { background: #f29c86; }
 button.small { font-size: 0.8rem; padding: 4px 10px; box-shadow: 2px 2px 0 var(--ink); }
+button.secret { background: none; border: 0; box-shadow: none; color: var(--ink); opacity: 0.18; font-size: 0.9rem; padding: 0; float: right; cursor: pointer; }
+button.secret:hover:not(:disabled), button.secret:focus-visible { opacity: 1; background: none; }
 button.armed { background: var(--red); color: #fff; }
 
 .overlay { position: fixed; inset: 0; z-index: 10; overflow: auto; }
