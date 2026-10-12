@@ -22,10 +22,25 @@ impl B<'_> {
         if kind == "boss" {
             let r = COURT_RADIUS + m(4);
             self.solids.push(Solid::new(v3(-r, -m(1), -r), v3(r, 0, r)));
-            self.shape(Mesh::Cube, boxed(v3(0, -ONE / 2, 0), v3(r * 2, ONE, r * 2)), floor, 0, false);
+            self.shape(
+                Mesh::Cube,
+                boxed(v3(0, -ONE / 2, 0), v3(r * 2, ONE, r * 2)),
+                floor,
+                0,
+                false,
+            );
             for (x, z) in [(-m(12), -m(10)), (m(12), -m(10)), (0, -m(20))] {
-                self.solids.push(Solid::new(v3(x - m(2), 0, z - m(1)), v3(x + m(2), m(2), z + m(1))));
-                self.shape(Mesh::Cube, boxed(v3(x, m(1), z), v3(m(4), m(2), m(2))), floor, 0, true);
+                self.solids.push(Solid::new(
+                    v3(x - m(2), 0, z - m(1)),
+                    v3(x + m(2), m(2), z + m(1)),
+                ));
+                self.shape(
+                    Mesh::Cube,
+                    boxed(v3(x, m(1), z), v3(m(4), m(2), m(2))),
+                    floor,
+                    0,
+                    true,
+                );
                 self.perches.push(v3(x, m(2), z));
             }
             return;
@@ -33,6 +48,12 @@ impl B<'_> {
         self.half = ROOM;
         let r = ROOM + m(2);
         self.solids.push(Solid::new(v3(-r, -m(1), -r), v3(r, 0, r)));
-        self.shape(Mesh::Cube, boxed(v3(0, -ONE / 2, 0), v3(r * 2, ONE, r * 2)), floor, 0, false);
+        self.shape(
+            Mesh::Cube,
+            boxed(v3(0, -ONE / 2, 0), v3(r * 2, ONE, r * 2)),
+            floor,
+            0,
+            false,
+        );
     }
 }

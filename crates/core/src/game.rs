@@ -488,7 +488,15 @@ impl Game {
         }
     }
 
-    fn world_for(&self, route: &Route, at: usize, player: Player, held: Held, seq: u32, mission: bool) -> World {
+    fn world_for(
+        &self,
+        route: &Route,
+        at: usize,
+        player: Player,
+        held: Held,
+        seq: u32,
+        mission: bool,
+    ) -> World {
         let node = &route.nodes[at];
         let exits: Vec<Exit> = node
             .next
@@ -1130,8 +1138,12 @@ impl Game {
         let learning = w.song.as_ref().is_some_and(|s| {
             s.asleep == 0 && matches!(s.part, crate::song::Part::Intro | crate::song::Part::Listen)
         });
+        let home = c.zones[run.zone].mission;
+        let first = run.mission && run.zone == 0 && run.at == run.route.start();
         let hint = match node.kind {
             NodeKind::Boss if learning => c.say("hint_song"),
+            NodeKind::Arrival if first && fresh(0) => c.say("hint_mission"),
+            NodeKind::Arrival if home => c.say("hint_cat"),
             NodeKind::Arrival if god && fresh(0) => c.say("hint_gullet"),
             NodeKind::Arrival if house => c.say("hint_vestibule"),
             NodeKind::Boss if house && w.tick > secs(4, 1) && fresh(secs(4, 1)) => c.say("hint_tank"),
@@ -2154,6 +2166,117 @@ pub(crate) mod tests {
         assert_eq!(g.mode, Mode::Holding);
         let after = (g.meta.deaths, g.meta.clemency, g.meta.years, g.meta.rush_wins);
         assert_eq!(before, after, "the record untouched");
+    }
+
+    #[test]
+    fn the_last_mission_opens_once_the_god_sleeps_and_runs_one_to_four_then_home() {
+        let mut g = game_with(r#"{"seen_intro": true, "wins": 1, "beaten": ["bailiff", "witness"]}"#);
+        g.begin();
+        g.start_mission();
+        assert_eq!(g.mode, Mode::Holding, "not before the Idiot God sleeps");
+        let s: Value = serde_json::from_str(&g.screen_json()).unwrap();
+        assert_eq!(s["mission"], false);
+        g.meta.beat("azathoth");
+        let s: Value = serde_json::from_str(&g.screen_json()).unwrap();
+        assert_eq!(s["mission"], true);
+        let unlocked = g.meta.unlocked;
+        // the brief first, on the interlude's screen
+        g.start_mission();
+        assert_eq!(g.mode, Mode::Interlude);
+        let s: Value = serde_json::from_str(&g.screen_json()).unwrap();
+        assert_eq!(s["interlude"]["title"], "THE LAST SENTENCE");
+        g.continue_run();
+        assert_eq!(g.mode, Mode::Play);
+        let run = g.run.as_ref().unwrap();
+        assert_eq!((run.zone, run.world.kind), (0, NodeKind::Arrival));
+        assert!(
+            run.world.mission && run.world.remix,
+            "new game plus from the crater"
+        );
+        let mut words = Vec::new();
+        for zone in 0..4 {
+            assert_eq!(g.run.as_ref().unwrap().zone, zone);
+            let boss = g.run.as_ref().unwrap().route.boss();
+            g.go(boss);
+            run_down_the_boss(&mut g);
+            assert_eq!(
+                g.mode,
+                Mode::Interlude,
+                "zone {zone}'s boss does not end the mission"
+            );
+            let s: Value = serde_json::from_str(&g.screen_json()).unwrap();
+            words.push(s["interlude"]["title"].as_str().unwrap().to_string());
+            g.continue_run();
+        }
+        assert_eq!(
+            words,
+            [
+                "THE YEARS AGAIN",
+                "THE KEY AGAIN",
+                "THE ORDERS AGAIN",
+                "REALITY BREAKS"
+            ]
+        );
+        assert_eq!(g.meta.unlocked, unlocked, "the mission opens no later start");
+        // home: the bedroom, the landing, downstairs
+        let run = g.run.as_ref().unwrap();
+        assert_eq!(Some(run.zone), g.c.mission_zone(), "after the summit, home");
+        assert_eq!(g.name_of(&run.route.nodes[run.at]), "Your Bedroom");
+        assert!(run.world.guide(&g.c).is_some(), "the cat leads the way out");
+        let boss = run.route.boss();
+        g.go(boss);
+        frames(&mut g, 120, 0);
+        let run = g.run.as_mut().unwrap();
+        let b = run.world.boss.expect("Chumbles came");
+        assert_eq!(g.c.enemies[run.world.enemies[b].def].id, "chumbles");
+        // fed: his last bar empty
+        run.world.player.iframes = 1_000_000;
+        let last = g.c.enemies[run.world.enemies[b].def].phases.len() - 1;
+        let e = &mut run.world.enemies[b];
+        e.size = ONE;
+        e.phase = last;
+        e.state = crate::enemy::State::Rest(1000);
+        e.hp = 2;
+        e.hurt(5);
+        for _ in 0..CAT_FED_TICKS + ENDING_TICKS {
+            frames(&mut g, 1, 0);
+            if g.mode != Mode::Play {
+                break;
+            }
+        }
+        assert_eq!(g.mode, Mode::Won);
+        assert_eq!(g.meta.mission_wins, 1);
+        let s: Value = serde_json::from_str(&g.screen_json()).unwrap();
+        assert_eq!(s["verdict"]["title"], "BREAKFAST");
+    }
+
+    #[test]
+    fn the_last_missions_fights_send_half_as_many_again_and_fire_remixes() {
+        let mut g = game_with(r#"{"seen_intro": true, "beaten": ["azathoth"]}"#);
+        g.begin();
+        g.start_mission();
+        g.continue_run();
+        let first = g.run.as_ref().unwrap().route.nodes[0].next[0];
+        g.go(first);
+        let run = g.run.as_ref().unwrap();
+        let node = &run.route.nodes[run.at];
+        let plain: Vec<usize> = g.c.zones[0].encounters[node.encounter.unwrap()]
+            .waves
+            .iter()
+            .map(|w| w.len())
+            .collect();
+        let remixed: Vec<usize> = run.world.waves_left.iter().map(|w| w.len()).collect();
+        let want: Vec<usize> = plain
+            .iter()
+            .map(|n| n + (n * 50).div_euclid(100) + (n % 2))
+            .collect();
+        assert_eq!(remixed, want, "half as many again, rounded up");
+        frames(&mut g, 300, 0);
+        let w = &g.run.as_ref().unwrap().world;
+        assert!(!w.enemies.is_empty() && w.enemies.iter().all(|e| e.remix));
+        let ring = g.c.patterns.iter().position(|p| p.id == "ring_16").unwrap();
+        let e = &w.enemies[0];
+        assert_eq!(g.c.patterns[e.pattern_of(&g.c, ring)].id, "remix_ring_16");
     }
 
     #[test]

@@ -430,7 +430,11 @@ impl World {
             return None;
         }
         let at = from.add(way.norm().scale(walked));
-        let floor = self.arena.level.floor_below(at.x, at.y + int(2), at.z).unwrap_or(0);
+        let floor = self
+            .arena
+            .level
+            .floor_below(at.x, at.y + int(2), at.z)
+            .unwrap_or(0);
         let (yaw, _) = crate::geom::yaw_pitch_of(way);
         Some((v3(at.x, floor, at.z), yaw, walked))
     }
@@ -495,7 +499,11 @@ impl World {
             GOD_HOME
         } else if d.kind == Kind::Cat {
             // by the back door, small, wanting out
-            let f = self.arena.level.floor_below(CAT_HOME.x, int(3), CAT_HOME.z).unwrap_or(0);
+            let f = self
+                .arena
+                .level
+                .floor_below(CAT_HOME.x, int(3), CAT_HOME.z)
+                .unwrap_or(0);
             v3(CAT_HOME.x, f + fx::mul(d.hover, CAT_SMALL), CAT_HOME.z)
         } else if d.kind == Kind::Double {
             // the Defendant waits before the Long Door
@@ -533,7 +541,12 @@ impl World {
         e.remix = self.remix;
         if d.kind == Kind::Cat {
             // up on the furniture
-            e.perches = self.arena.perches.iter().map(|p| p.add(v3(0, d.hover, 0))).collect();
+            e.perches = self
+                .arena
+                .perches
+                .iter()
+                .map(|p| p.add(v3(0, d.hover, 0)))
+                .collect();
         }
         if entering {
             e.state = enemy::State::Rest(tank::ENTER_TICKS + secs(1, 1));
@@ -544,7 +557,11 @@ impl World {
         }
         // the zone's boss; a mini-boss (the Escort, a tank too) is not, and
         // felling it only clears its arena (SECOND-ORDER Q25)
-        if matches!(d.kind, Kind::Boss | Kind::Tank | Kind::Double | Kind::God | Kind::Cat) && !d.elite {
+        if matches!(
+            d.kind,
+            Kind::Boss | Kind::Tank | Kind::Double | Kind::God | Kind::Cat
+        ) && !d.elite
+        {
             self.boss = Some(self.enemies.len());
         }
         if d.elite {
@@ -933,7 +950,15 @@ impl World {
                     self.effect(FxKind::Burst, o.pos, V3::ZERO, 14, o.rgb, o.radius * 2);
                 }
                 self.waves.clear();
-                self.note("boss_phase", c.say("callout_phase"));
+                // Chumbles' bars are named: each new one is called out
+                let d = &c.enemies[self.enemies[i].def];
+                let bar = c
+                    .story
+                    .bosses
+                    .get(&d.id)
+                    .filter(|_| d.kind == Kind::Cat)
+                    .and_then(|w| w.bars.get(self.enemies[i].phase).cloned());
+                self.note("boss_phase", bar.unwrap_or_else(|| c.say("callout_phase")));
             }
             let room = self.room();
             for s in deeds.summons.into_iter().take(room) {
@@ -1085,7 +1110,11 @@ impl World {
                 }
                 return;
             }
-            let remainder = if self.remix { REMIX_REMAINDER } else { WAVE_REMAINDER };
+            let remainder = if self.remix {
+                REMIX_REMAINDER
+            } else {
+                WAVE_REMAINDER
+            };
             let ready = alive as i32 <= remainder || self.enemies.is_empty();
             if ready {
                 self.wave_timer -= 1;
@@ -4613,5 +4642,182 @@ mod god {
             w.song.as_ref().map(|s| (s.part, s.verse, s.asleep, s.clock)),
             w.enemies[b].hp
         );
+    }
+}
+
+#[cfg(test)]
+mod home {
+    use super::*;
+    use crate::content::tests::content;
+    use crate::content::Gait;
+    use crate::enemy::State;
+    use crate::player::Build;
+    use crate::route::Route;
+
+    /// A node of zone `zone`'s map, of `kind`, as the last mission plays it.
+    fn mission_world(zone: usize, kind: NodeKind) -> (Content, World) {
+        let c = content();
+        let r = Route::build_for(&c, zone, 5, 1);
+        let i = r.nodes.iter().position(|n| n.kind == kind).expect("the node");
+        let exits: Vec<Exit> = r.nodes[i]
+            .next
+            .iter()
+            .enumerate()
+            .map(|(k, &to)| Exit {
+                to,
+                main: k == 0,
+                reward: r.nodes[to].reward,
+            })
+            .collect();
+        let p = Player::new(V3::ZERO, 0, Build::default());
+        let mut w = World::new(&c, &r.nodes[i], &exits, p, Held::new(0, 1), 1);
+        w.mission = true;
+        w.remix();
+        (c, w)
+    }
+
+    fn home() -> usize {
+        content().mission_zone().expect("home is built")
+    }
+
+    fn step(c: &Content, w: &mut World) {
+        let f = facing(w.player.yaw, w.player.pitch);
+        let eye = w.player.chest().sub(f.scale(int(4)));
+        w.tick(c, &Controls::default(), eye, f);
+    }
+
+    /// Downstairs, with Chumbles come.
+    fn downstairs() -> (Content, World, usize) {
+        let (c, mut w) = mission_world(home(), NodeKind::Boss);
+        w.player.iframes = 1_000_000;
+        for _ in 0..secs(4, 1) {
+            if w.boss.is_some() {
+                break;
+            }
+            step(&c, &mut w);
+        }
+        let b = w.boss.expect("Chumbles came");
+        (c, w, b)
+    }
+
+    #[test]
+    fn chumbles_screams_and_grows_to_three_times_his_size_and_cannot_be_hurt_meanwhile() {
+        let (c, mut w, b) = downstairs();
+        let d = &c.enemies[w.enemies[b].def];
+        assert_eq!(d.kind, Kind::Cat);
+        let floor = w
+            .arena
+            .level
+            .floor_below(w.enemies[b].pos.x, int(3), w.enemies[b].pos.z)
+            .unwrap();
+        let mut screamed = false;
+        let mut smallest = ONE;
+        for _ in 0..CAT_SCREAM + SPAWN_GRACE {
+            step(&c, &mut w);
+            let e = &w.enemies[b];
+            smallest = smallest.min(e.size);
+            screamed |= w.notes.iter().any(|n| n.sound == "scream");
+            if e.size < ONE {
+                assert!(!e.hurtable(), "small and screaming: not to be hurt");
+                let feet = e.pos.y - fx::mul(d.hover, e.size);
+                assert!((feet - floor).abs() < ONE / 20, "his feet stay on the floor");
+            }
+        }
+        assert!(screamed, "he screams for something");
+        assert_eq!(smallest, CAT_SMALL, "a third of his size at first");
+        assert_eq!(w.enemies[b].size, ONE, "then all of it");
+        for _ in 0..secs(1, 1) {
+            step(&c, &mut w);
+        }
+        assert!(w.enemies[b].hurtable());
+    }
+
+    const SPAWN_GRACE: i32 = secs(2, 1);
+
+    #[test]
+    fn each_of_chumbles_bars_moves_by_its_own_gait_and_he_sits_on_the_furniture() {
+        let (c, w, b) = downstairs();
+        let e = &w.enemies[b];
+        let d = &c.enemies[e.def];
+        let gaits: Vec<Gait> = (0..d.phases.len())
+            .map(|k| {
+                let mut e = e.clone();
+                e.phase = k;
+                e.gait(d)
+            })
+            .collect();
+        assert_eq!(
+            gaits,
+            [Gait::Charge, Gait::Bound, Gait::Perch, Gait::Unseen, Gait::Charge]
+        );
+        assert!(!w.arena.perches.is_empty(), "the house has places up high");
+        assert_eq!(e.perches.len(), w.arena.perches.len(), "he knows them");
+        assert_eq!(e.perches[0].y, w.arena.perches[0].y + d.hover);
+    }
+
+    #[test]
+    fn fed_he_shrinks_back_and_sleeps_and_the_mission_is_won() {
+        let (c, mut w, b) = downstairs();
+        let last = c.enemies[w.enemies[b].def].phases.len() - 1;
+        let e = &mut w.enemies[b];
+        e.size = ONE;
+        e.phase = last;
+        e.state = State::Rest(1000);
+        e.hp = 1;
+        step(&c, &mut w);
+        assert!(w.fed > 0, "his last bar empty: fed");
+        assert!(w.orbs.is_empty());
+        assert!(w.notes.iter().any(|n| n.sound == "treats"));
+        for _ in 0..CAT_FED_TICKS {
+            step(&c, &mut w);
+        }
+        assert_eq!(w.enemies[b].size, CAT_SMALL, "his own size again");
+        assert!(!w.enemies[b].alive(), "asleep");
+        for _ in 0..WIN_TICKS + 2 {
+            step(&c, &mut w);
+        }
+        assert_eq!(w.outcome, Outcome::Won);
+    }
+
+    #[test]
+    fn on_the_last_mission_the_defendants_fall_breaks_reality_and_nothing_comes_through() {
+        let (c, mut w) = mission_world(3, NodeKind::Boss);
+        w.player.iframes = 1_000_000;
+        for _ in 0..90 {
+            step(&c, &mut w);
+        }
+        let b = w.boss.unwrap();
+        w.enemies[b].state = State::Rest(100);
+        w.enemies[b].hp = 1;
+        w.enemies[b].hurt(5);
+        step(&c, &mut w);
+        assert!(w.ending > 0);
+        assert!(w.notes.iter().any(|n| n.sound == "break"));
+        assert!(
+            !w.notes.iter().any(|n| n.sound == "eldritch"),
+            "the god is asleep"
+        );
+        let at = w.player.pos;
+        for _ in 0..ENDING_TICKS {
+            step(&c, &mut w);
+        }
+        assert_eq!(w.player.pos.dist(at), 0, "held where you stand, not drawn up");
+        step(&c, &mut w);
+        assert_eq!(w.outcome, Outcome::Won);
+    }
+
+    #[test]
+    fn in_the_bedroom_the_cat_walks_out_of_the_door_ahead_of_you() {
+        let (c, mut w) = mission_world(home(), NodeKind::Arrival);
+        let door = w.arena.gates[1].0;
+        let (first, _, _) = w.guide(&c).expect("the cat is there");
+        let mut last = first;
+        while let Some((at, _, _)) = w.guide(&c) {
+            assert!(at.dist(door) <= last.dist(door), "always toward the door");
+            last = at;
+            step(&c, &mut w);
+            assert!(w.tick < secs(30, 1), "and through it in good time");
+        }
+        assert!(last.dist(door) < ONE, "gone through the door");
     }
 }

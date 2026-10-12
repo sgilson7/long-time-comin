@@ -7,15 +7,17 @@ copied from the game's own output:
 
 - story.json's sentencing has 5 lines; its indictment has 10 counts.
 - the Codex has 5 tabs (copy.json codex_tabs), 17 control rows
-  (copy.json controls), 5 guns (weapons.json) and 53 enemies (enemies.json:
+  (copy.json controls), 5 guns (weapons.json) and 55 enemies (enemies.json:
   the 43 of the first four zones, then zone five's seven, the Recursion's
-  two smaller orders and the Idiot God).
+  two smaller orders, the Idiot God, and the last mission's ball of yarn
+  and Chumbles).
 - the crater's gate is open, so its label shows; the first fight's gates
   stay dark and unlabelled until its enemies are defeated.
 - upgrades.json lists 32 upgrades in 4 branches (copy.json holding_branches);
   the cheapest (Constitution I) costs 8, so a new record with 0 Clemency can
   buy none of them.
-- zone.json lists 5 zones, all built: none is sealed.
+- zone.json lists 5 zones, all built: none is sealed (the last mission's
+  home is listed after them and not shown on the Holding's route).
 - a run starts in the arrival node, named "The Crater" in zone.json; with
   no upgrades the body has 100 health (balance.rs BASE_HEALTH), 1 jump
   (BASE_JUMPS) and 2 dashes (DASH_CHARGES).
@@ -33,6 +35,8 @@ copied from the game's own output:
   zone.json, and abandoning it returns to the Holding with no death added.
 - the test save (clicked twice, as it asks) owns all 32 upgrades and opens
   the boss rush, whose first arena is the Bailiff's, "The Court of Hours".
+- it has put the Idiot God to sleep, so the last mission is open: its brief
+  is story.json's mission brief, and after it the run starts in the crater.
 """
 
 import json
@@ -87,7 +91,7 @@ def run(page, check, engine):
     check(len(guns) == 5, f"five guns ({len(guns)})")
     click(page, "#codex-tabs .tab:nth-child(3)")
     foes = page.query_selector_all("#codex-body .codex-card")
-    check(len(foes) == 53, f"fifty-three enemies ({len(foes)})")
+    check(len(foes) == 55, f"fifty-five enemies ({len(foes)})")
     body = page.inner_text("#codex-body")
     check("{" not in body, "no unfilled placeholder in the Codex")
     click(page, "#codex-close")
@@ -222,13 +226,33 @@ def run(page, check, engine):
     check(mode(page) == "holding", f"abandoning the practice returns to the Holding ({mode(page)})")
     check(page.inner_text("#m-deaths") == deaths, f"and counts no death ({page.inner_text('#m-deaths')!r})")
     check(page.is_hidden("#start-rush"), "no boss rush before the game is beaten")
+    check(page.is_hidden("#start-mission"), "no last mission before the Idiot God sleeps")
     click(page, "#test-save")
     click(page, "#test-save")
     page.wait_for_timeout(300)
     owned = page.query_selector_all("#upgrades .upgrade.owned")
     check(len(owned) == 32, f"the test save owns every upgrade ({len(owned)})")
     check(page.is_visible("#start-rush"), "and opens the boss rush")
+    check(page.is_visible("#start-mission"), "and the last mission")
     click(page, "#start-rush")
     check(mode(page) == "play", f"the rush plays ({mode(page)})")
     page.wait_for_timeout(500)
     check(page.inner_text("#h-node") == "The Court of Hours", f"from the Bailiff's court ({page.inner_text('#h-node')!r})")
+
+    # the last mission: its brief, then the crater
+    page.keyboard.press("Escape")
+    page.wait_for_timeout(300)
+    if mode(page) == "play":
+        page.keyboard.press("Escape")
+        page.wait_for_timeout(300)
+    click(page, "#abandon")
+    click(page, "#abandon")
+    click(page, "#dead-next")
+    click(page, "#start-mission")
+    brief = STORY["mission"]["brief"]
+    check(mode(page) == "interlude", f"the last mission opens on its brief ({mode(page)})")
+    check(page.inner_text("#l-title") == brief["title"], f"titled {brief['title']} ({page.inner_text('#l-title')!r})")
+    click(page, "#interlude-next")
+    check(mode(page) == "play", f"then it plays ({mode(page)})")
+    page.wait_for_timeout(500)
+    check(page.inner_text("#h-node") == "The Crater", f"from the crater ({page.inner_text('#h-node')!r})")

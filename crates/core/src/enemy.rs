@@ -238,7 +238,11 @@ impl Enemy {
             seen: false,
             trail: None,
             beat: 0,
-            floor_hp: if matches!(d.kind, Kind::God | Kind::Cat) { 1 } else { 0 },
+            floor_hp: if matches!(d.kind, Kind::God | Kind::Cat) {
+                1
+            } else {
+                0
+            },
             size: if d.kind == Kind::Cat { CAT_SMALL } else { ONE },
             remix: false,
         }
@@ -340,7 +344,13 @@ impl Enemy {
                     self.dive(level, target);
                     deeds.dove = true;
                 }
-                State::Rest(secs(1, 2) + (me as i32 % 4) * secs(1, 5))
+                // a cat goes straight into its scream
+                if d.kind == Kind::Cat && self.size < ONE {
+                    deeds.scream = true;
+                    State::Changing(CAT_SCREAM + 1)
+                } else {
+                    State::Rest(secs(1, 2) + (me as i32 % 4) * secs(1, 5))
+                }
             };
             return deeds;
         }

@@ -135,6 +135,11 @@ async function start() {
       engage();
     }),
   );
+  // the last mission opens on its brief, read on the interlude's screen
+  el("start-mission").addEventListener(
+    "click",
+    act(() => game.start_mission()),
+  );
   el("engage-btn").addEventListener("click", act(engage));
   el("resume").addEventListener(
     "click",

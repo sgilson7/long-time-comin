@@ -160,6 +160,19 @@ BREAKS = [
  # the lullaby practice
  ("practice: straight to the song", "crates/core/src/game.rs", "                Outcome::Playing => self.lull(),", "                Outcome::Playing => {}", "the_lullaby_practice"),
  ("practice: nothing on the record", "crates/core/src/game.rs", "            if self.run.as_ref().is_some_and(|r| r.practice) {\n                self.end_practice();", "            if false {\n                self.end_practice();", "the_lullaby_practice"),
+ # the last sentence
+ ("last: home after the summit", "crates/core/src/game.rs", "            Some(home) if mission && zone == self.c.mission_break() => home,", "            Some(_) if mission && zone == self.c.mission_break() => zone + 1,", "the_last_mission_opens"),
+ ("last: opens once the god sleeps", "crates/core/src/meta.rs", "            && self.beaten.iter().any(|b| *b == c.zones[last].boss)", "            && !c.zones[last].boss.is_empty()", "the_last_mission_opens"),
+ ("last: half as many again", "crates/core/src/world.rs", "            let extra = ((wave.len() as i32 * REMIX_EXTRA_PCT + 99) / 100) as usize;", "            let extra = 0;", "the_last_missions_fights"),
+ ("last: remixed patterns", "crates/core/src/enemy.rs", "            (true, Some(k)) => k,", "            (true, Some(_)) => pattern,", "the_last_missions_fights"),
+ ("last: the scream cannot be hurt", "crates/core/src/enemy.rs", "                    State::Changing(CAT_SCREAM + 1)", "                    State::Rest(1)", "chumbles_screams"),
+ ("last: a gait a bar", "crates/core/src/enemy.rs", "            d.phases[self.phase.min(d.phases.len() - 1)].gait", "            d.gait", "each_of_chumbles_bars"),
+ ("last: the cat knows the perches", "crates/core/src/world.rs", "            e.perches = self.arena.perches.iter().map(|p| p.add(v3(0, d.hover, 0))).collect();", "", "each_of_chumbles_bars"),
+ ("last: fed, he sleeps", "crates/core/src/world.rs", "        if self.fed >= CAT_FED_TICKS {", "        if self.fed >= CAT_FED_TICKS * 1000 {", "fed_he_shrinks"),
+ ("last: reality breaks", "crates/core/src/world.rs", "        if self.mission {\n            let p = &mut self.player;", "        if false {\n            let p = &mut self.player;", "the_defendants_fall_breaks_reality"),
+ ("last: the cat walks out", "crates/core/src/world.rs", "        let walked = fx::mul(GUIDE_SPEED, (self.tick - GUIDE_WAIT).max(0) * ONE);", "        let walked = 0;", "the_cat_walks_out"),
+ ("last: a cat's phases have gaits", "crates/core/src/content.rs", "                if (kind == Kind::Cat) != !p.gait.is_empty() {", "                if false {", "a_cats_phases"),
+ ("last: no remix of a remix", "crates/core/src/content.rs", "            if out[k].remix.is_some() {", "            if false {", "a_remix_must_name"),
 ]
 
 

@@ -1661,7 +1661,10 @@ fn parse_patterns(text: &str, pal: &Palette) -> Result<Vec<Pattern>, String> {
     for p in &out {
         if let Some(k) = p.remix {
             if out[k].remix.is_some() {
-                return Err(format!("patterns: {}'s remix {} is remixed again", p.id, out[k].id));
+                return Err(format!(
+                    "patterns: {}'s remix {} is remixed again",
+                    p.id, out[k].id
+                ));
             }
         }
     }
@@ -1748,19 +1751,19 @@ fn parse_enemies(text: &str, patterns: &[Pattern]) -> Result<Vec<EnemyDef>, Stri
         }
         let gait_of = |g: &str| -> Result<Gait, String> {
             Ok(match g {
-            "" => Gait::None,
-            "bound" => Gait::Bound,
-            "hop" => Gait::Hop,
-            "wheel" => Gait::Wheel,
-            "root" => Gait::Root,
-            "surge" => Gait::Surge,
-            "perch" => Gait::Perch,
-            "march" => Gait::March,
-            "unseen" => Gait::Unseen,
-            "charge" => Gait::Charge,
-            "bounce" => Gait::Bounce,
-            "echo" => Gait::Echo,
-            g => return Err(format!("enemies: {} has no gait {g}", e.id)),
+                "" => Gait::None,
+                "bound" => Gait::Bound,
+                "hop" => Gait::Hop,
+                "wheel" => Gait::Wheel,
+                "root" => Gait::Root,
+                "surge" => Gait::Surge,
+                "perch" => Gait::Perch,
+                "march" => Gait::March,
+                "unseen" => Gait::Unseen,
+                "charge" => Gait::Charge,
+                "bounce" => Gait::Bounce,
+                "echo" => Gait::Echo,
+                g => return Err(format!("enemies: {} has no gait {g}", e.id)),
             })
         };
         let gait = gait_of(&e.gait)?;
@@ -1770,7 +1773,10 @@ fn parse_enemies(text: &str, patterns: &[Pattern]) -> Result<Vec<EnemyDef>, Stri
                 e.id
             ));
         }
-        let phases = if matches!(kind, Kind::Boss | Kind::Tank | Kind::Double | Kind::God | Kind::Cat) {
+        let phases = if matches!(
+            kind,
+            Kind::Boss | Kind::Tank | Kind::Double | Kind::God | Kind::Cat
+        ) {
             if e.phases.is_empty() {
                 return Err(format!("enemies: boss {} has no phases", e.id));
             }
@@ -2000,6 +2006,52 @@ pub mod tests {
         f.patterns = Box::leak(bad.into_boxed_str());
         let e = Content::parse(&f).unwrap_err();
         assert!(e.contains("ultraviolet"), "{e}");
+    }
+
+    #[test]
+    fn a_remix_must_name_another_pattern_that_is_not_remixed_again() {
+        let c = content();
+        let quad = &c.patterns[c.patterns.iter().position(|p| p.id == "spiral_quad").unwrap()];
+        assert_eq!(c.patterns[quad.remix.unwrap()].id, "remix_spiral_quad");
+        let mut f = files();
+        let bad = f.patterns.replacen(
+            "\"remix\": \"remix_spiral_quad\"",
+            "\"remix\": \"spiral_quad\"",
+            1,
+        );
+        f.patterns = Box::leak(bad.into_boxed_str());
+        let e = Content::parse(&f).unwrap_err();
+        assert!(e.contains("remixes as itself"), "{e}");
+        let mut f = files();
+        let chained = f
+            .patterns
+            .replacen("\"remix\": \"remix_ring_16\"", "\"remix\": \"spiral_quad\"", 1);
+        f.patterns = Box::leak(chained.into_boxed_str());
+        let e = Content::parse(&f).unwrap_err();
+        assert!(e.contains("remixed again"), "{e}");
+    }
+
+    #[test]
+    fn a_cats_phases_and_only_a_cats_have_a_gait_and_the_last_mission_has_its_own_zone() {
+        let c = content();
+        let cat = &c.enemies[c.enemy("chumbles").unwrap()];
+        assert_eq!(cat.kind, Kind::Cat);
+        assert_eq!(cat.phases.len(), 5);
+        assert!(cat.phases.iter().all(|p| p.gait != Gait::None));
+        let home = c.mission_zone().expect("home");
+        assert_eq!(c.zones[home].boss, "chumbles");
+        assert_eq!(c.built_zones(), 5, "home is not one of the zones a run crosses");
+        assert_eq!(c.zones[c.mission_break()].id, "the_ascent");
+        let mut f = files();
+        let bad = f.enemies.replacen(
+            "\"from_pct\": 80,\n          \"gait\": \"bound\"",
+            "\"from_pct\": 80,\n          \"gait\": \"\"",
+            1,
+        );
+        assert_ne!(bad, f.enemies, "the text to break is there");
+        f.enemies = Box::leak(bad.into_boxed_str());
+        let e = Content::parse(&f).unwrap_err();
+        assert!(e.contains("a cat's phases"), "{e}");
     }
 
     #[test]
