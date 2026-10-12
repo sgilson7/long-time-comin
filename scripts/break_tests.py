@@ -180,6 +180,12 @@ BREAKS = [
  ("cat: feet on the floor at any size", "crates/core/src/draw/cat.rs", "let floor = v3(at.x, at.y - fx::mul(d.hover, e.size), at.z);", "let floor = v3(at.x, at.y - d.hover, at.z);", "small_he_is_a_third"),
  ("cat: as big as his sphere", "crates/core/src/draw/cat.rs", "let scale = fx::mul(e.size, fx::div(d.radius, MODEL_RADIUS));", "let scale = fx::mul(e.size, fx::div(d.radius, MODEL_RADIUS)) / 2;", "chumbles_fills_the_sphere"),
  ("cat: asleep in a loaf", "crates/core/src/draw/cat.rs", "        return loaf(age);", "        return stand();", "asleep_his_eyes_are_shut"),
+ # the house (home.rs)
+ ("home: the landing's door walled off", "crates/core/src/arena/home.rs", "                self.home_landing();", "                self.home_landing();\n                self.solids.push(Solid::new(v3(-fx::int(6), 0, -fx::int(9)), v3(fx::int(6), fx::int(3), -fx::int(8))));", "every_home_room_builds"),
+ ("home: the cat's way blocked", "crates/core/src/arena/home.rs", "                self.home_bedroom();", "                self.home_bedroom();\n                self.solids.push(Solid::new(v3(fx::int(1), 0, -fx::int(5)), v3(fx::int(2), fx::int(1), -fx::int(4))));", "the_cat_walks_from"),
+ ("home: a solid fountain", "crates/core/src/arena/home.rs", "                self.home_landing();", "                self.home_landing();\n                self.solids.push(Solid::new(v3(-fx::int(1), 0, -fx::int(1)), v3(fx::int(1), fx::int(1), fx::int(1))));", "the_landing_keeps"),
+ ("home: the fridge perch against the wall", "crates/core/src/arena/home.rs", "        self.perches.push(p([(fx0 + fx1) / 2, 360, fz - 30]));", "        self.perches.push(p([(fx0 + fx1) / 2, 360, fz - 230]));", "downstairs_has_room"),
+ ("home: a block mid-room", "crates/core/src/arena/home.rs", "            \"boss\" => self.home_downstairs(),", "            \"boss\" => {\n                self.home_downstairs();\n                self.solids.push(Solid::new(v3(-fx::int(2), 0, -fx::int(2)), v3(fx::int(2), fx::int(2), fx::int(2))));\n            }", "downstairs_leaves_long_lanes"),
 ]
 
 

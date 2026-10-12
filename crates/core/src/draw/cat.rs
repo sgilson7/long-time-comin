@@ -4,14 +4,14 @@
 //! darker mask round his eyes, tabby lines on his forehead, big blue eyes
 //! and a pink nose. One model draws him, posed by what he is doing: the
 //! scream as he grows, the zoomies, the crouch and pounce, sitting tall on
-//! his cat trees, the 3 AM creep, the treat frenzy, eating, and asleep in a
+//! the furniture, the 3 AM creep, the treat frenzy, eating, and asleep in a
 //! loaf.
 //!
 //! The model is laid out in centimetres at his full size, from the floor
 //! below his middle (x right, y up, −z forward), and scaled as one piece,
 //! so his feet stay on the floor at any size.
 
-use crate::balance::{CAT_FED_TICKS, PERCH_HEIGHT};
+use crate::balance::CAT_FED_TICKS;
 use crate::content::{Content, EnemyDef, Rgb};
 use crate::enemy::{Enemy, State};
 use crate::fx::{self, deg, ONE};
@@ -714,9 +714,6 @@ pub fn chumbles(b: &mut Batch, c: &Content, e: &Enemy, d: &EnemyDef, at: V3, fed
     // the black line does not swallow him
     let bold = b.bold;
     b.bold = bold && scale > ONE / 2;
-    if e.phase == 2 && fed == 0 && e.alive() {
-        cat_trees(b, c, e, d);
-    }
     model(b, &k, &f, &p, scale > ONE / 2);
     if fed > 0 {
         bowl(b, c, &f, fed);
@@ -885,33 +882,6 @@ fn dreams(b: &mut Batch, c: &Content, f: &Affine, p: &Pose, age: i32) {
         b.inked(Mesh::Cube, &z.then(&bar(-s / 2)), white, 0);
         let slash = Affine::rot_z(deg(45)).then(&Affine::scale(v3(s * 14 / 10, s / 6, s / 6)));
         b.inked(Mesh::Cube, &z.then(&slash), white, 0);
-    }
-}
-
-/// His cat trees, for the counter: a sisal post up to each perch, carpeted
-/// platforms on it, a wide base.
-fn cat_trees(b: &mut Batch, c: &Content, e: &Enemy, d: &EnemyDef) {
-    let post = c.pal.c("cat_post");
-    let pad = c.pal.c("cat_tree");
-    for p in &e.perches {
-        let top = p.y - fx::mul(d.hover, e.size);
-        let foot = v3(p.x, p.y - PERCH_HEIGHT, p.z);
-        let deck = v3(p.x, top, p.z);
-        super::rod(b, foot, deck, u(70), post, 0, true);
-        b.inked(
-            Mesh::Cyl,
-            &boxed(deck.sub(v3(0, u(20), 0)), v3(u(420), u(40), u(420))),
-            pad,
-            0,
-        );
-        let mid = foot.lerp(deck, ONE / 2).add(v3(u(120), 0, 0));
-        b.inked(Mesh::Cyl, &boxed(mid, v3(u(240), u(36), u(240))), pad, 0);
-        b.inked(
-            Mesh::Cyl,
-            &boxed(foot.add(v3(0, u(20), 0)), v3(u(360), u(40), u(360))),
-            pad,
-            0,
-        );
     }
 }
 
