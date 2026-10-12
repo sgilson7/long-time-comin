@@ -4,7 +4,7 @@
 use ltc_core::arena;
 use ltc_core::content::{Content, Files};
 use ltc_core::mesh::{self, Mesh};
-use ltc_core::render::{Batch, INSTANCE_VALUES, PASSES};
+use ltc_core::render::{Batch, DRAW_VALUES, INSTANCE_VALUES, PASSES};
 
 #[test]
 #[ignore]
@@ -20,14 +20,17 @@ fn print_the_cost_of_each_archetype() {
         copy: include_str!("../../../data/copy.json"),
     })
     .unwrap();
-    for kind in ["arrival", "plaza", "market", "boss"] {
-        let a = arena::build(
-            "waiting_city",
-            kind,
-            9,
-            &[arena::Side::North, arena::Side::East],
-            &c.pal,
-        );
+    let scenes = [
+        ("waiting_city", "arrival"),
+        ("waiting_city", "plaza"),
+        ("waiting_city", "market"),
+        ("waiting_city", "boss"),
+        ("home", "arrival"),
+        ("home", "rest"),
+        ("home", "boss"),
+    ];
+    for (zone, kind) in scenes {
+        let a = arena::build(zone, kind, 9, &[arena::Side::North, arena::Side::East], &c.pal);
         let mut b = Batch::new([0; 3]);
         for s in &a.shapes {
             b.shape(s);
@@ -36,7 +39,7 @@ fn print_the_cost_of_each_archetype() {
         let mut total = 0;
         let mut line = String::new();
         for (pass, list) in draws.iter().enumerate().take(PASSES) {
-            for d in list.chunks(5) {
+            for d in list.chunks(DRAW_VALUES) {
                 let m = Mesh::ALL[d[1] as usize];
                 let verts = mesh::vertices(m).len() / mesh::VERTEX_VALUES;
                 total += verts * d[3] as usize;
@@ -44,6 +47,9 @@ fn print_the_cost_of_each_archetype() {
             }
         }
         let _ = INSTANCE_VALUES;
-        println!("{kind}: {total} vertices;{line}");
+        println!(
+            "{zone} {kind}: {} shapes, {total} vertices;{line}",
+            a.shapes.len()
+        );
     }
 }

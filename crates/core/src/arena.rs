@@ -2108,6 +2108,9 @@ mod size {
             ("idiot_god", "lattice"),
             ("idiot_god", "orrery"),
             ("idiot_god", "boss"),
+            ("home", "arrival"),
+            ("home", "rest"),
+            ("home", "boss"),
         ];
         for (zone, kind) in kinds {
             let a = build_at(zone, kind, 9, &[Side::North, Side::East], &c.pal, int(200));
