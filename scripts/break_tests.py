@@ -175,6 +175,11 @@ BREAKS = [
  ("last: no remix of a remix", "crates/core/src/content.rs", "            if out[k].remix.is_some() {", "            if false {", "a_remix_must_name"),
  ("practice: Chumbles maxed out", "crates/core/src/game.rs", "        let (build, gun_level) = Meta::everything(&self.c).build(&self.c);", "        let (build, gun_level) = self.meta.build(&self.c);", "the_chumbles_practice"),
  ("practice: only a god is lulled", "crates/core/src/game.rs", "            if sings && e.floor_hp > 0 && w.song.is_none() {", "            if e.floor_hp > 0 && w.song.is_none() {", "the_chumbles_practice"),
+
+ # Chumbles drawn
+ ("cat: feet on the floor at any size", "crates/core/src/draw/cat.rs", "let floor = v3(at.x, at.y - fx::mul(d.hover, e.size), at.z);", "let floor = v3(at.x, at.y - d.hover, at.z);", "small_he_is_a_third"),
+ ("cat: as big as his sphere", "crates/core/src/draw/cat.rs", "let scale = fx::mul(e.size, fx::div(d.radius, MODEL_RADIUS));", "let scale = fx::mul(e.size, fx::div(d.radius, MODEL_RADIUS)) / 2;", "chumbles_fills_the_sphere"),
+ ("cat: asleep in a loaf", "crates/core/src/draw/cat.rs", "        return loaf(age);", "        return stand();", "asleep_his_eyes_are_shut"),
 ]
 
 
