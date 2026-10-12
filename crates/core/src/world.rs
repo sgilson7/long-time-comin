@@ -119,6 +119,8 @@ const FIRST_WAVE: i32 = secs(1, 1);
 pub const MAW: V3 = v3(0, fx::int(70), -fx::int(160));
 /// where it heaves over the north of the Heart, at its heart
 pub const GOD_HOME: V3 = v3(0, fx::int(12), -fx::int(46));
+/// Where Chumbles sits at first, by the back door (on the floor)
+pub const CAT_HOME: V3 = v3(0, 0, -fx::int(18));
 /// the level of the Ripsaw the Lien leaves at an arrival
 pub const LIEN_LEVEL: i32 = 2;
 /// a pane of glass this far from where the Executor breaks through breaks
@@ -202,6 +204,14 @@ pub struct World {
     /// where your chest was, tick by tick, the newest last (the Reprise
     /// walks it)
     pub trail: Vec<V3>,
+    /// ticks since Chumbles' last bar emptied and he was fed (0: not yet)
+    pub fed: i32,
+    /// the last mission (new game plus): bigger waves, more at once, and
+    /// the enemies' remixed patterns
+    pub remix: bool,
+    /// the last mission: the Defendant's fall breaks reality instead of
+    /// letting the god in (it is asleep, sung to by the first of you)
+    pub mission: bool,
 }
 
 /// The sounds of the lullaby's five notes, on the trumpet and on the
@@ -308,6 +318,9 @@ impl World {
             song_casts: Vec::new(),
             bubble_r: 0,
             trail: Vec::new(),
+            fed: 0,
+            remix: false,
+            mission: false,
         };
         w.broken = vec![0; w.arena.panes.len()];
         if let Some(def) = node.elite {
@@ -380,9 +393,46 @@ impl World {
         self.enemies.iter().filter(|e| e.alive()).count()
     }
 
-    /// How many more enemies may come before MAX_ALIVE are up.
+    /// How many more enemies may come before MAX_ALIVE are up (more on
+    /// the last mission).
     fn room(&self) -> usize {
-        MAX_ALIVE.saturating_sub(self.alive_enemies())
+        let most = if self.remix { REMIX_MAX_ALIVE } else { MAX_ALIVE };
+        most.saturating_sub(self.alive_enemies())
+    }
+
+    /// The last mission (new game plus): each wave of a fight sends half
+    /// as many again (more of its own kinds, in order), its enemies fire
+    /// their remixes and rest less, and more of them are up at once.
+    pub fn remix(&mut self) {
+        self.remix = true;
+        if self.kind != NodeKind::Fight || self.elite.is_some() {
+            return;
+        }
+        for wave in self.waves_left.iter_mut() {
+            let extra = ((wave.len() as i32 * REMIX_EXTRA_PCT + 99) / 100) as usize;
+            let more: Vec<usize> = wave.iter().cycle().take(extra).copied().collect();
+            wave.extend(more);
+        }
+    }
+
+    /// The cat in the bedroom, on the last mission: where its feet are,
+    /// which way it faces and how far round its step its legs are, as it
+    /// walks out of the door ahead of you (none once it is through).
+    pub fn guide(&self, c: &Content) -> Option<(V3, i32, i32)> {
+        if self.kind != NodeKind::Arrival || !c.zones[self.zone].mission {
+            return None;
+        }
+        let door = self.arena.gates.get(1)?.0;
+        let from = self.arena.start.add(v3(int(3), 0, -int(4)));
+        let way = v3(door.x - from.x, 0, door.z - from.z);
+        let walked = fx::mul(GUIDE_SPEED, (self.tick - GUIDE_WAIT).max(0) * ONE);
+        if walked > way.len() {
+            return None;
+        }
+        let at = from.add(way.norm().scale(walked));
+        let floor = self.arena.level.floor_below(at.x, at.y + int(2), at.z).unwrap_or(0);
+        let (yaw, _) = crate::geom::yaw_pitch_of(way);
+        Some((v3(at.x, floor, at.z), yaw, walked))
     }
 
     /// The point the crosshair is on: the first solid or enemy along the
@@ -443,6 +493,10 @@ impl World {
         let mut at = if d.kind == Kind::God {
             // over the north of the Heart, vast
             GOD_HOME
+        } else if d.kind == Kind::Cat {
+            // by the back door, small, wanting out
+            let f = self.arena.level.floor_below(CAT_HOME.x, int(3), CAT_HOME.z).unwrap_or(0);
+            v3(CAT_HOME.x, f + fx::mul(d.hover, CAT_SMALL), CAT_HOME.z)
         } else if d.kind == Kind::Double {
             // the Defendant waits before the Long Door
             let f = self.arena.level.floor_below(0, int(3), -int(4)).unwrap_or(0);
@@ -452,7 +506,7 @@ impl World {
         } else {
             list[self.rng.range(0, list.len() as i32 - 1) as usize]
         };
-        if !air && !matches!(d.kind, Kind::Boss | Kind::God) {
+        if !air && !matches!(d.kind, Kind::Boss | Kind::God | Kind::Cat) {
             at.y += standing_lift(d);
         }
         self.spawn_at(c, def, at);
@@ -476,6 +530,11 @@ impl World {
             self.arena.centre
         };
         e.corrupt = self.corrupt;
+        e.remix = self.remix;
+        if d.kind == Kind::Cat {
+            // up on the furniture
+            e.perches = self.arena.perches.iter().map(|p| p.add(v3(0, d.hover, 0))).collect();
+        }
         if entering {
             e.state = enemy::State::Rest(tank::ENTER_TICKS + secs(1, 1));
         } else if let Some(t) = e.tank.as_mut() {
@@ -485,7 +544,7 @@ impl World {
         }
         // the zone's boss; a mini-boss (the Escort, a tank too) is not, and
         // felling it only clears its arena (SECOND-ORDER Q25)
-        if matches!(d.kind, Kind::Boss | Kind::Tank | Kind::Double | Kind::God) && !d.elite {
+        if matches!(d.kind, Kind::Boss | Kind::Tank | Kind::Double | Kind::God | Kind::Cat) && !d.elite {
             self.boss = Some(self.enemies.len());
         }
         if d.elite {
@@ -855,6 +914,19 @@ impl World {
             let room = MAX_ORBS.saturating_sub(self.orbs.len());
             self.orbs.extend(deeds.salvo.orbs.into_iter().take(room));
             self.waves.extend(deeds.salvo.waves);
+            if deeds.scream {
+                // Chumbles wants something, and says so
+                let want = if self.rng.chance(50) {
+                    "callout_scream_out"
+                } else {
+                    "callout_scream_treats"
+                };
+                self.note("scream", c.say(want));
+                self.shake = SHAKE_TICKS * 2;
+            }
+            if deeds.grown {
+                self.note("hiss", c.say("callout_grown"));
+            }
             if deeds.phase_changed {
                 // the court clears its orbs while the Bailiff changes
                 for o in std::mem::take(&mut self.orbs) {
@@ -871,6 +943,7 @@ impl World {
         self.glass_step(c);
         self.shake = (self.shake - 1).max(0);
         self.lullaby(c, keys, chest);
+        self.feed(c);
 
         if !stopped {
             self.orbs_step(c, chest);
@@ -924,7 +997,9 @@ impl World {
 
         if let Some(b) = self.boss {
             if !self.enemies[b].alive() && c.enemies[self.enemies[b].def].kind == Kind::Double {
-                // the Defendant falls, and what it held back comes
+                // the Defendant falls, and what it held back comes; on the
+                // last mission the god is asleep already, sung to by the
+                // first of you, and both cannot be: reality breaks
                 self.ending = 1;
                 self.stop = None;
                 self.grabbed = None;
@@ -936,7 +1011,11 @@ impl World {
                     e.hp = 0;
                 }
                 self.shake = SHAKE_TICKS * 2;
-                self.note("eldritch", c.say("callout_eldritch"));
+                if self.mission {
+                    self.note("break", c.say("callout_break"));
+                } else {
+                    self.note("eldritch", c.say("callout_eldritch"));
+                }
                 return;
             }
             if !self.enemies[b].alive() {
@@ -949,6 +1028,8 @@ impl World {
                         .unwrap_or_default();
                     if c.enemies[self.enemies[b].def].kind == Kind::God {
                         self.note("asleep", c.say("callout_asleep"));
+                    } else if c.enemies[self.enemies[b].def].kind == Kind::Cat {
+                        self.note("purr", c.say("callout_fed_asleep"));
                     } else {
                         self.note("boss_down", c.say("callout_boss_down").replace("{name}", &name));
                     }
@@ -961,7 +1042,12 @@ impl World {
                     }
                 }
                 self.win_timer += 1;
-                if self.win_timer % 8 == 1 {
+                let cat = c.enemies[self.enemies[b].def].kind == Kind::Cat;
+                if cat && self.win_timer % 20 == 1 {
+                    // a cat asleep: hearts, not fire
+                    let at = self.enemies[b].pos.add(v3(0, int(2), 0));
+                    self.sparks(at, c.pal.c("heart"), 6, ONE / 12);
+                } else if !cat && self.win_timer % 8 == 1 {
                     let at = self.enemies[b].pos.add(v3(
                         int(self.rng.range(-3, 3)),
                         int(self.rng.range(-2, 2)),
@@ -999,7 +1085,8 @@ impl World {
                 }
                 return;
             }
-            let ready = alive as i32 <= WAVE_REMAINDER || self.enemies.is_empty();
+            let remainder = if self.remix { REMIX_REMAINDER } else { WAVE_REMAINDER };
+            let ready = alive as i32 <= remainder || self.enemies.is_empty();
             if ready {
                 self.wave_timer -= 1;
                 if self.wave_timer <= 0 {
@@ -1955,7 +2042,10 @@ impl World {
                 e.hurtable()
                     && e.health_pct() <= GRAB_PCT
                     && !d.elite
-                    && !matches!(d.kind, Kind::Boss | Kind::Tank | Kind::Mech | Kind::Double)
+                    && !matches!(
+                        d.kind,
+                        Kind::Boss | Kind::Tank | Kind::Mech | Kind::Double | Kind::God | Kind::Cat
+                    )
                     && to.len() <= GRAB_REACH + d.radius
                     && to.norm().dot(fwd) > ONE / 2
             })
@@ -2004,10 +2094,31 @@ impl World {
     }
 
     /// The Idiot God comes: the summit melts away and you are drawn up into
-    /// its maw; then the revelation.
+    /// its maw; then the revelation. On the last mission reality breaks
+    /// instead: the summit melts and comes apart in light round you, and
+    /// you are held where you stand.
     fn ending_step(&mut self, c: &Content) {
         self.ending += 1;
         self.effects_step();
+        if self.mission {
+            let p = &mut self.player;
+            p.prev_pos = p.pos;
+            p.vel = V3::ZERO;
+            p.pitch = fx::lerp(p.pitch, PITCH_MAX, ONE / 60);
+            self.shake = self.shake.max(SHAKE_TICKS / 2);
+            if self.ending % 4 == 0 {
+                let at = self.player.pos.add(v3(
+                    int(self.rng.range(-10, 10)),
+                    int(self.rng.range(-2, 8)),
+                    int(self.rng.range(-10, 10)),
+                ));
+                self.sparks(at, c.pal.c("spark"), 8, ONE / 4);
+            }
+            if self.ending > ENDING_TICKS {
+                self.outcome = Outcome::Won;
+            }
+            return;
+        }
         let maw = MAW;
         let p = &mut self.player;
         let to = maw.sub(p.pos);
@@ -2079,6 +2190,60 @@ impl World {
                 s.prev = s.pos;
                 s.vel = crate::geom::rotate_y(s.vel, a.turn(&b));
             }
+        }
+    }
+
+    /// Chumbles fed: once his last bar is empty he stops, every orb and
+    /// every other enemy goes, and he shrinks back to his own size and
+    /// eats; then he sleeps, and the mission is won.
+    fn feed(&mut self, c: &Content) {
+        let Some(b) = self.boss else {
+            return;
+        };
+        let d = &c.enemies[self.enemies[b].def];
+        if d.kind != Kind::Cat {
+            return;
+        }
+        let cat = &self.enemies[b];
+        if self.fed == 0 {
+            let last = cat.phase + 1 >= d.phases.len();
+            if !cat.alive() || cat.hp > cat.floor_hp || !cat.hurtable() || !last {
+                return;
+            }
+            self.fed = 1;
+            for o in std::mem::take(&mut self.orbs) {
+                self.effect(FxKind::Burst, o.pos, V3::ZERO, 16, o.rgb, o.radius * 2);
+            }
+            self.waves.clear();
+            for (i, e) in self.enemies.iter_mut().enumerate() {
+                if i != b {
+                    e.hp = 0;
+                }
+            }
+            self.grabbed = None;
+            self.stop = None;
+            self.enemies[b].state = enemy::State::Changing(2);
+            self.note("treats", c.say("callout_fed"));
+            return;
+        }
+        if !cat.alive() {
+            return;
+        }
+        self.fed += 1;
+        let hover = d.hover;
+        let e = &mut self.enemies[b];
+        e.state = enemy::State::Changing(2);
+        let feet = e.pos.y - fx::mul(hover, e.size);
+        e.size = fx::approach(e.size, CAT_SMALL, (ONE - CAT_SMALL) / secs(2, 1));
+        e.pos.y = feet + fx::mul(hover, e.size);
+        e.prev = e.pos;
+        if self.fed % secs(1, 1) == 0 {
+            self.note("purr", String::new());
+        }
+        if self.fed >= CAT_FED_TICKS {
+            let e = &mut self.enemies[b];
+            e.floor_hp = 0;
+            e.hp = 0;
         }
     }
 

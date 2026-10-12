@@ -22,6 +22,7 @@ use std::collections::BTreeSet;
 
 mod ascent;
 mod god;
+mod home;
 mod house;
 mod ice;
 
@@ -91,6 +92,9 @@ pub struct Arena {
     /// how many of the arena's own shapes are drawn again above and below
     /// (the copies are the last of `shapes`)
     pub repeated: usize,
+    /// places up on the furniture a cat sits, leaps between and swoops
+    /// from: each the point on top it sits on (empty: none)
+    pub perches: Vec<V3>,
 }
 
 /// A doorway whose opening leads elsewhere: whatever passes through it
@@ -173,6 +177,10 @@ struct B<'a> {
     /// the shapes drawn again above and below, when the arena wraps: its
     /// own, not the far scenery round it
     repeat: usize,
+    /// half the square's width, where its gates stand (HALF but in a
+    /// smaller room: the last mission's bedroom and landing)
+    half: i32,
+    perches: Vec<V3>,
 }
 
 /// The dry canal's channel runs north to south between these two x values.
@@ -1826,6 +1834,8 @@ pub fn build_at(zone: &str, kind: &str, seed: u64, exits: &[Side], pal: &Palette
         wrap: 0,
         seams: Vec::new(),
         repeat: usize::MAX,
+        half: HALF,
+        perches: Vec::new(),
     };
     let is_court = kind == "boss";
     if zone == "white_waste" {
@@ -1836,6 +1846,8 @@ pub fn build_at(zone: &str, kind: &str, seed: u64, exits: &[Side], pal: &Palette
         b.ascent(kind, exits, rise);
     } else if zone == "idiot_god" {
         b.god(kind, exits);
+    } else if zone == "home" {
+        b.home(kind, exits);
     } else if is_court {
         b.court();
         b.shape(
@@ -1880,7 +1892,7 @@ pub fn build_at(zone: &str, kind: &str, seed: u64, exits: &[Side], pal: &Palette
     if !is_court {
         // the gate you came in by is shut, and solid: the camera backing
         // toward it stops in front of it instead of looking at its back
-        let (g, _) = Side::South.place(HALF);
+        let (g, _) = Side::South.place(b.half);
         b.solids
             .push(Solid::stand(g.x, 0, g.z + dm(5), m(5), m(6), dm(4)));
     }
@@ -1904,7 +1916,7 @@ pub fn build_at(zone: &str, kind: &str, seed: u64, exits: &[Side], pal: &Palette
     let reach = if is_court {
         COURT_RADIUS - m(4)
     } else {
-        HALF - m(4)
+        b.half - m(4)
     };
     let mut z = -reach;
     while z <= reach {
@@ -1949,7 +1961,7 @@ pub fn build_at(zone: &str, kind: &str, seed: u64, exits: &[Side], pal: &Palette
     let start_at = if is_court {
         v3(0, 0, COURT_RADIUS - m(8))
     } else {
-        v3(0, 0, HALF - m(5))
+        v3(0, 0, b.half - m(5))
     };
     let reached: BTreeSet<(i32, i32, i32)> = walk(&level, start_at)
         .into_iter()
@@ -1964,11 +1976,11 @@ pub fn build_at(zone: &str, kind: &str, seed: u64, exits: &[Side], pal: &Palette
     let (start, gates) = if is_court {
         (v3(0, 0, COURT_RADIUS - m(8)), Vec::new())
     } else {
-        let mut gates = vec![Side::South.place(HALF)];
+        let mut gates = vec![Side::South.place(b.half)];
         for s in exits {
-            gates.push(s.place(HALF));
+            gates.push(s.place(b.half));
         }
-        (v3(0, 0, HALF - m(5)), gates)
+        (v3(0, 0, b.half - m(5)), gates)
     };
     Arena {
         shapes: b.shapes,
@@ -1990,6 +2002,7 @@ pub fn build_at(zone: &str, kind: &str, seed: u64, exits: &[Side], pal: &Palette
         wrap: b.wrap,
         seams: b.seams,
         repeated,
+        perches: b.perches,
         level,
     }
 }

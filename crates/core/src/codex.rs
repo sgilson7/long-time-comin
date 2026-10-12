@@ -393,6 +393,32 @@ fn movement(d: &EnemyDef, c: &Content) -> String {
                 verses
             )
         }
+        Kind::Cat => {
+            let gaits: Vec<String> = d
+                .phases
+                .iter()
+                .enumerate()
+                .map(|(k, p)| {
+                    let how = match p.gait {
+                        Gait::Charge => "turns on the spot, then charges straight",
+                        Gait::Bound => "leaps round you, and pounces on where you stand",
+                        Gait::Perch => "sits up on the furniture, leaps between it and swoops at you",
+                        Gait::Unseen => "creeps at you only while you are not looking",
+                        Gait::Surge => "rushes past you in sweeping curves",
+                        Gait::Hop => "hops about you",
+                        _ => "moves",
+                    };
+                    format!("bar {} (from {}% health) {how}", k + 1, p.from_pct)
+                })
+                .collect();
+            format!(
+                "Screams for {} s first (to go outside, or for treats) and grows to three times his size, and cannot be hurt meanwhile. His health is {} bars: {}. At each bar he calls help, clears every orb and cannot be hurt for {} s. When the last bar empties he is fed, and that is the end.",
+                s(CAT_SCREAM),
+                d.phases.len(),
+                gaits.join("; "),
+                s(PHASE_TICKS)
+            )
+        }
         Kind::Turret => format!(
             "Does not move. Sits {} m above the floor and turns to face you.",
             m(d.hover)
@@ -594,7 +620,7 @@ fn enemy(d: &EnemyDef, c: &Content) -> Value {
                 })
                 .collect();
             json!({
-                "from": if matches!(d.kind, Kind::Boss | Kind::God) { format!("Phase {} (from {}% health)", k + 1, p.from_pct) } else { String::new() },
+                "from": if matches!(d.kind, Kind::Boss | Kind::God | Kind::Cat) { format!("Phase {} (from {}% health)", k + 1, p.from_pct) } else { String::new() },
                 "attacks": attacks,
             })
         })
@@ -607,6 +633,16 @@ fn enemy(d: &EnemyDef, c: &Content) -> Value {
     if let Some(p) = d.burst {
         let words: Vec<String> = c.patterns[p].volleys.iter().map(volley).collect();
         moves += &format!(" When it dies it leaves this behind: {}", words.join(" "));
+    }
+    let remixes: Vec<String> = d
+        .phases
+        .iter()
+        .flat_map(|p| p.attacks.iter())
+        .filter_map(|a| c.patterns[a.pattern].remix.map(|k| (a.pattern, k)))
+        .map(|(p, k)| format!("{} as {}", c.patterns[p].id, c.patterns[k].id))
+        .collect();
+    if !remixes.is_empty() {
+        moves += &format!(" On the last mission it fires remixes: {}.", remixes.join("; "));
     }
     if let Some(&first) = d.splits.first() {
         moves += &format!(

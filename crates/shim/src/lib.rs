@@ -130,6 +130,11 @@ impl Game {
         self.inner.start_rush()
     }
 
+    /// The last mission, once the Idiot God sleeps.
+    pub fn start_mission(&mut self) {
+        self.inner.start_mission()
+    }
+
     /// The lullaby alone, for testing; the record is left as it was.
     pub fn practice_lullaby(&mut self) {
         self.inner.practice_lullaby()

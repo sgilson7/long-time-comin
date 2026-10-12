@@ -34,6 +34,8 @@ pub struct Meta {
     pub rush_wins: i32,
     /// the bosses beaten, by id, over every run
     pub beaten: Vec<String>,
+    /// last missions won
+    pub mission_wins: i32,
 }
 
 /// What a death adds to the record, for the indictment screen.
@@ -225,6 +227,22 @@ impl Meta {
         self.wins > 0
     }
 
+    /// The last mission opens once the Idiot God (the last zone's boss)
+    /// has been put to sleep, and while its own zone is built.
+    pub fn mission_open(&self, c: &Content) -> bool {
+        let last = c.built_zones().saturating_sub(1);
+        c.mission_zone().is_some()
+            && c.story.mission.is_some()
+            && self.beaten.iter().any(|b| *b == c.zones[last].boss)
+    }
+
+    /// A won last mission: bank its Clemency.
+    pub fn record_mission(&mut self, c: &Content, earned: i32, nodes: i32) -> i32 {
+        self.runs += 1;
+        self.mission_wins += 1;
+        self.bank(c, earned, nodes)
+    }
+
     /// A record with everything: every upgrade bought, every count read,
     /// every zone open and the game beaten, for trying the game out.
     pub fn everything(c: &Content) -> Meta {
@@ -243,6 +261,7 @@ impl Meta {
             unlocked: c.built_zones() as i32 - 1,
             bosses_beaten: c.built_zones() as i32,
             rush_wins: 0,
+            mission_wins: 0,
             beaten: c
                 .zones
                 .iter()

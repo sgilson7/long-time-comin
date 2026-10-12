@@ -1,5 +1,5 @@
 {
-  "_about": "The story's words. The indictment is read one count per death, in order; after the last count, a death adds one of the addenda. {years}, {total} and {year} are filled in by the core. death_titles head the indictment by the zone you died in. interludes are read between a zone's boss and the next zone, by the zone just left. The verdict follows the last built zone's boss (the Idiot God, sung to sleep); its last line is mechanical and says what the build holds. A boss's bars, when it has them, name each phase's bar on the HUD; the last is the lullaby's.",
+  "_about": "The story's words. The indictment is read one count per death, in order; after the last count, a death adds one of the addenda. {years}, {total} and {year} are filled in by the core. death_titles head the indictment by the zone you died in. interludes are read between a zone's boss and the next zone, by the zone just left. The verdict follows the last built zone's boss (the Idiot God, sung to sleep); its last line is mechanical and says what the build holds. A boss's bars, when it has them, name each phase's bar on the HUD; the last is the lullaby's. mission: the last mission's words, opened by putting the Idiot God to sleep: its brief (read before it begins), its interludes by the zone just left (the fourth's is where reality breaks, and you wake at home), and its ending (the verdict after Chumbles is fed).",
   "case": "IN THE TRIBUNAL OF THE LAST HOUR, WHICH SITS AFTER EVERYTHING ELSE HAS RISEN · Case 2081-1 · The City of Meridian, and its nine million mornings, against the Defendant",
   "sentencing": [
     "There is a court that sits after the last hour has been struck. It keeps no calendar, because it has no further use for one. It tried you there. You do not remember the trial. The clerk says nobody does, and that this is a mercy the court extends to everyone, whether they want it or not.",
@@ -74,6 +74,17 @@
     "escort": {
       "name": "THE ESCORT",
       "title": "The Executor's little sister. It goes ahead to see that the doors are open."
+    },
+    "chumbles": {
+      "name": "CHUMBLES",
+      "title": "He has been fed. He says he has not.",
+      "bars": [
+        "THE ZOOMIES",
+        "THE POUNCE",
+        "THE COUNTER",
+        "3 AM",
+        "TREATS"
+      ]
     }
   },
   "death_titles": {
@@ -81,7 +92,8 @@
     "white_waste": "THE ICE GIVES YOU BACK TO THE COURT",
     "glass_house": "THE GREY MEN RETURN YOU TO THE COURT",
     "the_ascent": "YOU FALL FROM THE MOUNTAIN, AND THE COURT CATCHES YOU",
-    "idiot_god": "THE GOD DREAMS YOU BACK TO THE COURT"
+    "idiot_god": "THE GOD DREAMS YOU BACK TO THE COURT",
+    "home": "CHUMBLES SITS ON YOUR CHEST UNTIL THE COURT COLLECTS YOU"
   },
   "interludes": {
     "waiting_city": {
@@ -137,5 +149,68 @@
       "go": "Fall"
     }
   },
-  "verdict_art": "lullaby"
+  "verdict_art": "lullaby",
+  "mission": {
+    "brief": {
+      "title": "THE LAST SENTENCE",
+      "art": "sentencing",
+      "go": "Land",
+      "lines": [
+        "Far away, on a mountain, a clock moved from 21:14 to 21:15. The court noticed. The court does not like anything it did not order.",
+        "It went looking for the cause and found the Defendant still at the summit, the Long Door still standing, and somewhere past it a trumpet playing to something asleep. The court did not understand the trumpet. It understood the Defendant.",
+        "So it reached into another timeline, as it had before, and took another of you: younger, angrier, who has never heard the lullaby. You. The sentence is the one it gave the first of you. Go back to 2031 and stop yourself.",
+        "This time you go from the crater to the summit in one go: the Waiting City, the White Waste, the Glass House and the Ascent, with no return to the Holding between them. The years have hardened since the first of you crossed them. More of everything comes at once, and it fires in ways the first of you never saw.",
+        "You land in the crater, in the rain, and it is 2031 again."
+      ]
+    },
+    "interludes": {
+      "waiting_city": {
+        "title": "THE YEARS AGAIN",
+        "art": "interlude",
+        "go": "Sail north",
+        "lines": [
+          "The Bailiff goes down on one knee in its own court. You have read about this moment, in a file the court gave you, and it happens as the file says.",
+          "You do what the first of you did: the company, the money, the tower in the new city. It goes faster when you know the shape of it. In the spring of 2046 you sail north for the key."
+        ]
+      },
+      "white_waste": {
+        "title": "THE KEY AGAIN",
+        "art": "interlude_house",
+        "go": "Go home",
+        "lines": [
+          "The Witness lowers its arms and opens its mouth, and this time it says nothing at all. It looks past you, south, toward a mountain, as if it can hear something there that you cannot.",
+          "You take the key. You buy the house on Calder Hill and fill it with laboratories. In 2056 the grey men come, as the file said they would."
+        ]
+      },
+      "glass_house": {
+        "title": "THE ORDERS AGAIN",
+        "art": "orders",
+        "go": "Climb",
+        "lines": [
+          "The Executor's last eye closes, and the grey men leave the house the way they came.",
+          "You climb toward the Observatory. At the top the evening of 14 March 2081 is waiting, with the clock at 21:14, and your older self in a circle of stones."
+        ]
+      },
+      "the_ascent": {
+        "title": "REALITY BREAKS",
+        "art": "waking",
+        "go": "Get up",
+        "lines": [
+          "Your older self goes down in the circle of stones, looks up at you and says: I would do it again. Then they look past you, puzzled, as though listening to something a long way off.",
+          "The sky over the summit should tear open now. It does not. The thing outside is already asleep, in a bubble of stopped time, and at its heart the first of you sits with a trumpet and plays it the lullaby, verse after verse.",
+          "Both cannot be true. The god cannot come through a door it is already asleep behind, and you cannot stop a self who has already been stopped. The court's timeline tries to hold both, and cracks.",
+          "The summit comes apart like a dropped plate. The stones, the stars and the clock fall away in pieces, and behind each piece there is a white light, and in the light a sound you know but cannot place: a small, insistent voice, very close.",
+          "You open your eyes. You are in bed. It is morning, in your own bedroom, and your cat is sitting on your chest looking at you. When he sees that you are awake he jumps down and walks out of the door with his tail up, toward the stairs, as if to say: finally."
+        ]
+      }
+    },
+    "victory_title": "BREAKFAST",
+    "verdict_art": "chumbles",
+    "victory": [
+      "Chumbles stops. He is his own size again, sitting in the middle of the kitchen floor with his tail round his feet, looking at you as if none of that happened.",
+      "You find the treats where they always are. He eats every one, then the ones you drop, and then he washes his face for a long time.",
+      "Then he climbs onto the warm part of the sofa where the sun comes in, folds himself into a loaf and closes his eyes. Very far away a trumpet is still playing, softly, and a clock reads 21:15, and none of it is your problem this morning.",
+      "The last sentence is served. The Clemency from this run has been added to your record."
+    ]
+  }
 }

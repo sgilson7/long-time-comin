@@ -2447,6 +2447,231 @@
         ],
         "stir": "lull_stir"
       }
+    },
+    {
+      "id": "yarn",
+      "name": "Ball of Yarn",
+      "kind": "beast",
+      "gait": "surge",
+      "hp": 150,
+      "radius_cm": 70,
+      "hover_cm": 70,
+      "speed_cms": 1100,
+      "range_cm": 700,
+      "contact": 12,
+      "clemency": 1,
+      "attacks": [
+        {
+          "pattern": "yarn_trail",
+          "windup_ms": 350,
+          "rest_ms": 900
+        }
+      ],
+      "zone": "home"
+    },
+    {
+      "id": "chumbles",
+      "name": "Chumbles",
+      "kind": "cat",
+      "hp": 16000,
+      "radius_cm": 230,
+      "hover_cm": 210,
+      "speed_cms": 1700,
+      "range_cm": 1300,
+      "contact": 25,
+      "clemency": 300,
+      "attacks": [],
+      "zone": "home",
+      "phases": [
+        {
+          "from_pct": 100,
+          "gait": "charge",
+          "summons": [],
+          "attacks": [
+            {
+              "pattern": "cat_yowl",
+              "windup_ms": 600,
+              "rest_ms": 500
+            },
+            {
+              "pattern": "cat_swipe",
+              "windup_ms": 450,
+              "rest_ms": 450
+            },
+            {
+              "pattern": "cat_shed",
+              "windup_ms": 500,
+              "rest_ms": 500
+            },
+            {
+              "pattern": "cat_hiss",
+              "windup_ms": 450,
+              "rest_ms": 450
+            },
+            {
+              "pattern": "cat_swipe",
+              "windup_ms": 400,
+              "rest_ms": 400
+            }
+          ]
+        },
+        {
+          "from_pct": 80,
+          "gait": "bound",
+          "summons": [
+            "yarn",
+            "yarn"
+          ],
+          "attacks": [
+            {
+              "pattern": "cat_pounce",
+              "windup_ms": 700,
+              "rest_ms": 450,
+              "move": "pound"
+            },
+            {
+              "pattern": "cat_tail",
+              "windup_ms": 450,
+              "rest_ms": 450
+            },
+            {
+              "pattern": "cat_knead",
+              "windup_ms": 500,
+              "rest_ms": 450
+            },
+            {
+              "pattern": "cat_pounce",
+              "windup_ms": 650,
+              "rest_ms": 400,
+              "move": "pound"
+            },
+            {
+              "pattern": "cat_hiss",
+              "windup_ms": 400,
+              "rest_ms": 400
+            }
+          ]
+        },
+        {
+          "from_pct": 60,
+          "gait": "perch",
+          "summons": [],
+          "attacks": [
+            {
+              "pattern": "cat_knock",
+              "windup_ms": 550,
+              "rest_ms": 450
+            },
+            {
+              "pattern": "cat_hairball",
+              "windup_ms": 500,
+              "rest_ms": 450
+            },
+            {
+              "pattern": "cat_glare",
+              "windup_ms": 450,
+              "rest_ms": 450
+            },
+            {
+              "pattern": "cat_knock",
+              "windup_ms": 500,
+              "rest_ms": 400
+            },
+            {
+              "pattern": "cat_shed",
+              "windup_ms": 450,
+              "rest_ms": 450
+            }
+          ]
+        },
+        {
+          "from_pct": 40,
+          "gait": "unseen",
+          "summons": [
+            "yarn",
+            "yarn"
+          ],
+          "attacks": [
+            {
+              "pattern": "cat_laser",
+              "windup_ms": 500,
+              "rest_ms": 450
+            },
+            {
+              "pattern": "cat_3am",
+              "windup_ms": 500,
+              "rest_ms": 450
+            },
+            {
+              "pattern": "cat_eyes",
+              "windup_ms": 550,
+              "rest_ms": 450
+            },
+            {
+              "pattern": "cat_laser",
+              "windup_ms": 450,
+              "rest_ms": 400
+            },
+            {
+              "pattern": "cat_glare",
+              "windup_ms": 400,
+              "rest_ms": 450
+            }
+          ]
+        },
+        {
+          "from_pct": 20,
+          "gait": "charge",
+          "summons": [
+            "yarn",
+            "yarn",
+            "yarn"
+          ],
+          "attacks": [
+            {
+              "pattern": "cat_scream_2",
+              "windup_ms": 550,
+              "rest_ms": 350
+            },
+            {
+              "pattern": "cat_treats",
+              "windup_ms": 450,
+              "rest_ms": 350
+            },
+            {
+              "pattern": "cat_frenzy",
+              "windup_ms": 450,
+              "rest_ms": 350
+            },
+            {
+              "pattern": "cat_pounce",
+              "windup_ms": 550,
+              "rest_ms": 350,
+              "move": "pound"
+            },
+            {
+              "pattern": "cat_eyes",
+              "windup_ms": 450,
+              "rest_ms": 350
+            },
+            {
+              "pattern": "cat_swipe",
+              "windup_ms": 350,
+              "rest_ms": 300
+            },
+            {
+              "pattern": "cat_knock",
+              "windup_ms": 400,
+              "rest_ms": 350
+            },
+            {
+              "pattern": "cat_laser",
+              "windup_ms": 400,
+              "rest_ms": 300
+            }
+          ]
+        }
+      ]
     }
   ]
 }
