@@ -26,7 +26,7 @@ function table(rows) {
   return t;
 }
 
-export function makeScreens(game, copy, changed, startAt) {
+export function makeScreens(game, copy, changed, startAt, tryChumbles) {
   let tab = copy.codex_tabs[0][0];
 
   // each tab of the Codex, built from the core's numbers
@@ -146,6 +146,15 @@ export function makeScreens(game, copy, changed, startAt) {
         ...s.starts.map((st) => {
           const button = make("button", "big later", st.label);
           button.addEventListener("click", () => startAt(st.zone));
+          return button;
+        }),
+      );
+
+      // the bars the Chumbles practice may begin from, behind the paw
+      el("chumbles-bars").replaceChildren(
+        ...s.chumbles_bars.map((name, bar) => {
+          const button = make("button", "secret bar", name);
+          button.addEventListener("click", () => tryChumbles(bar));
           return button;
         }),
       );

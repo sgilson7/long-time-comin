@@ -32,6 +32,9 @@ button.big:hover:not(:disabled) { background: #f29c86; }
 button.small { font-size: 0.8rem; padding: 4px 10px; box-shadow: 2px 2px 0 var(--ink); }
 button.secret { background: none; border: 0; box-shadow: none; color: var(--ink); opacity: 0.18; font-size: 0.9rem; padding: 0; float: right; cursor: pointer; }
 button.secret:hover:not(:disabled), button.secret:focus-visible { opacity: 1; background: none; }
+#chumbles-bars { clear: both; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px 12px; }
+#chumbles-bars[hidden] { display: none; }
+button.secret.bar { float: none; opacity: 0.6; font-size: 0.75rem; letter-spacing: 0.05em; }
 button.armed { background: var(--red); color: #fff; }
 
 .overlay { position: fixed; inset: 0; z-index: 10; overflow: auto; }

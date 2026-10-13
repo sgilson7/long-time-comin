@@ -96,6 +96,11 @@ async function start() {
         game.start_run_at(zone);
         engage();
       })(),
+    (bar) =>
+      act(() => {
+        game.practice_chumbles(bar);
+        engage();
+      })(),
   );
 
   // a button that changes the mode: wake the sound, act, keep the record
@@ -126,15 +131,12 @@ async function start() {
       engage();
     }),
   );
-  // a faint mark under the credits: the lullaby alone, for testing
+  // faint marks under the credits, for testing: the paw opens a choice of
+  // Chumbles' bars to begin from; the note is the lullaby alone
   el("try-chumbles").title = copy.try_chumbles_title;
-  el("try-chumbles").addEventListener(
-    "click",
-    act(() => {
-      game.practice_chumbles();
-      engage();
-    }),
-  );
+  el("try-chumbles").addEventListener("click", () => {
+    el("chumbles-bars").hidden = !el("chumbles-bars").hidden;
+  });
   el("try-lullaby").title = copy.try_lullaby_title;
   el("try-lullaby").addEventListener(
     "click",
