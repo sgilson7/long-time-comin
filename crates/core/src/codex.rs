@@ -107,10 +107,12 @@ pub fn gun_summary(l: &GunLevel) -> String {
     } else {
         format!("{} damage", l.damage)
     }];
-    parts.push(format!(
-        "{}/s",
-        dec(fx::div(TICKS_PER_SECOND * ONE, l.rate * ONE), 1)
-    ));
+    // a spin gun's rate, at full spin
+    let per_s = match l.spin {
+        Some(sp) => per_second(sp.hot),
+        None => fx::div(TICKS_PER_SECOND * ONE, l.rate * ONE),
+    };
+    parts.push(format!("{}/s", dec(per_s, 1)));
     if l.splash_radius > 0 {
         parts.push(format!("{} burst {} m", l.splash, m(l.splash_radius)));
     }
@@ -120,8 +122,17 @@ pub fn gun_summary(l: &GunLevel) -> String {
     parts.join(" · ")
 }
 
+/// Shots a second, in fixed point, for thousandths of a tick between them.
+fn per_second(milliticks: i32) -> i32 {
+    (TICKS_PER_SECOND as i64 * 1000 * ONE as i64 / milliticks.max(1) as i64) as i32
+}
+
 fn gun_level(l: &GunLevel, level: usize, erases: bool) -> Value {
-    let per_s = fx::div(TICKS_PER_SECOND * ONE, l.rate * ONE);
+    // a spin gun's rate is the one it reaches at full spin
+    let per_s = match l.spin {
+        Some(sp) => per_second(sp.hot),
+        None => fx::div(TICKS_PER_SECOND * ONE, l.rate * ONE),
+    };
     // one target: every pellet on it; a burst's damage goes to the others
     let per_shot = l.damage * l.pellets;
     let mut notes = Vec::new();
@@ -141,13 +152,43 @@ fn gun_level(l: &GunLevel, level: usize, erases: bool) -> Value {
     if erases {
         notes.push("The burst also removes every enemy orb inside it.".to_string());
     }
+    if let Some(sp) = l.spin {
+        notes.push(format!(
+            "Spins up: {} shots/s when it starts, {} once the trigger has been held {} s (the rate and damage per second shown); its spread widens to ±{}°. Let go and the spin bleeds away over {} s.",
+            dec(per_second(sp.cold), 1),
+            dec(per_s, 1),
+            s(sp.up),
+            deg(sp.hot_spread),
+            s(sp.bleed)
+        ));
+    }
+    if l.erase_ward > 0 {
+        let which = if l.erase_ward > crate::world::WARDS {
+            "every enemy orb but gold".to_string()
+        } else if l.erase_ward == 1 {
+            "a blue orb (the Injunction's first ward)".to_string()
+        } else {
+            format!("an orb of the Injunction's first {} wards", l.erase_ward)
+        };
+        notes.push(format!(
+            "Each round erases {which} it meets{}.",
+            match l.through {
+                0 => ", and is spent".to_string(),
+                1 => " and goes on through one more".to_string(),
+                n => format!(" and goes on through {n} more"),
+            }
+        ));
+    }
     if l.pellets > 1 {
         notes.push("The first pellet flies along the aim; the rest scatter inside the spread. Damage per second assumes every pellet hits.".to_string());
     }
     json!({
         "level": level,
         "damage": if l.pellets > 1 { format!("{} pellets × {}", l.pellets, l.damage) } else { l.damage.to_string() },
-        "rate": format!("{} shots/s ({} s apart)", dec(per_s, 1), s(l.rate)),
+        "rate": match l.spin {
+            Some(sp) => format!("{} shots/s at full spin ({} s apart)", dec(per_s, 1), dec((sp.hot as i64 * ONE as i64 / (TICKS_PER_SECOND as i64 * 1000)) as i32, 3)),
+            None => format!("{} shots/s ({} s apart)", dec(per_s, 1), s(l.rate)),
+        },
         "dps": dec(fx::mul(per_s, per_shot * ONE), 0),
         "speed": format!("{} m/s", mps(l.speed)),
         "range": format!("{} m", dec(l.speed * l.life, 0)),
@@ -705,7 +746,8 @@ pub fn upgrade_effect(u: &Upgrade, pal: &crate::content::Palette) -> String {
             DASH_CHARGES + n,
             s(DASH_RECHARGE)
         ),
-        "armory" => format!("Every run starts with a level {n} Carbine instead of level 1."),
+        "armory" => format!("The gun you carry into a run starts at level {n} instead of level 1."),
+        "exhibit" => "A run may carry in this gun instead of the Carbine: choose it under Carry in. It starts at the level the Standing Armory gives.".to_string(),
         "recess" => format!("Once a run, a hit that would kill you leaves you at {RECESS_HEALTH_PCT}% of maximum health instead."),
         "grapple" => format!(
             "Hold F: a hook flies along your aim up to {} m from you and catches on any surface or enemy. It pulls you at {} m/s², up to {} m/s, and lets go when you release F, come within {} m, or after {} s. You keep your speed. Steering still works while pulled. Aimed at a wall up to {} m below a ledge, it lifts you over the ledge. If it stops moving you for {} s it lets go. {} s cooldown. Jumping or dashing lets go.",
@@ -814,6 +856,18 @@ pub fn alt_words(a: &crate::content::Alt) -> String {
             a.splash,
             m(a.splash_radius)
         ),
+        AltKind::Cloture => format!(
+            "one lance of {} damage, plus up to {} more as the gun is spun up, passing through {} enemies; it spends the spin",
+            a.damage,
+            a.spin_damage,
+            a.pierce
+        ),
+        AltKind::Redaction => format!(
+            "a flat bar {} m wide slides forward {} m, erasing every enemy orb it crosses but gold and dealing {} damage to each enemy it passes through",
+            m(a.half_w * 2),
+            m(a.speed * a.life),
+            a.damage
+        ),
     };
     format!(
         "Right mouse, {}: {what}. {} s cooldown. Each level above I adds {}% to its damage.",
@@ -851,7 +905,9 @@ fn rules(c: &Content) -> Vec<String> {
         ),
         "An arena's gates open only when every enemy in it is defeated. Blue gates continue the main path; orange gates start a side path.".to_string(),
         "Side paths are one or two fights a tier harder than the main fight they leave. The last fight holds the reward shown on the map and over the gate, and the path rejoins the next main arena.".to_string(),
-        format!("Rewards: a gun of level 2 or 3 (never a Carbine no better than the one you start with), +{HEALTH_PICKUP} maximum health, +{SPEED_PICKUP_PCT}% run speed, one more jump (up to {MAX_JUMPS}), or one of three that last the run: Piercing Rounds (every shot passes through {PIERCE_BONUS} more enemy), Dash Pulse (a dash removes every enemy orb within {} m of you, at most once every {} s), Mending Parry (each orb you turn back heals {MEND_HEAL}).", m(PULSE_RADIUS), s(PULSE_COOLDOWN)),
+        format!("Rewards: a gun one level above the gun in your hand when you take it (up to level {}), +{HEALTH_PICKUP} maximum health, +{SPEED_PICKUP_PCT}% run speed, one more jump (up to {MAX_JUMPS}), a Purse of Clemency ({PURSE_TIMES} times the zone's side-path share, kept when you die), or one of four that last the run: Piercing Rounds (every shot passes through {PIERCE_BONUS} more enemy), Dash Pulse (a dash removes every enemy orb within {} m of you, at most once every {} s), Mending Parry (each orb you turn back heals {MEND_HEAL}), Contempt (an enemy you kill bursts for {CONTEMPT_PCT}% of its own maximum health on every other enemy within {} m, and what that kills bursts too; each further Contempt adds {} m, up to {CONTEMPT_MAX}; a boss never bursts).", crate::world::roman(MAX_GUN_LEVEL), m(PULSE_RADIUS), s(PULSE_COOLDOWN), m(CONTEMPT_RADIUS), m(CONTEMPT_WIDEN)),
+        format!("A side path's reward is rolled from the zone's table: no reward twice in a zone, and nothing you could not use. A path two fights long holds a choice of two: press E at one; the other is lost. About {} side paths in a hundred are sealed: the map does not show what one holds, and it holds more: a gun a level higher, or two rewards that are both yours.", c.zones[0].route.sealed_pct),
+        format!("The gun you carry into a run is chosen in the Holding: the Carbine, or any gun whose Exhibit you have bought. The Standing Armory starts it at level {} at most; side paths take it up to {}.", c.upgrades.iter().filter(|u| u.effect == "armory").map(|u| u.amount).max().unwrap_or(1), crate::world::roman(MAX_GUN_LEVEL)),
         format!("The Antechamber offers a choice: {REST_HEAL_PCT}% of your maximum health back, or one reward. Press E at one; the other is lost."),
         format!("A wave of enemies comes {} s after the last one is defeated.", s(WAVE_GAP)),
         format!("An enemy that cannot see you when it finishes winding up holds that attack and tries again sooner; the next one it fires regardless. An enemy (not the boss) that has not seen you for {} s reappears where it can.", s(LOST_TICKS)),
@@ -872,7 +928,7 @@ fn rules(c: &Content) -> Vec<String> {
         ),
         "On the Ascent every arena stands higher up the mountain than the last, and off its edges is a fall. Its creatures are corrupted by the ritual and by what is coming: the higher the arena, the more clockwork and eyes they carry.".to_string(),
         "Beating the game opens the boss rush in the Holding: each zone's boss in turn, from the Bailiff on, your health restored between them, with what the Holding gives you to start a run.".to_string(),
-        format!("Rewards found in the house: guns of level III or IV, Hair Trigger (guns fire {TRIGGER_PCT}% faster; they stack) and Plating (hits do {PLATING_PCT}% less, up to {PLATING_MAX})."),
+        format!("From the house on, a deep side path's gun stands two levels above yours. Rewards found from the house on: Hair Trigger (guns fire {TRIGGER_PCT}% faster; they stack) and Plating (hits do {PLATING_PCT}% less, up to {PLATING_MAX})."),
         format!("Updraft vents (glowing grates on the ice) throw you about {} m up when you stand on them. You keep your air jumps.", m(fx::div(fx::mul(VENT_SPEED, VENT_SPEED) / 2, GRAVITY))),
         "Some attacks place their orbs in a shape and hold them still before they fly: a held orb is smaller, with a ring round it, and swells to full size just before it moves. Held orbs hurt to touch.".to_string(),
         format!("Each death reads the next count of the indictment and adds years to the sentence: 1 for the first death, 2 for the second, and so on. The first run to reach a tier {FAR_TIER} fight, and the first win, each read a count too."),

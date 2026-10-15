@@ -20,7 +20,7 @@ use crate::mesh::{self, Mesh};
 use crate::meta::{Meta, Reading, Refusal};
 use crate::player::{Controls, Player};
 use crate::render::{self, Batch, Camera};
-use crate::route::{NodeKind, Reward, Route};
+use crate::route::{Have, Node, NodeKind, Reward, Route};
 use crate::weapons::Held;
 use crate::world::{roman, Exit, Outcome, PickupKind, World};
 use serde::Serialize;
@@ -320,6 +320,11 @@ impl Game {
         self.mode == Mode::Holding && self.meta.buy(&self.c, id).is_ok()
     }
 
+    /// Chooses the gun runs carry in, in the Holding.
+    pub fn carry(&mut self, id: &str) -> bool {
+        self.mode == Mode::Holding && self.meta.choose_carry(&self.c, id)
+    }
+
     pub fn start_run(&mut self) {
         self.start_run_at(0);
     }
@@ -336,9 +341,9 @@ impl Game {
             0
         };
         let (build, gun_level) = self.meta.build(&self.c);
-        let route = Route::build_for(&self.c, zone, self.meta.run_seed(), gun_level);
+        let route = Route::build_for(&self.c, zone, self.meta.run_seed(), &Have::of(&build, gun_level));
         let player = Player::new(V3::ZERO, 0, build);
-        let held = Held::new(self.c.gun("carbine"), gun_level);
+        let held = Held::new(self.meta.carried(&self.c), gun_level);
         let start = route.start();
         let world = self.world_for(&route, start, player, held, 0, false);
         self.run = Some(Run {
@@ -369,7 +374,7 @@ impl Game {
         let (build, gun_level) = self.meta.build(&self.c);
         let route = Route::rush(0, self.meta.run_seed());
         let player = Player::new(V3::ZERO, 0, build);
-        let held = Held::new(self.c.gun("carbine"), gun_level);
+        let held = Held::new(self.meta.carried(&self.c), gun_level);
         let world = self.world_for(&route, 0, player, held, 0, false);
         self.run = Some(Run {
             zone: 0,
@@ -421,7 +426,7 @@ impl Game {
         }
         let route = Route::rush(zone, self.meta.run_seed());
         let player = Player::new(V3::ZERO, 0, build);
-        let held = Held::new(self.c.gun("carbine"), gun_level);
+        let held = Held::new(self.meta.carried(&self.c), gun_level);
         let world = self.world_for(&route, 0, player, held, 0, false);
         self.run = Some(Run {
             zone,
@@ -527,6 +532,7 @@ impl Game {
                 to,
                 main: k == 0,
                 reward: route.nodes[to].reward,
+                sealed: route.nodes[to].sealed,
             })
             .collect();
         let mut w = World::new(
@@ -600,13 +606,8 @@ impl Game {
         };
         run.earned += run.world.earned;
         let zone = self.next_zone(run.zone, run.mission);
-        let (_, gun_level) = self.meta.build(&self.c);
-        let route = Route::build_for(
-            &self.c,
-            zone,
-            self.meta.run_seed(),
-            gun_level.max(run.world.held.level),
-        );
+        let have = Have::of(&run.world.player.build, run.world.held.level);
+        let route = Route::build_for(&self.c, zone, self.meta.run_seed(), &have);
         let mut player = run.world.player.clone();
         player.health = player.build.max_health;
         let held = run.world.held;
@@ -1135,7 +1136,7 @@ impl Game {
                     "main": g.main,
                     "open": w.cleared,
                     "label": self.node_name(dest),
-                    "reward": dest.reward.map(|r| self.reward_label(r)).unwrap_or_default(),
+                    "reward": self.prize_label(dest),
                     "path": if g.main { c.say("gate_main") } else { c.say("gate_side") },
                 }))
             })
@@ -1251,6 +1252,9 @@ impl Game {
                 p.build.plating.min(PLATING_MAX)
             ));
         }
+        if p.build.contempt > 0 {
+            perks.push(format!("{} ×{}", c.say("reward_contempt"), p.build.contempt));
+        }
         let story = self
             .story
             .as_ref()
@@ -1297,7 +1301,16 @@ impl Game {
             "pound": p.build.pound > 0,
             "pound_ready": p.build.pound > 0 && p.pound_cooldown == 0 && !p.pounding,
             "pounding": p.pounding,
-            "saws": gl_saw.map(|s| c.say("hud_saws").replace("{n}", &(s.saws - w.held.saws_out).max(0).to_string()).replace("{max}", &s.saws.to_string())).unwrap_or_default(),
+            // the gun's own trait: blades in hand, the spin, the orbs struck
+            "saws": if let Some(s) = gl_saw {
+                c.say("hud_saws").replace("{n}", &(s.saws - w.held.saws_out).max(0).to_string()).replace("{max}", &s.saws.to_string())
+            } else if gl.spin.is_some() {
+                c.say("hud_spin").replace("{n}", &(w.held.spin * 100 / ONE).to_string())
+            } else if gl.erase_ward > 0 {
+                c.say("hud_struck").replace("{n}", &w.struck.to_string())
+            } else {
+                String::new()
+            },
             "boss": boss,
             "zone": c.zones[run.zone].name,
             "year": c.zones[run.zone].year,
@@ -1450,9 +1463,45 @@ impl Game {
         self.c.zones[n.zone].place_name(key)
     }
 
+    /// The level of the gun in hand, which a gun offered stands above.
+    fn held_level(&self) -> i32 {
+        self.run.as_ref().map_or(1, |r| r.world.held.level)
+    }
+
+    /// What a node holds, in words: its reward, a choice of two, or sealed.
+    fn prize_label(&self, n: &Node) -> String {
+        let Some(r) = n.reward else {
+            return String::new();
+        };
+        if n.sealed {
+            return self.c.say("reward_sealed");
+        }
+        match n.extra.first() {
+            Some(&x) if n.choose => self
+                .c
+                .say("reward_choice")
+                .replace("{a}", &self.reward_label(r))
+                .replace("{b}", &self.reward_label(x)),
+            _ => self.reward_label(r),
+        }
+    }
+
+    fn prize_icon(n: &Node) -> &'static str {
+        if n.sealed {
+            return "sealed";
+        }
+        n.reward.map(Game::reward_icon).unwrap_or("")
+    }
+
     pub fn reward_label(&self, r: Reward) -> String {
         match r {
-            Reward::Gun(g, l) => format!("{} {}", self.c.guns[g].name, roman(l)),
+            Reward::Gun(g, step) => format!(
+                "{} {}",
+                self.c.guns[g].name,
+                roman((self.held_level() + step).min(crate::balance::MAX_GUN_LEVEL))
+            ),
+            Reward::Contempt => self.c.say("reward_contempt"),
+            Reward::Purse(n) => self.c.say("reward_purse").replace("{n}", &n.to_string()),
             Reward::Jump => self.c.say("reward_jump"),
             Reward::Health => self.c.say("reward_health"),
             Reward::Speed => self.c.say("reward_speed"),
@@ -1478,6 +1527,8 @@ impl Game {
             PickupKind::Mend => c.say("reward_mend"),
             PickupKind::Trigger => c.say("reward_trigger"),
             PickupKind::Plating => c.say("reward_plating"),
+            PickupKind::Contempt => c.say("reward_contempt"),
+            PickupKind::Purse(n) => c.say("reward_purse").replace("{n}", &n.to_string()),
         }
     }
 
@@ -1497,6 +1548,8 @@ impl Game {
             Reward::Mend => "mend",
             Reward::Trigger => "trigger",
             Reward::Plating => "plating",
+            Reward::Contempt => "contempt",
+            Reward::Purse(_) => "purse",
         }
     }
 
@@ -1572,8 +1625,14 @@ impl Game {
                 self.count_of(build.jumps, "jump", "jumps"),
                 self.count_of(build.dash_charges, "dash", "dashes"),
                 c.say("build_speed").replace("{n}", &build.speed_pct.to_string()),
-                format!("{} {}", c.guns[c.gun("carbine")].name, roman(gun_level)),
+                format!("{} {}", c.guns[m.carried(c)].name, roman(gun_level)),
             ],
+            // the guns a run may carry in, the one chosen marked
+            "carry": m.carry_choices(c).into_iter().map(|g| json!({
+                "id": c.guns[g].id,
+                "name": c.guns[g].name,
+                "chosen": g == m.carried(c),
+            })).collect::<Vec<_>>(),
             "sentence_bonus": if m.sentence_bonus_pct() > 0 { c.say("sentence_bonus").replace("{n}", &m.sentence_bonus_pct().to_string()) } else { String::new() },
             "build": {
                 "health": build.max_health,
@@ -1583,7 +1642,7 @@ impl Game {
                 "grapple": build.grapple,
                 "parry": build.parry,
                 "recess": build.recess,
-                "gun": format!("{} {}", c.guns[c.gun("carbine")].name, roman(gun_level)),
+                "gun": format!("{} {}", c.guns[m.carried(c)].name, roman(gun_level)),
                 "wall": build.wall,
                 "pound": build.pound > 0,
             },
@@ -1621,8 +1680,8 @@ impl Game {
                         "kind": match n.kind { NodeKind::Arrival => "arrival", NodeKind::Fight => "fight", NodeKind::Rest => "rest", NodeKind::Boss => "boss" },
                         "name": self.node_name(n),
                         "detour": n.detour,
-                        "reward": n.reward.map(|x| self.reward_label(x)).unwrap_or_default(),
-                        "icon": n.reward.map(Game::reward_icon).unwrap_or(""),
+                        "reward": self.prize_label(n),
+                        "icon": Game::prize_icon(n),
                         "here": i == run.at,
                         "visited": run.visited.contains(&i),
                         "next": run.route.nodes[run.at].next.contains(&i),
@@ -1859,6 +1918,27 @@ pub(crate) mod tests {
         let mut back = game_with(&g.saved());
         back.begin();
         assert_eq!(back.mode, Mode::Holding, "the sentencing is not read twice");
+    }
+
+    #[test]
+    fn a_run_carries_in_the_gun_chosen_in_the_holding_at_the_armorys_level() {
+        let mut g = game_with(r#"{"seen_intro": true, "clemency": 500, "owned": ["exhibit_b", "armory"]}"#);
+        g.begin();
+        let s: Value = serde_json::from_str(&g.screen_json()).unwrap();
+        let names: Vec<&str> = s["carry"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|x| x["id"].as_str().unwrap())
+            .collect();
+        assert_eq!(names, ["carbine", "scattergun"]);
+        assert!(g.carry("scattergun"));
+        assert!(!g.carry("redactor"), "no Exhibit for it");
+        g.start_run();
+        let held = g.run.as_ref().unwrap().world.held;
+        assert_eq!(held.gun, g.c.gun("scattergun"));
+        assert_eq!(held.level, 2, "the Standing Armory's level");
+        assert!(!g.carry("carbine"), "chosen only in the Holding");
     }
 
     #[test]

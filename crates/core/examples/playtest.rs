@@ -824,6 +824,8 @@ impl Harness {
                 PickupKind::Mend => "Mending Parry".to_string(),
                 PickupKind::Trigger => "Hair Trigger".to_string(),
                 PickupKind::Plating => "Plating".to_string(),
+                PickupKind::Contempt => "Contempt".to_string(),
+                PickupKind::Purse(n) => format!("a purse of {n} Clemency"),
             };
             let what = if k.group != 0 {
                 format!("{what} [a choice: 'take' it with E; the other is lost]")

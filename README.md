@@ -4,8 +4,8 @@ A third-person bullet-hell roguelike that runs in the browser. You committed a c
 
 **Play:** https://sgilson7.github.io/long-time-comin/
 
-- **Runs.** Zone one, *The Waiting City, 2031*, is a graph of arenas: one main path from the crater where you land to the Court of Hours, and side paths of harder fights that rejoin it and end in a reward you can see on the map before you choose (a levelled gun, more health, more speed, another jump, up to four). Every run rolls its own graph.
-- **Five guns.** Carbine (automatic, accurate), Scattergun (pellets, close), Hourglass Launcher (a slow orb that bursts), in the house the Ripsaw (after Saros: a click throws a saw blade that lodges in what it hits, and holding the trigger revs every lodged blade), and on the mountain the Big Iron. Levels I to IV, found on side paths; each has a second fire on the right mouse button (a burst, a slug, a cluster of bombs, the saws' shatter); one carried at a time, as in Returnal and Tower of Guns.
+- **Runs.** Zone one, *The Waiting City, 2031*, is a graph of arenas: one main path from the crater where you land to the Court of Hours, and side paths of harder fights that rejoin it and end in a reward you can see on the map before you choose (a better gun, more health, more speed, another jump, a passive such as Contempt, under which what you kill bursts, or a purse of Clemency). A longer side path holds a choice of two, and some are sealed until you clear them. Every run rolls its own graph and its rewards.
+- **Seven guns.** Carbine (automatic, accurate), Scattergun (pellets, close), Hourglass Launcher (a slow orb that bursts), the Filibuster (an automatic rifle that fires faster the longer it is held), on the ice the Redactor (an automatic rifle whose rounds strike enemy orbs from the air), in the house the Ripsaw (after Saros: a click throws a saw blade that lodges in what it hits, and holding the trigger revs every lodged blade), and on the mountain the Big Iron. Levels I to V; each has a second fire on the right mouse button (a burst, a slug, a cluster of bombs, the saws' shatter, the hammer fanned, a lance that spends the spin, a bar that wipes orbs away); one carried at a time, as in Returnal and Tower of Guns. You choose the gun you carry in from those whose Exhibit you have bought in the Holding, and every gun a side path offers is a level or two above the one in your hand.
 - **Orbs.** Enemies fire volleys from `data/patterns.json`: rings, aimed fans, spirals (each repeat turned a little), flowers (orbs curling both ways), blooms (fast out, then hanging), spheres, and ground waves you jump. A ring fired from a roof tilts through you.
 - **Moving.** Run, up to four jumps, a dash that orbs pass through, and air control close to the ground's, after Returnal, Saros and Iron Vector.
 - **The Bailiff of Hours**, the zone's boss, has three phases and calls help at each. Beating it does not end the run: an interlude (the years between, a company built on knowing what comes next) carries you into zone two.
@@ -29,7 +29,7 @@ A third-person bullet-hell roguelike that runs in the browser. You committed a c
 | W A S D | Move |
 | Mouse | Look and aim |
 | Left mouse (hold) | Fire (the Ripsaw: click to throw, hold to rev) |
-| Right mouse | The gun's second fire: burst, slug, cluster or shatter |
+| Right mouse | The gun's second fire: burst, slug, cluster, shatter, fan, lance or bar |
 | Space | Jump, and again in the air |
 | Shift | Dash: orbs pass through you |
 | E | Take a gun from the floor |

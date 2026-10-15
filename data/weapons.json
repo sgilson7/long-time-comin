@@ -1,5 +1,5 @@
 {
-  "_about": "The five guns. Units: damage in health points, rate_ms between shots, speed_cms in cm/s, spread_deg the half-angle of the cone a shot may stray in, size_cm the shot's radius, life_ms how long it flies, splash_cm the radius of the blast and splash its damage, pierce how many enemies a shot passes through. Every number the Codex and the HUD show for a gun is computed from these by crates/core/src/codex.rs. Levels 1 to 4: a run finds higher levels on side paths; level 4 only in the house. A saw gun (saws > 0) throws a blade on each press while it has one in hand: saws blades out at once, each dealing damage on impact and, while the trigger is held, rev_damage every rev_ms until it has dealt teeth in all; then it comes back in recall_ms. from_zone: the first zone (counted from 0) whose rewards offer the gun. alt: the gun's second fire on the right mouse button: kind burst (count heavy rounds one behind another), slug (one heavy round that pierces), cluster (count bombs in a fan, spread_deg apart) or detonate (every lodged blade bursts for damage plus half its teeth left, splash_cm round it, and comes back); damage at level 1, 25% more each level above; cooldown_ms between uses. mag and shell_ms: a revolver's cylinder and the time to load one round into it; it loads one shell at a time once the trigger has been let be a moment (at once when empty). Alt kind fan: every round left, one after another, a little wild.",
+  "_about": "The seven guns. Units: damage in health points, rate_ms between shots, speed_cms in cm/s, spread_deg the half-angle of the cone a shot may stray in, size_cm the shot's radius, life_ms how long it flies, splash_cm the radius of the blast and splash its damage, pierce how many enemies a shot passes through. Every number the Codex and the HUD show for a gun is computed from these by crates/core/src/codex.rs. Levels 1 to 5: a run starts with the gun it carries in (the Holding's Exhibits) at level 1 to 3, and every gun a side path offers is a level or two above the gun in hand. A saw gun (saws > 0) throws a blade on each press while it has one in hand: saws blades out at once, each dealing damage on impact and, while the trigger is held, rev_damage every rev_ms until it has dealt teeth in all; then it comes back in recall_ms. from_zone: the first zone (counted from 0) whose rewards offer the gun. alt: the gun's second fire on the right mouse button: kind burst (count heavy rounds one behind another), slug (one heavy round that pierces), cluster (count bombs in a fan, spread_deg apart) or detonate (every lodged blade bursts for damage plus half its teeth left, splash_cm round it, and comes back); damage at level 1, 25% more each level above; cooldown_ms between uses. mag and shell_ms: a revolver's cylinder and the time to load one round into it; it loads one shell at a time once the trigger has been let be a moment (at once when empty). Alt kind fan: every round left, one after another, a little wild. A spin gun (cold_ms > 0) fires every cold_ms when it starts and every rate_ms once the trigger has been held spin_ms; its spread widens from spread_deg to hot_spread_deg as it spins up, and the spin bleeds away over bleed_ms once the trigger is let go. erase_ward: each round erases the first enemy orb it meets of a ward up to this (blue is 1; 4 or more is every orb but gold, which only the parry turns), and goes on through `through` more. Alt kind cloture: one lance of damage plus spin_damage times the spin, which it spends; redaction: a flat bar width_cm by height_cm that slides forward, erasing every orb but gold and hitting each enemy it crosses once.",
   "weapons": [
     {
       "id": "carbine",
@@ -54,6 +54,18 @@
           "splash_cm": 0,
           "splash": 0,
           "pierce": 1
+        },
+        {
+          "damage": 15,
+          "rate_ms": 60,
+          "pellets": 1,
+          "spread_deg": 1,
+          "speed_cms": 11000,
+          "size_cm": 13,
+          "life_ms": 1900,
+          "splash_cm": 0,
+          "splash": 0,
+          "pierce": 2
         }
       ],
       "alt": {
@@ -121,6 +133,18 @@
           "splash_cm": 0,
           "splash": 0,
           "pierce": 1
+        },
+        {
+          "damage": 12,
+          "rate_ms": 420,
+          "pellets": 18,
+          "spread_deg": 6,
+          "speed_cms": 9000,
+          "size_cm": 10,
+          "life_ms": 520,
+          "splash_cm": 0,
+          "splash": 0,
+          "pierce": 2
         }
       ],
       "alt": {
@@ -187,6 +211,18 @@
           "life_ms": 2400,
           "splash_cm": 600,
           "splash": 56,
+          "pierce": 0
+        },
+        {
+          "damage": 68,
+          "rate_ms": 520,
+          "pellets": 1,
+          "spread_deg": 0,
+          "speed_cms": 7500,
+          "size_cm": 34,
+          "life_ms": 2500,
+          "splash_cm": 680,
+          "splash": 64,
           "pierce": 0
         }
       ],
@@ -278,6 +314,23 @@
           "rev_ms": 50,
           "teeth": 300,
           "recall_ms": 350
+        },
+        {
+          "damage": 35,
+          "rate_ms": 180,
+          "pellets": 1,
+          "spread_deg": 0,
+          "speed_cms": 5700,
+          "size_cm": 36,
+          "life_ms": 1400,
+          "splash_cm": 0,
+          "splash": 0,
+          "pierce": 0,
+          "saws": 4,
+          "rev_damage": 9,
+          "rev_ms": 50,
+          "teeth": 340,
+          "recall_ms": 300
         }
       ],
       "alt": {
@@ -352,6 +405,20 @@
           "pierce": 1,
           "mag": 6,
           "shell_ms": 400
+        },
+        {
+          "damage": 125,
+          "rate_ms": 420,
+          "pellets": 1,
+          "spread_deg": 0,
+          "speed_cms": 5500,
+          "size_cm": 20,
+          "life_ms": 1500,
+          "splash_cm": 0,
+          "splash": 0,
+          "pierce": 2,
+          "mag": 6,
+          "shell_ms": 400
         }
       ],
       "alt": {
@@ -364,6 +431,196 @@
         "life_ms": 1400,
         "spread_deg": 6,
         "cooldown_ms": 1200
+      }
+    },
+    {
+      "id": "filibuster",
+      "name": "The Filibuster",
+      "blurb": "Automatic rifle that spins up: the longer the trigger is held, the faster it fires.",
+      "colour": "shot_filibuster",
+      "levels": [
+        {
+          "damage": 7,
+          "rate_ms": 60,
+          "pellets": 1,
+          "spread_deg": 1,
+          "speed_cms": 9000,
+          "size_cm": 9,
+          "life_ms": 1600,
+          "splash_cm": 0,
+          "splash": 0,
+          "pierce": 0,
+          "cold_ms": 200,
+          "spin_ms": 1500,
+          "bleed_ms": 600,
+          "hot_spread_deg": 3
+        },
+        {
+          "damage": 8,
+          "rate_ms": 55,
+          "pellets": 1,
+          "spread_deg": 1,
+          "speed_cms": 9500,
+          "size_cm": 10,
+          "life_ms": 1600,
+          "splash_cm": 0,
+          "splash": 0,
+          "pierce": 0,
+          "cold_ms": 190,
+          "spin_ms": 1400,
+          "bleed_ms": 600,
+          "hot_spread_deg": 3
+        },
+        {
+          "damage": 9,
+          "rate_ms": 50,
+          "pellets": 1,
+          "spread_deg": 1,
+          "speed_cms": 10000,
+          "size_cm": 11,
+          "life_ms": 1700,
+          "splash_cm": 0,
+          "splash": 0,
+          "pierce": 1,
+          "cold_ms": 180,
+          "spin_ms": 1300,
+          "bleed_ms": 600,
+          "hot_spread_deg": 2
+        },
+        {
+          "damage": 10,
+          "rate_ms": 45,
+          "pellets": 1,
+          "spread_deg": 1,
+          "speed_cms": 10500,
+          "size_cm": 12,
+          "life_ms": 1800,
+          "splash_cm": 0,
+          "splash": 0,
+          "pierce": 1,
+          "cold_ms": 170,
+          "spin_ms": 1200,
+          "bleed_ms": 600,
+          "hot_spread_deg": 2
+        },
+        {
+          "damage": 11,
+          "rate_ms": 40,
+          "pellets": 1,
+          "spread_deg": 1,
+          "speed_cms": 11000,
+          "size_cm": 13,
+          "life_ms": 1900,
+          "splash_cm": 0,
+          "splash": 0,
+          "pierce": 2,
+          "cold_ms": 160,
+          "spin_ms": 1100,
+          "bleed_ms": 600,
+          "hot_spread_deg": 2
+        }
+      ],
+      "alt": {
+        "kind": "cloture",
+        "name": "Cloture",
+        "damage": 20,
+        "spin_damage": 100,
+        "count": 1,
+        "speed_cms": 14000,
+        "size_cm": 24,
+        "life_ms": 1400,
+        "pierce": 4,
+        "cooldown_ms": 1000
+      }
+    },
+    {
+      "id": "redactor",
+      "name": "The Redactor",
+      "blurb": "Automatic rifle whose rounds strike enemy orbs from the air. Light damage.",
+      "colour": "shot_redactor",
+      "from_zone": 1,
+      "levels": [
+        {
+          "damage": 6,
+          "rate_ms": 110,
+          "pellets": 1,
+          "spread_deg": 1,
+          "speed_cms": 9000,
+          "size_cm": 10,
+          "life_ms": 1500,
+          "splash_cm": 0,
+          "splash": 0,
+          "pierce": 0,
+          "erase_ward": 1,
+          "through": 0
+        },
+        {
+          "damage": 7,
+          "rate_ms": 105,
+          "pellets": 1,
+          "spread_deg": 1,
+          "speed_cms": 9000,
+          "size_cm": 10,
+          "life_ms": 1500,
+          "splash_cm": 0,
+          "splash": 0,
+          "pierce": 0,
+          "erase_ward": 2,
+          "through": 0
+        },
+        {
+          "damage": 8,
+          "rate_ms": 90,
+          "pellets": 1,
+          "spread_deg": 1,
+          "speed_cms": 9000,
+          "size_cm": 10,
+          "life_ms": 1500,
+          "splash_cm": 0,
+          "splash": 0,
+          "pierce": 0,
+          "erase_ward": 9,
+          "through": 1
+        },
+        {
+          "damage": 9,
+          "rate_ms": 80,
+          "pellets": 1,
+          "spread_deg": 1,
+          "speed_cms": 9000,
+          "size_cm": 10,
+          "life_ms": 1500,
+          "splash_cm": 0,
+          "splash": 0,
+          "pierce": 1,
+          "erase_ward": 9,
+          "through": 2
+        },
+        {
+          "damage": 10,
+          "rate_ms": 70,
+          "pellets": 1,
+          "spread_deg": 1,
+          "speed_cms": 9000,
+          "size_cm": 10,
+          "life_ms": 1500,
+          "splash_cm": 0,
+          "splash": 0,
+          "pierce": 1,
+          "erase_ward": 9,
+          "through": 3
+        }
+      ],
+      "alt": {
+        "kind": "redaction",
+        "name": "Redaction",
+        "damage": 30,
+        "count": 1,
+        "speed_cms": 3000,
+        "life_ms": 900,
+        "width_cm": 300,
+        "height_cm": 120,
+        "cooldown_ms": 3000
       }
     }
   ]

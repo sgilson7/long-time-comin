@@ -116,6 +116,10 @@ impl Game {
         self.inner.buy(id)
     }
 
+    pub fn carry(&mut self, id: &str) -> bool {
+        self.inner.carry(id)
+    }
+
     pub fn start_run(&mut self) {
         self.inner.start_run()
     }

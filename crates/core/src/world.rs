@@ -29,12 +29,19 @@ pub enum PickupKind {
     Mend,
     Trigger,
     Plating,
+    /// what you kill bursts
+    Contempt,
+    /// Clemency, banked with the run's
+    Purse(i32),
 }
 
-/// The pickup a reward becomes.
-pub fn reward_pickup(r: Reward) -> PickupKind {
+/// The pickup a reward becomes, for a body holding a gun of `held_level`:
+/// a gun is that many levels above it, up to the last.
+pub fn reward_pickup(r: Reward, held_level: i32) -> PickupKind {
     match r {
-        Reward::Gun(g, l) => PickupKind::Gun(g, l),
+        Reward::Gun(g, step) => PickupKind::Gun(g, (held_level + step).clamp(1, MAX_GUN_LEVEL)),
+        Reward::Contempt => PickupKind::Contempt,
+        Reward::Purse(n) => PickupKind::Purse(n),
         Reward::Jump => PickupKind::Jump,
         Reward::Health => PickupKind::MaxHealth(HEALTH_PICKUP),
         Reward::Speed => PickupKind::Speed(SPEED_PICKUP_PCT),
@@ -65,6 +72,8 @@ pub struct Gate {
     pub to: Option<usize>,
     pub main: bool,
     pub reward: Option<Reward>,
+    /// what it leads to is sealed: its reward is not shown
+    pub sealed: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -151,6 +160,12 @@ pub struct World {
     pub wave_open: bool,
     pub cleared: bool,
     pub reward: Option<Reward>,
+    /// rewards beside it: a choice of one when `choose`, else a sealed
+    /// pair that is all yours
+    pub extra: Vec<Reward>,
+    pub choose: bool,
+    /// enemy orbs your rounds and bars have struck from the air
+    pub struck: i32,
     pub rng: Rng,
     pub tick: i32,
     pub notes: Vec<Note>,
@@ -237,6 +252,7 @@ pub struct Exit {
     pub to: usize,
     pub main: bool,
     pub reward: Option<Reward>,
+    pub sealed: bool,
 }
 
 impl World {
@@ -265,6 +281,7 @@ impl World {
                 to: exit.map(|e| e.to),
                 main: exit.is_none_or(|e| e.main),
                 reward: exit.and_then(|e| e.reward),
+                sealed: exit.is_some_and(|e| e.sealed),
             });
         }
         let waves_left = node
@@ -290,6 +307,9 @@ impl World {
             wave_open: false,
             cleared: !fight,
             reward: node.reward,
+            extra: node.extra.clone(),
+            choose: node.choose,
+            struck: 0,
             rng: Rng::new(seed ^ node.seed),
             tick: 0,
             notes: Vec::new(),
@@ -356,7 +376,7 @@ impl World {
                 let at = w.arena.start.add(v3(x, 0, -int(6)));
                 w.pickups.push(Pickup {
                     pos: at,
-                    kind: reward_pickup(*r),
+                    kind: reward_pickup(*r, w.held.level),
                     taken: false,
                     age: 0,
                     group: 2,
@@ -369,7 +389,7 @@ impl World {
             let heal = w.player.build.max_health * REST_HEAL_PCT / 100;
             let mut offer = vec![(v3(-int(4), 0, int(5)), PickupKind::Heal(heal))];
             if let Some(r) = node.reward {
-                offer.push((v3(int(4), 0, int(5)), reward_pickup(r)));
+                offer.push((v3(int(4), 0, int(5)), reward_pickup(r, w.held.level)));
             }
             for (pos, kind) in offer {
                 w.pickups.push(Pickup {
@@ -814,10 +834,11 @@ impl World {
             lodged,
         );
         if !alt.shots.is_empty() || alt.detonate {
-            let sound = if gun.id == "big_iron" {
-                "fire_iron"
-            } else {
-                "alt_fire"
+            let sound = match gun.id.as_str() {
+                "big_iron" => "fire_iron",
+                "filibuster" => "cloture",
+                "redactor" => "redaction",
+                _ => "alt_fire",
             };
             self.note(sound, String::new());
             self.effect(FxKind::Flash, muzzle, V3::ZERO, 6, rgb, ONE * 6 / 10);
@@ -832,6 +853,8 @@ impl World {
                 "scattergun" => "fire_scatter",
                 "ripsaw" => "saw_throw",
                 "big_iron" => "fire_iron",
+                "filibuster" => "fire_filibuster",
+                "redactor" => "fire_redactor",
                 _ => "fire_launcher",
             };
             self.note(sound, String::new());
@@ -1168,24 +1191,35 @@ impl World {
             let heal = HEAL_ON_CLEAR + self.player.build.bail;
             self.player.heal(heal);
             if let Some(r) = self.reward {
-                let kind = reward_pickup(r);
-                // on the open floor nearest the spot ahead of the body: the
-                // spot itself could be inside a wall
+                // a choice of two waits for the interact key, and taking
+                // one takes the other away; a sealed pair is both yours
+                let mut all = vec![r];
+                all.extend(self.extra.iter().copied());
+                let group = if self.choose && all.len() > 1 { 3 } else { 0 };
                 let ahead = self.player.pos.add(facing(self.player.yaw, 0).scale(int(4)));
-                let at = self
-                    .arena
-                    .ground_spawns
-                    .iter()
-                    .copied()
-                    .min_by_key(|p| p.dist(ahead))
-                    .unwrap_or(ahead);
-                self.pickups.push(Pickup {
-                    pos: at,
-                    kind,
-                    taken: false,
-                    age: 0,
-                    group: 0,
-                });
+                let across = right_of(self.player.yaw);
+                let n = all.len() as i32;
+                for (k, r) in all.into_iter().enumerate() {
+                    let kind = reward_pickup(r, self.held.level);
+                    // on the open floor nearest the spot ahead of the body:
+                    // the spot itself could be inside a wall
+                    let spot = ahead.add(across.scale(int(3) * (2 * k as i32 - (n - 1))));
+                    let at = self
+                        .arena
+                        .ground_spawns
+                        .iter()
+                        .copied()
+                        .filter(|p| !self.pickups.iter().any(|q| q.pos == *p))
+                        .min_by_key(|p| p.dist(spot))
+                        .unwrap_or(spot);
+                    self.pickups.push(Pickup {
+                        pos: at,
+                        kind,
+                        taken: false,
+                        age: 0,
+                        group,
+                    });
+                }
             }
             self.note("cleared", c.say("callout_cleared"));
         }
@@ -1277,6 +1311,8 @@ impl World {
                 rgb: reflect,
                 kind: ShotKind::Reflect,
                 erases: false,
+                erase_ward: 0,
+                through: 0,
                 lodged: None,
                 teeth: 0,
             });
@@ -1319,8 +1355,45 @@ impl World {
                 continue;
             }
             s.life -= 1;
-            let len = s.vel.len();
+            if let ShotKind::Bar { half_w, half_h } = s.kind {
+                if self.bar_step(c, &mut s, half_w, half_h, &mut killed) {
+                    kept.push(s);
+                }
+                continue;
+            }
+            let mut len = s.vel.len();
             let dir = s.vel.norm();
+            // a Redactor's round erases the orbs it meets; one too many
+            // spends it where it meets it
+            let mut spent = false;
+            if s.erase_ward > 0 {
+                let mut met: Vec<(i32, usize)> = self
+                    .orbs
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, o)| erasable(o, s.erase_ward))
+                    .filter_map(|(k, o)| ray_sphere(s.pos, dir, o.pos, o.radius + s.radius).map(|t| (t, k)))
+                    .filter(|&(t, _)| t <= len)
+                    .collect();
+                met.sort();
+                let mut gone = Vec::new();
+                for (t, k) in met {
+                    gone.push(k);
+                    if s.through > 0 {
+                        s.through -= 1;
+                    } else {
+                        len = t;
+                        spent = true;
+                        break;
+                    }
+                }
+                gone.sort_unstable_by(|a, b| b.cmp(a));
+                for k in gone {
+                    let o = self.orbs.remove(k);
+                    self.sparks(o.pos, o.rgb, 4, ONE / 8);
+                    self.struck += 1;
+                }
+            }
             let wall = self.arena.level.ray(s.pos, dir, len).map(|h| h.t);
             let first = self.first_hit(c, s.pos, dir, s.radius, len, &s.passed);
             let enemy_first = match (first, wall) {
@@ -1408,6 +1481,9 @@ impl World {
                 }
                 continue;
             }
+            if spent {
+                continue;
+            }
             s.pos = s.pos.add(s.vel);
             if s.life <= 0 {
                 if s.kind.bursts() {
@@ -1461,7 +1537,12 @@ impl World {
     fn fell(&mut self, c: &Content, mut killed: Vec<usize>) {
         killed.sort();
         killed.dedup();
-        for i in killed {
+        // Contempt's bursts add what they kill to the list as it is read
+        let mut k = 0;
+        while k < killed.len() {
+            let i = killed[k];
+            k += 1;
+            self.contempt(c, i, &mut killed);
             self.kills += 1;
             self.burst(c, i);
             let e = &self.enemies[i];
@@ -1564,6 +1645,17 @@ impl World {
                 PickupKind::Mend => {
                     self.player.build.mend = true;
                     self.note("pickup", c.say("callout_mend"));
+                }
+                PickupKind::Contempt => {
+                    self.player.build.contempt = (self.player.build.contempt + 1).min(CONTEMPT_MAX);
+                    let text = c
+                        .say("callout_contempt")
+                        .replace("{n}", &self.player.build.contempt.to_string());
+                    self.note("pickup", text);
+                }
+                PickupKind::Purse(n) => {
+                    self.earned += n;
+                    self.note("pickup", c.say("callout_purse").replace("{n}", &n.to_string()));
                 }
                 PickupKind::Trigger => {
                     self.player.build.trigger += 1;
@@ -1676,6 +1768,102 @@ impl World {
             self.orbs.extend(s.orbs.into_iter().take(room));
             self.waves.extend(s.waves);
         }
+    }
+
+    /// Contempt: enemy `i`, killed by you, bursts on those near it; what
+    /// the burst kills joins `killed` and bursts in its turn. A boss never
+    /// bursts.
+    fn contempt(&mut self, c: &Content, i: usize, killed: &mut Vec<usize>) {
+        let n = self.player.build.contempt;
+        if n <= 0 || Some(i) == self.boss {
+            return;
+        }
+        let at = self.enemies[i].pos;
+        let damage = (self.enemies[i].max_hp * CONTEMPT_PCT / 100).max(1);
+        let radius = CONTEMPT_RADIUS + CONTEMPT_WIDEN * (n - 1);
+        self.effect(FxKind::Burst, at, V3::ZERO, 16, c.pal.c("contempt"), radius * 2);
+        self.note("contempt", String::new());
+        for j in 0..self.enemies.len() {
+            if j == i || killed.contains(&j) || !self.enemies[j].hurtable() {
+                continue;
+            }
+            let r = radius + c.enemies[self.enemies[j].def].radius;
+            if orbs::within(self.enemies[j].pos, at, r) && self.enemies[j].hurt(damage) {
+                killed.push(j);
+            }
+        }
+    }
+
+    /// A Redaction's bar this tick: it erases every orb but gold it
+    /// crosses and hits each enemy it crosses once; a wall stops it. False
+    /// once it is spent.
+    fn bar_step(
+        &mut self,
+        c: &Content,
+        s: &mut Shot,
+        half_w: i32,
+        half_h: i32,
+        killed: &mut Vec<usize>,
+    ) -> bool {
+        let len = s.vel.len();
+        let dir = s.vel.norm();
+        let across = right_of(crate::geom::yaw_pitch_of(dir).0);
+        let wall = self.arena.level.ray(s.pos, dir, len).map(|h| h.t);
+        let reach = wall.unwrap_or(len);
+        let from = s.pos;
+        let inside = |p: V3, r: i32| {
+            let rel = p.sub(from);
+            let along = rel.dot(dir);
+            along >= -r
+                && along <= reach + r
+                && rel.dot(across).abs() <= half_w + r
+                && rel.y.abs() <= half_h + r
+        };
+        let before = self.orbs.len();
+        let mut gone = Vec::new();
+        self.orbs.retain(|o| {
+            let erase = !o.gold && inside(o.pos, o.radius);
+            if erase {
+                gone.push((o.pos, o.rgb));
+            }
+            !erase
+        });
+        self.struck += (before - self.orbs.len()) as i32;
+        for (at, rgb) in gone {
+            self.sparks(at, rgb, 3, ONE / 8);
+        }
+        let mut weak = Vec::new();
+        for i in 0..self.enemies.len() {
+            if s.passed.contains(&i) || !self.enemies[i].hurtable() {
+                continue;
+            }
+            let d = &c.enemies[self.enemies[i].def];
+            let parts = tank::weak_points(&self.enemies[i], d);
+            let body = inside(self.enemies[i].pos, d.radius);
+            let points: Vec<(usize, V3)> = parts
+                .iter()
+                .filter(|(wp, wr, _)| inside(*wp, *wr))
+                .map(|&(wp, _, k)| (k, wp))
+                .collect();
+            if !body && points.is_empty() {
+                continue;
+            }
+            s.passed.push(i);
+            if body && self.enemies[i].hurt(s.damage) {
+                killed.push(i);
+            }
+            for (k, wp) in points {
+                weak.push((i, k, wp));
+            }
+            let at = self.enemies[i].pos;
+            self.sparks(at, s.rgb, 8, ONE / 6);
+            self.note("hit", String::new());
+        }
+        for (i, k, wp) in weak {
+            self.hurt_weak(c, i, k, s.damage, wp);
+        }
+        s.pos = from.add(dir.scale(reach));
+        wall.is_none() && s.life > 0
     }
 
     /// A hit, and where it came from.
@@ -2133,6 +2321,8 @@ impl World {
             rgb: c.pal.c("spark"),
             kind: ShotKind::Thrown(def),
             erases: false,
+            erase_ward: 0,
+            through: 0,
             lodged: None,
             teeth: 0,
         });
@@ -2589,12 +2779,23 @@ pub fn ray_sphere(o: V3, d: V3, c: V3, r: i32) -> Option<i32> {
     Some((tca - thc).max(0))
 }
 
+/// Does a Redactor's round of `ward` erase this orb? Gold never; past the
+/// last ward, every other orb.
+pub fn erasable(o: &Orb, ward: i32) -> bool {
+    !o.gold && ward > 0 && ((1..=ward).contains(&o.ward) || ward > WARDS)
+}
+
+/// the Injunction's wards: blue, then a Standing Order's, then a Permanent
+/// Injunction's
+pub const WARDS: i32 = 3;
+
 pub fn roman(n: i32) -> &'static str {
     match n {
         1 => "I",
         2 => "II",
         3 => "III",
-        _ => "IV",
+        4 => "IV",
+        _ => "V",
     }
 }
 
@@ -2618,6 +2819,7 @@ mod tests {
                 to,
                 main: k == 0,
                 reward: r.nodes[to].reward,
+                sealed: r.nodes[to].sealed,
             })
             .collect();
         let p = Player::new(V3::ZERO, 0, Build::default());
@@ -2963,7 +3165,7 @@ mod tests {
 
     fn ice_world(kind: NodeKind) -> (Content, World) {
         let c = content();
-        let r = Route::build_for(&c, 1, 11, 1);
+        let r = Route::build_for(&c, 1, 11, &crate::route::Have::level(1));
         let i = r.nodes.iter().position(|n| n.kind == kind).unwrap();
         let exits: Vec<Exit> = r.nodes[i]
             .next
@@ -2973,6 +3175,7 @@ mod tests {
                 to,
                 main: k == 0,
                 reward: r.nodes[to].reward,
+                sealed: r.nodes[to].sealed,
             })
             .collect();
         let p = Player::new(V3::ZERO, 0, Build::default());
@@ -3259,7 +3462,7 @@ mod house {
         // mini-boss, or the Section Chief's Ballroom
         let (r, i) = (0..60u64)
             .find_map(|seed| {
-                let r = Route::build_for(&c, 2, seed, 1);
+                let r = Route::build_for(&c, 2, seed, &crate::route::Have::level(1));
                 let i = r.nodes.iter().position(|n| {
                     n.kind == kind
                         && if elite {
@@ -3438,6 +3641,8 @@ mod house {
             rgb: [0; 3],
             kind: ShotKind::Bullet,
             erases: false,
+            erase_ward: 0,
+            through: 0,
             lodged: None,
             teeth: 0,
         };
@@ -3546,6 +3751,8 @@ mod house {
             rgb: [0; 3],
             kind: ShotKind::Bullet,
             erases: false,
+            erase_ward: 0,
+            through: 0,
             lodged: None,
             teeth: 0,
         });
@@ -3835,7 +4042,7 @@ mod ascent {
         let want = elite.and_then(|id| c.enemy(id));
         let (r, i) = (0..60u64)
             .find_map(|seed| {
-                let r = Route::build_for(&c, zone, seed, 1);
+                let r = Route::build_for(&c, zone, seed, &crate::route::Have::level(1));
                 let i = r.nodes.iter().position(|n| n.kind == kind && n.elite == want)?;
                 Some((r, i))
             })
@@ -4157,7 +4364,7 @@ mod ascent {
     #[test]
     fn the_mountains_creatures_are_more_corrupted_the_higher_you_climb() {
         let c = content();
-        let r = Route::build_for(&c, 3, 1, 1);
+        let r = Route::build_for(&c, 3, 1, &crate::route::Have::level(1));
         let mut fights: Vec<&Node> = r.nodes.iter().filter(|n| n.kind == NodeKind::Fight).collect();
         fights.sort_by_key(|n| n.step);
         let hart = c.enemy("hart").unwrap();
@@ -4333,7 +4540,7 @@ mod god {
     /// A node of zone five's map, of `kind`; a fight's waves cleared.
     fn world_in(kind: NodeKind) -> (Content, World) {
         let c = content();
-        let r = Route::build_for(&c, 4, 3, 1);
+        let r = Route::build_for(&c, 4, 3, &crate::route::Have::level(1));
         let i = r.nodes.iter().position(|n| n.kind == kind).expect("the node");
         let p = Player::new(V3::ZERO, 0, Build::default());
         let mut w = World::new(&c, &r.nodes[i], &[], p, Held::new(0, 1), 1);
@@ -4674,7 +4881,7 @@ mod home {
     /// A node of zone `zone`'s map, of `kind`, as the last mission plays it.
     fn mission_world(zone: usize, kind: NodeKind) -> (Content, World) {
         let c = content();
-        let r = Route::build_for(&c, zone, 5, 1);
+        let r = Route::build_for(&c, zone, 5, &crate::route::Have::level(1));
         let i = r.nodes.iter().position(|n| n.kind == kind).expect("the node");
         let exits: Vec<Exit> = r.nodes[i]
             .next
@@ -4684,6 +4891,7 @@ mod home {
                 to,
                 main: k == 0,
                 reward: r.nodes[to].reward,
+                sealed: r.nodes[to].sealed,
             })
             .collect();
         let p = Player::new(V3::ZERO, 0, Build::default());
@@ -4836,5 +5044,247 @@ mod home {
             assert!(w.tick < secs(30, 1), "and through it in good time");
         }
         assert!(last.dist(door) < ONE, "gone through the door");
+    }
+}
+
+#[cfg(test)]
+mod arsenal {
+    use super::*;
+    use crate::content::tests::content;
+    use crate::enemy::State;
+    use crate::route::{Have, Route};
+
+    /// A fight in zone one, its waves gone and nothing in it.
+    fn empty_fight() -> (Content, World) {
+        let c = content();
+        let r = Route::build_for(&c, 0, 11, &Have::level(1));
+        let i = r.nodes.iter().position(|n| n.kind == NodeKind::Fight).unwrap();
+        let w = World::new(
+            &c,
+            &r.nodes[i],
+            &[],
+            Player::new(V3::ZERO, 0, crate::player::Build::default()),
+            Held::new(0, 1),
+            7,
+        );
+        let mut w = w;
+        w.waves_left.clear();
+        (c, w)
+    }
+
+    /// An orb standing still `ahead` metres in front of the chest.
+    fn still_orb(w: &World, ahead: i32, side: i32, ward: i32, gold: bool) -> Orb {
+        let n = facing(w.player.yaw, 0);
+        let at = w
+            .player
+            .chest()
+            .add(n.scale(int(ahead)))
+            .add(right_of(w.player.yaw).scale(int(side)));
+        Orb {
+            ward,
+            gold,
+            ..Orb::new(at, n, 0, ONE * 3 / 10, [0; 3], ORB_DAMAGE)
+        }
+    }
+
+    /// One shot of the gun in hand, from the chest along the facing.
+    fn fire(c: &Content, w: &mut World) {
+        let chest = w.player.chest();
+        let aim = chest.add(facing(w.player.yaw, 0).scale(int(30)));
+        let gun = &c.guns[w.held.gun];
+        let pull = Pull {
+            held: true,
+            pressed: true,
+            ..Pull::default()
+        };
+        w.held.cooldown = 0;
+        w.held.charge = 0;
+        let shots = weapons::trigger(&mut w.held, gun, [0; 3], pull, chest, aim, &mut w.rng);
+        assert_eq!(shots.len(), 1);
+        w.shots.extend(shots);
+    }
+
+    fn put(c: &Content, w: &mut World, id: &str, ahead: i32, side: i32) -> usize {
+        let d = c.enemy(id).unwrap();
+        let n = facing(w.player.yaw, 0);
+        let at = w
+            .player
+            .chest()
+            .add(n.scale(int(ahead)))
+            .add(right_of(w.player.yaw).scale(int(side)));
+        let mut e = Enemy::new(d, &c.enemies[d], at, 1);
+        e.state = State::Rest(10_000);
+        w.enemies.push(e);
+        w.enemies.len() - 1
+    }
+
+    #[test]
+    fn a_redactor_round_erases_an_orb_of_its_ward_and_passes_one_it_cannot() {
+        let (c, mut w) = empty_fight();
+        w.held = Held::new(c.gun("redactor"), 1);
+        // gold, the second ward, then two blue: a level I round erases the
+        // first blue and is spent
+        w.orbs = vec![
+            still_orb(&w, 3, 0, 0, true),
+            still_orb(&w, 5, 0, 2, false),
+            still_orb(&w, 7, 0, 1, false),
+            still_orb(&w, 9, 0, 1, false),
+        ];
+        fire(&c, &mut w);
+        for _ in 0..30 {
+            w.shots_step(&c);
+        }
+        let left: Vec<(i32, bool)> = w.orbs.iter().map(|o| (o.ward, o.gold)).collect();
+        assert_eq!(
+            left,
+            [(0, true), (2, false), (1, false)],
+            "only the first blue is gone"
+        );
+        assert!(w.shots.is_empty(), "the round is spent on it");
+        assert_eq!(w.struck, 1);
+        // level III erases any ward and goes on through one: the second
+        // ward and the last blue; gold stays
+        w.held = Held::new(c.gun("redactor"), 3);
+        fire(&c, &mut w);
+        for _ in 0..30 {
+            w.shots_step(&c);
+        }
+        assert_eq!(w.orbs.len(), 1);
+        assert!(w.orbs[0].gold, "gold is the parry's");
+        assert_eq!(w.struck, 3);
+    }
+
+    #[test]
+    fn a_redaction_bar_erases_every_orb_but_gold_it_crosses_and_hits_each_enemy_once() {
+        let (c, mut w) = empty_fight();
+        w.held = Held::new(c.gun("redactor"), 1);
+        w.orbs = vec![
+            still_orb(&w, 4, 1, 0, false),
+            still_orb(&w, 6, -1, 3, false),
+            still_orb(&w, 8, 0, 0, true),
+            // well to the side: the bar passes it by
+            still_orb(&w, 6, 4, 1, false),
+        ];
+        let e = put(&c, &mut w, "warden", 10, 0);
+        let hp = w.enemies[e].hp;
+        let chest = w.player.chest();
+        let aim = chest.add(facing(w.player.yaw, 0).scale(int(30)));
+        let gun = &c.guns[w.held.gun];
+        let alt = weapons::alt_trigger(&mut w.held, gun, [0; 3], true, chest, aim, 0, false);
+        assert!(matches!(alt.shots[0].kind, ShotKind::Bar { .. }));
+        w.shots.extend(alt.shots);
+        for _ in 0..60 {
+            w.shots_step(&c);
+        }
+        let left: Vec<(i32, bool)> = w.orbs.iter().map(|o| (o.ward, o.gold)).collect();
+        assert_eq!(left, [(0, true), (1, false)], "gold, and the orb beside its path");
+        assert_eq!(
+            w.enemies[e].hp,
+            hp - gun.alt.damage,
+            "hit once as it passed through"
+        );
+        assert_eq!(w.struck, 2);
+    }
+
+    #[test]
+    fn contempt_bursts_what_you_kill_on_those_near_it_and_what_that_kills_bursts_too() {
+        let (c, mut w) = empty_fight();
+        w.player.build.contempt = 1;
+        let health = w.player.health;
+        // a in the middle; b 2 m off it, weak enough that a's burst kills it;
+        // d 3 m beyond b, out of a's reach; f far away
+        let a = put(&c, &mut w, "warden", 8, 0);
+        let b = put(&c, &mut w, "drifter", 8, 2);
+        let d = put(&c, &mut w, "warden", 8, 5);
+        let f = put(&c, &mut w, "warden", 8, -9);
+        let burst_a = w.enemies[a].max_hp * CONTEMPT_PCT / 100;
+        let burst_b = w.enemies[b].max_hp * CONTEMPT_PCT / 100;
+        w.enemies[b].hp = burst_a;
+        w.enemies[a].hp = 0;
+        w.fell(&c, vec![a]);
+        assert!(!w.enemies[b].alive(), "a's burst killed b");
+        assert_eq!(
+            w.enemies[d].hp,
+            w.enemies[d].max_hp - burst_b,
+            "b burst in its turn, on d"
+        );
+        assert_eq!(w.enemies[f].hp, w.enemies[f].max_hp, "too far to be touched");
+        assert_eq!(w.kills, 2);
+        assert_eq!(w.player.health, health, "it never hurts you");
+    }
+
+    #[test]
+    fn a_boss_takes_contempt_but_never_bursts() {
+        let (c, mut w) = empty_fight();
+        w.player.build.contempt = 3;
+        let boss = put(&c, &mut w, "warden", 8, 0);
+        let near = put(&c, &mut w, "warden", 8, 2);
+        w.boss = Some(boss);
+        w.enemies[boss].hp = 0;
+        w.fell(&c, vec![boss]);
+        assert_eq!(
+            w.enemies[near].hp, w.enemies[near].max_hp,
+            "a boss does not burst"
+        );
+        // and an enemy dying beside the boss hurts it
+        let (c, mut w) = empty_fight();
+        w.player.build.contempt = 1;
+        let boss = put(&c, &mut w, "warden", 8, 0);
+        let near = put(&c, &mut w, "drifter", 8, 2);
+        w.boss = Some(boss);
+        w.enemies[near].hp = 0;
+        w.fell(&c, vec![near]);
+        let burst = w.enemies[near].max_hp * CONTEMPT_PCT / 100;
+        assert_eq!(w.enemies[boss].hp, w.enemies[boss].max_hp - burst);
+    }
+
+    #[test]
+    fn a_side_paths_gun_stands_above_the_gun_in_hand_and_a_choice_of_two_takes_one() {
+        let (c, mut w) = empty_fight();
+        w.held = Held::new(c.gun("carbine"), 3);
+        w.reward = Some(Reward::Gun(c.gun("scattergun"), 1));
+        w.extra = vec![Reward::Purse(12)];
+        w.choose = true;
+        w.cleared = false;
+        let ctl = Controls::default();
+        let eye = w.player.chest();
+        let fwd = facing(w.player.yaw, 0);
+        w.tick(&c, &ctl, eye, fwd);
+        assert!(w.cleared);
+        let kinds: Vec<PickupKind> = w.pickups.iter().map(|p| p.kind).collect();
+        assert!(
+            kinds.contains(&PickupKind::Gun(c.gun("scattergun"), 4)),
+            "a level above the Carbine III: {kinds:?}"
+        );
+        assert!(kinds.contains(&PickupKind::Purse(12)));
+        assert!(w.pickups.iter().all(|p| p.group == 3), "a choice");
+        // and never past the last level
+        assert_eq!(
+            reward_pickup(Reward::Gun(0, 2), MAX_GUN_LEVEL),
+            PickupKind::Gun(0, MAX_GUN_LEVEL)
+        );
+    }
+
+    #[test]
+    fn a_purse_banks_clemency_with_the_run() {
+        let (c, mut w) = empty_fight();
+        w.cleared = true;
+        w.pickups.push(Pickup {
+            pos: w.player.pos,
+            kind: PickupKind::Purse(18),
+            taken: false,
+            age: 0,
+            group: 0,
+        });
+        let before = w.earned;
+        w.pickups_step(&c, &Controls::default());
+        assert_eq!(w.earned, before + 18);
+        assert!(w.pickups[0].taken);
+    }
+
+    #[test]
+    fn the_wards_a_redactor_counts_are_the_palettes() {
+        let c = content();
+        assert_eq!(c.pal.wards.len() as i32, WARDS);
     }
 }

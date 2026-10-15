@@ -1,5 +1,5 @@
 {
-  "_about": "Every number the page's sound needs (the page holds none of its own). Each recipe is a list of layers: an oscillator sweeping `from` to `to` Hz, or the core's white noise through a filter. Times are in seconds after the sound starts. `gaps` is the least time between two plays of the same sound. The lullaby's notes (trumpet_* and pipe_*) are the ocarina's five pitches, D4, F4, A4, B4 and D5, in hertz; the pipes sound an octave up. The last mission adds Chumbles' scream (a meow rising and falling), his hiss, his purr, the rattle of the treats bag, and the sound of reality breaking.",
+  "_about": "Every number the page's sound needs (the page holds none of its own). Each recipe is a list of layers: an oscillator sweeping `from` to `to` Hz, or the core's white noise through a filter. Times are in seconds after the sound starts. `gaps` is the least time between two plays of the same sound. The lullaby's notes (trumpet_* and pipe_*) are the ocarina's five pitches, D4, F4, A4, B4 and D5, in hertz; the pipes sound an octave up. The last mission adds Chumbles' scream (a meow rising and falling), his hiss, his purr, the rattle of the treats bag, and the sound of reality breaking. The arsenal adds the Filibuster's buzz and its Cloture's rising lance, the Redactor's dry tick and its Redaction's low sweep, and Contempt's crack.",
   "master": 0.5,
   "floor": 0.0001,
   "tail": 0.05,
@@ -20,7 +20,10 @@
     "tick": 0.1,
     "wrap": 0.5,
     "seam": 0.2,
-    "purr": 0.5
+    "purr": 0.5,
+    "fire_filibuster": 0.03,
+    "fire_redactor": 0.05,
+    "contempt": 0.06
   },
   "recipes": {
     "fire_carbine": [
@@ -1703,6 +1706,116 @@
         "attack": 0.005,
         "dur": 1.6,
         "gain": 0.6
+      }
+    ],
+    "fire_filibuster": [
+      {
+        "type": "noise",
+        "filter": "bandpass",
+        "freq": 1800,
+        "q": 1.2,
+        "at": 0,
+        "attack": 0.002,
+        "dur": 0.045,
+        "gain": 0.2
+      },
+      {
+        "type": "osc",
+        "wave": "sawtooth",
+        "from": 340,
+        "to": 120,
+        "at": 0,
+        "attack": 0.002,
+        "dur": 0.04,
+        "gain": 0.05
+      }
+    ],
+    "fire_redactor": [
+      {
+        "type": "noise",
+        "filter": "highpass",
+        "freq": 3800,
+        "q": 0.9,
+        "at": 0,
+        "attack": 0.001,
+        "dur": 0.035,
+        "gain": 0.18
+      },
+      {
+        "type": "osc",
+        "wave": "square",
+        "from": 260,
+        "to": 90,
+        "at": 0,
+        "attack": 0.001,
+        "dur": 0.04,
+        "gain": 0.06
+      }
+    ],
+    "cloture": [
+      {
+        "type": "osc",
+        "wave": "sawtooth",
+        "from": 200,
+        "to": 900,
+        "at": 0,
+        "attack": 0.004,
+        "dur": 0.18,
+        "gain": 0.12
+      },
+      {
+        "type": "noise",
+        "filter": "bandpass",
+        "freq": 1500,
+        "q": 0.9,
+        "at": 0.02,
+        "attack": 0.002,
+        "dur": 0.2,
+        "gain": 0.35
+      }
+    ],
+    "redaction": [
+      {
+        "type": "noise",
+        "filter": "lowpass",
+        "freq": 900,
+        "q": 0.6,
+        "at": 0,
+        "attack": 0.01,
+        "dur": 0.45,
+        "gain": 0.4
+      },
+      {
+        "type": "osc",
+        "wave": "triangle",
+        "from": 110,
+        "to": 60,
+        "at": 0,
+        "attack": 0.01,
+        "dur": 0.4,
+        "gain": 0.2
+      }
+    ],
+    "contempt": [
+      {
+        "type": "noise",
+        "filter": "bandpass",
+        "freq": 700,
+        "q": 1.1,
+        "at": 0,
+        "attack": 0.002,
+        "dur": 0.22,
+        "gain": 0.4
+      },
+      {
+        "type": "osc",
+        "wave": "square",
+        "from": 180,
+        "to": 50,
+        "at": 0,
+        "attack": 0.002,
+        "dur": 0.2,
+        "gain": 0.12
       }
     ]
   }

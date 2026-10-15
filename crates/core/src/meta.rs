@@ -36,6 +36,9 @@ pub struct Meta {
     pub beaten: Vec<String>,
     /// last missions won
     pub mission_wins: i32,
+    /// the gun a run carries in, by id: the Carbine, or one an Exhibit
+    /// bought (empty: the Carbine)
+    pub carry: String,
 }
 
 /// What a death adds to the record, for the indictment screen.
@@ -113,7 +116,45 @@ impl Meta {
         Ok(())
     }
 
-    /// The body a run starts with, and the level of the Carbine it carries.
+    /// The guns a run may carry in: the Carbine, and each an Exhibit bought.
+    pub fn carry_choices(&self, c: &Content) -> Vec<usize> {
+        let mut out = vec![c.gun("carbine")];
+        for u in c
+            .upgrades
+            .iter()
+            .filter(|u| u.effect == "exhibit" && self.owns(&u.id))
+        {
+            let g = c.gun(&u.gun);
+            if c.guns.get(g).is_some_and(|x| x.id == u.gun) && !out.contains(&g) {
+                out.push(g);
+            }
+        }
+        out
+    }
+
+    /// Chooses the gun runs carry in; false if it is not one of the choices.
+    pub fn choose_carry(&mut self, c: &Content, id: &str) -> bool {
+        let g = c.gun(id);
+        if c.guns.get(g).is_none_or(|x| x.id != id) || !self.carry_choices(c).contains(&g) {
+            return false;
+        }
+        self.carry = id.to_string();
+        true
+    }
+
+    /// The gun a run carries in, by index: the one chosen while it is still
+    /// a choice, else the Carbine.
+    pub fn carried(&self, c: &Content) -> usize {
+        let g = c.gun(&self.carry);
+        let choices = self.carry_choices(c);
+        if !self.carry.is_empty() && choices.contains(&g) && c.guns[g].id == self.carry {
+            g
+        } else {
+            choices[0]
+        }
+    }
+
+    /// The body a run starts with, and the level of the gun it carries in.
     pub fn build(&self, c: &Content) -> (Build, i32) {
         let mut b = Build {
             max_health: BASE_HEALTH,
@@ -261,6 +302,7 @@ impl Meta {
             unlocked: c.built_zones() as i32 - 1,
             bosses_beaten: c.built_zones() as i32,
             rush_wins: 0,
+            carry: String::new(),
             mission_wins: 0,
             beaten: c
                 .zones
@@ -486,5 +528,52 @@ mod tests {
         m.record_death(&c, 100, 3, "2056");
         // 15% more, no sentence bonus yet, and the first offence's grant
         assert_eq!(m.clemency - (before - spent), 115 + FIRST_DEATH_GRANT);
+    }
+
+    #[test]
+    fn an_exhibit_waits_for_its_boss_and_lets_a_run_carry_its_gun_in() {
+        let c = content();
+        let mut m = Meta {
+            clemency: 1000,
+            ..Meta::default()
+        };
+        assert_eq!(m.carried(&c), c.gun("carbine"), "the Carbine before any Exhibit");
+        assert!(
+            !m.choose_carry(&c, "scattergun"),
+            "not before its Exhibit is bought"
+        );
+        assert_eq!(
+            m.check(&c, "exhibit_d"),
+            Err(Refusal::Locked("bailiff".to_string()))
+        );
+        m.buy(&c, "exhibit_b").unwrap();
+        m.beat("bailiff");
+        m.buy(&c, "exhibit_d").unwrap();
+        assert_eq!(
+            m.carry_choices(&c),
+            [c.gun("carbine"), c.gun("scattergun"), c.gun("filibuster")]
+        );
+        assert!(m.choose_carry(&c, "filibuster"));
+        assert_eq!(m.carried(&c), c.gun("filibuster"));
+        assert!(!m.choose_carry(&c, "ripsaw"), "its Exhibit is not bought");
+        assert_eq!(m.carried(&c), c.gun("filibuster"));
+        // the choice is kept with the record
+        assert_eq!(Meta::load(&m.save(), &c).carried(&c), c.gun("filibuster"));
+        // a record that names a gun it has no Exhibit for carries the Carbine
+        let odd = Meta::load(r#"{"carry": "big_iron"}"#, &c);
+        assert_eq!(odd.carried(&c), c.gun("carbine"));
+    }
+
+    #[test]
+    fn the_holding_starts_a_gun_at_level_three_at_most() {
+        let c = content();
+        let m = Meta::everything(&c);
+        let (_, level) = m.build(&c);
+        assert_eq!(level, 3);
+        assert!(c
+            .upgrades
+            .iter()
+            .filter(|u| u.effect == "armory")
+            .all(|u| u.amount <= 3));
     }
 }

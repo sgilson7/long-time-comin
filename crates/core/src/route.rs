@@ -4,7 +4,14 @@
 //! next main node, and the last node of each holds a reward you can see on
 //! the map before you choose. Every zone of every run rolls its own graph
 //! from a seed.
+//!
+//! A side path's reward is rolled from the zone's table, no name twice in a
+//! zone and nothing the body could not use: a two-fight path holds a choice
+//! of two, and some are sealed, better than the table and unseen until
+//! taken. A gun is always an upgrade: a level or two above the gun in hand
+//! when it is taken.
 
+use crate::balance::{CONTEMPT_MAX, MAX_GUN_LEVEL, MAX_JUMPS, PURSE_TIMES};
 use crate::content::Content;
 use crate::rng::Rng;
 
@@ -18,8 +25,12 @@ pub enum NodeKind {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Reward {
-    /// a gun, by index, and its level
+    /// a gun, by index, and the levels it stands above the gun in hand
     Gun(usize, i32),
+    /// what you kill bursts
+    Contempt,
+    /// this much Clemency
+    Purse(i32),
     Jump,
     Health,
     Speed,
@@ -56,6 +67,54 @@ pub struct Node {
     pub cache: Vec<Reward>,
     /// a mini-boss fought alone here, by enemy index
     pub elite: Option<usize>,
+    /// rewards beside `reward`: a choice of one when `choose`, else a
+    /// sealed pair, both yours
+    pub extra: Vec<Reward>,
+    pub choose: bool,
+    /// its rewards are not shown until it is cleared
+    pub sealed: bool,
+}
+
+/// What the body already has, so no reward offered is wasted on it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct Have {
+    pub level: i32,
+    pub pulse: bool,
+    pub mend: bool,
+    pub contempt: i32,
+    pub jumps: i32,
+}
+
+impl Have {
+    /// A body that has nothing yet, with a gun of `level` in hand.
+    pub fn level(level: i32) -> Have {
+        Have {
+            level,
+            ..Have::default()
+        }
+    }
+
+    pub fn of(b: &crate::player::Build, level: i32) -> Have {
+        Have {
+            level,
+            pulse: b.pulse,
+            mend: b.mend,
+            contempt: b.contempt,
+            jumps: b.jumps,
+        }
+    }
+
+    /// Would the reward `name` be any use?
+    fn wants(&self, name: &str) -> bool {
+        match name {
+            "weapon" => self.level < MAX_GUN_LEVEL,
+            "pulse" => !self.pulse,
+            "mend" => !self.mend,
+            "contempt" => self.contempt < CONTEMPT_MAX,
+            "jump" => self.jumps < MAX_JUMPS,
+            _ => true,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -70,13 +129,12 @@ pub const STRIDE: i32 = 4;
 
 impl Route {
     pub fn build(c: &Content, seed: u64) -> Route {
-        Route::build_for(c, 0, seed, 1)
+        Route::build_for(c, 0, seed, &Have::level(1))
     }
 
-    /// Zone `zone`'s map for a player whose Carbine starts at
-    /// `carbine_level`: no side path offers a Carbine that is no better
-    /// (SECOND-ORDER P6).
-    pub fn build_for(c: &Content, zone: usize, seed: u64, carbine_level: i32) -> Route {
+    /// Zone `zone`'s map for a body that has `have`: nothing offered is
+    /// wasted on it (SECOND-ORDER P6, Q60).
+    pub fn build_for(c: &Content, zone: usize, seed: u64, have: &Have) -> Route {
         let mut rng = Rng::new(seed ^ (zone as u64).wrapping_mul(0x9E37_79B9));
         let z = &c.zones[zone];
         let r = &z.route;
@@ -95,25 +153,21 @@ impl Route {
             encounter: None,
             cache: Vec::new(),
             elite: None,
+            extra: Vec::new(),
+            choose: false,
+            sealed: false,
         };
         // the main path
         let mut arrival = node(NodeKind::Arrival, "arrival", 0, 0, &mut rng);
+        // names offered anywhere in this zone so far: nothing twice
+        let mut used: Vec<String> = Vec::new();
         // an arrival's cache: two different rewards, take one
         if r.cache_rewards.len() >= 2 {
-            let a = rng.range(0, r.cache_rewards.len() as i32 - 1) as usize;
-            let mut b = rng.range(0, r.cache_rewards.len() as i32 - 2) as usize;
-            if b >= a {
-                b += 1;
-            }
-            for k in [a, b] {
-                arrival.cache.push(reward_of(
-                    c,
-                    zone,
-                    &r.cache_rewards[k],
-                    r.weapon_levels[0],
-                    carbine_level,
-                    &mut rng,
-                ));
+            for _ in 0..2 {
+                let name = draw(&r.cache_rewards, &mut used, have, true, &mut rng);
+                arrival
+                    .cache
+                    .push(reward_of(c, zone, &name, r.weapon_steps[0], &mut rng));
             }
         }
         nodes.push(arrival);
@@ -137,15 +191,8 @@ impl Route {
         let mut rest = node(NodeKind::Rest, "rest", 0, rest_step, &mut rng);
         // the Antechamber's alternative to its fountain
         if !r.rest_rewards.is_empty() {
-            let pick = &r.rest_rewards[rng.range(0, r.rest_rewards.len() as i32 - 1) as usize];
-            rest.reward = Some(reward_of(
-                c,
-                zone,
-                pick,
-                r.weapon_levels[1],
-                carbine_level,
-                &mut rng,
-            ));
+            let pick = draw(&r.rest_rewards, &mut used, have, true, &mut rng);
+            rest.reward = Some(reward_of(c, zone, &pick, r.weapon_steps[1], &mut rng));
         }
         nodes.push(rest);
         nodes.push(node(NodeKind::Boss, "boss", 0, rest_step + STRIDE, &mut rng));
@@ -163,14 +210,8 @@ impl Route {
             chosen.push(gaps.remove(k));
         }
         chosen.sort();
-        let mut bag = r.rewards.clone();
-        // shuffle the reward bag
-        for i in (1..bag.len()).rev() {
-            let j = rng.range(0, i as i32) as usize;
-            bag.swap(i, j);
-        }
         let max_tier = z.max_tier();
-        for (d, &from) in chosen.iter().enumerate() {
+        for &from in chosen.iter() {
             let len = rng.range(1, r.detour_max as i32);
             let tier = (nodes[from].tier + 1).min(max_tier);
             let mut prev = from;
@@ -188,15 +229,28 @@ impl Route {
                 n.encounter = Some(pick_encounter(c, zone, tier, &mut rng));
                 if k == len - 1 {
                     let deep = from * 2 > r.main_fights;
-                    let pick = bag.get(d).cloned().unwrap_or_else(|| "health".to_string());
-                    n.reward = Some(reward_of(
-                        c,
-                        zone,
-                        &pick,
-                        r.weapon_levels[deep as usize],
-                        carbine_level,
-                        &mut rng,
-                    ));
+                    let step = r.weapon_steps[deep as usize];
+                    let first = draw(&r.rewards, &mut used, have, true, &mut rng);
+                    if rng.chance(r.sealed_pct) {
+                        // sealed: a gun a level higher than the table's,
+                        // or two rewards that are both yours
+                        n.sealed = true;
+                        if first == "weapon" {
+                            n.reward = Some(reward_of(c, zone, &first, step + 1, &mut rng));
+                        } else {
+                            n.reward = Some(reward_of(c, zone, &first, step, &mut rng));
+                            let second = draw(&r.rewards, &mut used, have, false, &mut rng);
+                            n.extra.push(reward_of(c, zone, &second, step, &mut rng));
+                        }
+                    } else {
+                        n.reward = Some(reward_of(c, zone, &first, step, &mut rng));
+                        if len > 1 {
+                            // the longer path: a choice of two
+                            let second = draw(&r.rewards, &mut used, have, true, &mut rng);
+                            n.extra.push(reward_of(c, zone, &second, step, &mut rng));
+                            n.choose = true;
+                        }
+                    }
                 }
                 let idx = nodes.len();
                 nodes.push(n);
@@ -228,6 +282,9 @@ impl Route {
                 encounter: None,
                 cache: Vec::new(),
                 elite: None,
+                extra: Vec::new(),
+                choose: false,
+                sealed: false,
             }],
             steps: 1,
         }
@@ -246,19 +303,36 @@ impl Route {
     }
 }
 
-/// A reward by its name in zone.json; a gun is of `level`, one the zone
-/// offers, and never a Carbine no better than the one the run started with.
-fn reward_of(c: &Content, zone: usize, name: &str, level: i32, carbine_level: i32, rng: &mut Rng) -> Reward {
+/// A name from `table`, weighted by how often it is listed: not one in
+/// `used` (which it joins), nothing `have` could not use, and a gun only
+/// when `guns`. Health when nothing is left.
+fn draw(table: &[String], used: &mut Vec<String>, have: &Have, guns: bool, rng: &mut Rng) -> String {
+    let fits: Vec<&String> = table
+        .iter()
+        .filter(|n| !used.contains(n) && have.wants(n) && (guns || n.as_str() != "weapon"))
+        .collect();
+    let name = if fits.is_empty() {
+        "health".to_string()
+    } else {
+        fits[rng.range(0, fits.len() as i32 - 1) as usize].clone()
+    };
+    used.push(name.clone());
+    name
+}
+
+/// A reward by its name in zone.json; a gun is one the zone offers, `step`
+/// levels above the gun in hand when it is taken.
+fn reward_of(c: &Content, zone: usize, name: &str, step: i32, rng: &mut Rng) -> Reward {
     match name {
         "weapon" => {
-            let carbine = c.gun("carbine");
             let fits: Vec<usize> = (0..c.guns.len())
-                .filter(|&g| g != carbine || level > carbine_level)
                 .filter(|&g| c.guns[g].from_zone <= zone)
                 .collect();
             let gun = fits[rng.range(0, fits.len() as i32 - 1) as usize];
-            Reward::Gun(gun, level)
+            Reward::Gun(gun, step.max(1))
         }
+        "contempt" => Reward::Contempt,
+        "purse" => Reward::Purse(PURSE_TIMES * c.zones[zone].route.clemency_detour),
         "jump" => Reward::Jump,
         "speed" => Reward::Speed,
         "pierce" => Reward::Pierce,
@@ -361,30 +435,128 @@ mod tests {
         }
     }
 
+    /// Every reward a route offers: arrival caches, side paths (each
+    /// path's whole prize) and the Antechamber's.
+    fn prizes(r: &Route) -> Vec<Vec<Reward>> {
+        r.nodes
+            .iter()
+            .filter_map(|n| {
+                n.reward.map(|x| {
+                    let mut all = vec![x];
+                    all.extend(n.extra.iter().copied());
+                    all
+                })
+            })
+            .collect()
+    }
+
     #[test]
-    fn no_side_path_offers_a_carbine_no_better_than_the_one_you_start_with() {
+    fn side_path_guns_are_upgrades_and_nothing_offered_is_wasted() {
         let c = content();
-        let carbine = c.gun("carbine");
-        let mut offered_other = false;
-        for seed in 0..60 {
-            let r = Route::build_for(&c, 0, seed, 2);
-            for n in &r.nodes {
-                if let Some(Reward::Gun(g, l)) = n.reward {
+        let have = Have {
+            level: 2,
+            pulse: true,
+            mend: false,
+            contempt: CONTEMPT_MAX,
+            jumps: MAX_JUMPS,
+        };
+        let mut guns = 0;
+        for zone in 0..3 {
+            for seed in 0..80 {
+                let r = Route::build_for(&c, zone, seed, &have);
+                for x in prizes(&r).into_iter().flatten() {
+                    if let Reward::Gun(_, step) = x {
+                        assert!(step >= 1, "zone {zone} seed {seed}: a gun no better");
+                        guns += 1;
+                    }
                     assert!(
-                        g != carbine || l > 2,
-                        "seed {seed}: Carbine {l} offered to a Carbine II"
+                        !matches!(x, Reward::Pulse | Reward::Contempt | Reward::Jump),
+                        "zone {zone} seed {seed}: {x:?} offered to a body that has it"
                     );
-                    offered_other |= g != carbine;
                 }
+                assert!(
+                    r.nodes
+                        .iter()
+                        .any(|n| n.kind == NodeKind::Rest && n.reward.is_some()),
+                    "the Antechamber offers a choice"
+                );
             }
+        }
+        assert!(guns > 0);
+        // a gun at the last level is offered no gun
+        let top = Have::level(MAX_GUN_LEVEL);
+        for seed in 0..80 {
+            let r = Route::build_for(&c, 0, seed, &top);
             assert!(
-                r.nodes
-                    .iter()
-                    .any(|n| n.kind == NodeKind::Rest && n.reward.is_some()),
-                "the Antechamber offers a choice"
+                !prizes(&r)
+                    .into_iter()
+                    .flatten()
+                    .any(|x| matches!(x, Reward::Gun(..))),
+                "seed {seed}: a gun offered past level {MAX_GUN_LEVEL}"
             );
         }
-        assert!(offered_other);
+    }
+
+    #[test]
+    fn side_paths_vary_hold_no_name_twice_and_a_long_one_holds_a_choice() {
+        let c = content();
+        let (mut sealed, mut choices, mut kinds) = (0, 0, std::collections::BTreeSet::new());
+        for seed in 0..200 {
+            let r = Route::build(&c, seed);
+            let mut names = Vec::new();
+            for (i, n) in r.nodes.iter().enumerate() {
+                if !n.detour || n.reward.is_none() {
+                    continue;
+                }
+                // a path two fights long: the node before this one is a side node too
+                let long = r.nodes.iter().any(|m| m.detour && m.next.contains(&i));
+                if n.sealed {
+                    sealed += 1;
+                    assert!(!n.choose, "a sealed prize is no choice");
+                } else {
+                    assert_eq!(n.choose, long, "seed {seed}: a choice exactly on a long path");
+                    assert_eq!(n.extra.len(), long as usize);
+                    choices += long as usize;
+                }
+                for x in std::iter::once(n.reward.unwrap()).chain(n.extra.iter().copied()) {
+                    let name = std::mem::discriminant(&x);
+                    assert!(!names.contains(&name), "seed {seed}: {x:?} twice in a zone");
+                    names.push(name);
+                    kinds.insert(format!("{:?}", x).split('(').next().unwrap().to_string());
+                }
+            }
+        }
+        // nor anywhere else in the zone, its cache and its Antechamber:
+        // health alone, what is offered once nothing else is left, may come
+        // again
+        for zone in 0..3 {
+            for seed in 0..60 {
+                let r = Route::build_for(&c, zone, seed, &Have::level(1));
+                let all: Vec<_> = prizes(&r)
+                    .into_iter()
+                    .flatten()
+                    .chain(r.nodes[0].cache.iter().copied())
+                    .collect();
+                for (k, x) in all.iter().enumerate().filter(|(_, x)| **x != Reward::Health) {
+                    assert!(
+                        all[k + 1..]
+                            .iter()
+                            .all(|y| std::mem::discriminant(x) != std::mem::discriminant(y)),
+                        "zone {zone} seed {seed}: {x:?} offered twice"
+                    );
+                }
+            }
+        }
+        assert!(
+            sealed > 40 && sealed < 400,
+            "about one side path in four is sealed: {sealed}"
+        );
+        assert!(choices > 50, "{choices} choices");
+        for k in [
+            "Gun", "Contempt", "Purse", "Pulse", "Mend", "Pierce", "Jump", "Health", "Speed",
+        ] {
+            assert!(kinds.contains(k), "zone one's side paths never offer {k}");
+        }
     }
 
     #[test]
@@ -392,7 +564,7 @@ mod tests {
         let c = content();
         let z = &c.zones[1];
         for seed in 0..30 {
-            let r = Route::build_for(&c, 1, seed, 1);
+            let r = Route::build_for(&c, 1, seed, &Have::level(1));
             assert!(r.nodes.iter().all(|n| n.zone == 1));
             for n in r.nodes.iter().filter(|n| n.kind == NodeKind::Fight) {
                 assert!(z.archetypes.contains(&n.archetype), "{}", n.archetype);
@@ -411,21 +583,21 @@ mod tests {
         let c = content();
         let saw = c.gun("ripsaw");
         for seed in 0..30 {
-            let r = Route::build_for(&c, 2, seed, 1);
+            let r = Route::build_for(&c, 2, seed, &Have::level(1));
             let elites: Vec<&Node> = r.nodes.iter().filter(|n| n.elite.is_some()).collect();
             // the Escort in the Great Hall, the Section Chief in the Ballroom
             assert_eq!(elites.len(), 2, "two mini-bosses");
             let rooms: Vec<&str> = elites.iter().map(|n| n.archetype.as_str()).collect();
             assert_eq!(rooms, ["hall", "ballroom"]);
             assert!(elites.iter().all(|n| !n.detour));
-            // its guns are level 3 or 4
-            for n in &r.nodes {
-                if let Some(Reward::Gun(_, l)) = n.reward {
-                    assert!(l >= 3, "a house gun of level {l}");
+            // its deep side paths' guns stand two levels up
+            for n in r.nodes.iter().filter(|n| n.detour && !n.sealed) {
+                if let Some(Reward::Gun(_, step)) = n.reward {
+                    assert!((1..=2).contains(&step), "a house gun {step} up");
                 }
             }
             for z in [0, 1] {
-                let r = Route::build_for(&c, z, seed, 1);
+                let r = Route::build_for(&c, z, seed, &Have::level(1));
                 for n in &r.nodes {
                     assert!(
                         !matches!(n.reward, Some(Reward::Gun(g, _)) if g == saw),
@@ -439,7 +611,7 @@ mod tests {
         }
         // and some house route does offer it
         let offered = (0..60).any(|seed| {
-            Route::build_for(&c, 2, seed, 1)
+            Route::build_for(&c, 2, seed, &Have::level(1))
                 .nodes
                 .iter()
                 .any(|n| matches!(n.reward, Some(Reward::Gun(g, _)) if g == saw))

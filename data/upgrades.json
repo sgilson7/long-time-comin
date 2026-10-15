@@ -1,5 +1,5 @@
 {
-  "_about": "What Clemency buys in the Holding, between runs. effect kinds: max_health (amount in health points), speed (amount in percent), jumps (added to the jumps a run starts with), dash (charges added), grapple, parry, recess, armory (the level the Carbine starts at), wall (the Injunction), pound (the ground pound) and pound_plus (its second level), grapple_plus, parry_plus and wall_plus (the second levels of the hook, the parry and the wall), wall_ward (the wall breaks the orbs of ward amount too; palette.json lists each ward's colours), appeal (a second Recess), precedent (shots pierce amount more enemies), conduct (amount percent more Clemency earned), bail (amount more health when an arena is cleared), lien (a Ripsaw waits at every arrival), stop_plus (a second more of the time stop). unlock: a boss that must have been beaten first (the time stop itself comes with beating the Defendant). requires: an upgrade that must be owned first. branch: the Holding's column (body, motion, arms, writs). What each does is written by crates/core/src/codex.rs from these numbers and balance.rs.",
+  "_about": "What Clemency buys in the Holding, between runs. effect kinds: max_health (amount in health points), speed (amount in percent), jumps (added to the jumps a run starts with), dash (charges added), grapple, parry, recess, armory (the level the gun you carry in starts at; at most 3, side paths take it to 5), exhibit (the gun named by gun may be carried in: chosen in the Holding's Carry in row, the Carbine always), wall (the Injunction), pound (the ground pound) and pound_plus (its second level), grapple_plus, parry_plus and wall_plus (the second levels of the hook, the parry and the wall), wall_ward (the wall breaks the orbs of ward amount too; palette.json lists each ward's colours), appeal (a second Recess), precedent (shots pierce amount more enemies), conduct (amount percent more Clemency earned), bail (amount more health when an arena is cleared), lien (a Ripsaw waits at every arrival), stop_plus (a second more of the time stop). unlock: a boss that must have been beaten first (the time stop itself comes with beating the Defendant). requires: an upgrade that must be owned first. branch: the Holding's column (body, motion, arms, writs). What each does is written by crates/core/src/codex.rs from these numbers and balance.rs.",
   "upgrades": [
     {
       "id": "constitution_1",
@@ -322,6 +322,76 @@
       "amount": 1,
       "icon": "stop",
       "branch": "writs",
+      "unlock": "defendant"
+    },
+    {
+      "id": "exhibit_b",
+      "name": "Exhibit B: the Scattergun",
+      "cost": 18,
+      "requires": "",
+      "effect": "exhibit",
+      "amount": 0,
+      "icon": "gun",
+      "branch": "arms",
+      "gun": "scattergun"
+    },
+    {
+      "id": "exhibit_c",
+      "name": "Exhibit C: the Hourglass Launcher",
+      "cost": 24,
+      "requires": "",
+      "effect": "exhibit",
+      "amount": 0,
+      "icon": "gun",
+      "branch": "arms",
+      "gun": "launcher"
+    },
+    {
+      "id": "exhibit_d",
+      "name": "Exhibit D: the Filibuster",
+      "cost": 26,
+      "requires": "",
+      "effect": "exhibit",
+      "amount": 0,
+      "icon": "gun",
+      "branch": "arms",
+      "gun": "filibuster",
+      "unlock": "bailiff"
+    },
+    {
+      "id": "exhibit_e",
+      "name": "Exhibit E: the Redactor",
+      "cost": 30,
+      "requires": "",
+      "effect": "exhibit",
+      "amount": 0,
+      "icon": "gun",
+      "branch": "arms",
+      "gun": "redactor",
+      "unlock": "witness"
+    },
+    {
+      "id": "exhibit_f",
+      "name": "Exhibit F: the Ripsaw",
+      "cost": 40,
+      "requires": "",
+      "effect": "exhibit",
+      "amount": 0,
+      "icon": "gun",
+      "branch": "arms",
+      "gun": "ripsaw",
+      "unlock": "executor"
+    },
+    {
+      "id": "exhibit_g",
+      "name": "Exhibit G: the Big Iron",
+      "cost": 50,
+      "requires": "",
+      "effect": "exhibit",
+      "amount": 0,
+      "icon": "gun",
+      "branch": "arms",
+      "gun": "big_iron",
       "unlock": "defendant"
     }
   ]

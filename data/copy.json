@@ -295,5 +295,14 @@
   "hint_mission": "The last sentence: fight through all four eras without returning to the Holding. More enemies attack together, with new patterns.",
   "hint_cat": "Follow Chumbles downstairs.",
   "try_chumbles": "🐾",
-  "try_chumbles_title": "Practise the Chumbles fight from a chosen phase (nothing is saved)"
+  "try_chumbles_title": "Practise the Chumbles fight from a chosen phase (nothing is saved)",
+  "reward_contempt": "Contempt",
+  "reward_purse": "Purse: {n} Clemency",
+  "reward_sealed": "Sealed",
+  "reward_choice": "{a} or {b}",
+  "callout_contempt": "CONTEMPT: WHAT YOU KILL BURSTS (×{n})",
+  "callout_purse": "PURSE: +{n} CLEMENCY",
+  "carry_heading": "Carry in",
+  "hud_spin": "Spin {n}%",
+  "hud_struck": "Orbs struck {n}"
 }

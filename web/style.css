@@ -81,6 +81,13 @@ table.controls td:first-child { font-weight: 700; white-space: nowrap; }
 .big-num { font-size: 1.9rem; font-weight: 900; }
 #m-build { margin: 0 0 12px; padding-left: 18px; }
 #start-run { width: 100%; margin: 6px 0 12px; }
+#carry { margin: 0 0 12px; }
+#carry[hidden] { display: none; }
+#carry h4 { margin: 0 0 6px; }
+#carry-guns { display: flex; flex-wrap: wrap; gap: 6px; }
+button.carry-gun { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 10px; border-radius: 10px; background: #fff3d6; font-size: 0.75rem; opacity: 0.7; }
+button.carry-gun img { width: 72px; height: 29px; object-fit: contain; }
+button.carry-gun.chosen { background: var(--salmon); opacity: 1; font-weight: 800; }
 .tools { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
 .credit { font-size: 0.75rem; opacity: 0.75; margin: 8px 0 0; }
 #upgrades { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; align-items: start; }

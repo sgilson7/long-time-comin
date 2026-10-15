@@ -7,13 +7,13 @@ copied from the game's own output:
 
 - story.json's sentencing has 5 lines; its indictment has 10 counts.
 - the Codex has 5 tabs (copy.json codex_tabs), 17 control rows
-  (copy.json controls), 5 guns (weapons.json) and 55 enemies (enemies.json:
+  (copy.json controls), 7 guns (weapons.json) and 55 enemies (enemies.json:
   the 43 of the first four zones, then zone five's seven, the Recursion's
   two smaller orders, the Idiot God, and the last mission's ball of yarn
   and Chumbles).
 - the crater's gate is open, so its label shows; the first fight's gates
   stay dark and unlabelled until its enemies are defeated.
-- upgrades.json lists 32 upgrades in 4 branches (copy.json holding_branches);
+- upgrades.json lists 38 upgrades in 4 branches (copy.json holding_branches);
   the cheapest (Constitution I) costs 8, so a new record with 0 Clemency can
   buy none of them.
 - zone.json lists 5 zones, all built: none is sealed (the last mission's
@@ -34,7 +34,8 @@ copied from the game's own output:
 - the faint practice marks in the Holding start in the last zone a run
   crosses (the god's) and in the last mission's home (Chumbles), and
   abandoning either returns to the Holding with no death added.
-- the test save (clicked twice, as it asks) owns all 32 upgrades and opens
+- the test save (clicked twice, as it asks) owns all 38 upgrades, so the
+  Carry in row offers all 7 guns (the Carbine and the six Exhibits), and opens
   the boss rush, whose first arena is the Bailiff's, "The Court of Hours".
 - it has put the Idiot God to sleep, so the last mission is open: its brief
   is story.json's mission brief, and after it the run starts in the crater.
@@ -75,7 +76,7 @@ def run(page, check, engine):
     check(mode(page) == "holding", "then the Holding")
     cards = page.query_selector_all("#upgrades .upgrade")
     buyable = page.query_selector_all("#upgrades .upgrade:not(:disabled)")
-    check(len(cards) == 32 and len(buyable) == 0, f"32 upgrades, none affordable with 0 Clemency ({len(cards)}, {len(buyable)})")
+    check(len(cards) == 38 and len(buyable) == 0, f"38 upgrades, none affordable with 0 Clemency ({len(cards)}, {len(buyable)})")
     branches = page.query_selector_all("#upgrades .branch")
     check(len(branches) == 4, f"in four branches ({len(branches)})")
     check(page.inner_text("#m-counts") == "0 / 10", f"no count read yet ({page.inner_text('#m-counts')!r})")
@@ -91,7 +92,7 @@ def run(page, check, engine):
     check(len(tabs) == 5 and len(rows) == 17, f"5 tabs, 17 control rows ({len(tabs)}, {len(rows)})")
     click(page, "#codex-tabs .tab:nth-child(2)")
     guns = page.query_selector_all("#codex-body .codex-card")
-    check(len(guns) == 5, f"five guns ({len(guns)})")
+    check(len(guns) == 7, f"seven guns ({len(guns)})")
     click(page, "#codex-tabs .tab:nth-child(3)")
     foes = page.query_selector_all("#codex-body .codex-card")
     check(len(foes) == 55, f"fifty-five enemies ({len(foes)})")
@@ -252,13 +253,20 @@ def run(page, check, engine):
     click(page, "#test-save")
     page.wait_for_timeout(300)
     owned = page.query_selector_all("#upgrades .upgrade.owned")
-    check(len(owned) == 32, f"the test save owns every upgrade ({len(owned)})")
+    check(len(owned) == 38, f"the test save owns every upgrade ({len(owned)})")
     check(page.is_visible("#start-rush"), "and opens the boss rush")
     check(page.is_visible("#start-mission"), "and the last mission")
+    carry = page.query_selector_all("#carry-guns .carry-gun")
+    check(page.is_visible("#carry") and len(carry) == 7, f"Carry in offers all seven guns ({len(carry)})")
+    click(page, "#carry-guns .carry-gun:has-text('The Filibuster')")
+    chosen = page.inner_text("#carry-guns .carry-gun.chosen")
+    check(chosen == "The Filibuster", f"and the Filibuster is chosen ({chosen!r})")
     click(page, "#start-rush")
     check(mode(page) == "play", f"the rush plays ({mode(page)})")
     page.wait_for_timeout(500)
     check(page.inner_text("#h-node") == "The Court of Hours", f"from the Bailiff's court ({page.inner_text('#h-node')!r})")
+    gun = page.inner_text("#h-gun")
+    check(gun.upper().startswith("THE FILIBUSTER"), f"carrying the Filibuster in ({gun!r})")
 
     # the last mission: its brief, then the crater
     page.keyboard.press("Escape")

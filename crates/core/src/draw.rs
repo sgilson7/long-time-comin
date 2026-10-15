@@ -60,7 +60,10 @@ pub fn world(
     cam: &crate::render::Camera,
 ) {
     if body {
-        player_with(b, c, &w.player, w.held.gun, alpha, w.song.is_some());
+        // a spin gun's barrels turn as fast as it is spun up
+        let heat = w.held.spin;
+        let turn = fx::wrap(w.tick * fx::mul(heat, deg(47)));
+        player_with(b, c, &w.player, w.held.gun, alpha, w.song.is_some(), (turn, heat));
     }
     // enemies in a heavy black line, so their shapes stand out from the
     // warm city behind them
@@ -151,6 +154,17 @@ pub fn world(
         let at = s.prev.lerp(s.pos, alpha);
         let tail = at.sub(s.vel.scale(ONE * 6 / 10));
         match s.kind {
+            crate::weapons::ShotKind::Bullet if s.erase_ward > 0 => {
+                // a Redactor's round: a black dash in a cream edge, so it
+                // reads against the bright orbs and the dark rooms alike
+                rod(b, tail, at, s.radius * 2, s.rgb, 0, true);
+                b.glow(
+                    Mesh::Sphere,
+                    &boxed(at, v3(s.radius * 4, s.radius * 4, s.radius * 4)),
+                    c.pal.c("chalk"),
+                    ONE / 2,
+                );
+            }
             crate::weapons::ShotKind::Bullet => {
                 rod(b, tail, at, s.radius * 2, s.rgb, ONE, false);
             }
@@ -168,6 +182,30 @@ pub fn world(
                     s.rgb,
                     ONE / 4,
                 );
+            }
+            crate::weapons::ShotKind::Bar { half_w, half_h } => {
+                // a Redaction: a flat black bar across the way it slides,
+                // edged in cream above and below so it reads in a dark room
+                let (yaw, _) = crate::geom::yaw_pitch_of(s.vel);
+                let f = Affine::translate(at).then(&Affine::rot_y(yaw));
+                b.inked(
+                    Mesh::Cube,
+                    &f.then(&Affine::scale(v3(half_w * 2, half_h * 2, cm(12)))),
+                    s.rgb,
+                    0,
+                );
+                for side in [-1, 1] {
+                    let edge = f
+                        .then(&Affine::translate(v3(0, side * (half_h + cm(4)), 0)))
+                        .then(&Affine::scale(v3(half_w * 2, cm(6), cm(14))));
+                    b.push(
+                        Mesh::Cube,
+                        &edge,
+                        c.pal.c("chalk"),
+                        ONE / 2,
+                        crate::render::PASS_SOLID,
+                    );
+                }
             }
             crate::weapons::ShotKind::Saw => {
                 // a spinning blade, its teeth round its rim
@@ -236,7 +274,7 @@ pub fn world(
         );
     }
     for g in &w.gates {
-        gate(b, c, g, w.cleared, clock);
+        gate(b, c, g, w.cleared, clock, w.held.level);
     }
     if let Some(g) = w.player.grapple {
         let hand = hand_of(&w.player, alpha);
@@ -317,12 +355,20 @@ fn hand_of(p: &Player, alpha: i32) -> V3 {
 /// The Defendant: a long coat, a scarf that trails, legs that stride, and
 /// the gun held out along the aim.
 pub fn player(b: &mut Batch, c: &Content, p: &Player, gun: usize, alpha: i32) {
-    player_with(b, c, p, gun, alpha, false);
+    player_with(b, c, p, gun, alpha, false, (0, 0));
 }
 
 /// The Defendant, holding the trumpet to their mouth instead of the gun
 /// when `trumpet` is set (the lullaby).
-pub fn player_with(b: &mut Batch, c: &Content, p: &Player, gun: usize, alpha: i32, trumpet: bool) {
+pub fn player_with(
+    b: &mut Batch,
+    c: &Content,
+    p: &Player,
+    gun: usize,
+    alpha: i32,
+    trumpet: bool,
+    spin: (i32, i32),
+) {
     let feet = p.prev_pos.lerp(p.pos, alpha);
     let coat = c.pal.c("player_coat");
     let trim = c.pal.c("player_trim");
@@ -417,7 +463,7 @@ pub fn player_with(b: &mut Batch, c: &Content, p: &Player, gun: usize, alpha: i3
         true,
     );
     if !trumpet {
-        gun_model(b, c, gun, hand, p.yaw, p.pitch, ONE);
+        gun_model_spun(b, c, gun, hand, p.yaw, p.pitch, ONE, spin);
     }
     // a dash leaves ghosts
     if p.dashing() {
@@ -453,6 +499,22 @@ pub fn player_with(b: &mut Batch, c: &Content, p: &Player, gun: usize, alpha: i3
 /// A gun's model at `hand`, pointing along yaw and pitch. Also the icon
 /// for a gun lying on the floor.
 pub fn gun_model(b: &mut Batch, c: &Content, gun: usize, hand: V3, yaw: i32, pitch: i32, scale: i32) {
+    gun_model_spun(b, c, gun, hand, yaw, pitch, scale, (0, 0));
+}
+
+/// A gun's model, a spin gun's barrels turned by `spin.0` and glowing as
+/// hot as `spin.1` (0 cold to ONE).
+#[allow(clippy::too_many_arguments)]
+fn gun_model_spun(
+    b: &mut Batch,
+    c: &Content,
+    gun: usize,
+    hand: V3,
+    yaw: i32,
+    pitch: i32,
+    scale: i32,
+    spin: (i32, i32),
+) {
     let f = Affine::translate(hand)
         .then(&Affine::rot_y(yaw))
         .then(&Affine::rot_x(pitch))
@@ -531,6 +593,135 @@ pub fn gun_model(b: &mut Batch, c: &Content, gun: usize, hand: V3, yaw: i32, pit
                 crate::render::PASS_SOLID,
             );
         }
+        "filibuster" => {
+            // three barrels round one axis, turning as it spins up, and a
+            // strip on top that heats from cream to the shot's orange
+            let (turn, heat) = spin;
+            part(
+                b,
+                &f,
+                Mesh::Cube,
+                v3(0, 0, -dm(2)),
+                v3(cm(10), cm(13), dm(6)),
+                body,
+            );
+            part(
+                b,
+                &f,
+                Mesh::Cube,
+                v3(0, -cm(9), 0),
+                v3(cm(6), cm(12), cm(6)),
+                body,
+            );
+            part(
+                b,
+                &f,
+                Mesh::Cube,
+                v3(0, -cm(1), dm(2)),
+                v3(cm(8), cm(10), dm(2)),
+                c.pal.c("wood"),
+            );
+            for k in 0..3 {
+                let a = turn + fx::TURN / 3 * k;
+                let off = v3(
+                    fx::mul(fx::cos(a), cm(4)),
+                    cm(2) + fx::mul(fx::sin(a), cm(4)),
+                    -dm(7),
+                );
+                let tube = f
+                    .then(&Affine::translate(off))
+                    .then(&Affine::rot_x(fx::QUARTER))
+                    .then(&Affine::scale(v3(cm(4), dm(5), cm(4))));
+                b.inked(Mesh::Cyl, &tube, shade(body, 120), 0);
+            }
+            let collar = f
+                .then(&Affine::translate(v3(0, cm(2), -dm(9))))
+                .then(&Affine::rot_x(fx::QUARTER))
+                .then(&Affine::scale(v3(cm(15), cm(3), cm(15))));
+            b.inked(Mesh::Cyl, &collar, shade(body, 130), 0);
+            b.push(
+                Mesh::Cube,
+                &f.then(&boxed(v3(0, cm(8), -dm(2)), v3(cm(4), cm(2), dm(4)))),
+                mix(c.pal.c("chalk"), glow, heat),
+                ONE / 2 + heat / 2,
+                crate::render::PASS_SOLID,
+            );
+            if heat > ONE / 4 {
+                b.glow(
+                    Mesh::Sphere,
+                    &f.then(&boxed(v3(0, cm(2), -dm(10)), v3(dm(2), dm(2), dm(2)))),
+                    glow,
+                    heat / 3,
+                );
+            }
+        }
+        "redactor" => {
+            // a long, slim rifle; a black bar across the muzzle; a cream
+            // strip on top, struck through
+            part(
+                b,
+                &f,
+                Mesh::Cube,
+                v3(0, 0, -dm(3)),
+                v3(cm(8), cm(10), dm(9)),
+                body,
+            );
+            part(
+                b,
+                &f,
+                Mesh::Cube,
+                v3(0, -cm(8), 0),
+                v3(cm(6), cm(12), cm(6)),
+                body,
+            );
+            part(
+                b,
+                &f,
+                Mesh::Cube,
+                v3(0, -cm(8), -dm(3)),
+                v3(cm(5), cm(10), cm(6)),
+                shade(body, 120),
+            );
+            part(
+                b,
+                &f,
+                Mesh::Cube,
+                v3(0, 0, dm(2)),
+                v3(cm(7), cm(9), dm(2)),
+                c.pal.c("wood"),
+            );
+            let barrel = f
+                .then(&Affine::translate(v3(0, cm(2), -dm(9))))
+                .then(&Affine::rot_x(fx::QUARTER))
+                .then(&Affine::scale(v3(cm(4), dm(3), cm(4))));
+            b.inked(Mesh::Cyl, &barrel, shade(body, 120), 0);
+            part(
+                b,
+                &f,
+                Mesh::Cube,
+                v3(0, cm(2), -dm(11)),
+                v3(cm(24), cm(6), cm(4)),
+                glow,
+            );
+            part(
+                b,
+                &f,
+                Mesh::Cube,
+                v3(0, cm(6), -dm(3)),
+                v3(cm(5), cm(2), dm(6)),
+                c.pal.c("chalk"),
+            );
+            for k in 0..3 {
+                part(
+                    b,
+                    &f,
+                    Mesh::Cube,
+                    v3(0, cm(7), -dm(5) + dm(2) * k),
+                    v3(cm(6), cm(2), cm(12)),
+                    glow,
+                );
+            }
+        }
         "ripsaw" => {
             // a body, a guard over the front, a blade ready in it
             part(
@@ -604,6 +795,8 @@ pub fn pickup_colour(c: &Content, k: PickupKind) -> Rgb {
         PickupKind::Mend => "pickup_mend",
         PickupKind::Trigger => "pickup_trigger",
         PickupKind::Plating => "pickup_plating",
+        PickupKind::Contempt => "pickup_contempt",
+        PickupKind::Purse(_) => "pickup_purse",
     })
 }
 
@@ -721,6 +914,48 @@ pub fn pickup_icon(b: &mut Batch, c: &Content, k: PickupKind, at: V3, spin: i32,
                 b.inked(Mesh::Cube, &plate, shade(col, 100 - 10 * k), ONE / 2);
             }
         }
+        PickupKind::Contempt => {
+            // a body and the ring it bursts in
+            b.inked(
+                Mesh::Sphere,
+                &f.then(&boxed(V3::ZERO, v3(dm(3), dm(3), dm(3)))),
+                shade(col, 70),
+                ONE / 3,
+            );
+            for k in 0..8 {
+                let a = fx::TURN / 8 * k;
+                let p = v3(fx::mul(fx::cos(a), dm(5)), 0, fx::mul(fx::sin(a), dm(5)));
+                b.inked(
+                    Mesh::Octa,
+                    &f.then(&boxed(p, v3(cm(12), cm(12), cm(12)))),
+                    col,
+                    ONE,
+                );
+            }
+        }
+        PickupKind::Purse(_) => {
+            // a purse, tied, and coins over it
+            b.inked(
+                Mesh::Sphere,
+                &f.then(&boxed(V3::ZERO, v3(dm(4), dm(4), dm(4)))),
+                shade(col, 80),
+                ONE / 4,
+            );
+            b.inked(
+                Mesh::Cyl,
+                &f.then(&boxed(v3(0, dm(4), 0), v3(cm(12), cm(8), cm(12)))),
+                shade(col, 60),
+                0,
+            );
+            for k in 0..3 {
+                let p = v3(dm(2) * (k - 1), dm(7) + cm(6) * (k % 2), 0);
+                let coin = f
+                    .then(&Affine::translate(p))
+                    .then(&Affine::rot_x(fx::QUARTER))
+                    .then(&Affine::scale(v3(cm(14), cm(3), cm(14))));
+                b.inked(Mesh::Cyl, &coin, col, ONE);
+            }
+        }
         PickupKind::Gun(g, level) => {
             gun_model(b, c, g, at, spin, 0, scale * 2);
             for k in 0..level {
@@ -731,7 +966,7 @@ pub fn pickup_icon(b: &mut Batch, c: &Content, k: PickupKind, at: V3, spin: i32,
     }
 }
 
-fn gate(b: &mut Batch, c: &Content, g: &crate::world::Gate, cleared: bool, clock: i32) {
+fn gate(b: &mut Batch, c: &Content, g: &crate::world::Gate, cleared: bool, clock: i32, held_level: i32) {
     let across_x = g.yaw == 0 || g.yaw == fx::HALF;
     let (w, d) = if across_x {
         (int(5), dm(2))
@@ -769,10 +1004,30 @@ fn gate(b: &mut Batch, c: &Content, g: &crate::world::Gate, cleared: bool, clock
         );
     }
     // the reward floats over the gate only once the gate is open
-    if let Some(r) = g.reward.filter(|_| cleared) {
-        let k = crate::world::reward_pickup(r);
+    if g.sealed && cleared && g.reward.is_some() {
+        sealed(b, c, at.add(v3(0, int(5), 0)), clock * 2, ONE * 2);
+    } else if let Some(r) = g.reward.filter(|_| cleared) {
+        let k = crate::world::reward_pickup(r, held_level);
         pickup_icon(b, c, k, at.add(v3(0, int(5), 0)), clock * 2, ONE * 2);
     }
+}
+
+/// A sealed reward over its gate: a letter, and the court's wax seal.
+fn sealed(b: &mut Batch, c: &Content, at: V3, spin: i32, scale: i32) {
+    let f = Affine::translate(at)
+        .then(&Affine::rot_y(spin))
+        .then(&Affine::scale(v3(scale, scale, scale)));
+    b.inked(
+        Mesh::Cube,
+        &f.then(&boxed(V3::ZERO, v3(dm(7), dm(5), cm(4)))),
+        c.pal.c("etching_paper"),
+        0,
+    );
+    let wax = f
+        .then(&Affine::translate(v3(0, 0, cm(4))))
+        .then(&Affine::rot_x(fx::QUARTER))
+        .then(&Affine::scale(v3(dm(2), cm(4), dm(2))));
+    b.inked(Mesh::Cyl, &wax, c.pal.c("pickup_sealed"), ONE / 2);
 }
 
 fn orbs(b: &mut Batch, c: &Content, w: &World, alpha: i32, cam: &crate::render::Camera) {

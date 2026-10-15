@@ -142,6 +142,22 @@ export function makeScreens(game, copy, changed, startAt, tryChumbles) {
       if (b.wall) body.push(copy.build_wall);
       if (b.pound) body.push(copy.build_pound);
       el("m-build").replaceChildren(...body.map((t) => make("li", "", t)));
+      // the gun a run carries in: the Carbine, or one an Exhibit bought
+      el("carry").hidden = s.carry.length <= 1;
+      el("carry-guns").replaceChildren(
+        ...s.carry.map((g) => {
+          const button = make("button", `carry-gun ${g.chosen ? "chosen" : ""}`);
+          const icon = make("img", "");
+          icon.src = `art/guns/${g.id}.png`;
+          icon.alt = "";
+          button.append(icon, make("span", "", g.name));
+          button.setAttribute("aria-pressed", g.chosen ? "true" : "false");
+          button.addEventListener("click", () => {
+            if (game.carry(g.id)) changed();
+          });
+          return button;
+        }),
+      );
       el("start-later").replaceChildren(
         ...s.starts.map((st) => {
           const button = make("button", "big later", st.label);

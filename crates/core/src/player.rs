@@ -73,6 +73,8 @@ pub struct Build {
     pub lien: bool,
     /// your time stop, in ticks (0: not yet yours)
     pub stop_ticks: i32,
+    /// Contempts taken: what you kill bursts (0: none, up to three)
+    pub contempt: i32,
 }
 
 impl Default for Build {
@@ -100,6 +102,7 @@ impl Default for Build {
             bail: 0,
             lien: false,
             stop_ticks: 0,
+            contempt: 0,
         }
     }
 }
