@@ -1,65 +1,65 @@
 {
   "_about": "The story's words. The indictment is read one count per death, in order; after the last count, a death adds one of the addenda. {years}, {total} and {year} are filled in by the core. death_titles head the indictment by the zone you died in. interludes are read between a zone's boss and the next zone, by the zone just left. The verdict follows the last built zone's boss (the Idiot God, sung to sleep); its last line is mechanical and says what the build holds. A boss's bars, when it has them, name each phase's bar on the HUD; the last is the lullaby's. mission: the last mission's words, opened by putting the Idiot God to sleep: its brief (read before it begins), its interludes by the zone just left (the fourth's is where reality breaks, and you wake at home), and its ending (the verdict after Chumbles is fed).",
-  "case": "IN THE TRIBUNAL OF THE LAST HOUR, WHICH SITS AFTER EVERYTHING ELSE HAS RISEN · Case 2081-1 · The City of Meridian, and its nine million mornings, against the Defendant",
+  "case": "TRIBUNAL OF THE LAST HOUR | CASE 2081-1 | THE CITY OF MERIDIAN v. THE DEFENDANT",
   "sentencing": [
-    "There is a court that sits after the last hour has been struck. It keeps no calendar, because it has no further use for one. It tried you there. You do not remember the trial. The clerk says nobody does, and that this is a mercy the court extends to everyone, whether they want it or not.",
-    "The verdict was guilty. The sentence was Corrective Return: you would be carried back to the night of the fourteenth of March, 2081, and you would stand in the doorway, and you would stop yourself.",
-    "The Bailiff of Hours has carried prisoners down the years since before the years were counted. It is patient the way stone is patient. It has never once mistaken a date.",
-    "It set you down in 2031.",
-    "Fifty years early, in a city that does not yet know what it is waiting for. The night you were sent to lies at the far end of half a century, and there is only one road there, the one everybody walks: an hour, and then the next hour. Begin."
+    "On March 14, 2081, every clock in Meridian stopped at 9:14 p.m. Nine million people were trapped in the same evening. The Tribunal says you caused it.",
+    "You were found guilty of the Stilling. You remember none of the trial. Your sentence is Corrective Return: go back to that night, reach the Observatory, and stop your older self.",
+    "The Bailiff of Hours was ordered to deliver you to 2081. It has never missed its mark before.",
+    "It delivered you to 2031.",
+    "Fifty years early. The Tribunal calls it an error. The Bailiff says it followed its orders. The court will read your charges each time you die. Your task has not changed: reach 2081 and stop your older self."
   ],
   "counts": [
-    "COUNT THE FIRST. That on the evening of the fourteenth of March, 2081, the Defendant let themself into the Meridian Observatory with a key that had been given to someone else, a long time before, for a different reason.",
-    "COUNT THE SECOND. That the Defendant there woke the instrument called the Long Door. They had built it themself, over eleven years, and registered it with the city as a clock for measuring weather. In a sense it was.",
-    "COUNT THE THIRD. That the Long Door was made to hold a single evening open, the way a hand holds a door, so that one person inside that evening would never have to leave it; and that the Defendant knew what a door held open lets out.",
-    "COUNT THE FOURTH. That at fourteen minutes past nine the Defendant stopped the clocks of Meridian, and with them the morning of nine million people, and called it, in their notebook, a small adjustment.",
-    "COUNT THE FIFTH. That the people of Meridian are still in that evening. They are not dead. Dead would be a kind of ending, and this court knows endings well. They are waiting for a tomorrow that does not come.",
-    "COUNT THE SIXTH. That the one person the Long Door was built to keep is among them, in a kitchen with the light on, halfway through a sentence, and does not know.",
-    "COUNT THE SEVENTH. That the Defendant, alone outside the stopped city, walked its streets for thirty-one days and was seen by no one, because there was no one left who could look up.",
-    "COUNT THE EIGHTH. That the Defendant came to this court of their own accord, declined counsel, and offered one sentence in their defence, which the clerk took down exactly: I would do it again.",
-    "COUNT THE NINTH. That the court finds that sentence to be the crime. A deed is over once it is done. A person who would do it again is a deed that has not happened yet, and must be met before it does.",
-    "COUNT THE TENTH. That the person you are walking toward, at the far end of the fifty years, is you: older by every year this court has added, waiting, and certain."
+    "COUNT 01 | ACCESS. On March 14, 2081, you entered the Meridian Observatory with a key issued years earlier to another keeper.",
+    "COUNT 02 | THE DEVICE. Inside, you activated the Long Door. You had spent eleven years building it. Its official records called it a weather clock.",
+    "COUNT 03 | INTENT. The Long Door was built to hold one evening in place, so that one person would never have to leave it. You knew something else could pass through.",
+    "COUNT 04 | THE STILLING. At 9:14 p.m., the clocks stopped across Meridian. Nine million people lost the next morning. Your notes called it a small adjustment.",
+    "COUNT 05 | THE VICTIMS. The people of Meridian remain inside that evening. They cannot move on. The court has found no way to reach them.",
+    "COUNT 06 | THE PERSON. Among them is the person you meant to keep. They are in a kitchen, mid-sentence, unaware that the world has stopped.",
+    "COUNT 07 | AFTERMATH. You walked through the silent city for thirty-one days. No one saw you. No one could.",
+    "COUNT 08 | TESTIMONY. You surrendered to the Tribunal, refused counsel, and gave one statement: I would do it again.",
+    "COUNT 09 | JUDGMENT. The court treats that statement as proof you remain a threat. It orders your return to prevent the act.",
+    "COUNT 10 | THE TARGET. The person you were sent to stop is your older self. They are waiting at the end of the years the court has added."
   ],
   "addenda": [
-    "ADDENDUM. The Bailiff reports that the Defendant fell in {year} and was returned without complaint. The years are added. The court notes that it did not ask whether they were wanted.",
-    "ADDENDUM. The clerk asks that the record show the Defendant gets a little further each time. The court agrees to show it. The years are added anyway.",
-    "ADDENDUM. No new charge. The court wished only to remind the Defendant that it is still sitting, and that it has nowhere else to be.",
-    "ADDENDUM. A juror asked how many times a person may be sent back before they become someone else. The question was struck from the record. The years were not."
+    "ADDENDUM | Returned from {year}. The Bailiff reports another death. The court adds the years.",
+    "ADDENDUM | The record shows you reached farther this time. Your sentence increases regardless.",
+    "ADDENDUM | No new charge. The Tribunal remains in session. Your return has been entered into the record.",
+    "ADDENDUM | A juror asked whether these returns are changing who you are. The question was removed. The added years remain."
   ],
-  "time_served": "The court adds {years}. Your sentence now runs to {total}.",
+  "time_served": "Years added: {years}. Total sentence: {total}.",
   "victory_title": "THE LULLABY",
   "victory": [
-    "The last note leaves the bell and does not fade. It hangs over the god, and the air round it stops: a bubble of still time with the oldest and hungriest thing there is asleep inside it.",
-    "The dancers slow and settle, and pipe on as they always have, softly now, in your key. The eyes close one by one. Very far away, a clock on a mountain moves from 21:14 to 21:15.",
-    "You understand that the bubble holds only while someone plays. Your older self understood it too. It is why they stopped the whole world instead, and why that was never enough.",
-    "So you sit down at the edge of the god's heart with the trumpet across your knees and begin the song again from the first verse. Outside the bubble, time goes on without you. The court adjourns. Somewhere a younger you grows up, and never builds a door.",
-    "You have all the time there is. You play.",
-    "The game is beaten. The boss rush is open in the Holding, and the Clemency from this run has been added to your record."
+    "The final note holds. The Idiot God closes its eyes. Time stops in a small space around it, and for the first time the dancers play quietly.",
+    "Far away, the clock on Mount Meridian moves. 21:14 becomes 21:15. The city has a tomorrow again.",
+    "You understand why your older self stopped time. The Long Door had let the god through. Holding the whole world still was the only way they knew to keep it from waking.",
+    "Your song can hold it here without stopping everyone else. But someone must keep playing. You sit beside the sleeping god, set the trumpet to your lips, and begin again.",
+    "The world moves on. You do not. Somewhere, a younger version of you will never need to build the Long Door.",
+    "The game is beaten. Boss rush is now available in the Holding. Clemency from this run has been added to your record."
   ],
   "bosses": {
     "bailiff": {
-      "name": "THE BAILIFF OF HOURS",
-      "title": "It has carried the condemned down the years since before the years were counted. It is not cruel. It is punctual."
+      "name": "THE INTERDICTOR",
+      "title": "A machine waiting at the city limits. It carries the Tribunal's seal, an unsigned order, and one instruction: keep you from reaching 2081."
     },
     "witness": {
       "name": "THE WITNESS",
-      "title": "Every court needs one who saw. This one has watched the ice since before there was ice, and it has already seen what you will do."
+      "title": "It has watched the ice for longer than anyone remembers. It has seen your future, but something keeps it from speaking."
     },
     "defendant": {
       "name": "THE DEFENDANT",
-      "title": "You, older by every year the court added. You would do it again. You are about to."
+      "title": "Your older self. They know what happens after the clocks stop. They are prepared to do it again."
     },
     "executor": {
       "name": "THE EXECUTOR",
-      "title": "It carries out its orders to the letter. It has never once asked who signed them."
+      "title": "A machine sent to end your research. Its orders are sealed inside its turret."
     },
     "chief": {
       "name": "THE SECTION CHIEF",
-      "title": "He has a list of names. Yours is on it, and so is everyone you hired."
+      "title": "He has orders to clear the house. Your scientists are first on his list."
     },
     "azathoth": {
       "name": "THE IDIOT GOD",
-      "title": "Blind and mindless at the centre of everything, piped to by its dancers. It is not angry. It is hungry, and it is awake.",
+      "title": "Something from outside time. It hears the Long Door opening. Its dancers keep it awake.",
       "bars": [
         "THE BLIND MASS",
         "THE DANCERS",
@@ -69,15 +69,15 @@
     },
     "pioneer": {
       "name": "THE PIONEER",
-      "title": "The expedition's walking frame. The ice took its pilot, and taught it to walk on its own."
+      "title": "The expedition lost its pilot. The walking frame carried on without one."
     },
     "escort": {
       "name": "THE ESCORT",
-      "title": "The Executor's little sister. It goes ahead to see that the doors are open."
+      "title": "Sent ahead of the Executor to clear its way into the house."
     },
     "chumbles": {
       "name": "CHUMBLES",
-      "title": "He has been fed. He says he has not.",
+      "title": "It is breakfast. He has not been fed to his satisfaction.",
       "bars": [
         "THE ZOOMIES",
         "THE POUNCE",
@@ -88,23 +88,23 @@
     }
   },
   "death_titles": {
-    "waiting_city": "THE BAILIFF COLLECTS YOU",
-    "white_waste": "THE ICE GIVES YOU BACK TO THE COURT",
-    "glass_house": "THE GREY MEN RETURN YOU TO THE COURT",
-    "the_ascent": "YOU FALL FROM THE MOUNTAIN, AND THE COURT CATCHES YOU",
-    "idiot_god": "THE GOD DREAMS YOU BACK TO THE COURT",
-    "home": "CHUMBLES SITS ON YOUR CHEST UNTIL THE COURT COLLECTS YOU"
+    "waiting_city": "RETURNED TO THE TRIBUNAL",
+    "white_waste": "RETURNED FROM THE ICE",
+    "glass_house": "RETURNED FROM CALDER HILL",
+    "the_ascent": "RETURNED FROM MOUNT MERIDIAN",
+    "idiot_god": "RETURNED FROM OUTSIDE",
+    "home": "CHUMBLES HAS WON THIS ROUND"
   },
   "interludes": {
     "waiting_city": {
       "title": "THE YEARS BETWEEN",
       "lines": [
-        "The Bailiff of Hours goes down on one knee in its own court, and the stopped clock above the bench says nothing, which is what it has always said. It was not sent to bring you back. It was sent to make sure you never arrived.",
-        "It does not get up. The court, which does not lose things, loses track of you for a while, and the clerk writes that down too.",
-        "You have what nobody else in 2031 has: the next fifty years, read once, out of order. You know which harbours will flood and which will hold, which small firms will matter, which bridges will never be built. You do not need luck. You have the minutes.",
-        "By 2044 the company has your name on its door and two floors of a tower in the new city. People call it foresight. A newspaper calls you the most patient investor in Meridian, and you read the article twice, because you already know how the paper ends.",
-        "Count the first says the key was given to someone else, a long time before, for a different reason. It was given to Ines Calder, the Observatory's first keeper. In 2039 she took it north on the Long Patience, to measure the weather at the top of the world, and the ice kept her, and the key, until someone went to fetch it. You know who. You have seen that face in mirrors.",
-        "So in the spring of 2046 you pay for a ship of your own and sail north to fetch it first. Behind you the city is busy and bright and has thirty-five years left. Ahead is the White Waste, where the year turns so slowly that the court keeps someone there to watch it."
+        "The Interdictor falls beneath the stopped clock at the Court of Hours. Inside its chest is a transfer warrant. Your destination was changed from 2081 to 2031. The authorization line is blank.",
+        "The Bailiff brought you where the warrant told it to. The Interdictor was waiting to make sure you never reached the Observatory. Someone changed your route before the journey began.",
+        "The machine is destroyed. The Bailiff still returns you to the Tribunal when you die. For now, the road out of the city is clear. You use what you know of the next fifty years to build a fortune. By 2044 you run one of Meridian's largest firms.",
+        "You need a key to enter the Observatory. The last known key belonged to Ines Calder, its first keeper. She took it north aboard the Long Patience in 2039. The ship never returned.",
+        "You know where the key will be found. You also know who is supposed to find it. You intend to reach it first.",
+        "Spring, 2046. You fund an expedition into the White Waste. Meridian is thirty-five years from the Stilling. You have a ship, a crew, and one lead."
       ],
       "art": "interlude",
       "go": "Sail north"
@@ -113,12 +113,12 @@
       "title": "WHAT THE WITNESS SAW",
       "art": "interlude_house",
       "lines": [
-        "The Witness lowers its arms. The ice it grew into goes clear, the way a window does when the frost on it gives up, and inside it is a woman in an old red coat, asleep, with a key on a string round her neck. You take the key. She does not wake.",
-        "Then the Witness speaks, which the court's records say it has never done. It has watched you, it says, the whole way down the years, and it has seen what you will do with the key. You will do a thing so terrible that time itself will stop rather than go on past it.",
-        "You ask what the thing is. The Witness opens its mouth and nothing comes. It is not refusing. Whatever it saw has no words yet, and the Witness falls silent in the middle of a breath, as if the sentence it was about to say had been taken from it.",
-        "You sail home with the key in a lead box. By then the company is worth more than some countries, and in 2047 you buy the old house on Calder Hill above Meridian and fill its wings with laboratories. For ten years you spend the money on one question: how a person keeps time from breaking.",
-        "Physicists, clockmakers, two theologians, a woman who mends church bells. They work through the nights and find nothing that holds, and the money goes, and you sign for more. Somewhere in the house you are always listening for a clock to stop.",
-        "In the autumn of 2056 it is not a clock. Men in grey coats come up the lawn in the rain, all of them with the same face, and the first of your scientists dies at the conservatory door before anyone hears a shot. It is your house. You know every room of it. Go."
+        "As the Witness falls, the ice around it clears. Inside is a woman in a red coat, asleep. Ines Calder. The Observatory key hangs at her neck. You take it. She does not wake.",
+        "The Witness speaks. It says it has seen what you will do with the key. Something so terrible that time itself will stop.",
+        "You ask what happens. Its mouth opens, but the answer never comes. The Witness falls silent before it can tell you why.",
+        "You return to Meridian with the key sealed away. In 2047, you buy a house on Calder Hill and turn it into a research estate. You have ten years to prevent the future you have been shown.",
+        "You hire scientists and engineers. They test every theory you can afford. Nothing explains how to stop time from breaking. You spend the fortune you made trying.",
+        "Autumn, 2056. Armed men in grey arrive during a storm. Every one of them has the same face. They kill your staff and enter the house. You are still inside."
       ],
       "go": "Go home"
     },
@@ -127,26 +127,26 @@
       "art": "orders",
       "go": "Climb",
       "lines": [
-        "The Executor settles onto its treads in the wreck of the conservatory, and its eyes close, one wheel at a time, until the house is dark and quiet and full of rain.",
-        "In the turret, behind the last of its cannons, is a steel case, and in the case are its orders. They are typed on the house's own typewriter, the one in the safe room with the sticking e. They are dated the fourteenth of March, 2081. They are signed in your hand.",
-        "Raid the house on Calder Hill. End the work. Kill whoever you must, the scientists first. And under the signature, in ink, in the handwriting you have used your whole life: Time must break. If it does not, everything else will, which will be much worse.",
-        "You read it twice. You were sent back to stop yourself. At the far end of twenty-five years, you are already stopping you.",
-        "You have thought about letting yourself die. More than once, on the long nights in the house, it seemed the cleanest way: no Defendant, no door, no evening that never ends. But the court does not allow it. Every time you fall, the Bailiff collects you and sets you on your feet again, and the years are added, and you go on.",
-        "So it seems that this version of you must kill that version of you. Fifty years have come down to one evening. On the fourteenth of March, 2081, you climb Mount Meridian toward the Observatory on its summit, where the Long Door stands in a circle of old stones, and the evening light does not move, because it is always twenty-one fourteen. Someone you trained is waiting on every terrace. They all wear your coat."
+        "The Executor stops moving in the ruined conservatory. Rain falls through the broken glass. The house is quiet.",
+        "You find its orders in a steel case. They were typed on the machine in your own safe room. In the corner is the same seal as the Interdictor's warrant. The date is March 14, 2081. The signature is yours.",
+        "Raid Calder Hill. Destroy the research. Kill the scientists if necessary. Below that, in your handwriting: Time must break. If it does not, everything else will.",
+        "Your older self ordered the raid. The matching seal links these orders to the warrant that stranded you in 2031. They have been trying to keep you from the Observatory since the beginning.",
+        "You have considered dying to end the cycle. The court will not permit it. Each time you fall, it returns you to the past and adds more years.",
+        "March 14, 2081. You climb Mount Meridian toward the Observatory and the Long Door. The clock reads 21:14. Figures in your coat wait along the path. You taught them how to fight."
       ]
     },
     "the_ascent": {
       "title": "THE DOOR",
-      "lines": [
-        "You stand over yourself in the circle, and your older face looks up at you without fear. They say: I would do it again. Then the sky above the summit tears like wet paper.",
-        "It comes through all at once: a mass larger than the mountain, bubbling, blind and covered in eyes, piping to itself in a voice like a choir of flutes. The stones melt. The summit runs like wax. You are drawn up toward a mouth the size of the night.",
-        "Now you understand what the court never did. The Long Door was a ritual, not a clock. You built it to hold one evening open for one person, and it opened onto the outside instead, and the thing outside heard it, and came. You led it here. Your older self stopped time because a stopped moment was the only lock strong enough to hold it at the threshold.",
-        "The Tribunal knew only that time had stopped and that something had to be fixed. No one in your own timeline could get near the Defendant, so they reached into another timeline for a version of you more amenable to their cause. You. Nobody knew what stopping your older self would let in, except your older self, who learned to stop time to keep this reality from being eaten.",
-        "Your sin was never the stopping of time. It was the door.",
-        "The maw closes over you. Inside there is no up, and the floor you fall from is the floor you land on. Somewhere at its centre the god is piping to itself, and its dancers pipe with it. In your pack is the battered trumpet you took from the Hermitage on the way up, your older self's, its mouthpiece worn to the shape of your own mouth. You do not yet know why you brought it."
-      ],
       "art": "door",
-      "go": "Fall"
+      "go": "Fall",
+      "lines": [
+        "Your older self falls beside the Long Door. They look at you and say, quietly: I would do it again.",
+        "The sky opens. Something enormous moves through the gap. It has no shape that can remain still. The stone beneath you begins to give way.",
+        "The Long Door was never an ordinary clock. You built it to preserve one evening for one person. But the opening reached outside time. The god heard it and came toward your world.",
+        "Your older self stopped Meridian at 21:14 to keep that opening from widening. The Tribunal saw nine million people trapped in one evening. It called the Stilling the crime. It never understood what the Stilling was holding back.",
+        "So the Tribunal took another version of you from another timeline and told you to stop the Defendant. You did what it ordered. Now the lock is broken. The original mistake was opening the Long Door.",
+        "The god pulls you inside. Space turns back on itself. In your pack is the worn trumpet you found at the Hermitage, the one your older self carried. You brought it without knowing why."
+      ]
     }
   },
   "verdict_art": "lullaby",
@@ -156,11 +156,11 @@
       "art": "sentencing",
       "go": "Land",
       "lines": [
-        "Far away, on a mountain, a clock moved from 21:14 to 21:15. The court noticed. The court does not like anything it did not order.",
-        "It went looking for the cause and found the Defendant still at the summit, the Long Door still standing, and somewhere past it a trumpet playing to something asleep. The court did not understand the trumpet. It understood the Defendant.",
-        "So it reached into another timeline, as it had before, and took another of you: younger, angrier, who has never heard the lullaby. You. The sentence is the one it gave the first of you. Go back to 2031 and stop yourself.",
-        "This time you go from the crater to the summit in one go: the Waiting City, the White Waste, the Glass House and the Ascent, with no return to the Holding between them. The years have hardened since the first of you crossed them. More of everything comes at once, and it fires in ways the first of you never saw.",
-        "You land in the crater, in the rain, and it is 2031 again."
+        "On Mount Meridian, the clock advances from 21:14 to 21:15. The Tribunal notices. No one has authorized time to move.",
+        "The Defendant still waits at the Observatory. Beyond the Long Door, a trumpet is keeping something asleep. The court knows only that its original sentence has failed.",
+        "It reaches into another timeline and takes another you. You have never heard the lullaby. The court tells you what it told the first: return to 2031 and stop yourself.",
+        "This time there are no breaks between the years. Cross the Waiting City, the White Waste, the Glass House, and the Ascent in one run. Every fight is harder. You cannot return to the Holding until the mission ends.",
+        "Rain strikes the crater. The year is 2031. You begin again."
       ]
     },
     "interludes": {
@@ -169,8 +169,8 @@
         "art": "interlude",
         "go": "Sail north",
         "lines": [
-          "The Bailiff goes down on one knee in its own court. You have read about this moment, in a file the court gave you, and it happens as the file says.",
-          "You do what the first of you did: the company, the money, the tower in the new city. It goes faster when you know the shape of it. In the spring of 2046 you sail north for the key."
+          "The Interdictor falls beneath the stopped clock. Inside is the same altered transfer warrant: 2031, no authorization. The court file said you would find it. Someone has lived these years before.",
+          "You follow the same years: the company, the fortune, the Observatory key lost to the ice. In spring 2046, you sail north."
         ]
       },
       "white_waste": {
@@ -178,8 +178,8 @@
         "art": "interlude_house",
         "go": "Go home",
         "lines": [
-          "The Witness lowers its arms and opens its mouth, and this time it says nothing at all. It looks past you, south, toward a mountain, as if it can hear something there that you cannot.",
-          "You take the key. You buy the house on Calder Hill and fill it with laboratories. In 2056 the grey men come, as the file said they would."
+          "The Witness looks at you and tries to speak. This time it says nothing. It turns toward Mount Meridian, as though listening.",
+          "You take Ines Calder's key, return to Meridian, and build your laboratories. In 2056 the grey men arrive, just as the record said."
         ]
       },
       "glass_house": {
@@ -187,8 +187,8 @@
         "art": "orders",
         "go": "Climb",
         "lines": [
-          "The Executor's last eye closes, and the grey men leave the house the way they came.",
-          "You climb toward the Observatory. At the top the evening of 14 March 2081 is waiting, with the clock at 21:14, and your older self in a circle of stones."
+          "You defeat the Executor. Its orders are still signed by your future self. Nothing in the record has changed.",
+          "At the Observatory, on March 14, 2081, the clock is fixed at 21:14. Your older self waits inside the ring of stones."
         ]
       },
       "the_ascent": {
@@ -196,21 +196,21 @@
         "art": "waking",
         "go": "Get up",
         "lines": [
-          "Your older self goes down in the circle of stones, looks up at you and says: I would do it again. Then they look past you, puzzled, as though listening to something a long way off.",
-          "The sky over the summit should tear open now. It does not. The thing outside is already asleep, in a bubble of stopped time, and at its heart the first of you sits with a trumpet and plays it the lullaby, verse after verse.",
-          "Both cannot be true. The god cannot come through a door it is already asleep behind, and you cannot stop a self who has already been stopped. The court's timeline tries to hold both, and cracks.",
-          "The summit comes apart like a dropped plate. The stones, the stars and the clock fall away in pieces, and behind each piece there is a white light, and in the light a sound you know but cannot place: a small, insistent voice, very close.",
-          "You open your eyes. You are in bed. It is morning, in your own bedroom, and your cat is sitting on your chest looking at you. When he sees that you are awake he jumps down and walks out of the door with his tail up, toward the stairs, as if to say: finally."
+          "The Defendant falls. Once again, they say: I would do it again. Then they look toward the sky, waiting for something that does not come.",
+          "The god is already asleep. Somewhere outside time, the first of you is still playing the trumpet. There is no god left to come through the door.",
+          "The Tribunal has ordered an event that can no longer happen. It sent you to prevent a future another version of you has already changed. Both outcomes occupy the same moment.",
+          "The mountain breaks apart. Stone and sky fall away. Through the white light you hear a familiar, impatient voice.",
+          "You wake in your own bed on a Saturday morning. Chumbles is sitting on your chest. He sees your eyes open, hops down, and heads for the kitchen."
         ]
       }
     },
     "victory_title": "BREAKFAST",
     "verdict_art": "chumbles",
     "victory": [
-      "Chumbles stops. He is his own size again, sitting in the middle of the kitchen floor with his tail round his feet, looking at you as if none of that happened.",
-      "You find the treats where they always are. He eats every one, then the ones you drop, and then he washes his face for a long time.",
-      "Then he climbs onto the warm part of the sofa where the sun comes in, folds himself into a loaf and closes his eyes. Very far away a trumpet is still playing, softly, and a clock reads 21:15, and none of it is your problem this morning.",
-      "The last sentence is served. The Clemency from this run has been added to your record."
+      "Chumbles sits on the kitchen floor, back to his usual size. He watches you as though nothing unusual has happened.",
+      "You open the cupboard, find his treats, and give him some. He eats them, then checks the floor for more.",
+      "He settles on the sunny end of the sofa and goes to sleep. Somewhere, a trumpet is still playing. Somewhere, a clock reads 21:15. This morning, you are home.",
+      "The last sentence is served. Clemency from this run has been added to your record."
     ]
   }
 }

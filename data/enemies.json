@@ -192,7 +192,7 @@
     },
     {
       "id": "bailiff",
-      "name": "The Bailiff of Hours",
+      "name": "The Interdictor",
       "kind": "boss",
       "hp": 4000,
       "radius_cm": 260,

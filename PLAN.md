@@ -198,3 +198,7 @@ The request is in `BRIEF.md`. Choices it leaves open (SECOND-ORDER rows R13 and 
   - 3 AM (creeps at you only while you are not looking): a laser-pointer lane and a sweeping dot, two-colour spirals, eyes in the dark that close in, more yarn;
   - TREATS (charges again, everything at once): treat rain, a frenzy of spirals and waves, a second scream, three balls of yarn.
   When the last bar empties he is not killed: he is fed, shrinks back to his own size and eats, and sleeps; then the ending.
+
+## Round 14: the rewrite (2026-10-15)
+
+The request is in `BRIEF.md`; the packet is `long_time_comin_rewrite_v2/` in Sam's folder (not committed). It is data only: `apply_rewrite.py --check`, then `--apply`, which replaces the narrative text of `data/story.json`, 40 keys of `data/copy.json` and the first boss's display name. The first boss is the Interdictor, a machine carrying an unsigned transfer warrant; the Bailiff of Hours remains the court's courier and is not fought. The internal id `bailiff` stays everywhere (`zone.json`, `draw.rs`, saves, tests). Nothing else is reworded: strings outside the packet that still say Bailiff are reported (SECOND-ORDER Q54 to Q57), not changed.
