@@ -44,6 +44,7 @@ fn exits(r: &Route, at: usize) -> Vec<Exit> {
             to,
             main: k == 0,
             reward: r.nodes[to].reward,
+            sealed: r.nodes[to].sealed,
         })
         .collect()
 }

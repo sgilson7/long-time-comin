@@ -422,3 +422,18 @@ pub const CAT_FED_TICKS: i32 = secs(6, 1);
 /// this long
 pub const GUIDE_SPEED: i32 = ONE * 3 / 60;
 pub const GUIDE_WAIT: i32 = secs(3, 2);
+
+// ---- the arsenal (round 15) ---------------------------------------------------
+
+/// the highest level a gun reaches; the Holding's Armory starts one at
+/// most at level 3, and side paths carry it the rest of the way
+pub const MAX_GUN_LEVEL: i32 = 5;
+/// Contempt: an enemy you kill bursts for this many percent of its own
+/// maximum health, on every other enemy within the radius
+pub const CONTEMPT_PCT: i32 = 25;
+pub const CONTEMPT_RADIUS: i32 = int(3);
+/// each further Contempt widens the burst this much, up to three in all
+pub const CONTEMPT_WIDEN: i32 = ONE * 3 / 2;
+pub const CONTEMPT_MAX: i32 = 3;
+/// a Purse is this many times the zone's side-path Clemency
+pub const PURSE_TIMES: i32 = 3;

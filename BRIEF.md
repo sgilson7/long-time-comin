@@ -78,6 +78,16 @@ Done means, for this round: a last mission, opened by putting the Idiot God to s
 
 Done means, for this round: the packet's `story_rewrite.json`, `copy_overrides.json` and `enemy_overrides.json` applied exactly as written (the first boss shown as the Interdictor, its id and mechanics unchanged), every story branch and both endings checked, the string audit reported, and deployed. Approval to push and deploy is given in the request.
 
+## The sixteenth request, word for word (2026-10-15)
+
+> ok this is great. now design two new weapons that are similar to the playstyle of the carabine, and then add more potential starting weapons to unlock in the holding shop. I want screenshots of each weapon rendered in game added to the design doc for this phase of changes, alongside a description of how they fire / screen shot of how they fire, a description of the alt fire, a screenshot of the alt fire, and a description of what makes it unique relative to the other existing weapons. then, add a new passive type as well that can be found in the side paths, and make the rewards for doing the side paths more variable overall. write this all up in the design doc then let me inspect before you begin working
+
+The design went into the design journal's Round 15 tab for Sam to inspect. Sam's answers, word for word:
+
+> 1. names are good 2. yeah its fine if it destroys them and its weaker damage wise than the other guns 3. the purse is all right 4. carry in lets you choose a weapon to start the run with based on what youve bought at the holding, so the side paths should always give upgrades, max weapon should now be 5, max you can get in the holding is 3
+
+Done means, for this round: the Filibuster and the Redactor as designed; six Exhibits in the Holding and a Carry in choice of starting gun; Contempt on side paths; side-path rewards rolled from a table, a choice of two on a long path, sealed rewards and the Purse; every gun offered a level or two above the gun in hand; guns to level V, the Holding's Armory to III; in-game screenshots of each new gun in hand, firing and on its second fire in the journal; deployed.
+
 ## The tool
 
 A third-person bullet-hell shooter that runs in a desktop browser with a keyboard and mouse. Roguelike runs across a graph of arenas; meta-progression between runs; a story told by an indictment that is revealed one count at a time, on each death.

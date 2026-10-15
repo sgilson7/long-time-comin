@@ -4,7 +4,7 @@
 //! (cm, cm/s, ms, degrees); `cm`, `cms`, `ms` and friends turn them into the
 //! Q16 per-tick values the simulation uses.
 
-use crate::balance::TICKS_PER_SECOND;
+use crate::balance::{MAX_GUN_LEVEL, TICKS_PER_SECOND};
 use crate::fx::{self, ONE};
 use serde::Deserialize;
 use serde_json::Value;
@@ -165,6 +165,14 @@ struct AltFile {
     #[serde(default)]
     spread_deg: i32,
     cooldown_ms: i32,
+    /// cloture: damage added at full spin
+    #[serde(default)]
+    spin_damage: i32,
+    /// redaction: the bar's width and height
+    #[serde(default)]
+    width_cm: i32,
+    #[serde(default)]
+    height_cm: i32,
 }
 
 /// What a gun's second fire does.
@@ -180,6 +188,10 @@ pub enum AltKind {
     Detonate,
     /// every round left in the cylinder, one after another, a little wild
     Fan,
+    /// one piercing lance that spends the spin for its damage
+    Cloture,
+    /// a flat bar that slides forward, erasing orbs and hitting enemies
+    Redaction,
 }
 
 /// A gun's second fire, at level 1; each level above adds `ALT_LEVEL_PCT`.
@@ -197,6 +209,11 @@ pub struct Alt {
     pub splash: i32,
     pub spread: i32,
     pub cooldown: i32,
+    /// cloture: damage added at full spin, at level 1
+    pub spin_damage: i32,
+    /// redaction: half the bar's width and half its height
+    pub half_w: i32,
+    pub half_h: i32,
 }
 
 /// each gun level above the first adds this much to its second fire's damage
@@ -204,7 +221,13 @@ pub const ALT_LEVEL_PCT: i32 = 25;
 
 impl Alt {
     pub fn damage_at(&self, level: i32) -> i32 {
-        self.damage * (100 + ALT_LEVEL_PCT * (level.clamp(1, 4) - 1)) / 100
+        self.damage * (100 + ALT_LEVEL_PCT * (level.clamp(1, MAX_GUN_LEVEL) - 1)) / 100
+    }
+
+    /// A cloture's damage at `level` with the gun spun up `spin` of ONE.
+    pub fn cloture_at(&self, level: i32, spin: i32) -> i32 {
+        let base = self.damage + (self.spin_damage as i64 * spin.clamp(0, ONE) as i64 / ONE as i64) as i32;
+        base * (100 + ALT_LEVEL_PCT * (level.clamp(1, MAX_GUN_LEVEL) - 1)) / 100
     }
 }
 
@@ -237,6 +260,21 @@ struct GunLevelFile {
     mag: i32,
     #[serde(default)]
     shell_ms: i32,
+    /// a spin gun: its interval cold, the time to spin up, the time the
+    /// spin bleeds away in, and its spread at full spin
+    #[serde(default)]
+    cold_ms: i32,
+    #[serde(default)]
+    spin_ms: i32,
+    #[serde(default)]
+    bleed_ms: i32,
+    #[serde(default)]
+    hot_spread_deg: i32,
+    /// rounds that erase orbs: the highest ward erased, and orbs gone through
+    #[serde(default)]
+    erase_ward: i32,
+    #[serde(default)]
+    through: i32,
 }
 
 /// One level of one gun, in simulation units.
@@ -256,6 +294,25 @@ pub struct GunLevel {
     /// rounds in the cylinder (0: no reloading), and ticks to load one
     pub mag: i32,
     pub shell: i32,
+    /// a spin gun's spin; its `rate` is the interval at full spin
+    pub spin: Option<SpinLevel>,
+    /// its rounds erase orbs up to this ward (0: none; past the last
+    /// ward, every orb but gold), going on through `through` more
+    pub erase_ward: i32,
+    pub through: i32,
+}
+
+/// A spin gun's level: slow when it starts, fast once held.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SpinLevel {
+    /// thousandths of a tick between shots, cold and at full spin
+    pub cold: i32,
+    pub hot: i32,
+    /// ticks of holding to spin up, and of letting go to spin down
+    pub up: i32,
+    pub bleed: i32,
+    /// the spread at full spin
+    pub hot_spread: i32,
 }
 
 /// A saw gun's level: blades that lodge in what they hit and rev while
@@ -969,9 +1026,13 @@ pub struct RouteRules {
     /// expedition cache); none in zone one
     #[serde(default)]
     pub cache_rewards: Vec<String>,
-    /// the levels a gun on a near and on a deep side path has
-    #[serde(default = "two_three")]
-    pub weapon_levels: [i32; 2],
+    /// how many levels above the gun in hand a gun on a near and on a
+    /// deep side path stands
+    #[serde(default = "one_one")]
+    pub weapon_steps: [i32; 2],
+    /// the chance in a hundred that a side path's reward is sealed
+    #[serde(default)]
+    pub sealed_pct: i32,
     /// mini-bosses, each fought alone in its own arena on a main fight
     #[serde(default)]
     pub minibosses: Vec<Miniboss>,
@@ -985,8 +1046,8 @@ pub struct Miniboss {
     pub arena: String,
 }
 
-fn two_three() -> [i32; 2] {
-    [2, 3]
+fn one_one() -> [i32; 2] {
+    [1, 1]
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
@@ -1094,11 +1155,14 @@ pub struct Upgrade {
     /// a boss that must have been beaten before it can be bought
     #[serde(default)]
     pub unlock: String,
+    /// an Exhibit: the gun, by id, it lets a run carry in
+    #[serde(default)]
+    pub gun: String,
 }
 
 /// The rewards a side path or the Antechamber can hold.
 pub const REWARDS: &[&str] = &[
-    "weapon", "jump", "health", "speed", "pierce", "pulse", "mend", "trigger", "plating",
+    "weapon", "jump", "health", "speed", "pierce", "pulse", "mend", "trigger", "plating", "contempt", "purse",
 ];
 
 const EFFECTS: &[&str] = &[
@@ -1124,6 +1188,7 @@ const EFFECTS: &[&str] = &[
     "lien",
     "stop",
     "stop_plus",
+    "exhibit",
 ];
 
 /// The Holding's columns, in order.
@@ -1271,7 +1336,8 @@ impl Content {
                         clemency_boss: 0,
                         rest_rewards: Vec::new(),
                         cache_rewards: Vec::new(),
-                        weapon_levels: two_three(),
+                        weapon_steps: one_one(),
+                        sealed_pct: 0,
                         minibosses: Vec::new(),
                     },
                     archetypes: Vec::new(),
@@ -1349,6 +1415,9 @@ impl Content {
             }
             if !u.requires.is_empty() && !upgrades.upgrades.iter().any(|o| o.id == u.requires) {
                 return Err(format!("upgrades: {} requires unknown {}", u.id, u.requires));
+            }
+            if u.effect == "exhibit" && !guns.iter().any(|g| g.id == u.gun) {
+                return Err(format!("upgrades: {} carries in no gun {}", u.id, u.gun));
             }
         }
         let story: Story = serde_json::from_str(f.story).map_err(|e| format!("story: {e}"))?;
@@ -1461,6 +1530,15 @@ fn parse_guns(text: &str, pal: &Palette) -> Result<Vec<Gun>, String> {
                 pierce: l.pierce,
                 mag: l.mag.max(0),
                 shell: ms(l.shell_ms).max(1),
+                spin: (l.cold_ms > 0).then(|| SpinLevel {
+                    cold: l.cold_ms * TICKS_PER_SECOND,
+                    hot: l.rate_ms * TICKS_PER_SECOND,
+                    up: ms(l.spin_ms).max(1),
+                    bleed: ms(l.bleed_ms).max(1),
+                    hot_spread: fx::deg(l.hot_spread_deg),
+                }),
+                erase_ward: l.erase_ward.max(0),
+                through: l.through.max(0),
                 saw: (l.saws > 0).then(|| SawLevel {
                     saws: l.saws,
                     rev_damage: l.rev_damage,
@@ -1484,6 +1562,8 @@ fn parse_guns(text: &str, pal: &Palette) -> Result<Vec<Gun>, String> {
                     "cluster" => AltKind::Cluster,
                     "detonate" => AltKind::Detonate,
                     "fan" => AltKind::Fan,
+                    "cloture" => AltKind::Cloture,
+                    "redaction" => AltKind::Redaction,
                     k => return Err(format!("weapons: a gun has no alt fire {k}")),
                 },
                 name: w.alt.name.clone(),
@@ -1497,6 +1577,9 @@ fn parse_guns(text: &str, pal: &Palette) -> Result<Vec<Gun>, String> {
                 splash: w.alt.splash,
                 spread: fx::deg(w.alt.spread_deg),
                 cooldown: ms(w.alt.cooldown_ms).max(1),
+                spin_damage: w.alt.spin_damage,
+                half_w: cm(w.alt.width_cm) / 2,
+                half_h: cm(w.alt.height_cm) / 2,
             },
         });
     }
@@ -1971,21 +2054,36 @@ pub mod tests {
     }
 
     #[test]
-    fn the_data_files_parse_and_hold_five_guns_of_four_levels() {
+    fn the_data_files_parse_and_hold_seven_guns_of_five_levels() {
         let c = content();
-        assert_eq!(c.guns.len(), 5);
+        assert_eq!(c.guns.len(), 7);
         // the Big Iron: six rounds, the Ascent's
         let iron = &c.guns[c.gun("big_iron")];
         assert!(iron.levels.iter().all(|l| l.mag == 6));
         assert_eq!(iron.from_zone, 3);
-        assert!(c.guns.iter().all(|g| g.levels.len() == 4));
+        assert!(c.guns.iter().all(|g| g.levels.len() == MAX_GUN_LEVEL as usize));
+        // the Filibuster spins, the Redactor erases orbs, and no other does either
+        for g in &c.guns {
+            assert_eq!(
+                g.levels.iter().all(|l| l.spin.is_some()),
+                g.id == "filibuster",
+                "{}",
+                g.id
+            );
+            assert_eq!(
+                g.levels.iter().all(|l| l.erase_ward > 0),
+                g.id == "redactor",
+                "{}",
+                g.id
+            );
+        }
         // the Ripsaw is the saw gun, and only the house offers it
         let saw = &c.guns[c.gun("ripsaw")];
         assert!(saw.levels.iter().all(|l| l.saw.is_some()));
         assert_eq!(saw.from_zone, 2);
         // the Carbine fires every 105 ms: 6.3 ticks, rounded to 6
         assert_eq!(c.guns[0].level(1).rate, 6);
-        assert_eq!(c.guns[0].level(9), c.guns[0].level(4));
+        assert_eq!(c.guns[0].level(9), c.guns[0].level(5));
     }
 
     #[test]

@@ -547,6 +547,30 @@ def gun_art(kind):
         s += circle(7.8, 1.9, 0.55, "metal")
         s += circle(7.8, 1.9, 0.18, "ink")
         s += rect(2.0, 2.8, 4.8, 3.05, "chalk")
+    elif kind == "filibuster":
+        # three barrels round one axis, and a strip that heats from cream to orange
+        s += poly([(0.0, 1.7), (0.6, 1.6), (0.6, 2.7), (0.0, 2.5)], "wood")
+        s += poly([(0.6, 1.5), (5.0, 1.5), (5.0, 2.85), (0.6, 2.7)], "gun")
+        s += poly([(1.6, 1.5), (2.4, 1.5), (2.0, 0.35), (1.3, 0.45)], "gun")
+        s += poly([(3.6, 1.5), (4.3, 1.5), (4.2, 0.7), (3.5, 0.7)], "metaldark")
+        for y in (1.62, 1.98, 2.34):
+            s += rect(5.0, y, 9.3, y + 0.24, "metaldark")
+        s += rect(5.0, 1.45, 5.55, 2.75, "gun")
+        s += rect(8.6, 1.5, 8.95, 2.7, "metal")
+        s += rect(1.3, 2.75, 2.3, 3.0, "lamp")
+        s += rect(2.35, 2.75, 3.35, 3.0, "gold")
+        s += rect(3.4, 2.75, 4.4, 3.0, "trim")
+    elif kind == "redactor":
+        # a long, slim rifle; a black bar across the muzzle; a strip struck through
+        s += poly([(0.0, 1.8), (0.5, 1.7), (0.5, 2.6), (0.0, 2.45)], "wood")
+        s += poly([(0.5, 1.7), (6.6, 1.7), (6.8, 2.6), (0.5, 2.6)], "gun")
+        s += poly([(1.5, 1.7), (2.3, 1.7), (1.9, 0.5), (1.2, 0.6)], "gun")
+        s += poly([(3.8, 1.7), (4.4, 1.7), (4.6, 0.8), (4.0, 0.8)], "metaldark")
+        s += rect(6.6, 2.0, 9.0, 2.28, "metaldark")
+        s += rect(9.0, 1.3, 9.4, 3.0, "ink")
+        s += rect(1.0, 2.6, 5.4, 2.9, "lamp")
+        for (a, b) in ((1.2, 2.3), (2.6, 4.0), (4.3, 5.0)):
+            s += rect(a, 2.64, b, 2.86, "ink")
     else:
         s += rect(1.0, 1.4, 7.6, 2.8, "gun")
         s += circle(8.2, 2.1, 1.0, "cyan")
@@ -656,6 +680,24 @@ def icon(kind):
     elif kind == "gavel":
         s += poly([(0.9, 0.9), (2.4, 2.4), (2.1, 2.7), (0.6, 1.2)], "wood")
         s += f"\\filldraw[inked,fill=goldtrim,rotate around={{45:(2.6,2.6)}}] (1.9,2.25) rectangle (3.3,2.95);\n"
+    elif kind == "contempt":
+        # a body, and the ring it bursts in
+        s += "\\draw[trim, line width=2.6pt] (2,2) circle (1.2);\n"
+        for k in range(8):
+            a = 2 * math.pi * k / 8
+            s += f"\\draw[trim, line width=2pt] {P(2 + 0.62 * math.cos(a), 2 + 0.62 * math.sin(a))} -- {P(2 + 0.98 * math.cos(a), 2 + 0.98 * math.sin(a))};\n"
+        s += circle(2.0, 2.0, 0.45, "gun")
+    elif kind == "purse":
+        # a tied purse, and a coin
+        s += "\\filldraw[inked,fill=goldtrim] (2,0.8) .. controls (0.6,0.8) and (0.8,2.4) .. (1.6,2.6) -- (2.4,2.6) .. controls (3.2,2.4) and (3.4,0.8) .. (2,0.8) -- cycle;\n"
+        s += poly([(1.5, 2.6), (2.5, 2.6), (2.8, 3.2), (1.2, 3.2)], "goldtrim")
+        s += "\\draw[ink, line width=1.4pt] (1.55,2.65) -- (2.45,2.65);\n"
+        s += circle(2.0, 1.6, 0.35, "gold")
+    elif kind == "sealed":
+        # a letter, and the court's wax seal on it
+        s += rect(0.7, 1.1, 3.3, 2.9, "lamp")
+        s += "\\draw[ink, line width=1pt] (0.7,2.9) -- (2,1.9) -- (3.3,2.9);\n"
+        s += circle(2.0, 1.75, 0.45, "heart")
     return s, (W, H)
 
 
@@ -1503,9 +1545,9 @@ PICTURES = {
     "waking": waking,
     "chumbles": chumbles,
 }
-for g in ("carbine", "scattergun", "launcher", "ripsaw", "big_iron"):
+for g in ("carbine", "scattergun", "launcher", "ripsaw", "big_iron", "filibuster", "redactor"):
     PICTURES[f"guns/{g}"] = (lambda g=g: gun_art(g))
-for k in ("heart", "jump", "speed", "gun", "parry", "hook", "dash", "gavel", "pierce", "pulse", "mend", "wall", "pound", "saw", "conduct", "trigger", "plating", "stop"):
+for k in ("heart", "jump", "speed", "gun", "parry", "hook", "dash", "gavel", "pierce", "pulse", "mend", "wall", "pound", "saw", "conduct", "trigger", "plating", "stop", "contempt", "purse", "sealed"):
     PICTURES[f"icons/{k}"] = (lambda k=k: icon(k))
 
 # dpi for each kind: big pictures fill a screen, icons are small

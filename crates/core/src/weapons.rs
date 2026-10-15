@@ -6,9 +6,14 @@
 //! blade, if one is in hand, and a blade lodges in what it hits. Holding
 //! the trigger revs every lodged blade (the world deals that damage); a
 //! blade whose teeth are spent comes back after its recall.
+//!
+//! The Filibuster spins up: held, it fires faster and faster, and its
+//! second fire spends the spin on one lance. The Redactor's rounds erase
+//! the enemy orbs they meet, and its second fire is a bar that slides
+//! forward erasing every orb but gold.
 
 use crate::content::{AltKind, Gun, Rgb};
-use crate::fx;
+use crate::fx::{self, ONE};
 use crate::geom::{facing, yaw_pitch_of, V3};
 use crate::rng::Rng;
 
@@ -31,6 +36,10 @@ pub struct Held {
     pub fan: i32,
     /// emptied: it fires again only once all six are back in
     pub dry: bool,
+    /// a spin gun's spin, 0 cold to ONE full, and its charge toward the
+    /// next shot in thousandths of a tick
+    pub spin: i32,
+    pub charge: i32,
 }
 
 impl Held {
@@ -47,6 +56,8 @@ impl Held {
             idle: 0,
             fan: 0,
             dry: false,
+            spin: 0,
+            charge: 0,
         }
     }
 
@@ -127,6 +138,11 @@ pub enum ShotKind {
     Saw,
     /// an enemy you threw, by definition
     Thrown(usize),
+    /// a Redaction: a flat bar, half its width and half its height
+    Bar {
+        half_w: i32,
+        half_h: i32,
+    },
 }
 
 impl ShotKind {
@@ -153,6 +169,10 @@ pub struct Shot {
     pub kind: ShotKind,
     /// a level 3 launcher's burst erases enemy orbs inside it
     pub erases: bool,
+    /// a Redactor's round erases orbs up to this ward (0: none), and goes
+    /// on through this many more
+    pub erase_ward: i32,
+    pub through: i32,
     /// a blade: where it is lodged, and the damage it has left to deal
     pub lodged: Option<Lodge>,
     pub teeth: i32,
@@ -211,15 +231,40 @@ pub fn trigger(
             rgb,
             kind: ShotKind::Saw,
             erases: false,
+            erase_ward: 0,
+            through: 0,
             lodged: None,
             teeth: saw.teeth,
         }];
     }
     held.reload_step(l.mag, l.shell, pull.held);
-    if !pull.held || held.cooldown > 0 || held.fan > 0 || (l.mag > 0 && (held.rounds == 0 || held.dry)) {
-        return Vec::new();
+    let mut spread = l.spread;
+    if let Some(sp) = l.spin {
+        // held, it spins up; let go, the spin bleeds away
+        if pull.held {
+            held.spin = (held.spin + ONE / sp.up).min(ONE);
+        } else {
+            held.spin = (held.spin - ONE / sp.bleed).max(0);
+        }
+        let every = rate(sp.cold - fx::mul(sp.cold - sp.hot, held.spin), pull.trigger);
+        // let go, it is ready to fire at once and no sooner; held, what is
+        // left over carries to the next shot
+        held.charge += 1000;
+        if !pull.held {
+            held.charge = held.charge.min(every);
+            return Vec::new();
+        }
+        if held.charge < every {
+            return Vec::new();
+        }
+        held.charge -= every;
+        spread = l.spread + fx::mul(sp.hot_spread - l.spread, held.spin);
+    } else {
+        if !pull.held || held.cooldown > 0 || held.fan > 0 || (l.mag > 0 && (held.rounds == 0 || held.dry)) {
+            return Vec::new();
+        }
+        held.cooldown = rate(l.rate, pull.trigger);
     }
-    held.cooldown = rate(l.rate, pull.trigger);
     if l.mag > 0 {
         held.rounds -= 1;
         held.loading = 0;
@@ -236,7 +281,7 @@ pub fn trigger(
             let (dy, dp) = if k == 0 && l.pellets > 1 {
                 (0, 0)
             } else {
-                (rng.range(-l.spread, l.spread), rng.range(-l.spread, l.spread))
+                (rng.range(-spread, spread), rng.range(-spread, spread))
             };
             let dir = facing(yaw + dy, fx::wrap(pitch + dp));
             Shot {
@@ -253,6 +298,8 @@ pub fn trigger(
                 rgb,
                 kind,
                 erases: held.level >= 3 && kind == ShotKind::Bomb,
+                erase_ward: l.erase_ward,
+                through: l.through,
                 lodged: None,
                 teeth: 0,
             }
@@ -311,6 +358,8 @@ pub fn alt_trigger(
                 rgb,
                 kind: ShotKind::Bullet,
                 erases: false,
+                erase_ward: 0,
+                through: 0,
                 lodged: None,
                 teeth: 0,
             });
@@ -334,7 +383,15 @@ pub fn alt_trigger(
         return AltFire::default();
     }
     held.alt_cooldown = a.cooldown;
-    let damage = a.damage_at(held.level);
+    let damage = if a.kind == AltKind::Cloture {
+        // the spin is spent on the lance
+        let d = a.cloture_at(held.level, held.spin);
+        held.spin = 0;
+        held.charge = 0;
+        d
+    } else {
+        a.damage_at(held.level)
+    };
     let dir = aim_point.sub(muzzle).norm();
     let (yaw, pitch) = yaw_pitch_of(dir);
     let shot = |pos: V3, d: V3, kind: ShotKind| Shot {
@@ -351,6 +408,8 @@ pub fn alt_trigger(
         rgb,
         kind,
         erases: false,
+        erase_ward: 0,
+        through: 0,
         lodged: None,
         teeth: 0,
     };
@@ -363,7 +422,21 @@ pub fn alt_trigger(
                 s
             })
             .collect(),
-        AltKind::Slug => vec![shot(muzzle, dir, ShotKind::Bullet)],
+        AltKind::Slug | AltKind::Cloture => vec![shot(muzzle, dir, ShotKind::Bullet)],
+        AltKind::Redaction => {
+            // level along the floor, so it sweeps where you stand
+            let flat = facing(yaw, 0);
+            let mut s = shot(
+                muzzle,
+                flat,
+                ShotKind::Bar {
+                    half_w: a.half_w,
+                    half_h: a.half_h,
+                },
+            );
+            s.radius = a.half_w;
+            vec![s]
+        }
         AltKind::Cluster => (0..a.count)
             .map(|k| {
                 let off = a.spread * (2 * k - (a.count - 1)) / 2;
@@ -591,5 +664,56 @@ mod tests {
             assert_eq!(s[0].kind, ShotKind::Bomb);
             assert_eq!(s[0].erases, erases, "level {level}");
         }
+    }
+
+    #[test]
+    fn the_filibuster_fires_faster_the_longer_it_is_held_and_spins_down_when_let_go() {
+        let c = content();
+        let g = &c.guns[c.gun("filibuster")];
+        let mut h = Held::new(c.gun("filibuster"), 1);
+        let mut rng = Rng::new(1);
+        let mut second = |h: &mut Held, held: bool| {
+            let pull = Pull {
+                held,
+                pressed: held,
+                ..Pull::default()
+            };
+            (0..60)
+                .map(|_| trigger(h, g, [0; 3], pull, V3::ZERO, v3(0, 0, -int(10)), &mut rng).len())
+                .sum::<usize>()
+        };
+        let first = second(&mut h, true);
+        second(&mut h, true);
+        let spun = second(&mut h, true);
+        // 200 ms apart when cold, 60 ms once spun up: about 16 a second
+        assert!(first <= 9, "{first} in the first second");
+        assert!(spun >= 16, "{spun} a second at full spin");
+        assert_eq!(h.spin, ONE);
+        second(&mut h, false);
+        assert_eq!(h.spin, 0, "a second let go: the spin has bled away");
+    }
+
+    #[test]
+    fn cloture_spends_the_spin_on_one_lance() {
+        let c = content();
+        let g = &c.guns[c.gun("filibuster")];
+        let mut h = Held::new(c.gun("filibuster"), 1);
+        h.spin = ONE;
+        let fire = |h: &mut Held| alt_trigger(h, g, [0; 3], true, V3::ZERO, v3(0, 0, -int(10)), 0, false);
+        let hot = fire(&mut h);
+        assert_eq!(hot.shots.len(), 1);
+        assert_eq!(
+            hot.shots[0].damage,
+            g.alt.damage + g.alt.spin_damage,
+            "full spin: the most it deals"
+        );
+        assert_eq!(hot.shots[0].pierce, g.alt.pierce);
+        assert_eq!(h.spin, 0, "the spin is spent");
+        for _ in 0..g.alt.cooldown {
+            fire(&mut h);
+        }
+        h.alt_cooldown = 0;
+        let cold = fire(&mut h);
+        assert_eq!(cold.shots[0].damage, g.alt.damage, "cold: the lance alone");
     }
 }
