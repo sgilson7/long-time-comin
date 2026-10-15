@@ -72,6 +72,12 @@ Sam added three photos of Chumbles to the project folder (`IMG_5843.jpeg`, `IMG_
 
 Done means, for this round: a last mission, opened by putting the Idiot God to sleep, in which another of you is sent back; it runs from zone one to the end of zone four in one go, harder (remixed patterns on the simpler enemies, more enemies at once); beating the Defendant breaks reality instead of letting the god in, and you wake in your bedroom as Chumbles walks out of the door; downstairs Chumbles screams for something, grows to about three times his size, and is the hardest boss in the game by a wide margin, big enough to hit; the mission's own ending after him. Deploying to Pages is the standing approval (Autonomy).
 
+## The fifteenth request, word for word (2026-10-15)
+
+> Please get yourself up to speed on the state of development for long time coming; build an artifact that represents a design journal where each tab is a major update to the game. Then, read  the contents of long_time_comin_rewrite_v2 and execute the rewrite described therein. i give you approval to push and pull  and generslly interact with my github and github pages deployment for the game.
+
+Done means, for this round: the packet's `story_rewrite.json`, `copy_overrides.json` and `enemy_overrides.json` applied exactly as written (the first boss shown as the Interdictor, its id and mechanics unchanged), every story branch and both endings checked, the string audit reported, and deployed. Approval to push and deploy is given in the request.
+
 ## The tool
 
 A third-person bullet-hell shooter that runs in a desktop browser with a keyboard and mouse. Roguelike runs across a graph of arenas; meta-progression between runs; a story told by an indictment that is revealed one count at a time, on each death.
