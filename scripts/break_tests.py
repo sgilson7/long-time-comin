@@ -262,6 +262,16 @@ BREAKS = [
  ("far: a ship strikes her colours", "crates/core/src/course.rs", "            if !k.flags[n].struck && k.flags[n].crew.iter().all(down) {", "            if false {", "each_ship_of_the_fleet_strikes"),
  ("far: the dragon is held by its locks", "crates/core/src/course.rs", "                .any(|&l| foe(l).is_some_and(|f| self.enemies[f].alive()));", "                .any(|_| false);", "the_captured_dragon_keeps_to_its_chain"),
  ("far: the chain's reach", "crates/core/src/enemy.rs", "            if let Some((at, reach)) = self.leash {", "            if let Some((at, reach)) = self.leash.filter(|_| false) {", "on_its_chain_the_dragon_swoops"),
+ ("far: a rogue wave lifts its ship", "crates/core/src/course/waves.rs", "        m.corner(tick).add(v3(0, self.lift_of(i, tick), 0))", "        m.corner(tick)", "a_rogue_wave_lifts_a_deck"),
+ ("far: a lifted deck carries its rider", "crates/core/src/course.rs", "                self.player.pos = self.player.pos.add(delta);", "", "a_rogue_wave_lifts_a_deck"),
+ ("far: a wash throws you", "crates/core/src/course/waves.rs", "                pl.vel = v3(pl.vel.x + knock.x, pl.vel.y.max(WASH_HEAVE), pl.vel.z + knock.z);", "", "a_wash_shoves"),
+ ("far: a wash hurts", "crates/core/src/course/waves.rs", "                pl.hurt(WASH_DAMAGE);", "", "a_wash_shoves"),
+ ("far: a wash hurts once", "crates/core/src/course/waves.rs", "            if k.waves.struck[n] != cycle {", "            if true {", "a_wash_shoves"),
+ ("far: a wash is jumped", "crates/core/src/course/waves.rs", "            if p.y - floor >= WASH_HEIGHT {", "            if p.y - floor >= WASH_HEIGHT * 3 {", "a_wash_shoves"),
+ ("far: a rogue wave shoves a swimmer", "crates/core/src/course/waves.rs", "fx::mul(ROGUE_SWIM_PUSH, s)", "0", "a_rogue_wave_shoves"),
+ ("far: a rogue wave rolls past the line before it comes again", "crates/core/src/arena/sea/hurricane.rs", "        let speed = ROGUE_SPEED;", "        let speed = ROGUE_SPEED / 2;", "a_rogue_wave_lifts_no_ship"),
+ ("far: the Hurricane has its waves", "crates/core/src/arena/sea/hurricane.rs", "        self.rogue_wave(v3(ONE, 0, ROGUE_SLANT), ROGUE_PHASE);", "", "the_hurricane_is_crossed_through"),
+ ("far: the waves are drawn", "crates/core/src/draw/waves.rs", "    let Some(k) = &w.course else { return };", "    let Some(k) = w.course.as_ref().filter(|_| false) else { return };", "the_hurricanes_waves_draw"),
 ]
 
 

@@ -20,6 +20,7 @@ mod god;
 mod house;
 mod river;
 mod sea;
+mod waves;
 pub use god::{azathoth_at_heart, trumpet};
 pub use house::azathoth;
 
@@ -102,6 +103,7 @@ pub fn world(
         }
     }
     course(b, c, w);
+    waves::waves(b, c, w);
     orbs(b, c, w, alpha, cam);
     if w.ending > 0 && !w.mission {
         house::azathoth(b, c, clock, w.melt());

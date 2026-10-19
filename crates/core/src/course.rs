@@ -19,6 +19,9 @@ use crate::level::{Dyn, Solid};
 use crate::player::{bounce_speed, Event};
 use crate::world::{FxKind, World};
 
+mod waves;
+pub use waves::{Rogue, Wash, Waves};
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SwitchKind {
     /// hook its ring: the pull throws it
@@ -290,6 +293,8 @@ pub struct Course {
     pub chain: Option<Chain>,
     /// the Gallows Oak's arena: where the tree stands
     pub oak: Option<OakSite>,
+    /// the sea's rogue waves and green washes (the Hurricane)
+    pub waves: Waves,
     /// the highest the climb has reached (the Oak's first bar)
     pub climbed: i32,
     /// the Summons, by enemy index, once the crown is reached
@@ -417,9 +422,9 @@ impl World {
         }
 
         // moving ground, carrying whoever stands on it: you, and enemies
-        for m in &k.movers {
+        for (i, m) in k.movers.iter().enumerate() {
             let d = &mut level.dynamic[m.dynamic];
-            let delta = m.corner(self.tick).sub(d.solid.min);
+            let delta = k.waves.corner(i, m, self.tick).sub(d.solid.min);
             // what stands on it goes with it, down as well as up, and so
             // keeps its footing (a fall would leave it hanging each tick)
             let riding = self.player.grounded
@@ -599,6 +604,7 @@ impl World {
             }
         }
         self.player.shove = shove;
+        self.sea_step(c, &mut k, &mut said);
         // the Eraser: held pylon by pylon; the boss's bar is what is left
         if let Some(ch) = k.charge.as_mut() {
             if let Some(n) = ch.next() {
@@ -627,6 +633,7 @@ impl World {
         // the water
         if p.y < k.water {
             let back = k.posts.get(k.post).copied().unwrap_or(self.arena.start);
+            let back = back.add(v3(0, k.waves.lift_under(&k.movers, back, self.tick), 0));
             let pl = &mut self.player;
             pl.release_grapple();
             pl.pounding = false;
