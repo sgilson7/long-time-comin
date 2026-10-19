@@ -202,13 +202,14 @@ impl B<'_> {
         let wood = self.c("river_wood_dark");
         let rope = self.c("ascent_rope");
         let flag = self.c("brass");
-        let px = x + m(2);
+        // off to the left, clear of the camera over your right shoulder
+        let px = x - m(3);
         self.deco(Mesh::Cyl, v3(px, y + dm(9), z), v3(dm(3), dm(18), dm(3)), wood);
         self.deco(Mesh::Ring, v3(px, y + dm(12), z), v3(dm(5), dm(1), dm(5)), rope);
         self.glow(
             Mesh::Cube,
-            v3(px + dm(3), y + dm(16), z),
-            v3(dm(5), dm(3), dm(1)),
+            v3(px + dm(2), y + dm(16), z),
+            v3(dm(3), dm(2), dm(1)),
             flag,
         );
     }

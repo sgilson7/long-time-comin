@@ -262,6 +262,8 @@ impl World {
             let off = m.rise / 2 - fx::mul(m.rise / 2, fx::cos(t));
             let d = &mut level.dynamic[m.dynamic];
             let dy = m.base.min.y + off - d.solid.min.y;
+            // what stands on it goes with it, down as well as up, and so
+            // keeps its footing (a fall would leave it hanging each tick)
             let riding = self.player.grounded
                 && (feet.y - d.solid.max.y).abs() <= ONE / 20
                 && feet.x >= d.solid.min.x - PLAYER_RADIUS
@@ -725,15 +727,6 @@ pub(crate) mod tests {
             };
             w.player.yaw = d.yaw;
             let eye = w.player.chest();
-            if std::env::var("LTC_TRACE").is_ok() && tick % 4 == 0 {
-                let q = w.player.pos;
-                let f = |v: i32| v as f64 / ONE as f64;
-                eprintln!(
-                    "t{tick} s{} {:?} pos ({:.1},{:.1},{:.1}) vel ({:.2},{:.2},{:.2}) g{} hook {:?} target {:?}",
-                    pilot.step, line[pilot.step.min(line.len() - 1)], f(q.x), f(q.y), f(q.z), f(w.player.vel.x), f(w.player.vel.y), f(w.player.vel.z),
-                    w.player.grounded as i32, w.player.grapple.map(|g| (f(g.anchor.y), f(g.anchor.z))), w.hook_target.map(|h| (f(h.y), f(h.z)))
-                );
-            }
             let before = w.notes.iter().filter(|n| n.sound == "drown").count();
             w.tick(&c, &d.controls, eye, d.aim);
             if w.notes.iter().filter(|n| n.sound == "drown").count() > before {
@@ -950,10 +943,14 @@ pub(crate) mod tests {
         w.player.grounded = true;
         let mut low = i32::MAX;
         let mut high = i32::MIN;
-        for _ in 0..240 {
+        for k in 0..240 {
             tick(&c, &mut w, idle());
             low = low.min(w.player.pos.y);
             high = high.max(w.player.pos.y);
+            assert!(
+                w.player.grounded || k < 2,
+                "footing kept as it rises and sinks (tick {k})"
+            );
         }
         assert!(high - low > int(3), "carried {} m", (high - low) / ONE);
         assert!(w.player.grounded);
@@ -1000,6 +997,7 @@ pub(crate) mod tests {
         let line = w.course.as_ref().unwrap().line.clone();
         let mut pilot = Pilot::default();
         let mut first_bar = None;
+        let mut halfway = None;
         for tick in 0..60 * 60 * 3 {
             let Some(d) = pilot.drive(&line, &w.player) else {
                 break;
@@ -1007,27 +1005,13 @@ pub(crate) mod tests {
             w.player.yaw = d.yaw;
             let eye = w.player.chest();
             w.tick(&c, &d.controls, eye, d.aim);
-            if std::env::var("LTC_TRACE").is_ok() && tick % 3 == 0 {
-                let f = |v: i32| v as f64 / ONE as f64;
-                let q = w.player.pos;
-                eprintln!(
-                    "t{tick} s{} pos ({:.1},{:.1},{:.1}) v ({:.2},{:.2},{:.2}) g{} hook {:?} tgt {:?}",
-                    pilot.step,
-                    f(q.x),
-                    f(q.y),
-                    f(q.z),
-                    f(w.player.vel.x),
-                    f(w.player.vel.y),
-                    f(w.player.vel.z),
-                    w.player.grounded as i32,
-                    w.player
-                        .grapple
-                        .map(|g| (f(g.anchor.x), f(g.anchor.y), f(g.anchor.z))),
-                    w.hook_target.map(|h| (f(h.x), f(h.y), f(h.z)))
-                );
-            }
             if let Some(b) = w.boss {
                 first_bar.get_or_insert(w.enemies[b].hp);
+                // halfway up, the bar is part way down
+                let site = w.course.as_ref().unwrap().oak.unwrap();
+                if w.player.pos.y > (site.crown_y + site.axis.y) / 2 && halfway.is_none() {
+                    halfway = Some(w.enemies[b].hp);
+                }
             }
             assert!(
                 !w.notes.iter().any(|n| n.sound == "drown"),
@@ -1053,6 +1037,11 @@ pub(crate) mod tests {
         assert_eq!(w.elite, Some(s), "its own bar");
         let line_hp = w.enemies[b].max_hp * OAK_CLIMB_BAR_PCT / 100;
         assert!(first_bar.unwrap() > line_hp, "the bar began full");
+        let mid = halfway.expect("the climb passed halfway");
+        assert!(
+            mid < first_bar.unwrap() && mid > line_hp,
+            "halfway up, the bar halfway down: {mid}"
+        );
         assert!(
             w.enemies[b].hp <= line_hp,
             "and fell to the climb's line as you rose"

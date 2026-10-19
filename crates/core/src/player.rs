@@ -1026,4 +1026,62 @@ mod tests {
         p.hurt(500);
         assert!(!p.alive());
     }
+    #[test]
+    fn bound_over_dash_and_jump_together_or_a_tick_apart_leap_twice_as_far_as_a_jump() {
+        // a long runway; how far each leaves you from where it began
+        let l = Level::new(vec![Solid::new(
+            v3(-int(5), -ONE, -int(80)),
+            v3(int(5), 0, int(10)),
+        )]);
+        let fwd = Controls {
+            move_z: ONE,
+            ..Controls::default()
+        };
+        let leap = |first: Controls, second: Option<Controls>| {
+            let mut p = Player::new(v3(0, 0, 0), 0, Build::default());
+            for _ in 0..60 {
+                p.step(&fwd, &l);
+            }
+            let from = p.pos.z;
+            p.step(&first, &l);
+            if let Some(s) = second {
+                p.step(&s, &l);
+            }
+            for _ in 0..200 {
+                p.step(&fwd, &l);
+                if p.grounded {
+                    break;
+                }
+            }
+            from - p.pos.z
+        };
+        let jump = Controls {
+            jump_pressed: true,
+            ..fwd
+        };
+        let dash = Controls {
+            dash_pressed: true,
+            ..fwd
+        };
+        let both = Controls {
+            jump_pressed: true,
+            dash_pressed: true,
+            ..fwd
+        };
+        let plain = leap(jump, None);
+        let together = leap(both, None);
+        let apart = leap(dash, Some(jump));
+        assert!(
+            together > plain * 2,
+            "together {} against a jump's {}",
+            together / ONE,
+            plain / ONE
+        );
+        assert!(
+            apart > plain * 2,
+            "a tick apart {} against a jump's {}",
+            apart / ONE,
+            plain / ONE
+        );
+    }
 }

@@ -43,9 +43,10 @@ impl B<'_> {
         let wood = self.c("river_wood_dark");
         let roof = self.c("sandstone_dark");
         for (x, z) in [(-m(11), m(12)), (m(11), m(12)), (-m(11), -m(12)), (m(11), -m(12))] {
-            self.deco(Mesh::Cyl, v3(x, m(3), z), v3(dm(5), m(6), dm(5)), wood);
+            self.deco(Mesh::Cyl, v3(x, m(6), z), v3(dm(5), m(12), dm(5)), wood);
         }
-        self.deco(Mesh::Wedge, v3(0, m(7), 0), v3(m(26), m(2), m(28)), roof);
+        // the roof high over the boards, so the camera stays under it
+        self.deco(Mesh::Cube, v3(0, m(13), 0), v3(m(26), dm(6), m(28)), roof);
         // the old boats, upturned
         let hull = self.c("river_wood");
         for (x, z) in [(-m(8), -m(4)), (m(8), m(2))] {

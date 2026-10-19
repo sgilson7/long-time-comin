@@ -104,6 +104,11 @@ COLOURS = {
     "treat": "B8743A", "treatbag": "C8553D", "treatbagdark": "8E3A2C", "sofa": "5E7A8A", "sofadark": "3E5664",
     "sunlight": "FFF6E2", "homewall": "EDE2CE", "homewindow": "FFF2C8", "hometrim": "FBF7EE", "ceiling": "F7E2B0",
     "homefloor": "B98A5E", "homefloordark": "8A6240", "morningsky": "CFE3EE", "summitsky": "2A1830",
+    # the Water Gap: data/palette.json's river set
+    "riversky": "F2B97C", "riverfog": "E9A98A", "sandstone": "D9825B", "sandstonedark": "B5603F", "sandstonepale": "EBA97A",
+    "canyonshadow": "8E4A3E", "riverwater": "3E8FA0", "riverfoam": "E8F4F0", "riverdeep": "2A5F73", "riverwood": "9A6A44",
+    "riverwooddark": "6E4A33", "river": "2F8F5B", "bench": "F3D9A4", "oakbark": "2E2230", "oakeye": "FFC23A",
+    "oakleaf": "5E3A52", "fire": "FF7A2A", "firehi": "FFD36A", "smoke": "6E5A66", "smokepale": "A8939C",
 }
 WALLS = ["wallA", "wallB", "wallC", "wallD", "wallE", "wallF"]
 GREENS = ["greenA", "greenB", "greenC", "greenD"]
@@ -693,6 +698,12 @@ def icon(kind):
         s += poly([(1.5, 2.6), (2.5, 2.6), (2.8, 3.2), (1.2, 3.2)], "goldtrim")
         s += "\\draw[ink, line width=1.4pt] (1.55,2.65) -- (2.45,2.65);\n"
         s += circle(2.0, 1.6, 0.35, "gold")
+    elif kind == "bench":
+        # a plank in the air, its gold edges, a shot going through it
+        s += "\\draw[ember, line width=2pt] (1.0,0.7) -- (2.6,3.3);\n"
+        s += "\\filldraw[inked,fill=bench] (0.6,1.7) -- (3.4,1.7) -- (3.4,2.3) -- (0.6,2.3) -- cycle;\n"
+        s += "\\draw[goldtrim, line width=1.8pt] (0.7,2.25) -- (3.3,2.25);\n\\draw[goldtrim, line width=1.8pt] (0.7,1.75) -- (3.3,1.75);\n"
+        s += circle(2.0, 2.95, 0.42, "coat")
     elif kind == "sealed":
         # a letter, and the court's wax seal on it
         s += rect(0.7, 1.1, 3.3, 2.9, "lamp")
@@ -1531,6 +1542,101 @@ def chumbles():
     return s, (W, H)
 
 
+# ---- the Water Gap ------------------------------------------------------------
+
+def gallows_oak(x, y0, s, burning=False):
+    """The Gallows Oak: a black trunk, roots into the water, a dark crown,
+    gold eyes in the bark (shut when it burns), as draw/river.rs draws its eye."""
+    out = ""
+    out += f"\\filldraw[inked,fill=oakbark] {P(x - 1.1 * s, y0)} .. controls {P(x - 0.8 * s, y0 + 4 * s)} and {P(x - 1.2 * s, y0 + 7 * s)} .. {P(x - 0.6 * s, y0 + 9 * s)} -- {P(x + 0.6 * s, y0 + 9 * s)} .. controls {P(x + 1.2 * s, y0 + 7 * s)} and {P(x + 0.8 * s, y0 + 4 * s)} .. {P(x + 1.1 * s, y0)} -- cycle;\n"
+    for k in range(5):
+        a = -0.9 + k * 0.45
+        out += f"\\draw[ink, line width=3pt] {P(x + a * s, y0 + 0.2 * s)} .. controls {P(x + a * 2.5 * s, y0 - 0.2 * s)} .. {P(x + a * 4.2 * s, y0 - 0.5 * s)};\n"
+    for (cx, cy, r) in [(0, 10.2, 2.6), (-2.2, 9.4, 1.9), (2.3, 9.6, 2.0), (-1.0, 11.6, 1.7), (1.3, 11.4, 1.8)]:
+        out += f"\\filldraw[inked,fill=oakleaf] {P(x + cx * s, y0 + cy * s)} circle ({f(r * s)});\n"
+    for (ex, ey) in [(-0.3, 2.6), (0.35, 4.6), (-0.2, 6.8)]:
+        if burning:
+            out += f"\\draw[ink, line width=1.4pt] {P(x + (ex - 0.25) * s, y0 + ey * s)} -- {P(x + (ex + 0.25) * s, y0 + ey * s)};\n"
+        else:
+            out += f"\\filldraw[inked,fill=oakeye] {P(x + ex * s, y0 + ey * s)} ellipse ({f(0.32 * s)} and {f(0.16 * s)});\n"
+            out += circle(x + ex * s, y0 + ey * s, 0.07 * s, "ink")
+    return out
+
+
+def downriver():
+    """Downriver: the Calder in its sandstone canyon below the house, the
+    old weir, the Defendant on its wall, a Bench in the air over the race
+    with green orbs of the river's own, and far down the gorge, over the
+    lake, the Gallows Oak. The right side is canyon wall, under the sheet."""
+    W, H = 32.0, 18.0
+    rng = random.Random(2066)
+    s = f"\\fill[riversky] (0,0) rectangle {P(W, H)};\n"
+    s += f"\\fill[riverfog] (0,{f(H * 0.45)}) rectangle {P(W, H * 0.7)};\n"
+    # the far lake and the Oak on its shore, small down the gap
+    s += f"\\filldraw[inked,fill=riverwater] (9,7.2) -- (17,7.2) -- (16,6.4) -- (10,6.4) -- cycle;\n"
+    s += gallows_oak(13.2, 7.0, 0.42)
+    # the canyon walls in strata, either side, stepping in toward the gap
+    for side in (-1, 1):
+        for k in range(6):
+            top = 18.0 - k * 0.7
+            if side < 0:
+                xs = [(-0.5, 0), (5.5 + k * 0.6, 0), (8.6 + k * 0.1, top * 0.42 + 4), (-0.5, top)]
+            else:
+                xs = [(32.5, 0), (24.0 - k * 0.6, 0), (17.6 - k * 0.1, top * 0.42 + 4), (32.5, top)]
+            col = ["sandstone", "sandstonedark", "sandstonepale"][k % 3]
+            s += poly(xs, col)
+    # the race, and the broken weir across it
+    s += f"\\filldraw[inked,fill=riverwater] (5,0) -- (25,0) -- (17.2,6.4) -- (9.0,6.4) -- cycle;\n"
+    for k in range(26):
+        x = rng.uniform(7, 23); y = rng.uniform(0.3, 6.0)
+        w = rng.uniform(0.4, 1.4) * (1 - y / 7)
+        s += f"\\draw[riverfoam, line width=1.2pt] {P(x, y)} -- {P(x + w, y + 0.05)};\n"
+    for (x0, x1) in [(5.5, 10.2), (11.8, 14.8), (16.6, 21.0)]:
+        s += f"\\filldraw[inked,fill=sandstonepale] {P(x0, 2.4)} rectangle {P(x1, 3.4)};\n"
+        s += f"\\fill[riverfoam, opacity=0.7] {P(x0, 2.4)} rectangle {P(x1, 2.0)};\n"
+    s += defendant(8.2, 3.4, 1.15, lean=0.15)
+    # a Bench in the air over the second gap, a curtain of the river's orbs
+    s += f"\\filldraw[inked,fill=bench] (12.6,5.2) rectangle (14.4,5.55);\n\\draw[goldtrim, line width=1.6pt] (12.65,5.5) -- (14.35,5.5);\n"
+    for r in range(4):
+        for c in range(7):
+            if 2 <= c <= 3 and 1 <= r <= 2:
+                continue  # the hole to go through
+            s += orb(16.0 + c * 0.55, 4.0 + r * 0.55, 0.2, "river", glow=False)
+    # a hook ring on a pole, and a lever on the bank
+    s += f"\\draw[ink, line width=2pt] (19.4,2.0) -- (19.4,5.8);\n\\draw[goldtrim, line width=2.2pt] (19.4,6.1) circle (0.3);\n"
+    return s, (W, H)
+
+
+def oak_burns():
+    """The Oak burns: across Lake Stillwater at dawn the Gallows Oak burns
+    to the waterline, its eyes shut, smoke going up; on the near shore the
+    Defendant, small, watching. The right side is lake, under the sheet."""
+    W, H = 32.0, 18.0
+    rng = random.Random(2067)
+    s = f"\\fill[riversky] (0,0) rectangle {P(W, H)};\n"
+    s += f"\\fill[dawn] (0,{f(H * 0.5)}) rectangle {P(W, H * 0.62)};\n"
+    # smoke, then the lake
+    for k in range(9):
+        cx = 9.0 + rng.uniform(-1.5, 2.5) + k * 0.6; cy = 9.5 + k * 1.0
+        s += f"\\fill[{'smoke' if k % 2 else 'smokepale'}, opacity=0.75] {P(cx, cy)} circle ({f(1.0 + k * 0.25)});\n"
+    s += f"\\filldraw[inked,fill=riverwater] (-0.5,0) rectangle (32.5,6.2);\n"
+    s += f"\\filldraw[inked,fill=sandstonedark] (2,6.2) .. controls (6,7.0) and (12,7.1) .. (18,6.2) -- cycle;\n"
+    s += gallows_oak(9.5, 6.4, 0.75, burning=True)
+    # fire up the trunk and in the crown
+    for k in range(16):
+        fx = 9.5 + rng.uniform(-1.6, 1.6); fy = 6.6 + rng.uniform(0, 8.5)
+        r = rng.uniform(0.35, 0.8)
+        s += f"\\fill[fire] {P(fx, fy)} circle ({f(r)});\n\\fill[firehi] {P(fx, fy + 0.1)} circle ({f(r * 0.5)});\n"
+    # its reflection, broken by the water
+    for k in range(10):
+        y = 5.6 - k * 0.5
+        s += f"\\draw[fire, line width=2.5pt, opacity={f(0.7 - k * 0.06)}] {P(8.6 + rng.uniform(-0.4, 0.4), y)} -- {P(10.4 + rng.uniform(-0.4, 0.4), y)};\n"
+    # the near shore, and the Defendant on it
+    s += f"\\filldraw[inked,fill=sandstone] (-0.5,0) -- (-0.5,2.4) .. controls (4,2.9) and (8,2.4) .. (11,1.4) -- (11,0) -- cycle;\n"
+    s += defendant(5.0, 2.4, 1.0)
+    return s, (W, H)
+
+
 PICTURES = {
     "title": title,
     "sentencing": sentencing,
@@ -1544,10 +1650,12 @@ PICTURES = {
     "lullaby": lullaby,
     "waking": waking,
     "chumbles": chumbles,
+    "downriver": downriver,
+    "oak_burns": oak_burns,
 }
 for g in ("carbine", "scattergun", "launcher", "ripsaw", "big_iron", "filibuster", "redactor"):
     PICTURES[f"guns/{g}"] = (lambda g=g: gun_art(g))
-for k in ("heart", "jump", "speed", "gun", "parry", "hook", "dash", "gavel", "pierce", "pulse", "mend", "wall", "pound", "saw", "conduct", "trigger", "plating", "stop", "contempt", "purse", "sealed"):
+for k in ("heart", "jump", "speed", "gun", "parry", "hook", "dash", "gavel", "pierce", "pulse", "mend", "wall", "pound", "saw", "conduct", "trigger", "plating", "stop", "contempt", "purse", "sealed", "bench"):
     PICTURES[f"icons/{k}"] = (lambda k=k: icon(k))
 
 # dpi for each kind: big pictures fill a screen, icons are small

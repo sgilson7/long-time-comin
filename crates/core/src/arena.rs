@@ -1930,7 +1930,8 @@ pub fn build_at(zone: &str, kind: &str, seed: u64, exits: &[Side], pal: &Palette
         // a course is crossed, not fought over: no spawn grid, the start at
         // its first post and the way on at its far end
         let start = k.posts.first().copied().unwrap_or(V3::ZERO);
-        let behind = start.add(crate::geom::facing(b.start_yaw, 0).scale(-m(3)));
+        // the way you came in by stands well behind the camera
+        let behind = start.add(crate::geom::facing(b.start_yaw, 0).scale(-m(16)));
         return Arena {
             shapes: b.shapes,
             start,
@@ -2153,6 +2154,12 @@ mod size {
             ("home", "arrival"),
             ("home", "rest"),
             ("home", "boss"),
+            ("water_gap", "spillway"),
+            ("water_gap", "narrows"),
+            ("water_gap", "falls"),
+            ("water_gap", "shallows"),
+            ("water_gap", "rest"),
+            ("water_gap", "boss"),
         ];
         for (zone, kind) in kinds {
             let a = build_at(zone, kind, 9, &[Side::North, Side::East], &c.pal, int(200));

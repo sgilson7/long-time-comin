@@ -58,10 +58,12 @@ impl B<'_> {
         self.line(Step::To(v3(0, t, -m(173) - dm(6))));
         self.line(Step::Bound(p(-m(192))));
 
-        // 1d: weir-lamps on the walls fire curtains up the race
-        self.rock_emitter(-m(9), m(6), -m(242), "weir_lamp");
-        self.rock_emitter(m(9), m(6), -m(250), "weir_lamp");
+        // 1d: weir-lamps on the walls fire curtains up the race; a plate
+        // in the floor before them, pounded, quiets them a few seconds
+        let a = self.rock_emitter(-m(9), m(6), -m(242), "weir_lamp");
+        let b = self.rock_emitter(m(9), m(6), -m(250), "weir_lamp");
         self.rock_shelf(-m(3), -m(230), m(3), -m(264), t);
+        self.pound_plate(0, t, -m(236), vec![], vec![a, b], 4 * 60);
         self.line(Step::To(v3(0, t, -m(225) - dm(5))));
         self.line(Step::Jump(p(-m(234))));
         self.line(Step::To(p(-m(258))));

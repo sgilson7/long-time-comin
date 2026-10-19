@@ -316,3 +316,7 @@ button.big.last { background: #e8b6b0; font-size: 1rem; margin-top: 8px; }
 button.big.last:hover:not(:disabled) { background: #f2cdc8; }
 
 #stopped { position: absolute; left: 50%; top: 40%; translate: -50% 0; font-size: 2rem; font-weight: 900; letter-spacing: 0.2em; color: var(--paper); text-shadow: 3px 3px 0 var(--ink); pointer-events: none; }
+/* the tree's and the timeline's buttons are centred on their place by
+   translate; pressed, they keep it (the page's buttons shift by translate
+   when pressed, which would move these out from under the pointer) */
+.upgrade:active:not(:disabled), .year:active:not(:disabled) { translate: -50% -50%; scale: 0.95; }

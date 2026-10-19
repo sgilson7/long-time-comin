@@ -162,6 +162,11 @@ impl Game {
     }
 
     /// The test save: a record with everything.
+    /// Straight to node `to` of the run's map, for tools that drive the game.
+    pub fn go_to(&mut self, to: u32) {
+        self.inner.go_to(to as usize)
+    }
+
     pub fn test_save(&mut self) {
         self.inner.test_save()
     }

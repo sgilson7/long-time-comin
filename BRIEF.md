@@ -94,6 +94,12 @@ Done means, for this round: the Filibuster and the Redactor as designed; six Exh
 
 Done means, for this round: the Escort shown as the Blaster; the Holding's shop drawn as a passive tree after Path of Exile 2's (a ring round a hub, each branch bursting out in its own wedge); both in the design journal in the entry style of the Ape Race map journal, and deployed under the standing approval. The new branch after the Executor (the river, its four platforming sections, the Bench, the dash jump, the Gallows Oak and the vine boss) is designed in the journal with Sam's questions, and not built until Sam answers them.
 
+## The eighteenth request, word for word (2026-10-19)
+
+> ok this is great; keep in mind bound over is currently built. go with the defaults, and build this level. now there should be a map screen / timeline, where going doing this path is a different timeline than going to the peak to defeat yourself, and the timeline is how you select the mission you are on
+
+Done means, for this round: the Water Gap built with the journal's defaults (WG-Q1 to WG-Q18), using the dash jump that already exists as Bound Over; the Holding's timeline, on which the River is its own timeline from 2056 and a run is started by picking a year on a timeline; deployed under the standing approval.
+
 ## The tool
 
 A third-person bullet-hell shooter that runs in a desktop browser with a keyboard and mouse. Roguelike runs across a graph of arenas; meta-progression between runs; a story told by an indictment that is revealed one count at a time, on each death.

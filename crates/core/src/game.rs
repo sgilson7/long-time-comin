@@ -1351,8 +1351,12 @@ impl Game {
         });
         let home = c.zones[run.zone].mission;
         let first = run.mission && run.zone == 0 && run.at == run.route.start();
+        let course = w.course.is_some();
         let hint = match node.kind {
             NodeKind::Boss if learning => c.say("hint_song"),
+            NodeKind::Boss if course && fresh(0) => c.say("hint_oak"),
+            NodeKind::Arrival | NodeKind::Fight if course && fresh(0) => c.say("hint_course"),
+            NodeKind::Arrival | NodeKind::Fight if course => String::new(),
             NodeKind::Arrival if first && fresh(0) => c.say("hint_mission"),
             NodeKind::Arrival if home => c.say("hint_cat"),
             NodeKind::Arrival if god && fresh(0) => c.say("hint_gullet"),

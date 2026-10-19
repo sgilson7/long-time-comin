@@ -321,5 +321,7 @@
   "timeline_text": "Two ways out of 2056. Pick a year to start a run there; past the house, a run follows the timeline it is on.",
   "timeline_choose": "Follow",
   "build_bench": "the Bench",
-  "callout_summons": "THE SUMMONS RISES FROM THE LAKE"
+  "callout_summons": "THE SUMMONS RISES FROM THE LAKE",
+  "hint_course": "Cross to the gate at the far end. The water drowns you: a mooring post you have reached is where it returns you. Shift + Space together: Bound Over. V: a Bench to stand on.",
+  "hint_oak": "Climb: hook each ring and come down on the shelf above. Its eye opens just over you. At the crown, what it calls."
 }
