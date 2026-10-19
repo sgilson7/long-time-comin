@@ -277,25 +277,33 @@ impl Route {
         let mut used: Vec<String> = Vec::new();
         let mut nodes: Vec<Node> = Vec::new();
         for (i, arch) in z.archetypes.iter().enumerate() {
-            let kind = if i == 0 {
+            // a rest listed among the sections stands where it is listed
+            let kind = if arch == "rest" {
+                NodeKind::Rest
+            } else if i == 0 {
                 NodeKind::Arrival
             } else {
                 NodeKind::Fight
             };
             let name = draw(&r.rewards, &mut used, have, true, rng);
             let reward = Some(reward_of(c, zone, &name, r.weapon_steps[0], rng));
+            // a fought zone's sections (the Far Shore's) bring waves too: an
+            // encounter of the section's tier, when the zone lists any
+            let tier = r.main_tiers.get(i).copied().unwrap_or(0);
+            let encounter =
+                (i > 0 && tier > 0 && !z.encounters.is_empty()).then(|| pick_encounter(c, zone, tier, rng));
             nodes.push(Node {
                 zone,
                 kind,
                 archetype: arch.clone(),
-                tier: 0,
+                tier,
                 detour: false,
                 reward,
                 next: Vec::new(),
                 step: STRIDE * i as i32,
                 lane: 0,
                 seed: rng.next(),
-                encounter: None,
+                encounter,
                 cache: Vec::new(),
                 elite: None,
                 extra: Vec::new(),
@@ -304,6 +312,7 @@ impl Route {
             });
         }
         let rest_step = STRIDE * z.archetypes.len() as i32;
+        let listed = z.archetypes.iter().any(|a| a == "rest");
         let mut rest = Node {
             kind: NodeKind::Rest,
             archetype: "rest".into(),
@@ -316,7 +325,13 @@ impl Route {
             let pick = draw(&r.rest_rewards, &mut used, have, true, rng);
             rest.reward = Some(reward_of(c, zone, &pick, r.weapon_steps[1], rng));
         }
-        nodes.push(rest);
+        if let Some(n) = nodes.iter_mut().find(|n| n.kind == NodeKind::Rest) {
+            // the listed rest holds the rest's reward, not a strand's
+            n.reward = rest.reward;
+        }
+        if !listed {
+            nodes.push(rest);
+        }
         nodes.push(Node {
             kind: NodeKind::Boss,
             archetype: "boss".into(),

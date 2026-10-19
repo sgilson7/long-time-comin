@@ -184,6 +184,15 @@ pub struct Player {
     pub stop_cooldown: i32,
     /// until a Bench can be laid again
     pub bench_cooldown: i32,
+    /// under the water (the world says): lighter, and a stroke on the jump
+    /// key whenever it is ready
+    pub swimming: bool,
+    pub stroke_cooldown: i32,
+    /// ticks it is slowed yet (a Cockatrice's gaze)
+    pub slowed: i32,
+    /// a push the world gives each tick on top of how it moves (a gust, a
+    /// current)
+    pub shove: V3,
     pub last_ground: V3,
     /// ticks since a hit landed, for the screen's red flash
     pub hurt_age: i32,
@@ -248,6 +257,10 @@ impl Player {
             pound_cooldown: 0,
             stop_cooldown: 0,
             bench_cooldown: 0,
+            swimming: false,
+            stroke_cooldown: 0,
+            slowed: 0,
+            shove: V3::ZERO,
             last_ground: pos,
             hurt_age: 1000,
             stride: 0,
@@ -270,7 +283,8 @@ impl Player {
     }
 
     pub fn top_speed(&self) -> i32 {
-        RUN_SPEED * self.build.speed_pct / 100
+        let slow = if self.slowed > 0 { SLOWED_PCT } else { 100 };
+        RUN_SPEED * self.build.speed_pct / 100 * slow / 100
     }
 
     pub fn chest(&self) -> V3 {
@@ -432,6 +446,20 @@ impl Player {
             self.events.push(Event::Dash);
         }
 
+        // under the water, the jump key strokes up whenever it is ready
+        self.stroke_cooldown = (self.stroke_cooldown - 1).max(0);
+        self.slowed = (self.slowed - 1).max(0);
+        if c.jump_pressed
+            && self.swimming
+            && !(self.grounded || self.coyote > 0)
+            && self.jumps_used >= self.build.jumps
+            && self.stroke_cooldown == 0
+        {
+            self.release_grapple();
+            self.vel.y = self.vel.y.max(SWIM_STROKE);
+            self.stroke_cooldown = SWIM_COOLDOWN;
+            self.events.push(Event::Jump(self.jumps_used + 1));
+        }
         if c.jump_pressed {
             let ground_jump = self.grounded || self.coyote > 0;
             if ground_jump || self.jumps_used < self.build.jumps {
@@ -490,9 +518,19 @@ impl Player {
             }
         } else {
             self.run(wish, top, flat);
-            self.vel.y = (self.vel.y - GRAVITY).max(-MAX_FALL);
+            let (g, fall) = if self.swimming {
+                (
+                    GRAVITY * SWIM_GRAVITY_PCT / 100,
+                    MAX_FALL * SWIM_GRAVITY_PCT / 100,
+                )
+            } else {
+                (GRAVITY, MAX_FALL)
+            };
+            self.vel.y = (self.vel.y - g).max(-fall);
         }
 
+        self.vel.x += self.shove.x;
+        self.vel.z += self.shove.z;
         let was_grounded = self.grounded;
         self.collide_move(level);
         if self.grounded && self.pounding {
@@ -565,12 +603,14 @@ impl Player {
     fn run(&mut self, wish: V3, top: i32, flat: V3) {
         let accel = if self.grounded { GROUND_ACCEL } else { AIR_ACCEL };
         let speed = flat.len();
-        let next = if speed > top {
-            let decel = if self.grounded {
-                OVERSPEED_DECEL
-            } else {
-                OVERSPEED_DECEL_AIR
-            };
+        let decel = if self.grounded {
+            OVERSPEED_DECEL
+        } else {
+            OVERSPEED_DECEL_AIR
+        };
+        // the last of the overspeed is the run's to steer: clamped to the
+        // top, a length can round back a unit over it and never bleed off
+        let next = if speed - decel > top {
             let turned = flat.add(wish.scale(accel));
             turned.clamp_len((speed - decel).max(top))
         } else {
@@ -722,6 +762,26 @@ mod tests {
     fn settle(p: &mut Player, l: &Level) {
         for _ in 0..10 {
             p.step(&idle(), l);
+        }
+    }
+
+    #[test]
+    fn let_go_at_full_speed_on_any_heading_and_you_stop() {
+        // a speed a unit over the top, from rounding, once kept you sliding
+        let l = flat_floor();
+        for k in 0..64 {
+            let mut p = Player::new(V3::ZERO, 0, Build::default());
+            settle(&mut p, &l);
+            let top = p.top_speed();
+            let turn = crate::fx::TURN / 64 * k;
+            let d = crate::geom::rotate_y(v3(0, 0, top + 1), turn);
+            p.vel.x = d.x;
+            p.vel.z = d.z;
+            for _ in 0..120 {
+                p.step(&idle(), &l);
+            }
+            let left = v3(p.vel.x, 0, p.vel.z).len();
+            assert!(left < ONE / 10, "heading {k}: still sliding at {left}");
         }
     }
 

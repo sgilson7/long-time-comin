@@ -109,6 +109,11 @@ COLOURS = {
     "canyonshadow": "8E4A3E", "riverwater": "3E8FA0", "riverfoam": "E8F4F0", "riverdeep": "2A5F73", "riverwood": "9A6A44",
     "riverwooddark": "6E4A33", "river": "2F8F5B", "bench": "F3D9A4", "oakbark": "2E2230", "oakeye": "FFC23A",
     "oakleaf": "5E3A52", "fire": "FF7A2A", "firehi": "FFD36A", "smoke": "6E5A66", "smokepale": "A8939C",
+    # the Far Shore and the Vault
+    "ocean": "1F6F8B", "oceandeep": "134B60", "seasky": "8FA9C2", "stormsky": "4B4E6D", "stormcloud": "2E3048",
+    "sail": "E9D9B4", "piratered": "B3262E", "hulldk": "4E3020", "biolume": "7CFFB2", "dagonteal": "1E5A5A",
+    "vaultwhite": "E8EEF2", "chrome": "9AA6B2", "blackglass": "121826", "vaultcyan": "13CFE3", "vaultviolet": "7B2FF7",
+    "grey1": "D8D8D8", "grey2": "B0B0B0", "grey3": "8A8A8A", "grey4": "5E5E5E",
 }
 WALLS = ["wallA", "wallB", "wallC", "wallD", "wallE", "wallF"]
 GREENS = ["greenA", "greenB", "greenC", "greenD"]
@@ -1637,6 +1642,80 @@ def oak_burns():
     return s, (W, H)
 
 
+def ship_side(x, y, s, sails=True):
+    """A ship side on, bow to the right: hull, masts, sails, a red flag."""
+    out = poly([(x - 3 * s, y + 1.0 * s), (x + 3.4 * s, y + 1.0 * s), (x + 2.6 * s, y), (x - 2.6 * s, y)], "hulldk")
+    for k, mx in enumerate((-1.6, 0.2, 1.8)):
+        h = (3.2 if k == 1 else 2.5) * s
+        out += f"\\draw[ink, line width=1.4pt] {P(x + mx * s, y + 1.0 * s)} -- {P(x + mx * s, y + 1.0 * s + h)};\n"
+        if sails:
+            out += poly([(x + (mx - 0.8) * s, y + 1.0 * s + h * 0.85), (x + (mx + 0.8) * s, y + 1.0 * s + h * 0.85), (x + (mx + 0.7) * s, y + 1.0 * s + h * 0.3), (x + (mx - 0.7) * s, y + 1.0 * s + h * 0.3)], "sail")
+    out += poly([(x + 0.2 * s, y + 4.2 * s), (x + 0.9 * s, y + 4.0 * s), (x + 0.2 * s, y + 3.8 * s)], "piratered")
+    return out
+
+
+def anomaly():
+    """The anomaly: under the burnt Oak's roots, a door of light on the lake
+    bed; the Defendant swimming down to it; through it, ships on another sea."""
+    W, H = 32.0, 18.0
+    s = f"\\fill[oceandeep] (0,0) rectangle {P(W, H)};\n"
+    s += f"\\fill[ocean] (0,{f(H * 0.55)}) rectangle {P(W, H)};\n"
+    # the lake bed and the Oak's dead roots
+    s += f"\\filldraw[inked,fill=sandstonedark] (-0.5,0) -- (-0.5,3.0) .. controls (8,3.6) and (20,2.6) .. (32.5,3.2) -- (32.5,0) -- cycle;\n"
+    for k in range(7):
+        a = 4 + k * 3.6
+        s += f"\\draw[ink, line width=4pt] (16,9) .. controls {P(a, 7)} .. {P(a + 1.2, 2.8)};\n"
+    s += f"\\filldraw[inked,fill=oakbark] (14.8,9) rectangle (17.2,18.5);\n"
+    # the door: rings of light, and through it another sea and ships
+    for r, op in ((5.2, 0.15), (4.2, 0.25), (3.3, 0.4)):
+        s += f"\\fill[biolume, opacity={op}] (16,4.6) ellipse ({f(r)} and {f(r * 0.45)});\n"
+    s += f"\\filldraw[inked,fill=seasky] (16,4.6) ellipse (2.6 and 1.2);\n"
+    s += f"\\begin{{scope}}\\clip (16,4.6) ellipse (2.6 and 1.2);\n\\fill[ocean] (13,3.4) rectangle (19,4.5);\n" + ship_side(15.2, 4.3, 0.22) + ship_side(17.0, 4.4, 0.16) + "\\end{scope}\n"
+    s += defendant(9.5, 10.0, 1.0, lean=0.5, falling=True)
+    for k in range(9):
+        s += f"\\draw[riverfoam, line width=1pt] {P(10 + k * 0.25, 11.2 + k * 0.6)} circle ({f(0.08 + k * 0.01)});\n"
+    return s, (W, H)
+
+
+def descent():
+    """The descent: the drained whirlpool's floor, and under the lake bed a
+    white building older than the Oak, its halls lit with nothing."""
+    W, H = 32.0, 18.0
+    s = f"\\fill[oceandeep] (0,0) rectangle {P(W, H)};\n"
+    s += f"\\filldraw[inked,fill=sandstonedark] (-0.5,9) .. controls (8,10.2) and (22,9.4) .. (32.5,10) -- (32.5,7.5) -- (-0.5,7.5) -- cycle;\n"
+    # the Vault under the bed: white ribs, black glass, a shaft of cyan light
+    s += f"\\filldraw[inked,fill=blackglass] (4,0) -- (4,7.5) -- (24,7.5) -- (24,0) -- cycle;\n"
+    for k in range(6):
+        x = 5.5 + k * 3.4
+        s += f"\\filldraw[inked,fill=vaultwhite] {P(x, 0)} rectangle {P(x + 0.7, 7.5)};\n"
+    s += f"\\fill[vaultcyan, opacity=0.35] (13,0) rectangle (15,10.5);\n"
+    for y in (1.5, 3.5, 5.5):
+        s += f"\\draw[vaultcyan, line width=2pt] (4.2,{f(y)}) -- (23.8,{f(y)});\n"
+    s += f"\\filldraw[inked,fill=vaultviolet] (14,2.2) circle (0.9);\n"
+    s += defendant(14.0, 11.0, 0.9, lean=0.0, falling=True)
+    return s, (W, H)
+
+
+def grey_ending():
+    """The grey ending: an ordinary evening in Meridian, the clock tower
+    reading 21:16, and the Defendant at the bottom of the picture going
+    grey from the hands, as time stopped is drawn grey."""
+    W, H = 32.0, 18.0
+    rng = random.Random(2081)
+    s = sky(W, H)
+    s += skyline(rng, W, 3.0)
+    s += clocktower(22.5, 3.0, 2.6, 9.0, minute=16)
+    s += f"\\fill[grey1, opacity=0.55] (0,0) rectangle {P(W, 6.0)};\n"
+    s += defendant(8.0, 1.0, 1.4)
+    # going grey: the figure washed over, flakes rising
+    s += f"\\fill[grey2, opacity=0.65] (6.6,0.9) rectangle (9.6,5.6);\n"
+    for k in range(26):
+        x = 6.2 + rng.uniform(0, 4.2); y = 2.0 + rng.uniform(0, 6.5)
+        g = ["grey1", "grey2", "grey3", "grey4"][k % 4]
+        s += f"\\fill[{g}] {P(x, y)} rectangle {P(x + 0.18, y + 0.18)};\n"
+    return s, (W, H)
+
+
 PICTURES = {
     "title": title,
     "sentencing": sentencing,
@@ -1652,6 +1731,9 @@ PICTURES = {
     "chumbles": chumbles,
     "downriver": downriver,
     "oak_burns": oak_burns,
+    "anomaly": anomaly,
+    "descent": descent,
+    "grey_ending": grey_ending,
 }
 for g in ("carbine", "scattergun", "launcher", "ripsaw", "big_iron", "filibuster", "redactor"):
     PICTURES[f"guns/{g}"] = (lambda g=g: gun_art(g))

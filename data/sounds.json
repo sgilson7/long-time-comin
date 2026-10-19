@@ -1,5 +1,5 @@
 {
-  "_about": "Every number the page's sound needs (the page holds none of its own). Each recipe is a list of layers: an oscillator sweeping `from` to `to` Hz, or the core's white noise through a filter. Times are in seconds after the sound starts. `gaps` is the least time between two plays of the same sound. The lullaby's notes (trumpet_* and pipe_*) are the ocarina's five pitches, D4, F4, A4, B4 and D5, in hertz; the pipes sound an octave up. The last mission adds Chumbles' scream (a meow rising and falling), his hiss, his purr, the rattle of the treats bag, and the sound of reality breaking. The arsenal adds the Filibuster's buzz and its Cloture's rising lance, the Redactor's dry tick and its Redaction's low sweep, and Contempt's crack. The Water Gap adds the Bench's knock, a switch's clunk and chime, a mooring post's two notes, the water's gulp, rotten timber breaking and the drum-cap's boing.",
+  "_about": "Every number the page's sound needs (the page holds none of its own). Each recipe is a list of layers: an oscillator sweeping `from` to `to` Hz, or the core's white noise through a filter. Times are in seconds after the sound starts. `gaps` is the least time between two plays of the same sound. The lullaby's notes (trumpet_* and pipe_*) are the ocarina's five pitches, D4, F4, A4, B4 and D5, in hertz; the pipes sound an octave up. The last mission adds Chumbles' scream (a meow rising and falling), his hiss, his purr, the rattle of the treats bag, and the sound of reality breaking. The arsenal adds the Filibuster's buzz and its Cloture's rising lance, the Redactor's dry tick and its Redaction's low sweep, and Contempt's crack. The Water Gap adds the Bench's knock, a switch's clunk and chime, a mooring post's two notes, the water's gulp, rotten timber breaking and the drum-cap's boing. The Far Shore adds thunder.",
   "master": 0.5,
   "floor": 0.0001,
   "tail": 0.05,
@@ -1938,6 +1938,28 @@
         "attack": 0.003,
         "dur": 0.35,
         "gain": 0.4
+      }
+    ],
+    "thunder": [
+      {
+        "type": "noise",
+        "filter": "lowpass",
+        "freq": 300,
+        "q": 0.7,
+        "at": 0,
+        "attack": 0.01,
+        "dur": 1.4,
+        "gain": 0.6
+      },
+      {
+        "type": "noise",
+        "filter": "bandpass",
+        "freq": 2400,
+        "q": 1.5,
+        "at": 0,
+        "attack": 0.002,
+        "dur": 0.15,
+        "gain": 0.35
       }
     ]
   }

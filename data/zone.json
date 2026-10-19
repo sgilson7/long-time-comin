@@ -2151,10 +2151,184 @@
     {
       "id": "far_shore",
       "name": "The Far Shore",
-      "year": "?",
-      "built": false,
+      "year": "Inside the anomaly",
+      "built": true,
       "branch_from": "water_gap",
-      "boss": "far_shore"
+      "boss": "dagon",
+      "scene": {
+        "sky": "sea_sky",
+        "fog": "sea_fog",
+        "light": "sea_light",
+        "window_dark": "river_window_dark",
+        "ink": "river_ink",
+        "fog_near_m": 140,
+        "fog_far_m": 800
+      },
+      "route": {
+        "course": true,
+        "main_fights": 0,
+        "main_tiers": [
+          0,
+          2,
+          0,
+          3
+        ],
+        "detours_min": 0,
+        "detours_max": 0,
+        "detour_max": 0,
+        "rewards": [
+          "weapon",
+          "weapon",
+          "trigger",
+          "plating",
+          "health",
+          "pierce",
+          "contempt",
+          "speed",
+          "purse"
+        ],
+        "clemency_main": 10,
+        "clemency_detour": 10,
+        "clemency_boss": 100,
+        "rest_rewards": [
+          "trigger",
+          "plating",
+          "pierce",
+          "health"
+        ],
+        "weapon_steps": [
+          1,
+          2
+        ]
+      },
+      "archetypes": [
+        "fleet",
+        "hurricane",
+        "rest",
+        "maelstrom"
+      ],
+      "names": {
+        "arrival": "The Fleet",
+        "fleet": "The Fleet",
+        "hurricane": "The Hurricane",
+        "rest": "The Lee",
+        "maelstrom": "The Maelstrom",
+        "boss": "The Eye"
+      },
+      "encounters": [
+        {
+          "tier": 2,
+          "waves": [
+            [
+              "storm_harpy",
+              "storm_harpy",
+              "storm_harpy"
+            ],
+            [
+              "storm_harpy",
+              "storm_harpy",
+              "cockatrice"
+            ]
+          ]
+        },
+        {
+          "tier": 3,
+          "waves": [
+            [
+              "drowned",
+              "drowned",
+              "drowned",
+              "drowned"
+            ],
+            [
+              "drowned",
+              "drowned",
+              "drowned",
+              "chimera"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "vault",
+      "name": "The Vault",
+      "year": "Under Stillwater",
+      "built": true,
+      "branch_from": "far_shore",
+      "boss": "the_other",
+      "scene": {
+        "sky": "vault_sky",
+        "fog": "vault_fog",
+        "light": "vault_light",
+        "window_dark": "river_window_dark",
+        "ink": "river_ink",
+        "fog_near_m": 120,
+        "fog_far_m": 700
+      },
+      "route": {
+        "course": true,
+        "main_fights": 0,
+        "main_tiers": [
+          0,
+          4
+        ],
+        "detours_min": 0,
+        "detours_max": 0,
+        "detour_max": 0,
+        "rewards": [
+          "trigger",
+          "plating",
+          "health",
+          "pierce",
+          "purse"
+        ],
+        "clemency_main": 12,
+        "clemency_detour": 12,
+        "clemency_boss": 150,
+        "rest_rewards": [],
+        "weapon_steps": [
+          1,
+          2
+        ]
+      },
+      "archetypes": [
+        "shaft",
+        "halls"
+      ],
+      "names": {
+        "arrival": "The Shaft",
+        "shaft": "The Shaft",
+        "halls": "The Halls",
+        "boss": "The Eraser"
+      },
+      "encounters": [
+        {
+          "tier": 4,
+          "waves": [
+            [
+              "custodian",
+              "ward",
+              "ward",
+              "excisor"
+            ],
+            [
+              "ward",
+              "ward",
+              "excisor",
+              "excisor",
+              "custodian"
+            ],
+            [
+              "excisor",
+              "excisor",
+              "excisor",
+              "ward",
+              "ward"
+            ]
+          ]
+        }
+      ]
     }
   ]
 }

@@ -496,3 +496,20 @@ pub const ALOFT_LEASH: i32 = int(26);
 pub const OAK_CLIMB_BAR_PCT: i32 = 66;
 pub const OAK_EYE_OVER: i32 = int(4);
 pub const OAK_SUMMONS: &str = "summons";
+/// an enemy this far over moving ground's top rides it
+pub const ENEMY_RIDE: i32 = int(4);
+/// an enemy this far under a course's water has drowned
+pub const ENEMY_DROWN: i32 = int(2);
+
+// ---- the Far Shore and the Vault (round 18) ---------------------------------------------
+
+/// under the water: gravity this share of the air's, a stroke up this
+/// fast, again after this long
+pub const SWIM_GRAVITY_PCT: i32 = 40;
+pub const SWIM_STROKE: i32 = per_tick(55, 10);
+pub const SWIM_COOLDOWN: i32 = secs(35, 100);
+/// a Cockatrice's gaze slows you to this share of your speed, this long
+pub const SLOWED_PCT: i32 = 50;
+pub const SLOWED_TICKS: i32 = secs(1, 1);
+/// a gust's rain slants this long before it blows
+pub const WARN: i32 = secs(1, 1);

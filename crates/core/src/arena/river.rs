@@ -391,13 +391,9 @@ impl B<'_> {
             one_way: false,
         });
         let dynamic = self.dynamic.len() - 1;
-        self.k().movers.push(Mover {
-            dynamic,
-            base,
-            rise,
-            period,
-            phase,
-        });
+        self.k()
+            .movers
+            .push(Mover::breathing(dynamic, base, rise, period, phase));
     }
 
     /// A rotten timber floor a ground pound breaks.
