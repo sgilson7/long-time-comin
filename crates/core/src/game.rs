@@ -2613,7 +2613,7 @@ pub(crate) mod tests {
         assert_eq!(s["interlude"]["title"], "THE DOOR");
         g.continue_run();
         let h: Value = serde_json::from_str(&g.hud_json()).unwrap();
-        assert_eq!(h["zone"], "The Idiot God");
+        assert_eq!(h["zone"], "????");
         assert_eq!(h["node"], "The Gullet");
         // the god, sung to sleep (here, at once)
         let boss = g.run.as_ref().unwrap().route.boss();
