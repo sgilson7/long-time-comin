@@ -50,7 +50,9 @@ pub struct Door {
     pub total: i32,
 }
 
-/// A root that rises and sinks with the tree's breathing.
+/// Ground that moves: a root that rises and sinks with the tree's
+/// breathing, a deck that heaves and sways on the swell, wreckage turning
+/// round a whirlpool's eye. Whatever stands on it goes with it.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Mover {
     pub dynamic: usize,
@@ -60,6 +62,59 @@ pub struct Mover {
     pub period: i32,
     /// where in its breath it starts, a share of a turn
     pub phase: i32,
+    /// how far it sways each way along the level, on the same breath
+    pub swing: V3,
+    /// turns a tick it goes round `round` (0: it does not)
+    pub orbit: i32,
+    pub round: V3,
+    /// how it is drawn
+    pub look: Look,
+}
+
+/// How moving ground is drawn.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Look {
+    /// a root of the Oak
+    #[default]
+    Root,
+    /// a ship's deck, its hull under it and its rail round it
+    Deck,
+    /// a mast, its yards and furled sails, a crow's nest at the top
+    Mast,
+    /// wreckage: planks, a broken hull, a crate
+    Wreck,
+}
+
+impl Mover {
+    /// One that rises `rise` and sinks again every `period` ticks.
+    pub fn breathing(dynamic: usize, base: Solid, rise: i32, period: i32, phase: i32) -> Mover {
+        Mover {
+            dynamic,
+            base,
+            rise,
+            period,
+            phase,
+            swing: V3::ZERO,
+            orbit: 0,
+            round: V3::ZERO,
+            look: Look::Root,
+        }
+    }
+
+    /// Where its lowest corner is at tick `tick`.
+    pub fn corner(&self, tick: i32) -> V3 {
+        let t = (fx::TURN as i64 * tick as i64 / self.period.max(1) as i64) as i32 + self.phase;
+        let up = self.rise / 2 - fx::mul(self.rise / 2, fx::cos(t));
+        let sway = self.swing.scale(fx::sin(t));
+        let mut at = self.base.min.add(v3(sway.x, up, sway.z));
+        if self.orbit != 0 {
+            let c = self.base.centre();
+            let r = v3(c.x - self.round.x, 0, c.z - self.round.z);
+            let turned = crate::geom::rotate_y(r, self.orbit.wrapping_mul(tick));
+            at = at.add(v3(turned.x - r.x, 0, turned.z - r.z));
+        }
+        at
+    }
 }
 
 /// Something set in the rock that fires: an enemy that never moves, woken
@@ -98,6 +153,69 @@ pub enum Step {
     Hop,
 }
 
+/// A zone of wind that shoves you along `dir` for `on` ticks of every
+/// `period` (the Hurricane); its rain slants for `WARN` ticks before.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Gust {
+    pub zone: Solid,
+    pub dir: V3,
+    pub push: i32,
+    pub period: i32,
+    pub on: i32,
+    pub phase: i32,
+}
+
+impl Gust {
+    /// Ticks until it blows (0: blowing now).
+    pub fn until(&self, tick: i32) -> i32 {
+        let t = (tick + self.phase).rem_euclid(self.period.max(1));
+        (self.period - self.on - t).max(0)
+    }
+}
+
+/// A storm over the course: every `every` ticks lightning picks a place
+/// near you, marks it, and strikes it `warn` ticks later.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Storm {
+    pub every: i32,
+    pub warn: i32,
+    pub radius: i32,
+    pub damage: i32,
+}
+
+/// Under the water (the Maelstrom): gravity this share of the air's, a
+/// stroke on the jump key, and a current pulling toward `eye`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Underwater {
+    pub gravity_pct: i32,
+    pub eye: V3,
+    pub pull: i32,
+}
+
+/// The Eraser's charge (the Vault): pylons held in turn, each `need`
+/// ticks within `radius` of it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Charge {
+    pub pylons: Vec<V3>,
+    pub radius: i32,
+    pub need: i32,
+    /// ticks each has been held so far
+    pub held: Vec<i32>,
+}
+
+impl Charge {
+    /// The charge so far, Q16 of whole.
+    pub fn level(&self) -> i32 {
+        let total = self.need * self.pylons.len() as i32;
+        fx::div(self.held.iter().sum::<i32>(), total.max(1))
+    }
+
+    /// The pylon being charged now, if any is left.
+    pub fn next(&self) -> Option<usize> {
+        (0..self.pylons.len()).find(|&k| self.held.get(k).copied().unwrap_or(0) < self.need)
+    }
+}
+
 /// The Gallows Oak's place in its arena: its trunk's axis and radius, and
 /// its crown's height and reach.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -129,6 +247,19 @@ pub struct Course {
     pub finish_yaw: i32,
     /// the intended line, from the first post to the finish
     pub line: Vec<Step>,
+    /// fought: its way on opens only when its emitters (here, crews) and
+    /// waves are all down
+    pub fought: bool,
+    /// where its waves come in (near you, as an arena's do)
+    pub spawns: Vec<V3>,
+    pub gusts: Vec<Gust>,
+    pub storm: Option<Storm>,
+    /// lightning marked and coming: where, and ticks left
+    pub strikes: Vec<(V3, i32)>,
+    pub underwater: Option<Underwater>,
+    /// where the boss comes up (Dagon, in the eye)
+    pub boss_at: Option<V3>,
+    pub charge: Option<Charge>,
     /// the Gallows Oak's arena: where the tree stands
     pub oak: Option<OakSite>,
     /// the highest the climb has reached (the Oak's first bar)
@@ -165,8 +296,9 @@ impl World {
         let Some(k) = self.arena.course.clone() else {
             return;
         };
-        // a course is crossed, not cleared; the Oak's is fought
-        self.cleared = self.kind != crate::route::NodeKind::Boss;
+        // a course is crossed, not cleared; a fought one, and a boss's, is
+        // cleared as an arena is
+        self.cleared = !k.fought && self.kind != crate::route::NodeKind::Boss;
         let mut foes = Vec::new();
         for e in &k.emitters {
             let def = c.enemy(&e.enemy).unwrap_or(0);
@@ -256,12 +388,10 @@ impl World {
             *t = (*t - 1).max(0);
         }
 
-        // roots rise and sink, carrying whoever stands on them
+        // moving ground, carrying whoever stands on it: you, and enemies
         for m in &k.movers {
-            let t = (fx::TURN as i64 * self.tick as i64 / m.period.max(1) as i64) as i32 + m.phase;
-            let off = m.rise / 2 - fx::mul(m.rise / 2, fx::cos(t));
             let d = &mut level.dynamic[m.dynamic];
-            let dy = m.base.min.y + off - d.solid.min.y;
+            let delta = m.corner(self.tick).sub(d.solid.min);
             // what stands on it goes with it, down as well as up, and so
             // keeps its footing (a fall would leave it hanging each tick)
             let riding = self.player.grounded
@@ -270,10 +400,28 @@ impl World {
                 && feet.x <= d.solid.max.x + PLAYER_RADIUS
                 && feet.z >= d.solid.min.z - PLAYER_RADIUS
                 && feet.z <= d.solid.max.z + PLAYER_RADIUS;
-            d.solid.min.y += dy;
-            d.solid.max.y += dy;
+            let top = d.solid.max.y;
+            let (lo, hi) = (d.solid.min, d.solid.max);
+            d.solid.min = d.solid.min.add(delta);
+            d.solid.max = d.solid.max.add(delta);
             if riding {
-                self.player.pos.y += dy;
+                self.player.pos = self.player.pos.add(delta);
+            }
+            if delta != V3::ZERO {
+                for e in self.enemies.iter_mut().filter(|e| e.alive()) {
+                    let p = e.pos;
+                    if p.x >= lo.x
+                        && p.x <= hi.x
+                        && p.z >= lo.z
+                        && p.z <= hi.z
+                        && p.y >= top
+                        && p.y <= top + ENEMY_RIDE
+                    {
+                        e.pos = e.pos.add(delta);
+                        e.prev = e.prev.add(delta);
+                        e.home = e.home.add(delta);
+                    }
+                }
             }
         }
 
@@ -310,6 +458,84 @@ impl World {
         {
             k.post = n;
             said.push(("post", c.say("callout_post")));
+        }
+
+        // a fought course is cleared when its crews and its waves are down;
+        // whoever goes over the side drowns
+        for e in self.enemies.iter_mut().filter(|e| e.alive()) {
+            if e.pos.y < k.water - ENEMY_DROWN {
+                e.hp = 0;
+            }
+        }
+        if k.fought && !self.cleared && self.waves_left.is_empty() && self.enemies.iter().all(|e| !e.alive())
+        {
+            self.cleared = true;
+            self.cleared_at = self.tick;
+            said.push(("cleared", c.say("callout_course_cleared")));
+        }
+
+        // the wind: a gust shoves you while it blows
+        for g in &k.gusts {
+            let inside =
+                p.x >= g.zone.min.x && p.x <= g.zone.max.x && p.z >= g.zone.min.z && p.z <= g.zone.max.z;
+            if inside && g.until(self.tick) == 0 && !self.player.dashing() {
+                let push = g
+                    .dir
+                    .scale(if self.player.grounded { g.push / 2 } else { g.push });
+                self.player.vel = self.player.vel.add(v3(push.x, 0, push.z));
+            }
+        }
+        // lightning: marked, then struck
+        if let Some(st) = k.storm {
+            if self.tick % st.every.max(1) == 0 {
+                let off = v3(int(self.rng.range(-6, 6)), 0, int(self.rng.range(-6, 6)));
+                let at = p.add(off);
+                let ground = level.floor_below(at.x, p.y + int(3), at.z).unwrap_or(p.y);
+                k.strikes.push((v3(at.x, ground, at.z), st.warn));
+            }
+            for s in k.strikes.iter_mut() {
+                s.1 -= 1;
+            }
+            for &(at, left) in k.strikes.iter().filter(|s| s.1 == 0) {
+                said.push(("thunder", String::new()));
+                if v3(p.x - at.x, 0, p.z - at.z).len_xz() <= st.radius && (p.y - at.y).abs() < int(3) {
+                    self.player.hurt(st.damage);
+                }
+                let _ = left;
+            }
+            k.strikes.retain(|s| s.1 > 0);
+        }
+        // under the water: lighter, a stroke to swim, a current to the eye
+        self.player.swimming = k.underwater.is_some();
+        if let Some(u) = k.underwater {
+            if !self.player.grounded {
+                let to = v3(u.eye.x - p.x, 0, u.eye.z - p.z).norm().scale(u.pull);
+                self.player.vel = self.player.vel.add(to);
+            }
+        }
+        // the Eraser: held pylon by pylon; the boss's bar is what is left
+        if let Some(ch) = k.charge.as_mut() {
+            if let Some(n) = ch.next() {
+                if p.sub(ch.pylons[n]).len_xz() <= ch.radius {
+                    ch.held[n] += 1;
+                    if ch.held[n] == ch.need {
+                        said.push(("switch", c.say("callout_pylon")));
+                    }
+                }
+            }
+            let level_now = ch.level();
+            if let Some(b) = self.boss {
+                // your older self cannot be hurt here: only the Eraser ends it
+                let e = &mut self.enemies[b];
+                e.shielded = true;
+                if e.alive() {
+                    e.hp = if ch.next().is_none() {
+                        0
+                    } else {
+                        (e.max_hp - fx::mul(e.max_hp, level_now)).max(1)
+                    };
+                }
+            }
         }
 
         // the water
@@ -659,6 +885,9 @@ pub(crate) mod tests {
     use crate::world::{Exit, Outcome};
 
     /// The river's kit and no more: one jump, the hook, Gavel Drop, the Bench.
+    /// how near an enemy comes before the fighting Pilot fells it
+    const FELLED: i32 = 30 * ONE;
+
     pub(crate) fn river_kit() -> Build {
         Build {
             max_health: 100_000,
@@ -670,12 +899,13 @@ pub(crate) mod tests {
     }
 
     pub(crate) fn course_world(arch: &str) -> (Content, World) {
+        course_world_in("water_gap", arch)
+    }
+
+    /// A course of zone `zone`'s, with the river's kit.
+    pub(crate) fn course_world_in(zone: &str, arch: &str) -> (Content, World) {
         let c = content();
-        let zone = c
-            .zones
-            .iter()
-            .position(|z| z.id == "water_gap")
-            .expect("the Water Gap");
+        let zone = c.zones.iter().position(|z| z.id == zone).expect("the zone");
         let r = Route::build_for(&c, zone, 7, &Have::level(1));
         let node = r
             .nodes
@@ -698,14 +928,41 @@ pub(crate) mod tests {
     /// Drives a body along the course's line; the ticks it took and the
     /// health it lost, or where it stuck.
     pub(crate) fn cross(arch: &str) -> Result<(i32, i32), String> {
-        let (c, mut w) = course_world(arch);
+        cross_in("water_gap", arch, false)
+    }
+
+    /// Drives a body along a course of zone `zone`'s; when `fight`, every
+    /// enemy that comes within `FELLED` of it falls (as if shot: the Pilot
+    /// cannot aim), and at the line's end it waits for the way on to open.
+    pub(crate) fn cross_in(zone: &str, arch: &str, fight: bool) -> Result<(i32, i32), String> {
+        let (c, mut w) = course_world_in(zone, arch);
         let line = w.course.as_ref().unwrap().line.clone();
         let mut pilot = Pilot::default();
         let start = w.player.health;
         for tick in 0..60 * 60 * 4 {
+            if fight {
+                let at = w.player.pos;
+                for e in w
+                    .enemies
+                    .iter_mut()
+                    .filter(|e| e.alive() && e.pos.dist(at) < FELLED)
+                {
+                    e.hp = 0;
+                }
+            }
             let Some(d) = pilot.drive(&line, &w.player) else {
-                // the line done: a few steps on to the way on
-                for _ in 0..60 {
+                // the line done: a few steps on to the way on (once it opens)
+                for _ in 0..if fight { 60 * 30 } else { 60 } {
+                    if fight {
+                        let at = w.player.pos;
+                        for e in w
+                            .enemies
+                            .iter_mut()
+                            .filter(|e| e.alive() && e.pos.dist(at) < FELLED * 3)
+                        {
+                            e.hp = 0;
+                        }
+                    }
                     let fin = w.course.as_ref().unwrap().finish;
                     let to = fin.sub(w.player.pos);
                     w.player.yaw = crate::geom::yaw_pitch_of(to).0;
@@ -890,13 +1147,13 @@ pub(crate) mod tests {
         let k = w.course.as_mut().unwrap();
         k.rotten.push(rotten);
         k.drums.push(drum);
-        k.movers.push(Mover {
-            dynamic: root,
-            base: Solid::new(v3(-int(2), 0, -int(50)), v3(int(2), int(2), -int(46))),
-            rise: int(4),
-            period: 240,
-            phase: 0,
-        });
+        k.movers.push(Mover::breathing(
+            root,
+            Solid::new(v3(-int(2), 0, -int(50)), v3(int(2), int(2), -int(46))),
+            int(4),
+            240,
+            0,
+        ));
         (c, w)
     }
 

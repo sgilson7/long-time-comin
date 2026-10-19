@@ -1093,7 +1093,10 @@ impl World {
         self.effects_step();
 
         if let Some(b) = self.boss {
-            if !self.enemies[b].alive() && c.enemies[self.enemies[b].def].kind == Kind::Double {
+            if !self.enemies[b].alive()
+                && c.enemies[self.enemies[b].def].kind == Kind::Double
+                && self.course.is_none()
+            {
                 // the Defendant falls, and what it held back comes; on the
                 // last mission the god is asleep already, sung to by the
                 // first of you, and both cannot be: reality breaks
@@ -1294,6 +1297,9 @@ impl World {
             }
             if hurt.is_none() && o.touches(self.player.pos) && !self.player.invulnerable() {
                 hurt = Some((o.damage, o.pos.sub(o.dir.scale(ONE))));
+                if o.slow {
+                    self.player.slowed = SLOWED_TICKS;
+                }
                 self.hit_by = Some(o.owner);
                 spent.push(o);
                 continue;

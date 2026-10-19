@@ -416,6 +416,9 @@ struct VolleyFile {
     /// a curtain's hole, this many orbs across and up
     #[serde(default)]
     gap: i32,
+    /// what it hits is slowed
+    #[serde(default)]
+    slow: bool,
     #[serde(default)]
     at: String,
     #[serde(default)]
@@ -596,6 +599,8 @@ pub struct Volley {
     pub length: i32,
     /// a curtain's hole, this many orbs across and up
     pub gap: i32,
+    /// what it hits is slowed (the Cockatrice's gaze)
+    pub slow: bool,
 }
 
 impl Volley {
@@ -1411,7 +1416,7 @@ impl Content {
             };
             if z.built {
                 let r = &route;
-                if r.main_tiers.len() != r.main_fights {
+                if !r.course && r.main_tiers.len() != r.main_fights {
                     return Err(format!("zone {}: main_tiers needs one tier per main fight", z.id));
                 }
                 for t in r
@@ -1771,6 +1776,7 @@ fn parse_patterns(text: &str, pal: &Palette) -> Result<Vec<Pattern>, String> {
                 form,
                 rows: v.rows.max(1),
                 gap: v.gap.max(1),
+                slow: v.slow,
                 anchor,
                 at: cm(v.at_cm),
                 flat,

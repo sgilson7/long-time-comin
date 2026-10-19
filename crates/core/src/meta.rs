@@ -300,6 +300,18 @@ impl Meta {
             .map(|id| Refusal::Requires(id.to_string()))
     }
 
+    /// May a run start in zone `zone` off the main line: the first such
+    /// zone once the river is open, a later one once the boss of the zone
+    /// it follows has fallen?
+    pub fn branch_open(&self, c: &Content, zone: usize) -> bool {
+        let Some(z) = c.zones.get(zone).filter(|z| z.built && !z.branch_from.is_empty()) else {
+            return false;
+        };
+        let before = c.zones.iter().find(|p| p.id == z.branch_from);
+        let first = before.is_some_and(|p| p.branch_from.is_empty());
+        self.river_shut(c).is_none() && (first || before.is_some_and(|p| self.beaten.contains(&p.boss)))
+    }
+
     /// Is a run on the river's timeline?
     pub fn on_river(&self, c: &Content) -> bool {
         self.timeline == "river" && self.river_shut(c).is_none()

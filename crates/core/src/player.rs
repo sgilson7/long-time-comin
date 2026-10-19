@@ -184,6 +184,12 @@ pub struct Player {
     pub stop_cooldown: i32,
     /// until a Bench can be laid again
     pub bench_cooldown: i32,
+    /// under the water (the world says): lighter, and a stroke on the jump
+    /// key whenever it is ready
+    pub swimming: bool,
+    pub stroke_cooldown: i32,
+    /// ticks it is slowed yet (a Cockatrice's gaze)
+    pub slowed: i32,
     pub last_ground: V3,
     /// ticks since a hit landed, for the screen's red flash
     pub hurt_age: i32,
@@ -248,6 +254,9 @@ impl Player {
             pound_cooldown: 0,
             stop_cooldown: 0,
             bench_cooldown: 0,
+            swimming: false,
+            stroke_cooldown: 0,
+            slowed: 0,
             last_ground: pos,
             hurt_age: 1000,
             stride: 0,
@@ -270,7 +279,8 @@ impl Player {
     }
 
     pub fn top_speed(&self) -> i32 {
-        RUN_SPEED * self.build.speed_pct / 100
+        let slow = if self.slowed > 0 { SLOWED_PCT } else { 100 };
+        RUN_SPEED * self.build.speed_pct / 100 * slow / 100
     }
 
     pub fn chest(&self) -> V3 {
@@ -432,6 +442,20 @@ impl Player {
             self.events.push(Event::Dash);
         }
 
+        // under the water, the jump key strokes up whenever it is ready
+        self.stroke_cooldown = (self.stroke_cooldown - 1).max(0);
+        self.slowed = (self.slowed - 1).max(0);
+        if c.jump_pressed
+            && self.swimming
+            && !(self.grounded || self.coyote > 0)
+            && self.jumps_used >= self.build.jumps
+            && self.stroke_cooldown == 0
+        {
+            self.release_grapple();
+            self.vel.y = self.vel.y.max(SWIM_STROKE);
+            self.stroke_cooldown = SWIM_COOLDOWN;
+            self.events.push(Event::Jump(self.jumps_used + 1));
+        }
         if c.jump_pressed {
             let ground_jump = self.grounded || self.coyote > 0;
             if ground_jump || self.jumps_used < self.build.jumps {
@@ -490,7 +514,15 @@ impl Player {
             }
         } else {
             self.run(wish, top, flat);
-            self.vel.y = (self.vel.y - GRAVITY).max(-MAX_FALL);
+            let (g, fall) = if self.swimming {
+                (
+                    GRAVITY * SWIM_GRAVITY_PCT / 100,
+                    MAX_FALL * SWIM_GRAVITY_PCT / 100,
+                )
+            } else {
+                (GRAVITY, MAX_FALL)
+            };
+            self.vel.y = (self.vel.y - g).max(-fall);
         }
 
         let was_grounded = self.grounded;

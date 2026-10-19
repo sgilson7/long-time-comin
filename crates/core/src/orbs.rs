@@ -41,6 +41,8 @@ pub struct Orb {
     pub damage: i32,
     /// the Injunction's ward that breaks it (0: none does)
     pub ward: i32,
+    /// it slows what it hits (the Cockatrice's gaze)
+    pub slow: bool,
     /// ticks it still hangs still before it sets off; 0 once moving
     pub wait: i32,
     /// the hold it was given, for the drawn tell
@@ -82,6 +84,7 @@ impl Orb {
             owner: 0,
             damage,
             ward: 0,
+            slow: false,
             wait: 0,
             held: 0,
             launch: Launch::Keep,
@@ -163,6 +166,7 @@ pub fn fire(
             owner,
             damage: v.damage,
             ward: v.ward,
+            slow: v.slow,
             wait: 0,
             held: 0,
             launch: Launch::Keep,
@@ -447,6 +451,7 @@ fn formation(v: &Volley, origin: V3, target: V3, repeat: i32, owner: usize, rgb:
                 owner,
                 damage: v.damage,
                 ward: v.ward,
+                slow: v.slow,
                 wait,
                 held: wait,
                 launch: v.launch,

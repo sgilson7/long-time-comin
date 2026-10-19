@@ -344,7 +344,9 @@ impl Game {
         }
         let river = self.meta.on_river(&self.c);
         let branch = self.c.zones.get(zone).is_some_and(|z| !z.branch_from.is_empty());
-        let zone = if (zone as i32 <= self.meta.unlocked && !branch) || (branch && river) {
+        let zone = if (zone as i32 <= self.meta.unlocked && !branch)
+            || (branch && river && self.meta.branch_open(&self.c, zone))
+        {
             zone
         } else {
             0
@@ -473,13 +475,21 @@ impl Game {
             {
                 n += 1;
                 let at = (x_of(f) + step * n, TIMELINE_RIVER_Y);
-                let open = z.built && shut.is_none();
+                let open = m.branch_open(c, k);
                 nodes.push(json!({
                     "zone": k, "line": "river", "year": z.year, "name": z.name,
                     "boss": c.story.bosses.get(&z.boss).map(|b| b.name.clone()).unwrap_or_default(),
                     "x": at.0, "y": at.1,
                     "open": open, "beaten": m.beaten.contains(&z.boss), "sealed": !z.built,
-                    "why": if !z.built { c.say("sealed") } else { shut.as_ref().map(why).unwrap_or_default() },
+                    "why": if !z.built {
+                        c.say("sealed")
+                    } else if let Some(r) = shut.as_ref() {
+                        why(r)
+                    } else if !open {
+                        c.say("why_not_reached")
+                    } else {
+                        String::new()
+                    },
                 }));
                 edges.push(json!({ "x1": from.0, "y1": from.1, "x2": at.0, "y2": at.1, "line": "river" }));
                 from = at;
@@ -1352,7 +1362,17 @@ impl Game {
         let home = c.zones[run.zone].mission;
         let first = run.mission && run.zone == 0 && run.at == run.route.start();
         let course = w.course.is_some();
+        // on or by rotten timber: how it is broken
+        let rotten = w.course.as_ref().is_some_and(|k| {
+            k.rotten.iter().any(|&r| {
+                let d = &w.arena.level.dynamic[r];
+                let near = v3(p.pos.x - d.solid.centre().x, 0, p.pos.z - d.solid.centre().z).len_xz();
+                d.on && near < d.solid.size().x.max(d.solid.size().z) / 2 + int(4)
+                    && (p.pos.y - d.solid.max.y).abs() < int(6)
+            })
+        });
         let hint = match node.kind {
+            NodeKind::Arrival | NodeKind::Fight if rotten => c.say("hint_rotten"),
             NodeKind::Boss if learning => c.say("hint_song"),
             NodeKind::Boss if course && fresh(0) => c.say("hint_oak"),
             NodeKind::Arrival | NodeKind::Fight if course && fresh(0) => c.say("hint_course"),
@@ -3015,7 +3035,7 @@ pub(crate) mod tests {
     }
 
     #[test]
-    fn the_oaks_fall_ends_the_river_with_its_own_verdict_and_does_not_count_as_the_game_beaten() {
+    fn the_oaks_fall_leads_into_the_anomaly_and_the_eraser_ends_the_river_grey_and_not_as_the_game_beaten() {
         let mut g = game_with(RIVER_READY);
         g.begin();
         let gap = g.c.zones.iter().position(|z| z.id == "water_gap").unwrap();
@@ -3025,10 +3045,42 @@ pub(crate) mod tests {
         frames(&mut g, 120, 0);
         g.fell_boss();
         frames(&mut g, 400, 0);
+        assert_eq!(g.mode, Mode::Interlude, "the Oak's fall goes on");
+        let s: Value = serde_json::from_str(&g.screen_json()).unwrap();
+        assert_eq!(s["interlude"]["title"], "THE ANOMALY");
+        g.continue_run();
+        assert_eq!(g.c.zones[g.run.as_ref().unwrap().zone].id, "far_shore");
+        // Dagon's fall: down to the Vault
+        let boss = g.run.as_ref().unwrap().route.boss();
+        g.go(boss);
+        frames(&mut g, 120, 0);
+        g.fell_boss();
+        frames(&mut g, 400, 0);
+        let s: Value = serde_json::from_str(&g.screen_json()).unwrap();
+        assert_eq!(s["interlude"]["title"], "THE DESCENT");
+        g.continue_run();
+        assert_eq!(g.c.zones[g.run.as_ref().unwrap().zone].id, "vault");
+        // the Eraser fires: the grey ending
+        let boss = g.run.as_ref().unwrap().route.boss();
+        g.go(boss);
+        frames(&mut g, 120, 0);
+        let run = g.run.as_mut().unwrap();
+        let ch = run
+            .world
+            .course
+            .as_mut()
+            .unwrap()
+            .charge
+            .as_mut()
+            .expect("the Eraser's charge");
+        for h in ch.held.iter_mut() {
+            *h = ch.need;
+        }
+        run.world.player.iframes = 100_000;
+        frames(&mut g, 400, 0);
         assert_eq!(g.mode, Mode::Won);
         assert_eq!((g.meta.river_wins, g.meta.wins), (1, 0));
-        assert!(g.meta.beaten.iter().any(|b| b == "gallows_oak"));
         let s: Value = serde_json::from_str(&g.screen_json()).unwrap();
-        assert_eq!(s["verdict"]["title"], "THE OAK BURNS");
+        assert_eq!(s["verdict"]["title"], "THE GREY ENDING");
     }
 }

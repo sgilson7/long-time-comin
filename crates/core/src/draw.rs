@@ -19,6 +19,7 @@ mod fauna;
 mod god;
 mod house;
 mod river;
+mod sea;
 pub use god::{azathoth_at_heart, trumpet};
 pub use house::azathoth;
 
@@ -1082,25 +1083,149 @@ fn course(b: &mut Batch, c: &Content, w: &World) {
         }
         let root = c.pal.c("root");
         let glow = c.pal.c("root_glow");
+        let plank = c.pal.c("river_wood");
+        let hull = c.pal.c("hull");
+        let rail = c.pal.c("hull_dark");
+        let sail = c.pal.c("sail");
         for m in &k.movers {
             let Some((_, s)) = solid_of(m.dynamic) else {
                 continue;
             };
-            b.inked(Mesh::Cube, &boxed(s.centre(), s.size()), root, 0);
-            b.glow(
-                Mesh::Cube,
-                &boxed(
-                    v3(s.centre().x, s.max.y, s.centre().z),
-                    v3(s.size().x / 3, dm(1), s.size().z / 3),
-                ),
-                glow,
-                ONE / 3,
-            );
+            let (mid, size) = (s.centre(), s.size());
+            match m.look {
+                crate::course::Look::Root => {
+                    b.inked(Mesh::Cube, &boxed(mid, size), root, 0);
+                    b.glow(
+                        Mesh::Cube,
+                        &boxed(v3(mid.x, s.max.y, mid.z), v3(size.x / 3, dm(1), size.z / 3)),
+                        glow,
+                        ONE / 3,
+                    );
+                }
+                crate::course::Look::Deck => {
+                    // the deck, its rail, and the hull swelling under it
+                    b.inked(
+                        Mesh::Cube,
+                        &boxed(v3(mid.x, s.max.y - dm(2), mid.z), v3(size.x, dm(4), size.z)),
+                        plank,
+                        0,
+                    );
+                    let hull_h = size.y + int(3);
+                    b.inked(
+                        Mesh::Blob,
+                        &boxed(
+                            v3(mid.x, s.max.y - hull_h / 2, mid.z),
+                            v3(size.x + int(1), hull_h, size.z + int(2)),
+                        ),
+                        hull,
+                        0,
+                    );
+                    for dx in [-size.x / 2, size.x / 2] {
+                        b.inked(
+                            Mesh::Cube,
+                            &boxed(v3(mid.x + dx, s.max.y + dm(4), mid.z), v3(dm(2), dm(8), size.z)),
+                            rail,
+                            0,
+                        );
+                    }
+                }
+                crate::course::Look::Mast => {
+                    b.inked(Mesh::Cyl, &boxed(mid, v3(dm(5), size.y, dm(5))), rail, 0);
+                    // a yard and its furled sail two thirds up, a nest at the top
+                    let yard = v3(mid.x, s.min.y + size.y * 2 / 3, mid.z);
+                    b.inked(Mesh::Cube, &boxed(yard, v3(int(7), dm(3), dm(3))), rail, 0);
+                    b.inked(
+                        Mesh::Cube,
+                        &boxed(yard.add(v3(0, -int(1), 0)), v3(int(6), int(2), dm(2))),
+                        sail,
+                        0,
+                    );
+                    b.inked(
+                        Mesh::Cyl,
+                        &boxed(
+                            v3(mid.x, s.max.y - dm(5), mid.z),
+                            v3(int(1) + dm(4), dm(6), int(1) + dm(4)),
+                        ),
+                        plank,
+                        0,
+                    );
+                }
+                crate::course::Look::Wreck => {
+                    b.inked(Mesh::Cube, &boxed(mid, size), plank, 0);
+                    b.inked(
+                        Mesh::Cube,
+                        &boxed(
+                            v3(mid.x, s.min.y - dm(3), mid.z),
+                            v3(size.x * 3 / 4, dm(6), size.z * 3 / 4),
+                        ),
+                        hull,
+                        0,
+                    );
+                }
+            }
+        }
+        // the storm: lightning marked where it will strike, then the bolt
+        let bolt = c.pal.c("lightning");
+        if let Some(st) = k.storm {
+            for &(at, left) in &k.strikes {
+                let r = st.radius;
+                let ready = ONE - ONE * left / st.warn.max(1);
+                b.glow(
+                    Mesh::Ring,
+                    &boxed(at.add(v3(0, dm(1), 0)), v3(r * 2, dm(2), r * 2)),
+                    bolt,
+                    ready,
+                );
+                if left <= 3 {
+                    b.glow(
+                        Mesh::Cyl,
+                        &boxed(at.add(v3(0, int(30), 0)), v3(dm(5), int(60), dm(5))),
+                        bolt,
+                        ONE,
+                    );
+                }
+            }
+        }
+        // the rain, slanting the way the wind will blow
+        let rain = c.pal.c("river_foam");
+        let feet = w.player.pos;
+        for g in &k.gusts {
+            let inside = feet.x >= g.zone.min.x
+                && feet.x <= g.zone.max.x
+                && feet.z >= g.zone.min.z
+                && feet.z <= g.zone.max.z;
+            if !inside {
+                continue;
+            }
+            let until = g.until(w.tick);
+            let slant = if until == 0 {
+                ONE
+            } else if until < WARN {
+                ONE / 2
+            } else {
+                ONE / 8
+            };
+            for k2 in 0..40 {
+                let seed = (k2 * 7919 + w.tick * 13) & 1023;
+                let at = feet.add(v3(
+                    int((seed % 31) - 15),
+                    int(((seed / 31) % 12) + 1),
+                    int((k2 % 13) - 6),
+                ));
+                let tail = at.add(g.dir.scale(fx::mul(int(2), slant))).add(v3(0, -int(2), 0));
+                rod(b, at, tail, dm(1) / 2, rain, ONE / 4, false);
+            }
         }
         let rotten = c.pal.c("rotten");
+        let mark = c.pal.c("brass");
         for &r in &k.rotten {
             let Some((true, s)) = solid_of(r) else { continue };
             b.inked(Mesh::Cube, &boxed(s.centre(), s.size()), rotten, 0);
+            // a ring on it that pulses: pound here
+            let pulse = ONE / 2 + fx::sin(w.tick * fx::TURN / 50) / 2;
+            let r = fx::mul(s.size().x.min(s.size().z) / 3, ONE * 3 / 4 + pulse / 4);
+            let top = v3(s.centre().x, s.max.y + dm(1), s.centre().z);
+            b.glow(Mesh::Ring, &boxed(top, v3(r * 2, dm(2), r * 2)), mark, pulse);
         }
     }
     let plank = c.pal.c("bench");
@@ -1247,7 +1372,7 @@ pub fn enemy(b: &mut Batch, c: &Content, e: &Enemy, alpha: i32, target: V3) {
     } else {
         core
     };
-    if river::draw(b, c, e, d, at, s, &paint) {
+    if river::draw(b, c, e, d, at, s, &paint) || sea::draw(b, c, e, d, at, s, &paint) {
         return;
     }
     if matches!(d.kind, Kind::Agent | Kind::Tank | Kind::Mech | Kind::Double) {

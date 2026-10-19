@@ -26,6 +26,8 @@ mod home;
 mod house;
 mod ice;
 mod river;
+mod sea;
+mod vault;
 
 /// Half the width of an arena's floor.
 pub const HALF: i32 = int(28);
@@ -1861,6 +1863,10 @@ pub fn build_at(zone: &str, kind: &str, seed: u64, exits: &[Side], pal: &Palette
         b.home(kind, exits);
     } else if zone == "water_gap" {
         b.river(kind, exits);
+    } else if zone == "far_shore" {
+        b.sea(kind);
+    } else if zone == "vault" {
+        b.vault(kind);
     } else if is_court {
         b.court();
         b.shape(
@@ -1936,8 +1942,8 @@ pub fn build_at(zone: &str, kind: &str, seed: u64, exits: &[Side], pal: &Palette
             shapes: b.shapes,
             start,
             start_yaw: b.start_yaw,
-            ground_spawns: Vec::new(),
-            air_spawns: Vec::new(),
+            ground_spawns: k.spawns.clone(),
+            air_spawns: k.spawns.iter().map(|p| p.add(v3(0, m(5), 0))).collect(),
             gates: vec![(behind, b.start_yaw), (k.finish, k.finish_yaw)],
             centre: start.add(v3(0, m(4), 0)),
             fountain: None,

@@ -98,6 +98,28 @@
     "summons": {
       "name": "THE SUMMONS",
       "title": "A summons compels you to appear. This one comes up out of the lake."
+    },
+    "dagon": {
+      "name": "DAGON",
+      "title": "What the drowned pray to, at the bottom of the anomaly.",
+      "bars": [
+        "THE TIDE",
+        "THE UNDERTOW",
+        "THE DROWNED GOD"
+      ]
+    },
+    "enslaved_dragon": {
+      "name": "THE ENSLAVED DRAGON",
+      "title": "Chained to the flagship's mast. Break the three locks and it fights free."
+    },
+    "the_other": {
+      "name": "YOUR OLDER SELF",
+      "title": "They came through the anomaly to stop the Eraser. Hold its pylons until it fires.",
+      "bars": [
+        "THE ERASER CHARGES",
+        "THE ERASER CHARGES",
+        "THE ERASER CHARGES"
+      ]
     }
   },
   "death_titles": {
@@ -107,7 +129,9 @@
     "the_ascent": "RETURNED FROM MOUNT MERIDIAN",
     "idiot_god": "RETURNED FROM OUTSIDE",
     "home": "CHUMBLES HAS WON THIS ROUND",
-    "water_gap": "RETURNED FROM CALDER HILL"
+    "water_gap": "RETURNED FROM CALDER HILL",
+    "far_shore": "RETURNED FROM CALDER HILL",
+    "vault": "RETURNED FROM CALDER HILL"
   },
   "interludes": {
     "waiting_city": {
@@ -251,6 +275,50 @@
         "This build ends here. The far shore is sealed for now."
       ],
       "verdict_art": "oak_burns"
+    },
+    "far_shore": {
+      "timeline": "The River",
+      "main_timeline": "The Peak",
+      "interlude": {
+        "title": "THE ANOMALY",
+        "art": "anomaly",
+        "go": "Go under",
+        "lines": [
+          "The Oak burns to the waterline. Where its roots went into the lake bed, something is still lit.",
+          "It is not fire. It is a door, and it has been open for a long time. The Oak grew over it to keep it shut.",
+          "You swim down to it. On the other side there is no lake: an ocean under a strange sky, and ships.",
+          "The ships fly every flag of every century. Their crews were taken the way the clocks were taken: one evening, and never let go.",
+          "They have seen you. They are making ready."
+        ]
+      },
+      "victory_title": "",
+      "victory": [],
+      "verdict_art": "anomaly"
+    },
+    "vault": {
+      "timeline": "The River",
+      "main_timeline": "The Peak",
+      "interlude": {
+        "title": "THE DESCENT",
+        "art": "descent",
+        "go": "Go down",
+        "lines": [
+          "Dagon sinks back into its eye, and the whirlpool drains, and you go down with it.",
+          "You come to rest on the bottom of Lake Stillwater. The anomaly was never the door. It was the doorstep.",
+          "Under the lake bed there is a building that was here before the lake. White halls, black glass, light with nothing to cast it.",
+          "At the bottom of it, a machine that takes a thing out of the world so cleanly that the world never notices the hole.",
+          "Your older self is the hole that would be left. So are you."
+        ]
+      },
+      "victory_title": "THE GREY ENDING",
+      "victory": [
+        "The Eraser fires. Your older self is not killed. They were never born to this. The Long Door is never built.",
+        "March 14, 2081 is an ordinary evening in Meridian. At 21:14 the clocks show 21:15, and then 21:16.",
+        "Nobody is sentenced. Nobody is sent back. The court never sits.",
+        "You were only ever here because of them. You feel it begin at your hands: grey, then nothing, without pain.",
+        "Everything happens as it should. Neither of you was supposed to be here."
+      ],
+      "verdict_art": "grey_ending"
     }
   }
 }
