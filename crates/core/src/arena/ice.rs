@@ -130,23 +130,36 @@ impl B<'_> {
         self.shape(Mesh::Cone, down, c, ONE / 6, true);
     }
 
-    /// A cliff of ice with a rock foot, a snow cap and shards on top.
-    fn cliff(&mut self, x: i32, z: i32, w: i32, d: i32, h: i32, inward: V3) {
+    /// A cliff of ice with a rock foot, a snow cap and shards on top;
+    /// `k`th along its row.
+    #[allow(clippy::too_many_arguments)]
+    fn cliff(&mut self, x: i32, z: i32, w: i32, d: i32, h: i32, inward: V3, k: i32) {
         let ice = self.pick(&[self.c("ice_blue"), self.c("ice_deep"), self.c("ice_white")]);
         let rock = self.pick(&[self.c("ice_rock"), self.c("ice_rock_dark")]);
         let snow = self.c("ice_snow");
         self.block(x, 0, z, w, h, d, ice);
-        let foot = self.metres(2, 5);
+        // under the cap, never level with it
+        let foot = self.metres(2, 5).min(h - dm(5));
+        // the feet of neighbours overlap: every other one stands out two
+        // centimetres further and higher, so no two fronts or tops lie in
+        // one plane (that flickers); and its foot goes a little under the
+        // cliff's, which may hang over a chasm
+        let jog = dm(1) / 5 * (k % 2) * 2;
+        let sunk = dm(1) / 5;
         self.deco(
             Mesh::Cube,
-            v3(x, foot / 2, z),
-            v3(w + dm(3), foot, d + dm(3)),
+            v3(x, (foot + jog - sunk) / 2, z),
+            v3(w + dm(3) + jog, foot + jog + sunk, d + dm(3) + jog),
             rock,
         );
+        // a quarter metre over the sides all round: the sides stand on a
+        // tenth-metre grid, and a cap's side level with a neighbour's
+        // face flickers
+        // and its top off the grid too (a wall's top may lie there)
         self.deco(
             Mesh::Cube,
-            v3(x, h + dm(3), z),
-            v3(w + dm(6), dm(6), d + dm(6)),
+            v3(x, h + dm(3) - ONE / 40, z),
+            v3(w + dm(5), dm(6), d + dm(5)),
             snow,
         );
         // great broken chunks along the top, so the line of cliffs is
@@ -173,10 +186,11 @@ impl B<'_> {
             self.shape(Mesh::Octa, tilt, c, 0, true);
         }
         // the inner face: a streak of glowing ice and icicles under the cap
+        // clear of the foot's front (as much as 17 cm out)
         let face = v3(x, 0, z).add(v3(
-            fx::mul(inward.x, w / 2 + dm(1)),
+            fx::mul(inward.x, w / 2 + dm(1) + dm(1) * 3 / 10),
             0,
-            fx::mul(inward.z, d / 2 + dm(1)),
+            fx::mul(inward.z, d / 2 + dm(1) + dm(1) * 3 / 10),
         ));
         let along_x = inward.x == 0;
         let glow = self.c("ice_glow");
@@ -184,14 +198,17 @@ impl B<'_> {
             let off = dm(self.rng.range(-20, 20));
             let p = face.add(if along_x { v3(off, 0, 0) } else { v3(0, 0, off) });
             let len = h * 2 / 3;
+            // its ends and foot off the tenth-metre grid the cliff's sides
+            // and the feet stand on, never level with them (that flickers)
+            let wide = dm(6) - dm(1) / 5;
             let size = if along_x {
-                v3(dm(6), len, dm(1))
+                v3(wide, len, dm(1))
             } else {
-                v3(dm(1), len, dm(6))
+                v3(dm(1), len, wide)
             };
             self.shape(
                 Mesh::Cube,
-                boxed(p.add(v3(0, h - len / 2 - dm(5), 0)), size),
+                boxed(p.add(v3(0, h - len / 2 - dm(5) + dm(1) * 15 / 100, 0)), size),
                 glow,
                 ONE / 3,
                 false,
@@ -235,7 +252,10 @@ impl B<'_> {
             let deep = self.c("ice_deep");
             let rock = self.c("ice_rock_dark");
             for z in [z0, z1] {
-                for (top, h, c) in [(0, m(8), deep), (-m(8), m(16), rock)] {
+                // the upper band's top a little under the floor's: a bridge
+                // lies over the lip (one plane flickers)
+                let lip = dm(1) / 5;
+                for (top, h, c) in [(-lip, m(8) - lip, deep), (-m(8), m(16), rock)] {
                     self.shape(
                         Mesh::Cube,
                         boxed(v3(0, top - h / 2, z), v3(o * 2, h, dm(4))),
@@ -248,7 +268,10 @@ impl B<'_> {
             let mist = self.c("ice_glow");
             self.shape(
                 Mesh::Cube,
-                boxed(v3(0, -m(18), (z0 + z1) / 2), v3(o * 2, dm(2), z1 - z0)),
+                boxed(
+                    v3(0, -m(18), (z0 + z1) / 2),
+                    v3(o * 2 - dm(1) / 5, dm(2), z1 - z0),
+                ),
                 mist,
                 ONE / 3,
                 false,
@@ -341,7 +364,9 @@ impl B<'_> {
         let sides = [Side::South, Side::North, Side::East, Side::West];
         for (si, side) in sides.iter().enumerate() {
             let mut along = -half - m(6);
+            let mut k = 0;
             while along < half + m(6) {
+                k += 1;
                 let w = self.metres(7, 14);
                 let mid = along + w / 2;
                 along += w;
@@ -361,7 +386,7 @@ impl B<'_> {
                     Side::East => (out, mid, depth, w, v3(-ONE, 0, 0)),
                     Side::West => (-out, mid, depth, w, v3(ONE, 0, 0)),
                 };
-                self.cliff(x, z, bw, bd, h, inward);
+                self.cliff(x, z, bw, bd, h, inward, k);
             }
             let (pos, _) = side.place(half);
             if gaps[si] {
@@ -456,7 +481,7 @@ impl B<'_> {
         };
         let inward = v3(-out.x.signum() * ONE, 0, -out.z.signum() * ONE);
         let h = self.metres(9, 15);
-        self.cliff(at.x, at.z, bw, bd, h, inward);
+        self.cliff(at.x, at.z, bw, bd, h, inward, 0);
         for k in -2..=2 {
             let off = if across_x {
                 v3(m(2) * k, 0, 0)
@@ -717,7 +742,8 @@ impl B<'_> {
             // its underside hangs down into the chasm
             let belly = Affine::translate(v3((x0 + x1) / 2, -m(2), (z0 + z1) / 2))
                 .then(&Affine::rot_x(fx::HALF))
-                .then(&Affine::scale(v3(x1 - x0, m(3), z1 - z0)));
+                // a little in from the deck's sides (one plane flickers)
+                .then(&Affine::scale(v3(x1 - x0 - dm(1) / 5, m(3), z1 - z0 - dm(1) / 5)));
             self.shape(Mesh::Wedge, belly, shade(ice, 85), 0, true);
             for s in [x0, x1] {
                 for k in 0..3 {
@@ -763,10 +789,13 @@ impl B<'_> {
             (-m(20), m(10), m(12), m(12), m(2)),
         ] {
             self.block(x, 0, z, w, top, d, ice);
+            // its snow a little under the 0.4 m steps that climb onto it,
+            // not level with the first (one plane flickers)
+            let cap = dm(4) - ONE / 40;
             self.deco(
                 Mesh::Cube,
-                v3(x, top + dm(2), z),
-                v3(w + dm(4), dm(4), d + dm(4)),
+                v3(x, top + cap / 2, z),
+                v3(w + dm(4), cap, d + dm(4)),
                 snow,
             );
             // banded faces: older ice lower down
@@ -815,7 +844,8 @@ impl B<'_> {
         let glow = self.c("ice_glow");
         self.shape(
             Mesh::Cube,
-            boxed(v3(-m(10) - dm(1), h / 2, -m(14)), v3(dm(2), h, m(3))),
+            // proud of the face it runs down, not level with it
+            boxed(v3(-m(10) + ONE / 50, h / 2, -m(14)), v3(dm(2), h, m(3))),
             glow,
             ONE / 3,
             false,
@@ -1247,7 +1277,8 @@ impl B<'_> {
         let water = self.c("ice_water");
         self.shape(
             Mesh::Cube,
-            boxed(v3(0, -dm(3), sz), v3(m(200), dm(2), m(30))),
+            // its top over the ground beyond (at −0.2 m), not level with it
+            boxed(v3(0, -dm(2), sz), v3(m(200), dm(2), m(30))),
             water,
             ONE / 6,
             false,

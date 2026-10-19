@@ -90,10 +90,12 @@ impl B<'_> {
                 wood,
             );
             for x in [-m(11), m(11)] {
+                // a little thicker than the frame's beam, so its sides lie
+                // off the tenth-metre grid the canyon's strata stand on
                 self.deco(
                     crate::mesh::Mesh::Cube,
                     v3(x, m(7), z),
-                    v3(dm(8), m(14), dm(8)),
+                    v3(dm(9), m(14), dm(9)),
                     wood,
                 );
             }

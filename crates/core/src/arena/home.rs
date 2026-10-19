@@ -257,7 +257,9 @@ impl B<'_> {
                     continue;
                 }
                 if k % 2 == 1 {
-                    self.h_flat([a, 0, r[1]], [b, 1, r[3]], alt);
+                    // a centimetre in from the lane's ends and sides: a
+                    // board's side in a wall's face flickers
+                    self.h_flat([a + 1, 0, r[1] + 1], [b - 1, 1, r[3] - 1], alt);
                 }
                 let mut z = r[1] + self.rng.range(joint / 4, joint);
                 while z < r[3] - 30 {
@@ -652,10 +654,12 @@ impl B<'_> {
         let lamp = self.c("lamp");
 
         // the door: its frame, and the door swung open into the room
+        // a centimetre clear of the opening's sides and top: in their
+        // planes, they flickered
         for s in [-1, 1] {
             self.h_on(
                 north,
-                s * (DOOR_W + 9),
+                s * (DOOR_W + 10),
                 (DOOR_H + 14) / 2,
                 18,
                 DOOR_H + 14,
@@ -665,7 +669,7 @@ impl B<'_> {
                 0,
             );
         }
-        self.h_on(north, 0, DOOR_H + 7, DOOR_W * 2 + 36, 14, 6, 8, trim, 0);
+        self.h_on(north, 0, DOOR_H + 6, DOOR_W * 2 + 38, 14, 6, 8, trim, 0);
         let leaf = DOOR_W * 2 - 10;
         self.h_block([DOOR_W, 0, -FACE], [DOOR_W + 10, DOOR_H - 4, -FACE + leaf], trim);
         for x in [DOOR_W - 2, DOOR_W + 12] {
@@ -808,7 +812,8 @@ impl B<'_> {
         // the window over the desk, the sun coming in
         self.h_window(east, -420, 340, 480, 300, 2, 2, Some(rug2));
         self.h_beam([880, 340, -420], [350, 0, -380], v3(0, 0, ONE), 460, 30);
-        self.h_lit([300, 0, -620], [620, 2, -200], self.c("home_window"), ONE / 4);
+        // the sun's patch over the boards' seams (2 cm), not level with them
+        self.h_lit([300, 0, -620], [620, 4, -200], self.c("home_window"), ONE / 4);
         // and a window north, by the door, a radiator under it
         self.h_window(north, -560, 360, 320, 280, 2, 2, Some(self.c("home_bed")));
         self.h_on(north, -560, 90, 300, 110, 14, 10, trim, 0);
@@ -848,7 +853,9 @@ impl B<'_> {
         for z in [sz0, sz1 - 6] {
             self.h_box([sx0, 0, z], [hx, 360, z + 6], dark);
         }
-        self.h_box([hx - 4, 0, sz0], [hx, 360, sz1], shade(dark, 120));
+        // the back a centimetre inside the case all round: its edges in
+        // the sides' and top's faces flickered
+        self.h_box([hx - 4, 1, sz0 + 1], [hx, 359, sz1 - 1], shade(dark, 120));
         let front = Wall {
             x_axis: true,
             at: sx0,
@@ -977,7 +984,8 @@ impl B<'_> {
             (-520, 200, "heart"),
             (-400, 240, "home_rug_2"),
         ] {
-            self.h_box([846, dy, dz], [847, dy + 10, dz + 10], self.c(c));
+            // a centimetre in front of the screen's picture, not in it
+            self.h_box([845, dy, dz], [846, dy + 10, dz + 10], self.c(c));
         }
         // a beanbag, a t-shirt on the floor, a box under the bed
         self.h_at(
@@ -1018,7 +1026,9 @@ impl B<'_> {
             -700,
             460,
             -700,
-            Some([-well, -FACE - 100, well, lip]),
+            // the floor's edge two centimetres back from the north wall's
+            // end and the well's walls (one plane flickers)
+            Some([-well - 2, -FACE - 100, well + 2, lip]),
         );
         let north = Wall {
             x_axis: false,
@@ -1063,13 +1073,19 @@ impl B<'_> {
         self.h_block([-300, -800, foot - 300], [300, low, foot], self.c("home_floor"));
         // the stairwell's walls, its ceiling, and the light from downstairs
         for s in [-1, 1] {
-            let (x0, x1) = if s < 0 { (-300, -well) } else { (well, 300) };
-            self.h_block([x0, -800, foot - 400], [x1, UP_H, -FACE], wall);
+            // a centimetre back from the opening in the floor and the north
+            // wall: their ends lay in this wall's face and flickered
+            let (x0, x1) = if s < 0 { (-300, -well - 1) } else { (well + 1, 300) };
+            self.h_block([x0, -800, foot - 400], [x1, UP_H, -FACE - 1], wall);
             let x = s * (well - 6);
             self.h_rod([x, 90, lip], [x, low + 90, foot], 5, wood);
         }
         self.h_block([-300, -800, foot - 400], [300, UP_H, foot - 300], wall);
-        self.h_flat([-300, 460, foot - 400], [300, UP_H, -FACE], shade(trim, 97));
+        self.h_flat(
+            [-300, 461, foot - 400],
+            [300, UP_H - 1, -FACE - 1],
+            shade(trim, 97),
+        );
         let far = Wall {
             x_axis: false,
             at: foot - 300,
@@ -1152,7 +1168,7 @@ impl B<'_> {
         // the window at the south end, the sun on the floor, a radiator
         self.h_window(south, 220, 360, 280, 320, 2, 2, Some(self.c("home_sofa")));
         self.h_on(south, 220, 90, 260, 100, 14, 10, trim, 0);
-        self.h_lit([60, 0, 560], [380, 2, 900], self.c("home_window"), ONE / 4);
+        self.h_lit([60, 0, 560], [380, 4, 900], self.c("home_window"), ONE / 4);
         self.h_beam([220, 360, FACE - 10], [220, 0, 600], v3(ONE, 0, 0), 260, 30);
         self.h_plant(-600, 0, 900, 140);
         self.h_plant(600, 0, -900, 120);
@@ -1229,7 +1245,8 @@ impl B<'_> {
         self.h_boards(-w - 200, -w - 200, w + 200, w + 200, 120, 800, None);
         let tile = self.c("home_counter");
         let kz = -2400;
-        self.h_flat([-w, 0, -w], [w, 2, kz], shade(tile, 92));
+        // over the boards' seams (2 cm), not level with them
+        self.h_flat([-w, 0, -w], [w, 6, kz], shade(tile, 92));
         let mut i = 0;
         let mut x = -w;
         while x < w {
@@ -1237,7 +1254,7 @@ impl B<'_> {
             let mut z = -w;
             while z < kz {
                 if (i + j) % 2 == 0 {
-                    self.h_flat([x + 4, 2, z + 4], [x + 196, 3, z + 196], self.c("home_sheet"));
+                    self.h_flat([x + 4, 6, z + 4], [x + 196, 7, z + 196], self.c("home_sheet"));
                 }
                 z += 200;
                 j += 1;
@@ -1297,7 +1314,9 @@ impl B<'_> {
         ];
         for wl in walls {
             self.h_on(wl, 0, 18, w * 2, 36, 5, 5, trim, 0);
-            self.h_on(wl, 0, top - 15, w * 2, 30, 14, 14, trim, 0);
+            // a centimetre under the ceiling: the stair's top tread lies
+            // level with it there
+            self.h_on(wl, 0, top - 16, w * 2, 30, 14, 14, trim, 0);
         }
         let [north, south, west, east] = walls;
         // a big round rug over the middle, worn thin by the cat
@@ -1507,7 +1526,7 @@ impl B<'_> {
         self.h_at(Mesh::Cyl, [-2220, 8, -3130], [60, 16, 60], self.c("home_bed"));
         self.h_glow_at(
             Mesh::Cyl,
-            [-2220, 15, -3130],
+            [-2220, 16, -3130],
             [44, 2, 44],
             self.c("water"),
             ONE / 3,
@@ -1850,7 +1869,7 @@ impl B<'_> {
         for x in [bx0, bx1 - 8] {
             self.h_box([x, 0, bz0], [x + 8, 320, bz1], dark);
         }
-        self.h_box([bx0, 0, bz0 + 56], [bx1, 320, bz0 + 64], shade(dark, 120));
+        self.h_box([bx0 + 1, 1, bz0 + 56], [bx1 - 1, 319, bz0 + 64], shade(dark, 120));
         for k in 0..5 {
             let y = k * 79;
             self.h_box([bx0, y, bz0], [bx1, y + 8, bz1], dark);
@@ -1974,8 +1993,13 @@ impl B<'_> {
         // the landing at the top, past the ceiling, and its walls
         self.h_block([-w, 0, z0], [top_x, top_y, z1], wall);
         self.h_flat([-w, top_y, z0], [top_x, top_y + 2, z1], self.c("home_floor"));
-        self.h_block([-w, top_y, 2800], [-2500, top_y + 600, 3200], wall);
-        self.h_block([-2500, top_y, 2800], [-2400, top_y + 600, z1], wall);
+        // drawn from a centimetre over the ceiling's underside (their
+        // bottoms in its plane flickered)
+        self.h_solid([-w, top_y, 2800], [-2500, top_y + 600, 3200]);
+        // and a centimetre back from the ceiling's edge at the stairs
+        self.h_box([-w, top_y + 1, 2800], [-2500, top_y + 600, 3199], wall);
+        self.h_solid([-2500, top_y, 2800], [-2400, top_y + 600, z1]);
+        self.h_box([-2500, top_y + 1, 2800], [-2400, top_y + 600, z1], wall);
         self.h_solid([-w, top_y + 600, 2800], [-2400, top_y + 700, z1]);
         self.h_flat([-w, top_y + 600, 2800], [-2400, top_y + 700, z1], shade(trim, 90));
         // photos climbing the wall beside the stairs
@@ -2186,7 +2210,8 @@ impl B<'_> {
         self.h_books(shelf, px0, px0 + 300, 532, 70, 50, 150);
         self.h_plant(px1, 532, w - 30, 60);
         // the reading corner: a tall bookcase, a beanbag, a lamp
-        let (bz0, bz1) = (2650, 3150);
+        // clear of the window's frame at 2650 (its side lay in the case's)
+        let (bz0, bz1) = (2652, 3150);
         self.h_block([-w, 0, bz0], [-w + 150, 420, bz1], dark);
         let face = Wall {
             x_axis: true,

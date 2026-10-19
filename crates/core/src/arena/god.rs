@@ -333,7 +333,15 @@ impl B<'_> {
         let arc = fx::mul(mid, TWO_PI) / segments.max(1);
         for k in 0..segments {
             let a = fx::TURN / segments * k;
-            let at = v3(fx::mul(fx::sin(a), mid), top - SLAB / 2, fx::mul(fx::cos(a), mid));
+            // the segments overlap their neighbours, and slabs and treads
+            // lie over the ring: each segment sunk a little, the odd ones
+            // further, so no two tops lie in one plane (that flickers)
+            let sunk = dm(1) / 5 * (1 + k % 2);
+            let at = v3(
+                fx::mul(fx::sin(a), mid),
+                top - sunk - SLAB / 2,
+                fx::mul(fx::cos(a), mid),
+            );
             let seg = Affine::translate(at)
                 .then(&Affine::rot_y(a))
                 .then(&Affine::scale(v3(arc + dm(4), SLAB, r1 - r0)));

@@ -16,6 +16,8 @@ pub mod content;
 pub mod course;
 pub mod draw;
 pub mod enemy;
+#[cfg(test)]
+mod flicker;
 pub mod fx;
 pub mod game;
 pub mod geom;

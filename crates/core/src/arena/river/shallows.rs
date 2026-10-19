@@ -160,7 +160,8 @@ impl B<'_> {
         self.solids.push(Solid::new(v3(x0, BED, z0), v3(x1, top, z1)));
         let root = self.c("root");
         let moss = self.c("moss");
-        let h = top - BED;
+        // the body stops inside the moss: two tops in one plane flicker
+        let h = top - dm(1) - BED;
         self.deco(
             Mesh::Cube,
             v3((x0 + x1) / 2, BED + h / 2, (z0 + z1) / 2),

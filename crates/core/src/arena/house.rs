@@ -133,7 +133,12 @@ impl B<'_> {
             ] {
                 self.shape(
                     Mesh::Cube,
-                    boxed(v3(cx, -LAB_DEPTH / 2, cz), v3(w, LAB_DEPTH, d)),
+                    // their tops a little under the floor's, which lies over
+                    // them at the edge (one plane flickers)
+                    boxed(
+                        v3(cx, -LAB_DEPTH / 2 - dm(1) / 10, cz),
+                        v3(w, LAB_DEPTH - dm(1) / 5, d),
+                    ),
                     shade(dark, 120),
                     0,
                     true,
@@ -193,8 +198,10 @@ impl B<'_> {
                 if !lay {
                     continue;
                 }
+                // a runner's tiles a centimetre in all round: a side in a
+                // plinth's face flickers
                 let size = if pattern == 2 {
-                    v3(tile, dm(1) / 5, tile)
+                    v3(tile - dm(1) / 5, dm(1) / 5, tile - dm(1) / 5)
                 } else {
                     v3(tile - dm(1) / 2, dm(1) / 5, tile - dm(1) / 2)
                 };
@@ -254,14 +261,21 @@ impl B<'_> {
                 let sz = size(len, CEILING, m(1));
                 self.solids.push(Solid::stand(c.x, 0, c.z, sz.x, sz.y, sz.z));
                 self.deco(Mesh::Cube, c.add(v3(0, CEILING / 2, 0)), sz, paper);
-                // the wainscot and its rail
+                // the wainscot and its rail, their ends a little inside the
+                // walls they run into (an end in a wall's face flickers)
+                let inside = len - dm(1) / 5;
                 self.deco(
                     Mesh::Cube,
                     at(mid, dm(7), -dm(1)),
-                    size(len, dm(14), dm(2)),
+                    size(inside, dm(14), dm(2)),
                     panel,
                 );
-                self.deco(Mesh::Cube, at(mid, dm(14), -dm(2)), size(len, dm(1), dm(2)), trim);
+                self.deco(
+                    Mesh::Cube,
+                    at(mid, dm(14), -dm(2)),
+                    size(inside, dm(1), dm(2)),
+                    trim,
+                );
             }
             // over the doorway, the wall goes on above the door
             if gap {
@@ -298,15 +312,21 @@ impl B<'_> {
                         // a tall window: moonlight in a frame, mullions
                         self.glow(Mesh::Cube, at(mid, m(8), -dm(1)), size(m(3), m(7), dm(1)), moon);
                         self.deco(Mesh::Cube, at(mid, m(8), -dm(2)), size(dm(2), m(7), dm(2)), trim);
-                        self.deco(Mesh::Cube, at(mid, m(8), -dm(2)), size(m(3), dm(2), dm(2)), trim);
+                        // the transom short of the window's sides
+                        self.deco(
+                            Mesh::Cube,
+                            at(mid, m(8), -dm(2)),
+                            size(m(3) - dm(1) / 5, dm(2), dm(2)),
+                            trim,
+                        );
                         self.deco(
                             Mesh::Cube,
                             at(mid, m(4) + dm(4), -dm(4)),
                             size(m(3) + dm(6), dm(3), dm(6)),
                             trim,
                         );
-                        // its arch
-                        let arch = Affine::translate(at(mid, m(11) + dm(5), -dm(1)))
+                        // its arch, a little behind the window's face
+                        let arch = Affine::translate(at(mid, m(11) + dm(5), -dm(1) + dm(1) / 5))
                             .then(&Affine::rot_x(if along.x != 0 { fx::QUARTER } else { 0 }))
                             .then(&Affine::rot_z(if along.x != 0 { 0 } else { fx::QUARTER }))
                             .then(&Affine::scale(v3(m(3), dm(1), m(3))));
@@ -410,10 +430,12 @@ impl B<'_> {
                 brass,
             );
         }
+        // the lintel a little below the wall over the door, not level
+        // with its underside
         self.deco(
             Mesh::Cube,
-            at.add(v3(0, m(7) + dm(3), 0)).add(n.scale(dm(2))),
-            sz(w * 2 + dm(8), dm(6), dm(6)),
+            at.add(v3(0, m(7) + dm(3) - dm(1) / 10, 0)).add(n.scale(dm(2))),
+            sz(w * 2 + dm(8), dm(6) + dm(1) / 5, dm(6)),
             trim,
         );
         let ped = Affine::translate(at.add(v3(0, m(8), 0)).add(n.scale(dm(2))))
@@ -634,7 +656,12 @@ impl B<'_> {
         for s in [-1, 1] {
             self.shape(
                 Mesh::Cube,
-                f.then(&boxed(v3(s * dm(5), dm(5), 0), v3(dm(2), dm(4), dm(8)))),
+                // a centimetre proud of the seat front and back (their
+                // ends in its faces flickered)
+                f.then(&boxed(
+                    v3(s * dm(5), dm(5), 0),
+                    v3(dm(2), dm(4), dm(8) + dm(1) / 5),
+                )),
                 wood,
                 0,
                 true,
@@ -1309,7 +1336,13 @@ impl B<'_> {
             );
         }
         for row in 0..=rows {
-            self.deco(Mesh::Cube, v3(0, ph * row, z), v3(face * 2, dm(2), dm(3)), iron);
+            // short of the floor's ends, so no end lies in their faces
+            self.deco(
+                Mesh::Cube,
+                v3(0, ph * row, z),
+                v3(face * 2 - dm(1) / 5, dm(2), dm(3)),
+                iron,
+            );
         }
         let _ = glass;
         // the bound: nobody leaves, the Executor comes in from the north

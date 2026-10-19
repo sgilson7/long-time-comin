@@ -47,7 +47,12 @@ impl B<'_> {
             self.glow(
                 crate::mesh::Mesh::Cube,
                 v3(x.signum() * w, m(3), (near + far) / 2),
-                v3(crate::arena::dm(2), crate::arena::dm(2), near - far),
+                // short of the glass's ends, so no end lies in theirs
+                v3(
+                    crate::arena::dm(2),
+                    crate::arena::dm(2),
+                    near - far - crate::arena::dm(1),
+                ),
                 cyan,
             );
         }
