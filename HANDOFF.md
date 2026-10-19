@@ -212,3 +212,5 @@ Live (2026-10-19): PR #19 passed its check on CI (run 39307336381) and merged as
 The Vault's last boss is THE ARCHIVIST, a jet-packed alien that grows each bar; when it falls the Eraser opens and takes you, and THE GREY ENDING is read (SECOND-ORDER R21, K1 to K4; built by an agent). The flicker analysis follows as its own change.
 
 Checked locally: fmt, clippy with warnings as errors, 340 core and 11 boundary tests, the release wasm build and the import audit passed; the browser check timed out on a click while the flicker analysis held the processor (load average about 41), as it has before under load. The Archivist's agent ran the whole `./scripts/check.sh`, browser check in three engines included, and it passed; CI's check is the gate.
+
+Live (2026-10-19): PR #20 passed its check on CI (run 39312525003, the browser check included) and merged as 70a55cd; main's run 39313401725 passed check and deploy, and the live `data/enemies.json` holds the Archivist.
