@@ -496,7 +496,8 @@ impl World {
             .map_or(max, |h| h.t + skip);
         let mut who = None;
         for (i, e) in self.enemies.iter().enumerate() {
-            if !e.alive() || e.buried || e.held {
+            // the Oak's eye, never hurt, neither stops the aim nor holds a hook
+            if !e.alive() || e.buried || e.held || e.shielded {
                 continue;
             }
             for (at, r) in body_spheres(c, e) {

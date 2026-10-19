@@ -100,6 +100,7 @@ pub fn world(
             b.glow(Mesh::Cube, &boxed(p.centre, p.size), glass, ONE / 3);
         }
     }
+    course(b, c, w);
     orbs(b, c, w, alpha, cam);
     if w.ending > 0 && !w.mission {
         house::azathoth(b, c, clock, w.melt());
@@ -1029,6 +1030,99 @@ fn sealed(b: &mut Batch, c: &Content, at: V3, spin: i32, scale: i32) {
         .then(&Affine::rot_x(fx::QUARTER))
         .then(&Affine::scale(v3(dm(2), cm(4), dm(2))));
     b.inked(Mesh::Cyl, &wax, c.pal.c("pickup_sealed"), ONE / 2);
+}
+
+/// What changes in a course (the Water Gap), and your Benches anywhere:
+/// each gate shut or open with its countdown, each root where its breath
+/// has it, each rotten floor until it breaks, each Bench laid.
+fn course(b: &mut Batch, c: &Content, w: &World) {
+    let dynamic = &w.arena.level.dynamic;
+    let solid_of = |i: usize| dynamic.get(i).map(|d| (d.on, d.solid));
+    if let Some(k) = &w.course {
+        let door = c.pal.c("door");
+        let open = c.pal.c("door_open");
+        for d in &k.doors {
+            let Some((on, s)) = solid_of(d.dynamic) else {
+                continue;
+            };
+            let mid = s.centre();
+            if on {
+                b.inked(Mesh::Cube, &boxed(mid, s.size()), door, 0);
+                // its planks, and the brass band the switch's ring answers
+                b.glow(
+                    Mesh::Cube,
+                    &boxed(
+                        mid.add(v3(0, s.size().y / 4, 0)),
+                        v3(s.size().x, dm(2), s.size().z + dm(1)),
+                    ),
+                    open,
+                    ONE / 4,
+                );
+            } else {
+                // open: the gate drawn up under its frame, and its time
+                // left as a ring that empties
+                let top = v3(mid.x, s.max.y + dm(4), mid.z);
+                b.inked(
+                    Mesh::Cube,
+                    &boxed(top, v3(s.size().x, dm(5), s.size().z)),
+                    door,
+                    0,
+                );
+                let left = fx::div(d.left * ONE, d.total.max(1) * ONE);
+                let r = fx::mul(s.size().x / 3, left).max(dm(2));
+                b.glow(
+                    Mesh::Ring,
+                    &Affine::translate(mid)
+                        .then(&Affine::rot_x(fx::QUARTER))
+                        .then(&Affine::scale(v3(r, dm(2), r))),
+                    open,
+                    ONE,
+                );
+            }
+        }
+        let root = c.pal.c("root");
+        let glow = c.pal.c("root_glow");
+        for m in &k.movers {
+            let Some((_, s)) = solid_of(m.dynamic) else {
+                continue;
+            };
+            b.inked(Mesh::Cube, &boxed(s.centre(), s.size()), root, 0);
+            b.glow(
+                Mesh::Cube,
+                &boxed(
+                    v3(s.centre().x, s.max.y, s.centre().z),
+                    v3(s.size().x / 3, dm(1), s.size().z / 3),
+                ),
+                glow,
+                ONE / 3,
+            );
+        }
+        let rotten = c.pal.c("rotten");
+        for &r in &k.rotten {
+            let Some((true, s)) = solid_of(r) else { continue };
+            b.inked(Mesh::Cube, &boxed(s.centre(), s.size()), rotten, 0);
+        }
+    }
+    let plank = c.pal.c("bench");
+    let edge = c.pal.c("bench_edge");
+    for &(i, left) in &w.benches {
+        let Some((true, s)) = solid_of(i) else { continue };
+        // it fades in its last second
+        let g = if left < TICKS_PER_SECOND {
+            ONE * left / TICKS_PER_SECOND
+        } else {
+            ONE
+        };
+        b.inked(Mesh::Cube, &boxed(s.centre(), s.size()), plank, 0);
+        for dz in [-s.size().z / 2, s.size().z / 2] {
+            b.glow(
+                Mesh::Cube,
+                &boxed(s.centre().add(v3(0, dm(1), dz)), v3(s.size().x, dm(1), dm(1))),
+                edge,
+                g,
+            );
+        }
+    }
 }
 
 fn orbs(b: &mut Batch, c: &Content, w: &World, alpha: i32, cam: &crate::render::Camera) {

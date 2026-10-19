@@ -643,6 +643,18 @@ impl Wave {
     }
 }
 
+/// A held formation's orbs as placed, for tests elsewhere in the core.
+#[cfg(test)]
+pub(crate) fn formation_for_test(
+    v: &Volley,
+    origin: V3,
+    target: V3,
+    repeat: i32,
+    pal: &crate::content::Palette,
+) -> Vec<Orb> {
+    formation(v, origin, target, repeat, 0, pal.c(&v.colour))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

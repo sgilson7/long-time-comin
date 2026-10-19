@@ -34,6 +34,7 @@
     <div id="boss" hidden>
       <div class="boss-name" id="b-name"></div>
       <div class="boss-title" id="b-title"></div>
+      <div class="bar husk" id="b-husk-bar" hidden><div class="fill" id="b-husk"></div></div>
       <div class="bar"><div class="fill" id="b-fill"></div></div>
       <div class="boss-bars pips" id="b-bars"></div>
       <div class="boss-timer" id="b-timer"></div>
@@ -120,7 +121,6 @@
         </div>
         <p class="lede" id="m-bonus"></p>
         <button id="start-run" class="big" data-copy="start_run"></button>
-        <div id="start-later"></div>
         <button id="start-rush" class="big later" data-copy="start_rush" hidden></button>
         <button id="start-mission" class="big last" data-copy="start_mission" hidden></button>
         <p id="mission-note" class="lede" data-copy="mission_note" hidden></p>
@@ -152,6 +152,15 @@
           <p id="tree-text"></p>
           <p class="needs" id="tree-needs"></p>
           <button id="tree-buy" class="big"></button>
+        </div>
+      </section>
+      <section class="timeline">
+        <h3 data-copy="timeline_heading"></h3>
+        <p class="lede" data-copy="timeline_text"></p>
+        <div id="timeline-lines"></div>
+        <div class="timeline-map">
+          <svg id="timeline-edges" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"></svg>
+          <div id="timeline-nodes"></div>
         </div>
       </section>
       <section class="case-file">

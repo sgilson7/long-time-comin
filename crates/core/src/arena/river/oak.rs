@@ -1,8 +1,8 @@
 //! The end of the river: the Boathouse (rest) on the shore of Lake
 //! Stillwater, and the Gallows Oak (the boss), 150 m of black trunk climbed
-//! knot to knot from its roots: a shelf of bark every 9 m round it, a ring
-//! over each to hook, three ledges all the way round (the climb's mooring
-//! posts), and at the top its crown, a ring of broken boughs over the lake.
+//! ring to ring from its roots: a shelf of bark every 9 m round it, a ring
+//! hung over each to hook, three broad ledges (the climb's mooring posts),
+//! and at the top its crown, a ring of broken boughs over the lake.
 
 use super::super::{dm, m, B};
 use crate::course::{OakSite, Step};
@@ -20,8 +20,18 @@ const RUNG: i32 = 9 * ONE;
 const RUNGS: i32 = 16;
 const CROWN: i32 = SHORE + 150 * ONE;
 const CROWN_R: i32 = 20 * ONE;
+/// a shelf of bark this wide each way; each a turn this far round from the
+/// last; its ring this far over the next shelf's top
+const SHELF: i32 = 5 * ONE;
+const ROUND: i32 = 34;
+const RING_OVER: i32 = ONE * 15 / 10;
+/// and this far out past the shelf under it, so a body rising past it
+/// does not come down on it
+const RING_OUT: i32 = 2 * ONE;
 /// the shelves that go all the way round: the climb's ledges
 const LEDGES: [i32; 3] = [4, 9, 13];
+/// a ledge is this wide each way
+const LEDGE: i32 = 8 * ONE;
 
 impl B<'_> {
     /// The Boathouse: a floor of boards over the shallows, its roof, and
@@ -100,36 +110,74 @@ impl B<'_> {
             }
         }
 
-        // the climb: a shelf of bark every rung, round and up, a ring over
-        // each to hook; the ledges go all the way round
+        // the climb: a shelf of bark every rung, round and up, and over each
+        // shelf a ring hung on a chain from the next: the hook pulls you
+        // straight up past the next shelf, and you come down onto it; the
+        // ledges go all the way round
+        let mut prev = v3(0, SHORE, m(9));
         for k in 1..=RUNGS {
             let y = SHORE + RUNG * k;
-            let a = fx::QUARTER + deg(55) * k;
-            let out = |r: i32| v3(fx::mul(fx::cos(a), r), 0, fx::mul(fx::sin(a), r));
-            let c = out(TRUNK + m(2));
-            if LEDGES.contains(&k) {
-                self.ledge_round(y);
+            let a = fx::QUARTER + deg(ROUND) * k;
+            let ledge = LEDGES.contains(&k);
+            let size = if ledge { LEDGE } else { SHELF };
+            let c = v3(
+                fx::mul(fx::cos(a), TRUNK + size / 2),
+                y,
+                fx::mul(fx::sin(a), TRUNK + size / 2),
+            );
+            if ledge {
+                // a broad ledge, a mooring post on it
+                self.bark_slab(
+                    c.x - LEDGE / 2,
+                    c.z - LEDGE / 2,
+                    c.x + LEDGE / 2,
+                    c.z + LEDGE / 2,
+                    y,
+                );
                 self.mooring(c.x, y, c.z);
             } else {
-                self.rock_shelf(c.x - m(2), c.z - m(2), c.x + m(2), c.z + m(2), y);
+                self.bark_slab(
+                    c.x - SHELF / 2,
+                    c.z - SHELF / 2,
+                    c.x + SHELF / 2,
+                    c.z + SHELF / 2,
+                    y,
+                );
             }
-            let ring = out(TRUNK + m(3)).add(v3(0, y + dm(35), 0));
-            self.hook_ring(ring.x, ring.y, ring.z, Some(y + m(6)));
-            let stand = v3(c.x, y, c.z);
+            // the ring over where you stand now, out past the shelf's edge
+            let out = v3(prev.x, 0, prev.z);
+            let at = out.norm().scale(out.len_xz() + RING_OUT);
+            let ring = v3(at.x, y + RING_OVER, at.z);
+            self.hook_ring(ring.x, ring.y, ring.z, Some(y + RUNG));
             self.line(Step::Hook(ring));
-            self.line(Step::Air(stand));
+            self.line(Step::Air(c));
+            self.line(Step::To(c));
+            prev = c;
         }
         // the crown: the trunk's top, and a ring of boughs with gaps over
         // the lake; its post is where a fall off it returns you
         let top = CROWN;
-        self.rock_shelf(-TRUNK - m(2), -TRUNK - m(2), TRUNK + m(2), TRUNK + m(2), top);
+        self.bark_slab(-TRUNK - m(2), -TRUNK - m(2), TRUNK + m(2), TRUNK + m(2), top);
         let bough = self.c("oak_bark");
         let leaf = self.c("oak_leaf");
+        // one of the gaps is over the last shelf: the last pull goes up
+        // through it, from a ring hung in it
+        let last = fx::QUARTER + deg(ROUND) * RUNGS;
+        let turn = last - fx::TURN / 12 * 5 / 2;
+        let lip = v3(
+            fx::mul(fx::cos(last), TRUNK + SHELF / 2 + RING_OUT),
+            top + RING_OVER,
+            fx::mul(fx::sin(last), TRUNK + SHELF / 2 + RING_OUT),
+        );
+        self.hook_ring(lip.x, lip.y, lip.z, Some(top + m(10)));
+        self.line(Step::Hook(lip));
+        let onto = v3(fx::mul(fx::cos(last), m(4)), top, fx::mul(fx::sin(last), m(4)));
+        self.line(Step::Air(onto));
         for k in 0..12 {
             if k % 3 == 2 {
                 continue; // a gap: the lake far below
             }
-            let a0 = fx::TURN / 12 * k;
+            let a0 = turn + fx::TURN / 12 * k;
             let a1 = a0 + fx::TURN / 12;
             for r in [m(10), m(16)] {
                 let mid = (a0 + a1) / 2;
@@ -145,7 +193,7 @@ impl B<'_> {
         }
         // the spokes joining trunk and ring
         for k in 0..4 {
-            let a = fx::TURN / 4 * k + fx::TURN / 24;
+            let a = turn + fx::TURN / 4 * k + fx::TURN / 24;
             let at = v3(fx::mul(fx::cos(a), m(9)), top, fx::mul(fx::sin(a), m(9)));
             self.solids.push(Solid::new(
                 v3(at.x - m(2), top - m(2), at.z - m(2)),
@@ -166,24 +214,16 @@ impl B<'_> {
         self.oak_far(v3(0, 0, -m(4000)));
     }
 
-    /// A ledge of bark all the way round the trunk at `y`.
-    fn ledge_round(&mut self, y: i32) {
-        let w = TRUNK + m(5);
-        for (x0, z0, x1, z1) in [
-            (-w, -w, w, -TRUNK),
-            (-w, TRUNK, w, w),
-            (-w, -TRUNK, -TRUNK, TRUNK),
-            (TRUNK, -TRUNK, w, TRUNK),
-        ] {
-            self.solids.push(Solid::new(v3(x0, y - m(1), z0), v3(x1, y, z1)));
-            let bark = self.c("oak_bark");
-            self.deco(
-                Mesh::Cube,
-                v3((x0 + x1) / 2, y - dm(5), (z0 + z1) / 2),
-                v3(x1 - x0, m(1), z1 - z0),
-                bark,
-            );
-        }
+    /// A slab of bark a metre thick, its top at `y`, standing off the trunk.
+    fn bark_slab(&mut self, x0: i32, z0: i32, x1: i32, z1: i32, y: i32) {
+        self.solids.push(Solid::new(v3(x0, y - m(1), z0), v3(x1, y, z1)));
+        let bark = self.c("oak_bark");
+        self.deco(
+            Mesh::Cube,
+            v3((x0 + x1) / 2, y - dm(5), (z0 + z1) / 2),
+            v3(x1 - x0, m(1), z1 - z0),
+            bark,
+        );
     }
 
     /// The Oak seen from far off: a black trunk and a dark crown.

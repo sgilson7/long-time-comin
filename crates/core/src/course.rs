@@ -519,6 +519,9 @@ pub struct Pilot {
     pub t: i32,
     /// ticks it has gone without finishing a step, all told
     pub stuck: i32,
+    /// the hook of this step has caught (it presses again until it does,
+    /// as a player would while the hook's cooldown runs)
+    pub caught: bool,
 }
 
 /// What the pilot asks for on one tick.
@@ -584,15 +587,16 @@ impl Pilot {
             ),
             Step::Hook(a) => {
                 let hooked = p.grapple.is_some();
+                self.caught |= hooked;
                 (
                     Controls {
-                        grapple_pressed: t == 0,
+                        grapple_pressed: !self.caught,
                         grapple_held: true,
                         ..fwd
                     },
                     yaw_to(a),
                     a,
-                    t > 2 && !hooked,
+                    self.caught && !hooked,
                 )
             }
             Step::Tug(a) => (
@@ -634,6 +638,7 @@ impl Pilot {
         if done {
             self.step += 1;
             self.t = 0;
+            self.caught = false;
             return self.drive(line, p);
         }
         self.t += 1;
@@ -695,7 +700,6 @@ pub(crate) mod tests {
         let line = w.course.as_ref().unwrap().line.clone();
         let mut pilot = Pilot::default();
         let start = w.player.health;
-        let mut drowned = 0;
         for tick in 0..60 * 60 * 4 {
             let Some(d) = pilot.drive(&line, &w.player) else {
                 // the line done: a few steps on to the way on
@@ -733,7 +737,6 @@ pub(crate) mod tests {
             let before = w.notes.iter().filter(|n| n.sound == "drown").count();
             w.tick(&c, &d.controls, eye, d.aim);
             if w.notes.iter().filter(|n| n.sound == "drown").count() > before {
-                drowned += 1;
                 return Err(format!(
                     "{arch}: drowned on step {} ({:?}) at tick {tick}, from {:?}",
                     pilot.step, line[pilot.step], w.player.prev_pos
@@ -749,7 +752,7 @@ pub(crate) mod tests {
                 return Ok((tick, start - w.player.health));
             }
         }
-        Err(format!("{arch}: out of time ({drowned} drownings)"))
+        Err(format!("{arch}: out of time"))
     }
 
     #[test]
@@ -757,5 +760,344 @@ pub(crate) mod tests {
         let (ticks, lost) = cross("spillway").unwrap();
         assert!(ticks < 60 * 120, "{ticks} ticks");
         let _ = lost;
+    }
+    fn tick(c: &Content, w: &mut World, ctl: crate::player::Controls) {
+        let eye = w.player.chest();
+        let fwd = crate::geom::facing(w.player.yaw, 0);
+        w.tick(c, &ctl, eye, fwd);
+    }
+
+    fn idle() -> crate::player::Controls {
+        crate::player::Controls::default()
+    }
+
+    #[test]
+    fn a_bench_laid_in_the_air_is_stood_on_and_shots_pass_through_it() {
+        let (c, mut w) = course_world("spillway");
+        // over open water, falling
+        w.player.pos = v3(0, int(6), -int(44));
+        w.player.grounded = false;
+        tick(
+            &c,
+            &mut w,
+            crate::player::Controls {
+                bench_pressed: true,
+                ..idle()
+            },
+        );
+        let (i, _) = w.benches[0];
+        let top = w.arena.level.dynamic[i].solid.max.y;
+        for _ in 0..30 {
+            tick(&c, &mut w, idle());
+        }
+        assert!(w.player.grounded, "standing on the Bench");
+        assert!((w.player.pos.y - top).abs() <= ONE / 20, "on its top");
+        // a ray down through it meets nothing until the water's bed
+        let hit = w
+            .arena
+            .level
+            .ray(v3(0, top + ONE, -int(44)), v3(0, -ONE, 0), int(3));
+        assert!(hit.is_none(), "shots and orbs pass through a Bench");
+        // from below, a body rises through it
+        assert!(!w.arena.level.blocked(
+            v3(-ONE / 4, top - ONE / 2, -int(44) - ONE / 4),
+            v3(ONE / 4, top + ONE, -int(44) + ONE / 4)
+        ));
+        // and it is gone once its time is up
+        for _ in 0..BENCH_TICKS {
+            tick(&c, &mut w, idle());
+        }
+        assert!(!w.arena.level.dynamic[i].on, "taken up after its time");
+    }
+
+    #[test]
+    fn the_water_returns_you_to_the_last_post_you_reached_a_tenth_of_your_health_the_poorer() {
+        let (c, mut w) = course_world("spillway");
+        w.player.build.max_health = 200;
+        w.player.health = 200;
+        let posts = w.course.as_ref().unwrap().posts.clone();
+        // reach the second post
+        w.player.pos = posts[1];
+        tick(&c, &mut w, idle());
+        assert_eq!(w.course.as_ref().unwrap().post, 1);
+        // and fall in
+        w.player.pos = v3(0, -ONE, -int(140));
+        tick(&c, &mut w, idle());
+        assert_eq!(w.player.health, 200 - 200 * DROWN_PCT / 100);
+        assert!(w.player.pos.sub(posts[1]).len_xz() < ONE, "back at the post");
+        assert!(w.notes.iter().any(|n| n.sound == "drown"));
+    }
+
+    #[test]
+    fn a_lever_hooked_opens_its_gate_for_its_time_and_the_gate_shuts_but_never_on_you() {
+        let (c, mut w) = course_world("spillway");
+        let k = w.course.as_ref().unwrap().clone();
+        let lever = k
+            .switches
+            .iter()
+            .find(|s| s.kind == SwitchKind::Lever)
+            .unwrap()
+            .clone();
+        let door = k.doors[lever.opens[0]].dynamic;
+        assert!(w.arena.level.dynamic[door].on, "shut to begin with");
+        // the hook strikes the lever's ring
+        w.player.pos = v3(0, int(2), -int(168));
+        let ring = lever.at.centre();
+        w.player.yaw = crate::geom::yaw_pitch_of(ring.sub(w.player.pos)).0;
+        let eye = w.player.chest();
+        w.tick(
+            &c,
+            &crate::player::Controls {
+                grapple_pressed: true,
+                grapple_held: true,
+                ..idle()
+            },
+            eye,
+            ring.sub(eye).norm(),
+        );
+        assert!(!w.arena.level.dynamic[door].on, "open");
+        // standing in the gateway when its time is up, it waits
+        let gate = w.arena.level.dynamic[door].solid.centre();
+        w.player.release_grapple();
+        for _ in 0..lever.ticks + 30 {
+            w.player.pos = v3(gate.x, gate.y - int(2), gate.z);
+            w.player.vel = V3::ZERO;
+            tick(&c, &mut w, idle());
+        }
+        assert!(!w.arena.level.dynamic[door].on, "never shuts on you");
+        w.player.pos = v3(0, int(2), -int(170));
+        tick(&c, &mut w, idle());
+        tick(&c, &mut w, idle());
+        assert!(w.arena.level.dynamic[door].on, "shut once you are clear");
+    }
+
+    /// A world with a rotten floor over a drum-cap, a root, and a plain floor.
+    fn ground_world() -> (Content, World) {
+        let (c, mut w) = course_world("spillway");
+        let level = &mut w.arena.level;
+        let rotten = level.add_dynamic(Dyn {
+            solid: Solid::new(v3(-int(2), int(9), -int(42)), v3(int(2), int(10), -int(38))),
+            on: true,
+            one_way: false,
+        });
+        let drum = Solid::new(v3(-int(2), int(3), -int(42)), v3(int(2), int(4), -int(38)));
+        level.solids.push(drum);
+        *level = {
+            let mut l = crate::level::Level::new(level.solids.clone());
+            for d in level.dynamic.clone() {
+                l.add_dynamic(d);
+            }
+            l
+        };
+        let root = w.arena.level.add_dynamic(Dyn {
+            solid: Solid::new(v3(-int(2), 0, -int(50)), v3(int(2), int(2), -int(46))),
+            on: true,
+            one_way: false,
+        });
+        let k = w.course.as_mut().unwrap();
+        k.rotten.push(rotten);
+        k.drums.push(drum);
+        k.movers.push(Mover {
+            dynamic: root,
+            base: Solid::new(v3(-int(2), 0, -int(50)), v3(int(2), int(2), -int(46))),
+            rise: int(4),
+            period: 240,
+            phase: 0,
+        });
+        (c, w)
+    }
+
+    #[test]
+    fn a_pound_breaks_a_rotten_floor_and_drops_on_through_and_off_a_drum_cap_bounces_twice_as_high() {
+        let (c, mut w) = ground_world();
+        w.player.pos = v3(0, int(14), -int(40));
+        w.player.grounded = false;
+        tick(
+            &c,
+            &mut w,
+            crate::player::Controls {
+                pound_pressed: true,
+                ..idle()
+            },
+        );
+        let mut top = 0;
+        let mut broke = false;
+        let mut bounced = false;
+        for _ in 0..240 {
+            tick(&c, &mut w, idle());
+            let k = w.course.as_ref().unwrap();
+            broke |= !w.arena.level.dynamic[k.rotten[0]].on;
+            if broke && w.player.vel.y > 0 {
+                bounced = true;
+            }
+            if bounced {
+                top = top.max(w.player.pos.y);
+            }
+            if bounced && w.player.vel.y < 0 {
+                break;
+            }
+        }
+        assert!(broke, "the rotten floor broke");
+        // pounded from 14 m onto the drum at 4 m: a plain bounce rises a
+        // little over 14 m; the drum's, twice the drop and more
+        assert!(top > int(4) + int(10) * 2, "bounced to {}", top / ONE);
+    }
+
+    #[test]
+    fn a_root_rises_and_sinks_and_carries_whoever_stands_on_it() {
+        let (c, mut w) = ground_world();
+        w.player.pos = v3(0, int(2), -int(48));
+        w.player.grounded = true;
+        let mut low = i32::MAX;
+        let mut high = i32::MIN;
+        for _ in 0..240 {
+            tick(&c, &mut w, idle());
+            low = low.min(w.player.pos.y);
+            high = high.max(w.player.pos.y);
+        }
+        assert!(high - low > int(3), "carried {} m", (high - low) / ONE);
+        assert!(w.player.grounded);
+    }
+
+    #[test]
+    fn a_curtain_leaves_a_hole_that_moves_along_it() {
+        let c = content();
+        let p = c.patterns.iter().find(|p| p.id == "weir_curtain").unwrap();
+        let v = &p.volleys[0];
+        assert_eq!(v.form, crate::content::Form::Curtain);
+        let from = v3(0, int(2), -int(20));
+        let target = v3(0, int(2), 0);
+        let mut holes = Vec::new();
+        for repeat in 0..3 {
+            let orbs = crate::orbs::formation_for_test(v, from, target, repeat, &c.pal);
+            assert_eq!(
+                orbs.len() as i32,
+                v.count * v.rows - v.gap * v.gap,
+                "a hole of {} by {}",
+                v.gap,
+                v.gap
+            );
+            // where the hole is: the mean across of what is missing
+            let xs: i32 = orbs.iter().map(|o| o.pos.x).sum::<i32>() / orbs.len() as i32;
+            holes.push(xs);
+        }
+        assert!(
+            holes[0] != holes[1] && holes[1] != holes[2],
+            "the hole moves: {holes:?}"
+        );
+    }
+
+    #[test]
+    fn the_oak_can_be_climbed_on_its_line_its_bar_falling_as_you_rise_and_at_its_crown_it_calls_the_summons()
+    {
+        let c = content();
+        let zone = c.zones.iter().position(|z| z.id == "water_gap").unwrap();
+        let r = Route::build_for(&c, zone, 7, &Have::level(1));
+        let node = r.nodes.iter().find(|n| n.kind == NodeKind::Boss).unwrap().clone();
+        let p = Player::new(V3::ZERO, 0, river_kit());
+        let mut w = World::new(&c, &node, &[], p, Held::new(0, 1), 3);
+        assert!(!w.cleared, "the Oak's arena is fought");
+        let line = w.course.as_ref().unwrap().line.clone();
+        let mut pilot = Pilot::default();
+        let mut first_bar = None;
+        for tick in 0..60 * 60 * 3 {
+            let Some(d) = pilot.drive(&line, &w.player) else {
+                break;
+            };
+            w.player.yaw = d.yaw;
+            let eye = w.player.chest();
+            w.tick(&c, &d.controls, eye, d.aim);
+            if std::env::var("LTC_TRACE").is_ok() && tick % 3 == 0 {
+                let f = |v: i32| v as f64 / ONE as f64;
+                let q = w.player.pos;
+                eprintln!(
+                    "t{tick} s{} pos ({:.1},{:.1},{:.1}) v ({:.2},{:.2},{:.2}) g{} hook {:?} tgt {:?}",
+                    pilot.step,
+                    f(q.x),
+                    f(q.y),
+                    f(q.z),
+                    f(w.player.vel.x),
+                    f(w.player.vel.y),
+                    f(w.player.vel.z),
+                    w.player.grounded as i32,
+                    w.player
+                        .grapple
+                        .map(|g| (f(g.anchor.x), f(g.anchor.y), f(g.anchor.z))),
+                    w.hook_target.map(|h| (f(h.x), f(h.y), f(h.z)))
+                );
+            }
+            if let Some(b) = w.boss {
+                first_bar.get_or_insert(w.enemies[b].hp);
+            }
+            assert!(
+                !w.notes.iter().any(|n| n.sound == "drown"),
+                "fell on step {} ({:?}) at tick {tick}",
+                pilot.step,
+                line[pilot.step.min(line.len() - 1)]
+            );
+            assert!(
+                pilot.t < 60 * 20,
+                "stuck on step {} ({:?}) at {:?}",
+                pilot.step,
+                line[pilot.step],
+                w.player.pos
+            );
+            if w.course.as_ref().unwrap().summons.is_some() {
+                break;
+            }
+        }
+        let k = w.course.as_ref().unwrap();
+        let s = k.summons.expect("the Summons came at the crown");
+        let b = w.boss.expect("the Oak");
+        assert_eq!(c.enemies[w.enemies[s].def].id, "summons");
+        assert_eq!(w.elite, Some(s), "its own bar");
+        let line_hp = w.enemies[b].max_hp * OAK_CLIMB_BAR_PCT / 100;
+        assert!(first_bar.unwrap() > line_hp, "the bar began full");
+        assert!(
+            w.enemies[b].hp <= line_hp,
+            "and fell to the climb's line as you rose"
+        );
+        // the Summons' health is now the Oak's bar
+        w.enemies[s].hp = w.enemies[s].max_hp / 2;
+        tick(&c, &mut w, idle());
+        assert!(w.enemies[b].hp <= line_hp / 2 + 1);
+        // and its fall is the Oak's
+        w.enemies[s].hp = 0;
+        tick(&c, &mut w, idle());
+        assert!(!w.enemies[b].alive());
+    }
+
+    #[test]
+    fn the_summons_husk_takes_every_blow_first_breaks_to_a_stagger_at_double_damage_and_grows_back() {
+        let c = content();
+        let def = c.enemy("summons").unwrap();
+        let d = &c.enemies[def];
+        let mut e = crate::enemy::Enemy::new(def, d, v3(0, int(10), 0), 1);
+        e.state = crate::enemy::State::Rest(100);
+        let hp = e.hp;
+        assert!(e.husk > 0);
+        e.hurt(50);
+        assert_eq!(e.hp, hp, "the Husk takes it");
+        e.hurt(d.husk);
+        assert_eq!(e.husk, 0);
+        assert!(e.stagger > 0, "broken, it staggers");
+        e.hurt(50);
+        assert_eq!(e.hp, hp - 100, "double damage while staggered");
+        let level = crate::level::Level::new(vec![Solid::new(
+            v3(-int(30), -ONE, -int(30)),
+            v3(int(30), 0, int(30)),
+        )]);
+        for _ in 0..d.stagger + 2 {
+            e.step(&c, &level, v3(0, int(2), int(14)), 0);
+        }
+        assert_eq!(e.stagger, 0);
+        assert_eq!(e.husk, e.husk_max, "whole again after the stagger");
+        // chipped and then left alone, it grows back
+        e.hurt(100);
+        assert!(e.husk < e.husk_max);
+        for _ in 0..d.husk_regen + HUSK_REGROW_TICKS + 2 {
+            e.step(&c, &level, v3(0, int(2), int(14)), 0);
+        }
+        assert_eq!(e.husk, e.husk_max);
     }
 }

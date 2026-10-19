@@ -84,6 +84,11 @@ export function makeHud(copy, play) {
         text("b-name", h.boss.name);
         text("b-title", h.boss.title);
         el("b-fill").style.width = `${h.boss.pct}%`;
+        // the Summons' Husk, over its health; gone while it staggers
+        const husk = h.boss.husk >= 0;
+        el("b-husk-bar").hidden = !husk;
+        if (husk) el("b-husk").style.width = `${h.boss.husk}%`;
+        boss.classList.toggle("staggered", h.boss.staggered === true);
         text("b-timer", h.boss.timer);
         pips("b-bars", h.boss.bars, h.boss.bars_left);
         boss.classList.toggle("sleep", h.boss.sleep);

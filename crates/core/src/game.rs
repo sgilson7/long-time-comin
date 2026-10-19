@@ -269,6 +269,10 @@ impl Game {
                 e.floor_hp = 0;
                 e.hp = 1;
                 e.hurt(10);
+                if e.shielded {
+                    // the Oak is never hurt: it simply falls
+                    e.hp = 0;
+                }
             }
         }
     }
@@ -1249,7 +1253,22 @@ impl Game {
                         }
                     };
                     let bars = n + d.lullaby.is_some() as usize;
+                    // a Husk over the health: the boss's own, or the Summons'
+                    // the Oak has called
+                    let shield = run
+                        .world
+                        .course
+                        .as_ref()
+                        .and_then(|k| k.summons)
+                        .map(|s| &run.world.enemies[s])
+                        .filter(|s| s.alive())
+                        .or(Some(e))
+                        .filter(|s| s.husk_max > 0);
+                    let husk = shield.map_or(-1, |s| s.husk * 100 / s.husk_max.max(1));
+                    let staggered = shield.is_some_and(|s| s.stagger > 0);
                     return json!({
+                        "husk": husk,
+                        "staggered": staggered,
                         "name": w.name,
                         "title": title,
                         "pct": pct,
@@ -2894,5 +2913,118 @@ pub(crate) mod tests {
             ice[ice.len() - 5..ice.len() - 1],
             [SEE_NEAR, SEE_WIDE_LENS, SEE_WIDE_HEAD, SEE_SHORT]
         );
+    }
+    /// A record that has beaten the house and owns the river's kit.
+    const RIVER_READY: &str = r#"{"seen_intro": true, "unlocked": 3, "beaten": ["bailiff", "witness", "executor"], "owned": ["writ", "gavel", "bench"]}"#;
+
+    #[test]
+    fn the_river_stays_shut_until_the_executor_is_beaten_and_its_kit_bought() {
+        let mut g = game_with(
+            r#"{"seen_intro": true, "unlocked": 2, "beaten": ["bailiff", "witness"], "owned": ["writ", "gavel", "bench"]}"#,
+        );
+        g.begin();
+        assert!(!g.choose_timeline("river"), "the Executor first");
+        let s: Value = serde_json::from_str(&g.screen_json()).unwrap();
+        let river = &s["timeline"]["lines"][1];
+        assert_eq!(river["open"], false);
+        assert_eq!(
+            river["why"],
+            g.c.say("why_locked").replace("{boss}", "THE EXECUTOR").as_str()
+        );
+        let mut g = game_with(r#"{"seen_intro": true, "beaten": ["executor"], "owned": ["writ", "gavel"]}"#);
+        g.begin();
+        assert!(!g.choose_timeline("river"), "the Bench too");
+        let mut g = game_with(RIVER_READY);
+        g.begin();
+        assert!(g.choose_timeline("river"));
+        let s: Value = serde_json::from_str(&g.screen_json()).unwrap();
+        assert_eq!(s["timeline"]["lines"][1]["chosen"], true);
+        // the river's year stands below the main line, after the house
+        let nodes = s["timeline"]["nodes"].as_array().unwrap();
+        let gap = nodes
+            .iter()
+            .find(|n| n["name"] == "The Water Gap")
+            .expect("the Water Gap on the timeline");
+        let house = nodes.iter().find(|n| n["name"] == "The Glass House").unwrap();
+        assert_eq!(gap["line"], "river");
+        assert!(gap["y"].as_i64() > house["y"].as_i64() && gap["x"].as_i64() > house["x"].as_i64());
+        assert_eq!(gap["open"], true);
+        assert_eq!(house["line"], "both");
+    }
+
+    #[test]
+    fn on_the_river_the_executors_fall_leads_down_to_the_water_gap_and_on_the_peak_up_the_mountain() {
+        for (line, title, next) in [
+            ("peak", "THE ORDERS", "the_ascent"),
+            ("river", "DOWNRIVER", "water_gap"),
+        ] {
+            let mut g = game_with(RIVER_READY);
+            g.begin();
+            g.start_on(line, 2);
+            assert_eq!(g.run.as_ref().unwrap().zone, 2, "{line}: a run from the house");
+            fell_the_boss(&mut g);
+            let run = g.run.as_mut().unwrap();
+            let b = run.world.boss.unwrap();
+            if let Some(t) = run.world.enemies[b].tank.as_mut() {
+                t.survive = 1;
+            }
+            frames(&mut g, 400, 0);
+            assert_eq!(g.mode, Mode::Interlude, "{line}");
+            let s: Value = serde_json::from_str(&g.screen_json()).unwrap();
+            assert_eq!(s["interlude"]["title"], title, "{line}");
+            g.continue_run();
+            let run = g.run.as_ref().unwrap();
+            assert_eq!(g.c.zones[run.zone].id, next, "{line}");
+        }
+        // the river opens no later start of the main line
+        let mut g = game_with(RIVER_READY);
+        g.begin();
+        g.start_on("river", 2);
+        fell_the_boss(&mut g);
+        let run = g.run.as_mut().unwrap();
+        let b = run.world.boss.unwrap();
+        if let Some(t) = run.world.enemies[b].tank.as_mut() {
+            t.survive = 1;
+        }
+        frames(&mut g, 400, 0);
+        assert_eq!(g.meta.unlocked, 3);
+    }
+
+    #[test]
+    fn the_water_gap_is_its_four_sections_in_order_then_the_boathouse_and_the_oak() {
+        let mut g = game_with(RIVER_READY);
+        g.begin();
+        let gap = g.c.zones.iter().position(|z| z.id == "water_gap").unwrap();
+        g.start_on("river", gap);
+        let run = g.run.as_ref().unwrap();
+        assert_eq!(run.zone, gap);
+        let arch: Vec<&str> = run.route.nodes.iter().map(|n| n.archetype.as_str()).collect();
+        assert_eq!(arch, ["spillway", "narrows", "falls", "shallows", "rest", "boss"]);
+        assert!(run.route.nodes.iter().all(|n| n.next.len() <= 1), "no side paths");
+        assert!(
+            run.route.nodes[..4].iter().all(|n| n.reward.is_some()),
+            "a strand's reward in each section"
+        );
+        // a section is crossed, not cleared: its way on is open at once
+        assert!(run.world.cleared);
+        assert!(run.world.course.is_some());
+    }
+
+    #[test]
+    fn the_oaks_fall_ends_the_river_with_its_own_verdict_and_does_not_count_as_the_game_beaten() {
+        let mut g = game_with(RIVER_READY);
+        g.begin();
+        let gap = g.c.zones.iter().position(|z| z.id == "water_gap").unwrap();
+        g.start_on("river", gap);
+        let boss = g.run.as_ref().unwrap().route.boss();
+        g.go(boss);
+        frames(&mut g, 120, 0);
+        g.fell_boss();
+        frames(&mut g, 400, 0);
+        assert_eq!(g.mode, Mode::Won);
+        assert_eq!((g.meta.river_wins, g.meta.wins), (1, 0));
+        assert!(g.meta.beaten.iter().any(|b| b == "gallows_oak"));
+        let s: Value = serde_json::from_str(&g.screen_json()).unwrap();
+        assert_eq!(s["verdict"]["title"], "THE OAK BURNS");
     }
 }
