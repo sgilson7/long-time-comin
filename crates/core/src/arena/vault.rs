@@ -20,8 +20,8 @@ mod shaft;
 impl B<'_> {
     pub(super) fn vault(&mut self, kind: &str) {
         self.course = Some(Course {
-            // the Vault has no water: a fall is a long one, back to the post
-            water: -m(40),
+            // the Vault has no water: a long fall returns you to the post
+            water: -m(20),
             ..Course::default()
         });
         self.start_yaw = 0;
