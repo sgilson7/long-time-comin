@@ -1516,6 +1516,42 @@ pub(crate) mod tests {
     }
 
     #[test]
+    fn dagon_and_your_older_self_come_where_their_course_puts_them_away_from_you() {
+        let c = content();
+        for zone in ["far_shore", "vault"] {
+            let z = c.zones.iter().position(|q| q.id == zone).unwrap();
+            let r = Route::build_for(&c, z, 7, &Have::level(1));
+            let node = r.nodes.iter().find(|n| n.kind == NodeKind::Boss).unwrap().clone();
+            let mut w = World::new(
+                &c,
+                &node,
+                &[],
+                Player::new(V3::ZERO, 0, river_kit()),
+                Held::new(0, 1),
+                3,
+            );
+            let start = w.player.pos;
+            let at = w.course.as_ref().unwrap().boss_at.expect("the boss's place");
+            for _ in 0..90 {
+                w.player.pos = start;
+                tick(&c, &mut w, idle());
+            }
+            let b = w.boss.expect("the boss came");
+            let e = &w.enemies[b];
+            assert!(
+                e.pos.sub(at).len_xz() < int(12),
+                "{zone}: the boss at {:?}, not by {at:?}",
+                e.pos
+            );
+            assert!(
+                e.pos.sub(start).len_xz() > int(15),
+                "{zone}: the boss on top of you at {:?}",
+                e.pos
+            );
+        }
+    }
+
+    #[test]
     fn the_erasers_charge_fills_only_while_you_hold_its_lit_pylon_and_its_end_is_the_bosss() {
         let c = content();
         let zone = c.zones.iter().position(|z| z.id == "vault").unwrap();
@@ -1553,14 +1589,22 @@ pub(crate) mod tests {
         assert!(w.enemies[b].hp < w.enemies[b].max_hp, "the bar is the charge");
         assert!(w.enemies[b].shielded, "your older self cannot be hurt here");
         // all three held: the boss is gone
+        // (a pylon holds no charge while time is stopped, so a few ticks over)
         for k in 0..3 {
-            for _ in 0..ch.need {
+            for _ in 0..ch.need * 3 / 2 {
+                if w.course.as_ref().unwrap().charge.as_ref().unwrap().held[k] >= ch.need {
+                    break;
+                }
                 w.player.pos = ch.pylons[k];
                 w.player.iframes = 1000;
                 tick(&c, &mut w, idle());
             }
         }
-        assert!(!w.enemies[b].alive(), "erased");
+        assert!(
+            !w.enemies[b].alive(),
+            "erased: {:?}",
+            w.course.as_ref().unwrap().charge.as_ref().unwrap().held
+        );
     }
     #[test]
     fn a_cockatrices_gaze_slows_what_it_hits() {

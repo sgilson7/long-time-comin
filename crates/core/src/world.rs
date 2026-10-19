@@ -541,6 +541,15 @@ impl World {
                 .floor_below(CAT_HOME.x, int(3), CAT_HOME.z)
                 .unwrap_or(0);
             v3(CAT_HOME.x, f + fx::mul(d.hover, CAT_SMALL), CAT_HOME.z)
+        } else if let Some(at) = self
+            .arena
+            .course
+            .as_ref()
+            .and_then(|k| k.boss_at)
+            .filter(|_| matches!(d.kind, Kind::Boss | Kind::Double))
+        {
+            // where the course puts its boss
+            at
         } else if d.kind == Kind::Double {
             // the Defendant waits before the Long Door
             let f = self.arena.level.floor_below(0, int(3), -int(4)).unwrap_or(0);

@@ -2173,6 +2173,7 @@ mod size {
             ("far_shore", "boss"),
             ("vault", "shaft"),
             ("vault", "halls"),
+            ("vault", "rest"),
             ("vault", "boss"),
         ];
         for (zone, kind) in kinds {
