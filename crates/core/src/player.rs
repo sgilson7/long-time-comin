@@ -187,6 +187,8 @@ pub struct Player {
     /// under the water (the world says): lighter, and a stroke on the jump
     /// key whenever it is ready
     pub swimming: bool,
+    /// in the open sea: you sink slowly
+    pub afloat: bool,
     pub stroke_cooldown: i32,
     /// ticks it is slowed yet (a Cockatrice's gaze)
     pub slowed: i32,
@@ -258,6 +260,7 @@ impl Player {
             stop_cooldown: 0,
             bench_cooldown: 0,
             swimming: false,
+            afloat: false,
             stroke_cooldown: 0,
             slowed: 0,
             shove: V3::ZERO,
@@ -518,7 +521,9 @@ impl Player {
             }
         } else {
             self.run(wish, top, flat);
-            let (g, fall) = if self.swimming {
+            let (g, fall) = if self.afloat {
+                (GRAVITY * SWIM_GRAVITY_PCT / 100, SEA_SINK)
+            } else if self.swimming {
                 (
                     GRAVITY * SWIM_GRAVITY_PCT / 100,
                     MAX_FALL * SWIM_GRAVITY_PCT / 100,

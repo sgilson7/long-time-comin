@@ -335,5 +335,16 @@
   "hint_halls": "The Vault's machines wake as you pass. Fell them all and the far door opens.",
   "callout_struck": "She strikes her colours: {n} of {of}.",
   "callout_dragon_free": "The chain breaks. The dragon is free!",
-  "hint_dragon": "The dragon can't be hurt on its chain. Shoot the three brass locks at the mainmast's foot to free it, then bring it down."
+  "hint_dragon": "The dragon can't be hurt on its chain. Shoot the three brass locks at the mainmast's foot to free it, then bring it down.",
+  "tour_shut": "Not open yet: reach it on its timeline first.",
+  "map_open": "The map",
+  "atlas_heading": "THE TIMELINE",
+  "atlas_hint": "Pick a year to see it. Follow a line to choose where runs go past 2056.",
+  "atlas_close": "Back to the Holding",
+  "tour_start": "Start here",
+  "tour_back": "Back to the map",
+  "tour_creatures": "Met here",
+  "tour_boss": "At the end",
+  "tour_sections": "The way through",
+  "tour_beaten": "Beaten"
 }

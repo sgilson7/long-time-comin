@@ -332,6 +332,8 @@
     "storm_sky": "#4B4E6D",
     "storm_cloud": "#2E3048",
     "storm_fog": "#5E6380",
+    "atlas_beam": "#F2C46B",
+    "atlas_river": "#5CC8D8",
     "storm_light": "#C9CCE0",
     "deep_sky": "#0E3A4A",
     "deep_fog": "#1A5566",

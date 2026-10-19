@@ -30,6 +30,9 @@ impl B<'_> {
     pub(super) fn sea(&mut self, kind: &str) {
         self.course = Some(Course {
             water: -ONE / 2,
+            // the open sea: fall in and you may swim a while, and hook
+            // yourself back aboard, before it takes you
+            depth: crate::balance::SEA_DEPTH,
             ..Course::default()
         });
         self.start_yaw = 0;

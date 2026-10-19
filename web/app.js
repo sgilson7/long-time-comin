@@ -133,6 +133,16 @@ async function start() {
   );
   // faint marks under the credits, for testing: the paw opens a choice of
   // Chumbles' bars to begin from; the note is the lullaby alone
+  // the map, and a zone's walkthrough opened from it
+  el("open-map").addEventListener("click", act(() => game.open_map()));
+  el("atlas-close").addEventListener("click", act(() => game.close_map()));
+  el("tour-back").addEventListener("click", act(() => game.tour_back()));
+  el("tour-start").addEventListener(
+    "click",
+    act(() => {
+      if (game.tour_start()) engage();
+    }),
+  );
   el("try-chumbles").title = copy.try_chumbles_title;
   el("try-chumbles").addEventListener("click", () => {
     el("chumbles-bars").hidden = !el("chumbles-bars").hidden;
@@ -244,6 +254,8 @@ async function start() {
       return;
     }
     if (e.code === "Escape" && mode === "map") game.resume();
+    if (e.code === "Escape" && mode === "atlas") game.close_map();
+    if (e.code === "Escape" && mode === "tour") game.tour_back();
     if (e.code === "Escape" && mode === "play") game.pause();
     if (e.code === "KeyN") toggleMute();
     wake(BUILD);
@@ -256,11 +268,13 @@ async function start() {
     const scale = renderer && renderer.software ? display.software_scale : 1;
     const [w, h] = game.resize(canvas.clientWidth, canvas.clientHeight, (window.devicePixelRatio || 1) * scale);
     if (renderer) renderer.resize(w, h);
+    // the map's labels follow where the dioramas land
+    if (shownMode === "atlas") screens.atlas(JSON.parse(game.screen()));
   }
   window.addEventListener("resize", resize);
   resize();
 
-  const overlays = { title: "title", intro: "intro", holding: "holding", map: "map", paused: "paused", interlude: "interlude", dead: "dead", won: "won" };
+  const overlays = { title: "title", intro: "intro", holding: "holding", atlas: "atlas", tour: "tour", map: "map", paused: "paused", interlude: "interlude", dead: "dead", won: "won" };
   function showMode(mode, again) {
     if (mode === shownMode && !again) return;
     document.body.dataset.mode = mode;
@@ -269,11 +283,13 @@ async function start() {
     const s = JSON.parse(game.screen());
     if (mode === "intro") screens.intro(s);
     if (mode === "holding") screens.holding(s);
+    if (mode === "atlas") screens.atlas(s);
+    if (mode === "tour") screens.tour(s);
     if (mode === "map") screens.map(s);
     if (mode === "interlude") screens.interlude(s);
     if (mode === "dead") screens.dead(s);
     if (mode === "won") screens.won(s);
-    if (mode === "dead" || mode === "won" || mode === "holding" || mode === "interlude") input.release();
+    if (["dead", "won", "holding", "interlude", "atlas", "tour"].includes(mode)) input.release();
     if (mode === "dead" || mode === "won" || mode === "interlude") save();
     shownMode = mode;
   }
@@ -283,6 +299,11 @@ async function start() {
     game.advance(now, bits, dx, dy);
     const h = JSON.parse(game.hud());
     showMode(h.mode, false);
+    // the walkthrough's card follows the camera from stop to stop
+    if (h.mode === "tour" && game.tour_stop() !== shownStop) {
+      shownStop = game.tour_stop();
+      screens.tour(JSON.parse(game.screen()));
+    }
     if (h.mode === "play") {
       hud.update(h);
       el("engage").hidden = input.engaged();
@@ -297,6 +318,7 @@ async function start() {
     requestAnimationFrame(frame);
   }
   let sceneVersion = null;
+  let shownStop = null;
 
   hud.reset(JSON.parse(game.hud()));
   document.body.dataset.ready = "true";

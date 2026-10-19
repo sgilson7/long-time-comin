@@ -479,13 +479,6 @@ pub const POST_REACH: i32 = int(3);
 /// the water returns you to the last post, this share of your health the
 /// poorer
 pub const DROWN_PCT: i32 = 10;
-/// the Holding's timeline, in percent of its panel: the main line's first
-/// year this far in, its last this much further, the main line this far
-/// down and the river's below it
-pub const TIMELINE_LEFT: i32 = 10;
-pub const TIMELINE_SPAN: i32 = 80;
-pub const TIMELINE_MAIN_Y: i32 = 34;
-pub const TIMELINE_RIVER_Y: i32 = 74;
 /// the Summons' Husk grows back over this many ticks once it has gone
 /// unhit its time
 pub const HUSK_REGROW_TICKS: i32 = secs(1, 1);
@@ -542,3 +535,45 @@ pub const WASH_PUSH: i32 = ratio(1, 25);
 pub const WASH_KNOCK: i32 = per_tick(11, 1);
 pub const WASH_HEAVE: i32 = per_tick(4, 1);
 pub const WASH_DAMAGE: i32 = 8;
+
+/// the map: the timeline as a hologram over the crater, its root (2031) at
+/// the top and each later zone a row below; the main line's column and the
+/// River's either side of the middle, rows this far apart, each row a little
+/// further back; the camera this far in front, looking at its middle; each
+/// zone's diorama this wide, turning once in this long
+pub const ATLAS_CENTRE: crate::geom::V3 = crate::geom::v3(0, int(34), int(-6));
+pub const ATLAS_ROW: i32 = ratio(23, 10);
+pub const ATLAS_COL: i32 = ratio(19, 10);
+pub const ATLAS_LEAN: i32 = ratio(3, 10);
+pub const ATLAS_BACK: i32 = int(12);
+pub const ATLAS_DIORAMA: i32 = ratio(17, 10);
+pub const ATLAS_SPIN_TICKS: i32 = 60 * 40;
+pub const ATLAS_BEAM: i32 = ratio(6, 100);
+
+/// a zone's walkthrough: the route it shows (a fixed seed, so it is the same
+/// each time); a course flown at this speed, each stop shown at least and at
+/// most this long; an arena that is not a course circled this long, from this
+/// angle through this much, this far out (within these) and this high; the
+/// camera this far behind and above the line, looking this far ahead; the
+/// parked body's shield
+pub const TOUR_SEED: u64 = 7;
+pub const TOUR_SPEED: i32 = per_tick(24, 1);
+pub const TOUR_MIN: i32 = 60 * 6;
+pub const TOUR_MAX: i32 = 60 * 14;
+pub const TOUR_CIRCLE: i32 = 60 * 7;
+pub const TOUR_ORBIT_FROM: i32 = deg(200);
+pub const TOUR_ORBIT_SWEEP: i32 = deg(110);
+pub const TOUR_ORBIT_MIN: i32 = int(14);
+pub const TOUR_ORBIT_MAX: i32 = int(34);
+pub const TOUR_ORBIT_UP: i32 = int(10);
+pub const TOUR_BEHIND: i32 = int(10);
+pub const TOUR_ABOVE: i32 = int(7);
+pub const TOUR_AHEAD: i32 = int(18);
+pub const TOUR_SHIELD: i32 = 60 * 60;
+
+/// the open sea (the Far Shore): you may sink this far under the surface,
+/// at no more than this speed, and stay in it this long, before it takes
+/// you back to your post
+pub const SEA_DEPTH: i32 = int(8);
+pub const SEA_SINK: i32 = per_tick(2, 1);
+pub const SEA_BREATH: i32 = secs(12, 1);

@@ -63,25 +63,33 @@ pub struct Batch {
     pub bold: bool,
     /// the pass a solid goes in: PASS_SOLID, or one of the styles
     pub style: u32,
+    /// while set, what is pushed is scenery that moves (a ship's deck, a
+    /// door), cut away between the camera and you as the static scenery is
+    pub scenery: bool,
 }
 
 fn slot(mesh: Mesh, pass: u32) -> usize {
     pass as usize * Mesh::ALL.len() + mesh as usize
 }
 
+/// The lists' half for scenery that moves follows the rest.
+const SCENERY: usize = PASSES * Mesh::ALL.len();
+
 impl Batch {
     pub fn new(ink: Rgb) -> Batch {
         Batch {
-            lists: vec![Vec::new(); PASSES * Mesh::ALL.len()],
+            lists: vec![Vec::new(); 2 * SCENERY],
             ink,
             bold: false,
             style: PASS_SOLID,
+            scenery: false,
         }
     }
 
     pub fn push(&mut self, mesh: Mesh, a: &Affine, rgb: Rgb, glow: i32, pass: u32) {
         let pass = if pass == PASS_SOLID { self.style } else { pass };
-        self.lists[slot(mesh, pass)].extend_from_slice(&[
+        let at = slot(mesh, pass) + if self.scenery { SCENERY } else { 0 };
+        self.lists[at].extend_from_slice(&[
             a.c0.x, a.c0.y, a.c0.z, a.t.x, a.c1.x, a.c1.y, a.c1.z, a.t.y, a.c2.x, a.c2.y, a.c2.z, a.t.z,
             rgb[0], rgb[1], rgb[2], glow,
         ]);
@@ -134,14 +142,14 @@ impl Batch {
         // indexed by pass; drawn in PASS_ORDER
         let mut draws = vec![Vec::new(); PASSES];
         for pass in PASS_ORDER {
-            for mesh in Mesh::ALL {
-                let v = &self.lists[slot(mesh, pass)];
+            for (mesh, half) in Mesh::ALL.iter().flat_map(|&m| [(m, 0), (m, SCENERY)]) {
+                let v = &self.lists[slot(mesh, pass) + half];
                 if v.is_empty() {
                     continue;
                 }
                 let offset = (values.len() * BYTES_PER_VALUE) as u32;
                 let count = (v.len() / INSTANCE_VALUES) as u32;
-                let see_through = (buffer == STATIC_BUFFER) as u32;
+                let see_through = (buffer == STATIC_BUFFER || half == SCENERY) as u32;
                 draws[pass as usize].extend_from_slice(&[
                     buffer,
                     mesh as u32,
@@ -243,6 +251,26 @@ mod tests {
     use crate::fx::{deg, int};
     use crate::geom::facing;
     use crate::geom::v3;
+
+    #[test]
+    fn scenery_that_moves_is_cut_away_as_the_static_scenery_is_and_bodies_are_not() {
+        let a = boxed(V3::ZERO, v3(int(2), int(1), int(4)));
+        let mut b = Batch::new([0; 3]);
+        b.inked(Mesh::Cube, &a, [ONE; 3], 0);
+        b.scenery = true;
+        b.inked(Mesh::Cube, &a, [ONE; 3], 0);
+        let (_, draws) = b.finish(DYNAMIC_BUFFER);
+        let cut: Vec<u32> = draws
+            .iter()
+            .flat_map(|d| d.chunks(DRAW_VALUES).map(|v| v[5]))
+            .collect();
+        assert_eq!(
+            cut.iter().filter(|&&c| c == 1).count(),
+            2,
+            "the scenery's solid and ink: {cut:?}"
+        );
+        assert_eq!(cut.iter().filter(|&&c| c == 0).count(), 2, "the body's: {cut:?}");
+    }
 
     #[test]
     fn an_inked_shape_is_drawn_twice_and_its_outline_is_larger() {

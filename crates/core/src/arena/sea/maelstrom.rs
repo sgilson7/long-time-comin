@@ -53,6 +53,8 @@ fn turn() -> i32 {
 impl B<'_> {
     pub(super) fn maelstrom(&mut self) {
         self.k().water = DROWN;
+        // already under the water: its floor of water is where you drown
+        self.k().depth = 0;
         self.k().fought = true;
         self.under_water(EYE, PULL, crate::balance::SWIM_GRAVITY_PCT);
 

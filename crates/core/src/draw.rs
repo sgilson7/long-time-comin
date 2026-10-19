@@ -13,6 +13,7 @@ use crate::player::Player;
 use crate::render::{boxed, mix, shade, Batch};
 use crate::world::{FxKind, PickupKind, World};
 
+pub mod atlas;
 mod beasts;
 mod cat;
 mod fauna;
@@ -41,6 +42,12 @@ fn rod(b: &mut Batch, a: V3, c: V3, w: i32, rgb: Rgb, glow: i32, ink: bool) {
             b.push(Mesh::Cyl, &af, rgb, glow, crate::render::PASS_SOLID);
         }
     }
+}
+
+/// A beam of light from `a` to `c` (the map's lines between zones), lit by
+/// `glow`.
+pub fn beam(b: &mut Batch, a: V3, c: V3, w: i32, rgb: Rgb, glow: i32) {
+    rod(b, a, c, w, rgb, glow, false);
 }
 
 /// A basis turned to `yaw` at `at`, so a body's parts are placed in its own
@@ -102,8 +109,12 @@ pub fn world(
             b.glow(Mesh::Cube, &boxed(p.centre, p.size), glass, ONE / 3);
         }
     }
+    // a course's moving ground (decks, masts, wreckage, doors) and its
+    // waves are scenery: cut away between the camera and you
+    b.scenery = true;
     course(b, c, w);
     waves::waves(b, c, w);
+    b.scenery = false;
     orbs(b, c, w, alpha, cam);
     if w.ending > 0 && !w.mission {
         house::azathoth(b, c, clock, w.melt());

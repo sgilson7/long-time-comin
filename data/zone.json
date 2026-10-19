@@ -76,6 +76,17 @@
         "canal": "The Dry Canal",
         "atrium": "The Old Exchange"
       },
+      "tour": {
+        "blurb": "2031, the first stop on the road to 2081. A machine waits at the city limits to keep you from going further.",
+        "arrival": "The crater you came down in.",
+        "plaza": "Fountain Square.",
+        "market": "The night market, between its stalls.",
+        "rooftops": "Across the roofs, from ledge to ledge above the streets.",
+        "canal": "A canal drained to its bed, its bridges standing over nothing.",
+        "atrium": "The old exchange, its trading floor under a glass roof.",
+        "rest": "A quiet room before the court: health, or something to carry.",
+        "boss": "The Court of Hours, where the Interdictor waits with its unsigned order."
+      },
       "encounters": [
         {
           "tier": 1,
@@ -467,6 +478,17 @@
         "pylons": "The Antenna Field",
         "hall": "The Blue Hall"
       },
+      "tour": {
+        "blurb": "2046: ice to every horizon. The Witness has watched it longer than anyone remembers.",
+        "arrival": "The landing.",
+        "crevasse": "Down into a crack in the ice, and along it.",
+        "terraces": "A shelf of ice stepped like a stair.",
+        "wreck": "The wreck of the Long Patience, held in the ice.",
+        "pylons": "A field of antennas, still listening for something.",
+        "hall": "A blue hall carved out of the ice.",
+        "rest": "The weather station: warmth, briefly.",
+        "boss": "The Witness Stand. It has seen your future, and cannot say it."
+      },
       "encounters": [
         {
           "tier": 1,
@@ -783,6 +805,17 @@
         "library": "The Library",
         "lab": "The East Laboratory",
         "gallery": "The Long Gallery"
+      },
+      "tour": {
+        "blurb": "Calder Hill, 2056: the house where the research was done, and the machines sent to end it.",
+        "arrival": "The vestibule.",
+        "hall": "The great hall, two floors high.",
+        "dining": "The dining room.",
+        "library": "The library, its stacks and its gallery.",
+        "lab": "The east laboratory, where the work was done.",
+        "gallery": "The long gallery, lined with glass.",
+        "rest": "The safe room.",
+        "boss": "The Conservatory. The Executor's orders are sealed inside its turret."
       },
       "encounters": [
         {
@@ -1103,6 +1136,17 @@
         "spire": "The Spire",
         "chapel": "The Ruined Chapel",
         "ledge": "The Ledge"
+      },
+      "tour": {
+        "blurb": "The mountain in 2081, and at its top the evening everything stopped. Your older self is waiting there.",
+        "arrival": "The trailhead.",
+        "switchback": "Back and forth up the face of the mountain.",
+        "span": "A bridge over the drop.",
+        "spire": "Up a spire of rock.",
+        "chapel": "A ruined chapel on the mountainside.",
+        "ledge": "A narrow ledge, and the wind.",
+        "rest": "The hermitage.",
+        "boss": "The Circle, at the summit. Your older self knows what happens after the clocks stop."
       },
       "encounters": [
         {
@@ -1609,6 +1653,17 @@
         "lattice": "The Lattice",
         "orrery": "The Orrery"
       },
+      "tour": {
+        "blurb": "Outside time altogether. The Idiot God hears the Long Door opening, and its dancers keep it awake.",
+        "arrival": "The gullet: the way in.",
+        "fold": "Islands in the void, and the Waiting City hanging upside down overhead.",
+        "stair": "A stair that climbs forever and arrives where it began.",
+        "doors": "Gold doorways that lead across the room, and some that lead nowhere.",
+        "lattice": "Rocks hanging in the void, reached by updrafts and a stair grown up a root.",
+        "orrery": "Rings of floor round a sun, the planets hanging.",
+        "rest": "The still point.",
+        "boss": "The Heart, where it dreams."
+      },
       "encounters": [
         {
           "tier": 1,
@@ -2080,6 +2135,13 @@
         "boss": "Downstairs",
         "landing": "The Landing"
       },
+      "tour": {
+        "blurb": "Saturday morning. Chumbles has not been fed to his satisfaction.",
+        "arrival": "Your bedroom.",
+        "landing": "The landing at the top of the stairs.",
+        "rest": "The landing.",
+        "boss": "Downstairs, where breakfast is."
+      },
       "encounters": []
     },
     {
@@ -2145,6 +2207,16 @@
         "shallows": "The Shallows",
         "rest": "The Boathouse",
         "boss": "The Gallows Oak"
+      },
+      "tour": {
+        "blurb": "Down the river Calder from the house, through its canyon to Lake Stillwater. All platforming; the water drowns.",
+        "arrival": "The Spillway: the house's old weir and its sluices.",
+        "spillway": "The Spillway: the house's old weir and its sluices.",
+        "narrows": "A slot canyon forty metres deep, crossed on rings, roots and Benches.",
+        "falls": "A cascade a hundred and twenty metres down, rotten floors and all.",
+        "shallows": "Lake Stillwater's flooded wood, its roots rising and sinking.",
+        "rest": "The Boathouse.",
+        "boss": "The Gallows Oak. Climb it, and at its crown the Summons comes up out of the lake."
       },
       "encounters": []
     },
@@ -2218,6 +2290,15 @@
         "rest": "The Lee",
         "maelstrom": "The Maelstrom",
         "boss": "The Eye"
+      },
+      "tour": {
+        "blurb": "An ocean inside the anomaly under the lake, and on it the Drowned Fleet.",
+        "arrival": "Seven ships at anchor, seven crews. Each strikes her colours when her crew is down.",
+        "fleet": "Seven ships at anchor, seven crews. Each strikes her colours when her crew is down.",
+        "hurricane": "The fleet running through a hurricane: rogue waves lift the ships one by one.",
+        "rest": "The Lee: the dry pocket under a capsized hull.",
+        "maelstrom": "Under the water, among wreckage spiralling down into the whirlpool.",
+        "boss": "The Eye, where Dagon rises out of the whirlpool."
       },
       "encounters": [
         {
@@ -2306,6 +2387,14 @@
         "halls": "The Halls",
         "rest": "The Lock",
         "boss": "The Eraser"
+      },
+      "tour": {
+        "blurb": "An alien base under the bed of Lake Stillwater, older than the Oak. The Eraser is at its heart.",
+        "arrival": "Down a shaft of black glass, gantry by gantry.",
+        "shaft": "Down a shaft of black glass, gantry by gantry.",
+        "halls": "Three hundred metres of white hall, and the machines that wake in it.",
+        "rest": "The Lock: a still white room.",
+        "boss": "The Eraser. Hold its pylons while your older self tries to stop it."
       },
       "encounters": [
         {

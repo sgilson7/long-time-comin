@@ -188,6 +188,43 @@ impl Game {
         self.inner.toggle_map()
     }
 
+    /// The Holding's map, and back.
+    pub fn open_map(&mut self) {
+        self.inner.open_map()
+    }
+
+    pub fn close_map(&mut self) {
+        self.inner.close_map()
+    }
+
+    /// The zone the pointer is over on the map (−1: none).
+    pub fn point_at(&mut self, zone: i32) {
+        self.inner.point_at(zone)
+    }
+
+    /// A zone's walkthrough, from the map.
+    pub fn show_zone(&mut self, zone: u32) -> bool {
+        self.inner.show_zone(zone as usize)
+    }
+
+    pub fn tour_to(&mut self, stop: u32) {
+        self.inner.tour_to(stop as usize)
+    }
+
+    pub fn tour_back(&mut self) {
+        self.inner.tour_back()
+    }
+
+    pub fn tour_start(&mut self) -> bool {
+        self.inner.tour_start()
+    }
+
+    /// The walkthrough's stop shown now (−1: none), so the page knows when
+    /// to redraw its card.
+    pub fn tour_stop(&self) -> i32 {
+        self.inner.tour_stop()
+    }
+
     pub fn abandon(&mut self) {
         self.inner.abandon()
     }

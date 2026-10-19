@@ -9,6 +9,7 @@
 #![recursion_limit = "256"]
 
 pub mod arena;
+pub mod atlas;
 pub mod balance;
 pub mod codex;
 pub mod content;
@@ -30,6 +31,7 @@ pub mod route;
 pub mod song;
 pub mod squad;
 pub mod tank;
+pub mod tour;
 pub mod tree;
 pub mod weapons;
 pub mod world;

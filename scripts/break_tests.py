@@ -273,6 +273,11 @@ BREAKS = [
  ("far: the Hurricane has its waves", "crates/core/src/arena/sea/hurricane.rs", "        self.rogue_wave(v3(ONE, 0, ROGUE_SLANT), ROGUE_PHASE);", "", "the_hurricane_is_crossed_through"),
  ("far: the waves are drawn", "crates/core/src/draw/waves.rs", "    let Some(k) = &w.course else { return };", "    let Some(k) = w.course.as_ref().filter(|_| false) else { return };", "the_hurricanes_waves_draw"),
  ("far: the start boat rides the rogue", "crates/core/src/arena/sea/hurricane.rs", "        self.jolly_boat(a.stern, a.crest());", "", "the_boat_you_start_on_rides"),
+ ("far: the decks are cut away", "crates/core/src/draw.rs", "    b.scenery = true;\n    course(b, c, w);", "    course(b, c, w);", "the_fleets_decks_and_masts_are_cut"),
+ ("far: moving scenery marked to cut", "crates/core/src/render.rs", "let see_through = (buffer == STATIC_BUFFER || half == SCENERY) as u32;", "let see_through = (buffer == STATIC_BUFFER) as u32;", "scenery_that_moves_is_cut"),
+ ("far: the sea lets you swim", "crates/core/src/course.rs", "            p.y < k.water - k.depth || k.wet > SEA_BREATH", "            p.y < k.water || k.wet > SEA_BREATH", "overboard_in_the_open_sea"),
+ ("far: the sea slows your fall", "crates/core/src/player.rs", "(GRAVITY * SWIM_GRAVITY_PCT / 100, SEA_SINK)", "(GRAVITY, MAX_FALL)", "overboard_in_the_open_sea"),
+ ("far: the sea's breath", "crates/core/src/course.rs", "            p.y < k.water - k.depth || k.wet > SEA_BREATH", "            p.y < k.water - k.depth", "the_sea_takes_you"),
 ]
 
 
