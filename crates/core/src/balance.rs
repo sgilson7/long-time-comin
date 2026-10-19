@@ -549,6 +549,9 @@ pub const ATLAS_BACK: i32 = int(12);
 pub const ATLAS_DIORAMA: i32 = ratio(17, 10);
 pub const ATLAS_SPIN_TICKS: i32 = 60 * 40;
 pub const ATLAS_BEAM: i32 = ratio(6, 100);
+/// the hologram's dark field: this far behind its middle, this big
+pub const ATLAS_FIELD_BACK: i32 = int(6);
+pub const ATLAS_FIELD: crate::geom::V3 = crate::geom::v3(int(90), int(60), ratio(1, 5));
 
 /// a zone's walkthrough: the route it shows (a fixed seed, so it is the same
 /// each time); a course flown at this speed, each stop shown at least and at

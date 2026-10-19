@@ -1258,6 +1258,16 @@ impl Game {
         let c = &self.c;
         let (spots, beams) = crate::atlas::spots(c);
         let river_on = self.meta.on_river(c);
+        // the hologram's dark field, behind it and filling the view, so the
+        // dioramas read against the night and not the city
+        let field = ATLAS_CENTRE.add(v3(0, 0, -ATLAS_FIELD_BACK));
+        b.push(
+            Mesh::Cube,
+            &render::boxed(field, ATLAS_FIELD),
+            c.pal.c("atlas_field"),
+            ONE / 6,
+            render::PASS_SOLID,
+        );
         for &(a, z) in &beams {
             let line = spots[z].line;
             let followed = line != "river" && !river_on
