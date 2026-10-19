@@ -413,6 +413,9 @@ struct VolleyFile {
     form: String,
     #[serde(default)]
     rows: i32,
+    /// a curtain's hole, this many orbs across and up
+    #[serde(default)]
+    gap: i32,
     #[serde(default)]
     at: String,
     #[serde(default)]
@@ -466,6 +469,10 @@ pub enum Form {
     Ring,
     /// `count` across by `rows` up, `radius` apart
     Grid,
+    /// a grid standing across the line to you with a hole `gap` orbs
+    /// across and up, to the left, the middle, then the right as it
+    /// repeats: the way through a wall of orbs
+    Curtain,
     /// `count` across, over `radius` either side
     Line,
     /// `count` stacked up to `radius` above the anchor
@@ -587,6 +594,8 @@ pub struct Volley {
     pub sweep: i32,
     /// a lane's walls' length
     pub length: i32,
+    /// a curtain's hole, this many orbs across and up
+    pub gap: i32,
 }
 
 impl Volley {
@@ -598,7 +607,7 @@ impl Volley {
     /// How many orbs one repeat places.
     pub fn orbs(&self) -> i32 {
         match (self.shape, self.form) {
-            (Shape::Form, Form::Grid | Form::Star | Form::Dome) => self.count * self.rows,
+            (Shape::Form, Form::Grid | Form::Curtain | Form::Star | Form::Dome) => self.count * self.rows,
             (Shape::Form, Form::Lane) => self.count * 2,
             _ => self.count,
         }
@@ -757,6 +766,17 @@ struct EnemyFile {
     /// the god's lullaby: the song you play it to sleep with
     #[serde(default)]
     lullaby: Option<LullabyFile>,
+    /// a shield over its health (the Summons' Husk), that grows back when
+    /// it is not hit this long, and breaks to a stagger this long
+    #[serde(default)]
+    husk_hp: i32,
+    #[serde(default)]
+    husk_regen_ms: i32,
+    #[serde(default)]
+    stagger_ms: i32,
+    /// it flies at its home's height, over gaps as over floor
+    #[serde(default)]
+    aloft: bool,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -862,6 +882,10 @@ pub enum Kind {
     /// Chumbles: screams and grows, then a phase a bar, each with its own
     /// gait; when the last bar empties he is fed, and the mission is won
     Cat,
+    /// the Gallows Oak: rooted, never hurt; its first bar is your climb up
+    /// it, and at its crown it calls the Summons, whose health its bar
+    /// then follows (the world drives it, `course.rs`)
+    Oak,
 }
 
 /// How a beast moves.
@@ -1005,6 +1029,13 @@ pub struct EnemyDef {
     /// what it splits into where it dies
     pub splits: Vec<usize>,
     pub lullaby: Option<Lullaby>,
+    /// a Husk over its health (0: none), the ticks unhit before it grows
+    /// back, and the stagger when it breaks
+    pub husk: i32,
+    pub husk_regen: i32,
+    pub stagger: i32,
+    /// it flies at its home's height
+    pub aloft: bool,
 }
 
 // ---- the zones and their routes ---------------------------------------------
@@ -1036,6 +1067,11 @@ pub struct RouteRules {
     /// mini-bosses, each fought alone in its own arena on a main fight
     #[serde(default)]
     pub minibosses: Vec<Miniboss>,
+    /// a zone of courses, crossed and not fought (the Water Gap): its main
+    /// path is its archetypes in order, the first the arrival, each holding
+    /// a strand's reward off its line; no side paths, no encounters
+    #[serde(default)]
+    pub course: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
@@ -1083,6 +1119,10 @@ struct ZoneFileEntry {
     /// reached only on the last mission, after the fourth zone's boss
     #[serde(default)]
     mission: bool,
+    /// a zone off the main line: it follows this zone's boss on its own
+    /// timeline (the Water Gap follows the Glass House)
+    #[serde(default)]
+    branch_from: String,
     #[serde(default)]
     scene: Option<Scene>,
     #[serde(default)]
@@ -1116,6 +1156,9 @@ pub struct Zone {
     pub boss: String,
     /// reached only on the last mission
     pub mission: bool,
+    /// off the main line: the zone, by id, whose boss it follows on its
+    /// own timeline (empty: on the main line)
+    pub branch_from: String,
     pub scene: Scene,
     pub route: RouteRules,
     pub archetypes: Vec<String>,
@@ -1188,6 +1231,7 @@ const EFFECTS: &[&str] = &[
     "lien",
     "stop",
     "stop_plus",
+    "bench",
     "exhibit",
 ];
 
@@ -1225,6 +1269,23 @@ pub struct Story {
     /// the last mission's words
     #[serde(default)]
     pub mission: Option<Mission>,
+    /// the words of each zone off the main line, by its id: its timeline's
+    /// name, the interlude into it, and its verdict
+    #[serde(default)]
+    pub branches: BTreeMap<String, Branch>,
+}
+
+/// A timeline's own words (the river's): read crossing into its zone, and
+/// at its end.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+pub struct Branch {
+    /// the timeline's name on the Holding's timeline, and the main line's
+    pub timeline: String,
+    pub main_timeline: String,
+    pub interlude: Interlude,
+    pub victory_title: String,
+    pub victory: Vec<String>,
+    pub verdict_art: String,
 }
 
 /// The last mission's words: what is read before it, between its zones
@@ -1314,6 +1375,7 @@ impl Content {
                     built: false,
                     boss: z.boss,
                     mission: z.mission,
+                    branch_from: z.branch_from.clone(),
                     scene: Scene {
                         sky: "sky".into(),
                         fog: "fog".into(),
@@ -1339,6 +1401,7 @@ impl Content {
                         weapon_steps: one_one(),
                         sealed_pct: 0,
                         minibosses: Vec::new(),
+                        course: false,
                     },
                     archetypes: Vec::new(),
                     names: z.names,
@@ -1351,7 +1414,12 @@ impl Content {
                 if r.main_tiers.len() != r.main_fights {
                     return Err(format!("zone {}: main_tiers needs one tier per main fight", z.id));
                 }
-                for t in r.main_tiers.iter().flat_map(|t| [*t, *t + 1]) {
+                for t in r
+                    .main_tiers
+                    .iter()
+                    .flat_map(|t| [*t, *t + 1])
+                    .filter(|_| !r.course)
+                {
                     let top = encounters.iter().map(|e| e.tier).max().unwrap_or(0);
                     if !encounters.iter().any(|e| e.tier == t.min(top)) {
                         return Err(format!("zone {}: no encounter of tier {t}", z.id));
@@ -1394,6 +1462,7 @@ impl Content {
                 built: z.built,
                 boss: z.boss,
                 mission: z.mission,
+                branch_from: z.branch_from,
                 scene,
                 route,
                 archetypes: z.archetypes,
@@ -1472,7 +1541,17 @@ impl Content {
     /// The zones a run can be in, in order (the last mission's own zone,
     /// which follows them in the file, is not one).
     pub fn built_zones(&self) -> usize {
-        self.zones.iter().take_while(|z| z.built && !z.mission).count()
+        self.zones
+            .iter()
+            .take_while(|z| z.built && !z.mission && z.branch_from.is_empty())
+            .count()
+    }
+
+    /// The zone off the main line that follows zone `zone`'s boss, if one
+    /// is built: on the river's timeline, the Water Gap after the house.
+    pub fn branch_after(&self, zone: usize) -> Option<usize> {
+        let id = &self.zones.get(zone)?.id;
+        self.zones.iter().position(|z| z.built && &z.branch_from == id)
     }
 
     /// The last mission's own zone, by index, once it is built.
@@ -1619,6 +1698,7 @@ fn parse_patterns(text: &str, pal: &Palette) -> Result<Vec<Pattern>, String> {
                 "arc" => Form::Arc,
                 "ribbon" => Form::Ribbon,
                 "lane" => Form::Lane,
+                "curtain" => Form::Curtain,
                 "dome" => Form::Dome,
                 s => return Err(format!("patterns: {} has no form {s}", p.id)),
             };
@@ -1690,6 +1770,7 @@ fn parse_patterns(text: &str, pal: &Palette) -> Result<Vec<Pattern>, String> {
                 },
                 form,
                 rows: v.rows.max(1),
+                gap: v.gap.max(1),
                 anchor,
                 at: cm(v.at_cm),
                 flat,
@@ -1815,6 +1896,7 @@ fn parse_enemies(text: &str, patterns: &[Pattern]) -> Result<Vec<EnemyDef>, Stri
             "beast" => Kind::Beast,
             "god" => Kind::God,
             "cat" => Kind::Cat,
+            "oak" => Kind::Oak,
             k => return Err(format!("enemies: {} has no kind {k}", e.id)),
         };
         let role = match e.role.as_str() {
@@ -1858,8 +1940,9 @@ fn parse_enemies(text: &str, patterns: &[Pattern]) -> Result<Vec<EnemyDef>, Stri
         }
         let phases = if matches!(
             kind,
-            Kind::Boss | Kind::Tank | Kind::Double | Kind::God | Kind::Cat
-        ) {
+            Kind::Boss | Kind::Tank | Kind::Double | Kind::God | Kind::Cat | Kind::Oak
+        ) || !e.phases.is_empty()
+        {
             if e.phases.is_empty() {
                 return Err(format!("enemies: boss {} has no phases", e.id));
             }
@@ -2026,6 +2109,10 @@ fn parse_enemies(text: &str, patterns: &[Pattern]) -> Result<Vec<EnemyDef>, Stri
             bite: cm(e.bite_cm),
             splits: list(&e.splits)?,
             lullaby,
+            husk: e.husk_hp,
+            husk_regen: ms(e.husk_regen_ms),
+            stagger: ms(e.stagger_ms),
+            aloft: e.aloft,
         });
     }
     Ok(out)

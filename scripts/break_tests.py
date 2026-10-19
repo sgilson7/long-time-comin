@@ -111,7 +111,7 @@ BREAKS = [
  ("corruption by height", "crates/core/src/world.rs", "        e.corrupt = self.corrupt;", "        e.corrupt = CORRUPT_LEAST;", "more_corrupted_the_higher"),
  ("a beast's body clears the floor", "crates/core/src/enemy.rs", "let body = d.radius.min(d.hover * 9 / 10).max(ONE / 10);", "let body = d.radius;", "a_toad_hops"),
 
- ("a mini-boss is not the zone's boss", "crates/core/src/world.rs", "            Kind::Boss | Kind::Tank | Kind::Double | Kind::God | Kind::Cat\n        ) && !d.elite", "            Kind::Boss | Kind::Tank | Kind::Double | Kind::God | Kind::Cat\n        )", "the_blaster_is_a_smaller"),
+ ("a mini-boss is not the zone's boss", "crates/core/src/world.rs", "            Kind::Boss | Kind::Tank | Kind::Double | Kind::God | Kind::Cat | Kind::Oak\n        ) && !d.elite", "            Kind::Boss | Kind::Tank | Kind::Double | Kind::God | Kind::Cat | Kind::Oak\n        )", "the_blaster_is_a_smaller"),
  # round ten: the Great Horned, big waves
  ("the owl perches high", "crates/core/src/enemy.rs", "Some(v3(p.x, f + PERCH_HEIGHT, p.z))", "Some(v3(p.x, f, p.z))", "the_great_horned_perches"),
  ("the owl swoops through you", "crates/core/src/enemy.rs", "self.fly_to(target.add(way.scale(SWOOP_PAST)), SWOOP_SPEED);", "self.fly_to(self.perches[self.perch], SWOOP_SPEED);", "the_great_horned_perches"),

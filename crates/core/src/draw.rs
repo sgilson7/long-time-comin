@@ -18,6 +18,7 @@ mod cat;
 mod fauna;
 mod god;
 mod house;
+mod river;
 pub use god::{azathoth_at_heart, trumpet};
 pub use house::azathoth;
 
@@ -1152,6 +1153,9 @@ pub fn enemy(b: &mut Batch, c: &Content, e: &Enemy, alpha: i32, target: V3) {
     } else {
         core
     };
+    if river::draw(b, c, e, d, at, s, &paint) {
+        return;
+    }
     if matches!(d.kind, Kind::Agent | Kind::Tank | Kind::Mech | Kind::Double) {
         house::draw(b, c, e, d, at, alpha, target, &paint);
         return;
@@ -1318,7 +1322,14 @@ pub fn enemy(b: &mut Batch, c: &Content, e: &Enemy, alpha: i32, target: V3) {
             );
         }
         Kind::Boss => bailiff(b, c, e, at, s, paint),
-        Kind::Agent | Kind::Tank | Kind::Mech | Kind::Double | Kind::Beast | Kind::God | Kind::Cat => {}
+        Kind::Agent
+        | Kind::Tank
+        | Kind::Mech
+        | Kind::Double
+        | Kind::Beast
+        | Kind::God
+        | Kind::Cat
+        | Kind::Oak => {}
     }
     // the windup: a halo that grows as the attack comes
     if charge > 0 && d.kind != Kind::Boss {

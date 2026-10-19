@@ -85,6 +85,19 @@
         "3 AM",
         "TREATS"
       ]
+    },
+    "gallows_oak": {
+      "name": "THE GALLOWS OAK",
+      "title": "It was old when the city was a ford. The Long Door's frame was cut from it.",
+      "bars": [
+        "THE CLIMB",
+        "THE SUMMONS",
+        "THE BLOOM"
+      ]
+    },
+    "summons": {
+      "name": "THE SUMMONS",
+      "title": "A summons compels you to appear. This one comes up out of the lake."
     }
   },
   "death_titles": {
@@ -93,7 +106,8 @@
     "glass_house": "RETURNED FROM CALDER HILL",
     "the_ascent": "RETURNED FROM MOUNT MERIDIAN",
     "idiot_god": "RETURNED FROM OUTSIDE",
-    "home": "CHUMBLES HAS WON THIS ROUND"
+    "home": "CHUMBLES HAS WON THIS ROUND",
+    "water_gap": "RETURNED FROM CALDER HILL"
   },
   "interludes": {
     "waiting_city": {
@@ -212,5 +226,31 @@
       "He settles on the sunny end of the sofa and goes to sleep. Somewhere, a trumpet is still playing. Somewhere, a clock reads 21:15. This morning, you are home.",
       "The last sentence is served. Clemency from this run has been added to your record."
     ]
+  },
+  "branches": {
+    "water_gap": {
+      "timeline": "The River",
+      "main_timeline": "The Peak",
+      "interlude": {
+        "title": "DOWNRIVER",
+        "art": "downriver",
+        "go": "Go down to the water",
+        "lines": [
+          "The Executor stops moving in the ruined conservatory. Its orders are in a steel case, signed by you, dated March 14, 2081.",
+          "Under the signature is a requisition you have not written yet: one frame, Gallows Oak, cut at Lake Stillwater. The Long Door will be built from it.",
+          "If the tree burns, there is no frame. If there is no frame, there is no Door.",
+          "Ten years go by in the empty house. In 2066 you go down to the river below Calder Hill, past the old weir, toward the lake.",
+          "The water is fast and cold. Nothing that falls in comes out where it went in."
+        ]
+      },
+      "victory_title": "THE OAK BURNS",
+      "victory": [
+        "The Summons comes apart over the lake. The crown of the Gallows Oak catches, and the fire runs down the trunk to the water.",
+        "By morning the Oak is black to the waterline. There will be no frame for the Long Door from this tree.",
+        "Across the lake, on the far shore, something has noticed the smoke.",
+        "This build ends here. The far shore is sealed for now."
+      ],
+      "verdict_art": "oak_burns"
+    }
   }
 }

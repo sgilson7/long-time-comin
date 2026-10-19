@@ -444,9 +444,9 @@ pub const PURSE_TIMES: i32 = 3;
 pub const TREE_SIZE: i32 = 1000;
 /// the hub in the middle, and the ring every root upgrade stands on
 pub const TREE_HUB: i32 = 118;
-pub const TREE_RING: i32 = 212;
+pub const TREE_RING: i32 = 226;
 /// each upgrade further out than the one it needs by this much
-pub const TREE_STEP: i32 = 84;
+pub const TREE_STEP: i32 = 80;
 /// a branch's wedge reaches this far out; its name sits this far out
 pub const TREE_EDGE: i32 = 494;
 /// each wedge, a petal, reaches this far past its outermost upgrade
@@ -460,3 +460,39 @@ pub const TREE_START: i32 = -crate::fx::QUARTER / 2;
 /// no two upgrades closer than this, centre to centre (a node is drawn
 /// a little smaller)
 pub const TREE_ROOM: i32 = 52;
+
+// ---- the Water Gap (round 17) -----------------------------------------------------
+
+/// the Bench: a plank this wide and this thick, standing this long (Bench
+/// III longer), laid again after this; on the ground it is laid where you
+/// aim, as far as this
+pub const BENCH_SIZE: i32 = int(3);
+pub const BENCH_THICK: i32 = ONE / 5;
+pub const BENCH_TICKS: i32 = secs(3, 1);
+pub const BENCH_LONG_TICKS: i32 = secs(5, 1);
+pub const BENCH_COOLDOWN: i32 = secs(4, 1);
+pub const BENCH_REACH: i32 = int(12);
+/// an emitter in the rock fires only while you are this near
+pub const EMITTER_WAKE: i32 = int(45);
+/// a mooring post is reached this near
+pub const POST_REACH: i32 = int(3);
+/// the water returns you to the last post, this share of your health the
+/// poorer
+pub const DROWN_PCT: i32 = 10;
+/// the Holding's timeline, in percent of its panel: the main line's first
+/// year this far in, its last this much further, the main line this far
+/// down and the river's below it
+pub const TIMELINE_LEFT: i32 = 10;
+pub const TIMELINE_SPAN: i32 = 80;
+pub const TIMELINE_MAIN_Y: i32 = 34;
+pub const TIMELINE_RIVER_Y: i32 = 74;
+/// the Summons' Husk grows back over this many ticks once it has gone
+/// unhit its time
+pub const HUSK_REGROW_TICKS: i32 = secs(1, 1);
+/// an aloft flier stays this near its home
+pub const ALOFT_LEASH: i32 = int(26);
+/// the Gallows Oak: its bar's share that is the climb's (the rest follows
+/// the Summons), its eye this far over you, and what it calls at its crown
+pub const OAK_CLIMB_BAR_PCT: i32 = 66;
+pub const OAK_EYE_OVER: i32 = int(4);
+pub const OAK_SUMMONS: &str = "summons";

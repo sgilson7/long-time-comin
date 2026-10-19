@@ -103,6 +103,10 @@
       "Dash {dash_distance} m in {dash_time} s. No damage for the first {dash_iframes} s. Uses a charge; each recharges in {dash_recharge} s."
     ],
     [
+      "Shift + Space",
+      "Bound Over: dash and jump together, Shift first or on the same press, for a long, low leap that keeps the dash's speed."
+    ],
+    [
       "E",
       "Take a gun from the floor within {pickup_reach} m. Your old gun is left in its place."
     ],
@@ -125,6 +129,10 @@
     [
       "T",
       "Stop time, once the Defendant is beaten: {stop} s at first. Enemies, orbs and your own shots hold still until it resumes."
+    ],
+    [
+      "V",
+      "Lay a Bench, once bought: a {bench_size} m plank for {bench_time} s, under you in the air or where you aim on the ground. You stand on it; shots and orbs pass through it."
     ],
     [
       "Left mouse, Q, E, R, F",
@@ -304,5 +312,14 @@
   "callout_purse": "PURSE: +{n} CLEMENCY",
   "carry_heading": "Carry in",
   "hud_spin": "Spin {n}%",
-  "hud_struck": "Orbs struck {n}"
+  "hud_struck": "Orbs struck {n}",
+  "callout_switch": "The gate is open",
+  "callout_post": "Mooring post",
+  "callout_drown": "DROWNED: BACK TO THE POST",
+  "why_not_reached": "Not reached yet",
+  "timeline_heading": "Your timelines",
+  "timeline_text": "Two ways out of 2056. Pick a year to start a run there; past the house, a run follows the timeline it is on.",
+  "timeline_choose": "Follow",
+  "build_bench": "the Bench",
+  "callout_summons": "THE SUMMONS RISES FROM THE LAKE"
 }

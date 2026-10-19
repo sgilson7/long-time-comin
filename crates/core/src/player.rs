@@ -34,6 +34,8 @@ pub struct Controls {
     /// the grab key and the time stop's went down
     pub grab_pressed: bool,
     pub stop_pressed: bool,
+    /// the Bench's key went down
+    pub bench_pressed: bool,
 }
 
 /// What a run has made of the body: the upgrades bought and the pickups found.
@@ -75,6 +77,8 @@ pub struct Build {
     pub stop_ticks: i32,
     /// Contempts taken: what you kill bursts (0: none, up to three)
     pub contempt: i32,
+    /// the Bench: 0 without it, 1, 2 (two at once), 3 (it lasts longer)
+    pub bench: i32,
 }
 
 impl Default for Build {
@@ -103,6 +107,7 @@ impl Default for Build {
             lien: false,
             stop_ticks: 0,
             contempt: 0,
+            bench: 0,
         }
     }
 }
@@ -124,6 +129,16 @@ impl Build {
     /// Recesses a run starts with.
     pub fn recesses(&self) -> i32 {
         self.recess as i32 + (self.recess && self.appeal) as i32
+    }
+
+    /// How many Benches may stand at once, and how long each stands.
+    pub fn benches(&self) -> (usize, i32) {
+        match self.bench {
+            0 => (0, 0),
+            1 => (1, BENCH_TICKS),
+            2 => (2, BENCH_TICKS),
+            _ => (2, BENCH_LONG_TICKS),
+        }
     }
 }
 
@@ -167,6 +182,8 @@ pub struct Player {
     pub pound_cooldown: i32,
     /// until your time stop can be used again
     pub stop_cooldown: i32,
+    /// until a Bench can be laid again
+    pub bench_cooldown: i32,
     pub last_ground: V3,
     /// ticks since a hit landed, for the screen's red flash
     pub hurt_age: i32,
@@ -197,6 +214,8 @@ pub enum Event {
     Pound,
     /// you stopped time
     Stop,
+    /// you asked for a Bench (the world lays it)
+    Bench,
 }
 
 impl Player {
@@ -228,6 +247,7 @@ impl Player {
             pound_from: 0,
             pound_cooldown: 0,
             stop_cooldown: 0,
+            bench_cooldown: 0,
             last_ground: pos,
             hurt_age: 1000,
             stride: 0,
@@ -374,6 +394,13 @@ impl Player {
             self.events.push(Event::Stop);
         }
 
+        // the Bench: the world lays it, under you or where you aim
+        self.bench_cooldown = (self.bench_cooldown - 1).max(0);
+        if c.bench_pressed && self.build.bench > 0 && self.bench_cooldown == 0 {
+            self.bench_cooldown = BENCH_COOLDOWN;
+            self.events.push(Event::Bench);
+        }
+
         // the ground pound: in the air, straight down
         self.pound_cooldown = (self.pound_cooldown - 1).max(0);
         if c.pound_pressed
@@ -390,7 +417,7 @@ impl Player {
 
         let wish = self.wish(c);
         let top = self.top_speed();
-        let flat = v3(self.vel.x, 0, self.vel.z);
+        let mut flat = v3(self.vel.x, 0, self.vel.z);
 
         if c.dash_pressed && self.dash_left > 0 && !self.dashing() {
             self.release_grapple();
@@ -409,6 +436,14 @@ impl Player {
             let ground_jump = self.grounded || self.coyote > 0;
             if ground_jump || self.jumps_used < self.build.jumps {
                 self.release_grapple();
+                if self.dash_ticks == DASH_TICKS {
+                    // Bound Over with both keys on one tick: the dash just
+                    // begun lends the jump its speed, as it does a tick on
+                    let d = self.dash_dir.scale(DASH_SPEED);
+                    self.vel.x = d.x;
+                    self.vel.z = d.z;
+                    flat = v3(d.x, 0, d.z);
+                }
                 self.dash_ticks = 0;
                 if ground_jump {
                     self.vel.y = JUMP_SPEED;
@@ -574,6 +609,18 @@ impl Player {
                 _ => next.y += dv,
             }
             let (min, max) = self.bounds(next);
+            if axis == 2 && dv < 0 {
+                // a fall through the top of a Bench stops on it
+                if let Some(top) = level.one_way_catch(min, max, self.pos.y) {
+                    let (lmin, lmax) = self.bounds(v3(next.x, top, next.z));
+                    if !level.blocked(lmin, lmax) {
+                        self.pos.y = top;
+                        self.vel.y = 0;
+                        self.grounded = true;
+                        continue;
+                    }
+                }
+            }
             if !level.blocked(min, max) {
                 self.pos = next;
                 continue;

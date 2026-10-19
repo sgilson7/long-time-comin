@@ -25,6 +25,7 @@ mod god;
 mod home;
 mod house;
 mod ice;
+mod river;
 
 /// Half the width of an arena's floor.
 pub const HALF: i32 = int(28);
@@ -95,6 +96,8 @@ pub struct Arena {
     /// places up on the furniture a cat sits, leaps between and swoops
     /// from: each the point on top it sits on (empty: none)
     pub perches: Vec<V3>,
+    /// a course (the Water Gap's sections): crossed, not cleared
+    pub course: Option<crate::course::Course>,
 }
 
 /// A doorway whose opening leads elsewhere: whatever passes through it
@@ -181,6 +184,11 @@ struct B<'a> {
     /// smaller room: the last mission's bedroom and landing)
     half: i32,
     perches: Vec<V3>,
+    /// a course (the Water Gap): its start, its yaw, and its ground
+    course: Option<crate::course::Course>,
+    start_yaw: i32,
+    /// solids that change in play (doors, roots, rotten floors)
+    dynamic: Vec<crate::level::Dyn>,
 }
 
 /// The dry canal's channel runs north to south between these two x values.
@@ -1836,6 +1844,9 @@ pub fn build_at(zone: &str, kind: &str, seed: u64, exits: &[Side], pal: &Palette
         repeat: usize::MAX,
         half: HALF,
         perches: Vec::new(),
+        course: None,
+        start_yaw: 0,
+        dynamic: Vec::new(),
     };
     let is_court = kind == "boss";
     if zone == "white_waste" {
@@ -1848,6 +1859,8 @@ pub fn build_at(zone: &str, kind: &str, seed: u64, exits: &[Side], pal: &Palette
         b.god(kind, exits);
     } else if zone == "home" {
         b.home(kind, exits);
+    } else if zone == "water_gap" {
+        b.river(kind, exits);
     } else if is_court {
         b.court();
         b.shape(
@@ -1889,7 +1902,7 @@ pub fn build_at(zone: &str, kind: &str, seed: u64, exits: &[Side], pal: &Palette
         b.scatter_props(HALF, props);
         b.skyline(HALF);
     }
-    if !is_court {
+    if !is_court && b.course.is_none() {
         // the gate you came in by is shut, and solid: the camera backing
         // toward it stops in front of it instead of looking at its back
         let (g, _) = Side::South.place(b.half);
@@ -1909,7 +1922,35 @@ pub fn build_at(zone: &str, kind: &str, seed: u64, exits: &[Side], pal: &Palette
             }
         }
     }
-    let level = Level::new(b.solids.clone());
+    let mut level = Level::new(b.solids.clone());
+    for d in std::mem::take(&mut b.dynamic) {
+        level.add_dynamic(d);
+    }
+    if let Some(k) = b.course.take() {
+        // a course is crossed, not fought over: no spawn grid, the start at
+        // its first post and the way on at its far end
+        let start = k.posts.first().copied().unwrap_or(V3::ZERO);
+        let behind = start.add(crate::geom::facing(b.start_yaw, 0).scale(-m(3)));
+        return Arena {
+            shapes: b.shapes,
+            start,
+            start_yaw: b.start_yaw,
+            ground_spawns: Vec::new(),
+            air_spawns: Vec::new(),
+            gates: vec![(behind, b.start_yaw), (k.finish, k.finish_yaw)],
+            centre: start.add(v3(0, m(4), 0)),
+            fountain: None,
+            vents: b.vents,
+            nav: None,
+            panes: b.panes,
+            wrap: 0,
+            seams: Vec::new(),
+            repeated: 0,
+            perches: Vec::new(),
+            course: Some(k),
+            level,
+        };
+    }
     // spawn points: a grid over the floor, kept where a body fits
     let mut ground_spawns = Vec::new();
     let mut air_spawns = Vec::new();
@@ -2003,6 +2044,7 @@ pub fn build_at(zone: &str, kind: &str, seed: u64, exits: &[Side], pal: &Palette
         seams: b.seams,
         repeated,
         perches: b.perches,
+        course: None,
         level,
     }
 }

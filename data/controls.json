@@ -18,5 +18,5 @@
   "KeyR": "wall",
   "KeyC": "pound",
   "KeyG": "grab",
-  "KeyT": "stop"
+  "KeyT": "stop", "KeyV": "bench"
 }

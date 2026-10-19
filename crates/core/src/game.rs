@@ -45,6 +45,7 @@ pub const ACTIONS: &[(&str, u32)] = &[
     ("alt", 1 << 13),
     ("grab", 1 << 14),
     ("stop", 1 << 15),
+    ("bench", 1 << 16),
 ];
 
 fn bit(name: &str) -> u32 {
@@ -92,6 +93,8 @@ struct Run {
     /// plus), then home; and whether its brief has been read
     mission: bool,
     briefed: bool,
+    /// on the river's timeline: past the house, the Water Gap
+    river: bool,
 }
 
 impl Run {
@@ -335,7 +338,9 @@ impl Game {
         if !matches!(self.mode, Mode::Holding | Mode::Dead | Mode::Won) {
             return;
         }
-        let zone = if zone as i32 <= self.meta.unlocked {
+        let river = self.meta.on_river(&self.c);
+        let branch = self.c.zones.get(zone).is_some_and(|z| !z.branch_from.is_empty());
+        let zone = if (zone as i32 <= self.meta.unlocked && !branch) || (branch && river) {
             zone
         } else {
             0
@@ -359,10 +364,132 @@ impl Game {
             practice: false,
             mission: false,
             briefed: true,
+            river: false,
         });
+        if let Some(run) = self.run.as_mut() {
+            run.river = river;
+        }
         self.reading = None;
         self.mode = Mode::Play;
         self.enter();
+    }
+
+    /// Chooses a timeline on the Holding's timeline and starts a run on it
+    /// from zone `zone`: the Peak (`peak`) or the River (`river`), the river
+    /// only once it is open.
+    pub fn start_on(&mut self, line: &str, zone: usize) {
+        if self.mode != Mode::Holding {
+            return;
+        }
+        if line == "river" && self.meta.river_shut(&self.c).is_some() {
+            return;
+        }
+        self.meta.timeline = if line == "river" {
+            "river".into()
+        } else {
+            String::new()
+        };
+        self.start_run_at(zone);
+    }
+
+    /// Chooses the timeline runs follow past the house, in the Holding:
+    /// the Peak (`peak`) or, once open, the River (`river`).
+    pub fn choose_timeline(&mut self, line: &str) -> bool {
+        if self.mode != Mode::Holding || (line == "river" && self.meta.river_shut(&self.c).is_some()) {
+            return false;
+        }
+        self.meta.timeline = if line == "river" {
+            "river".into()
+        } else {
+            String::new()
+        };
+        true
+    }
+
+    /// The Holding's timeline: the main line of years, and each zone off it
+    /// forking from the zone it follows; where each stands on the panel (in
+    /// percent), whether a run may start there, and why not.
+    fn timeline_json(&self) -> Value {
+        let c = &self.c;
+        let m = &self.meta;
+        let main = c.built_zones();
+        let shut = m.river_shut(c);
+        let river_on = m.on_river(c);
+        let why = |r: &Refusal| match r {
+            Refusal::Locked(boss) => c.say("why_locked").replace(
+                "{boss}",
+                &c.story.bosses.get(boss).map_or(boss.clone(), |b| b.name.clone()),
+            ),
+            Refusal::Requires(id) => c.say("why_requires").replace(
+                "{name}",
+                &c.upgrades
+                    .iter()
+                    .find(|u| &u.id == id)
+                    .map_or(id.clone(), |u| u.name.clone()),
+            ),
+            _ => String::new(),
+        };
+        let x_of = |k: usize| TIMELINE_LEFT + TIMELINE_SPAN * k as i32 / main.saturating_sub(1).max(1) as i32;
+        let step = TIMELINE_SPAN / main.saturating_sub(1).max(1) as i32;
+        let mut nodes = Vec::new();
+        let mut edges = Vec::new();
+        // the branch's zones fork after the zone they follow
+        let fork = c
+            .zones
+            .iter()
+            .find(|z| z.built && !z.branch_from.is_empty())
+            .and_then(|z| c.zones.iter().position(|f| f.id == z.branch_from));
+        for k in 0..main {
+            let z = &c.zones[k];
+            let line = if fork.is_some_and(|f| k <= f) {
+                "both"
+            } else {
+                "peak"
+            };
+            let start_ok = k as i32 <= m.unlocked;
+            nodes.push(json!({
+                "zone": k, "line": line, "year": z.year, "name": z.name,
+                "boss": c.story.bosses.get(&z.boss).map(|b| b.name.clone()).unwrap_or_default(),
+                "x": x_of(k), "y": TIMELINE_MAIN_Y,
+                "open": start_ok, "beaten": m.beaten.contains(&z.boss), "sealed": false,
+                "why": if start_ok { String::new() } else { c.say("why_not_reached") },
+            }));
+            if k > 0 {
+                edges.push(json!({ "x1": x_of(k - 1), "y1": TIMELINE_MAIN_Y, "x2": x_of(k), "y2": TIMELINE_MAIN_Y, "line": line }));
+            }
+        }
+        if let Some(f) = fork {
+            let mut from = (x_of(f), TIMELINE_MAIN_Y);
+            let mut n = 0;
+            for (k, z) in c
+                .zones
+                .iter()
+                .enumerate()
+                .filter(|(_, z)| !z.branch_from.is_empty())
+            {
+                n += 1;
+                let at = (x_of(f) + step * n, TIMELINE_RIVER_Y);
+                let open = z.built && shut.is_none();
+                nodes.push(json!({
+                    "zone": k, "line": "river", "year": z.year, "name": z.name,
+                    "boss": c.story.bosses.get(&z.boss).map(|b| b.name.clone()).unwrap_or_default(),
+                    "x": at.0, "y": at.1,
+                    "open": open, "beaten": m.beaten.contains(&z.boss), "sealed": !z.built,
+                    "why": if !z.built { c.say("sealed") } else { shut.as_ref().map(why).unwrap_or_default() },
+                }));
+                edges.push(json!({ "x1": from.0, "y1": from.1, "x2": at.0, "y2": at.1, "line": "river" }));
+                from = at;
+            }
+        }
+        let branch_words = c.zones.iter().find_map(|z| c.story.branches.get(&z.id));
+        json!({
+            "lines": [
+                { "id": "peak", "name": branch_words.map(|b| b.main_timeline.clone()).unwrap_or_default(), "chosen": !river_on, "open": true, "why": "" },
+                { "id": "river", "name": branch_words.map(|b| b.timeline.clone()).unwrap_or_default(), "chosen": river_on, "open": shut.is_none(), "why": shut.as_ref().map(why).unwrap_or_default() },
+            ],
+            "nodes": nodes,
+            "edges": edges,
+        })
     }
 
     /// A boss rush, once the game has been beaten: the first zone's boss,
@@ -389,6 +516,7 @@ impl Game {
             practice: false,
             mission: false,
             briefed: true,
+            river: false,
         });
         self.reading = None;
         self.mode = Mode::Play;
@@ -441,6 +569,7 @@ impl Game {
             practice: true,
             mission: false,
             briefed: true,
+            river: false,
         });
         self.reading = None;
         self.mode = Mode::Play;
@@ -489,11 +618,39 @@ impl Game {
 
     /// The zone a run goes on to after zone `zone`'s boss: the next, but on
     /// the last mission home after the fourth.
-    fn next_zone(&self, zone: usize, mission: bool) -> usize {
+    fn next_zone(&self, zone: usize, mission: bool, river: bool) -> usize {
+        if river && !mission {
+            if let Some(b) = self.c.branch_after(zone) {
+                return b;
+            }
+        }
+        if !self.c.zones[zone].branch_from.is_empty() {
+            // the end of its timeline, for now
+            return usize::MAX;
+        }
         match self.c.mission_zone() {
             Some(home) if mission && zone == self.c.mission_break() => home,
             _ => zone + 1,
         }
+    }
+
+    /// Does zone `next` exist to be crossed into (not the last mission's)?
+    fn leads_on(&self, next: usize) -> bool {
+        self.c.zones.get(next).is_some_and(|z| z.built && !z.mission)
+    }
+
+    /// The boss rush's next boss after zone `zone`'s: the next zone's on
+    /// the main line, then the Oak's once it has burnt.
+    fn rush_next(&self, zone: usize) -> usize {
+        if zone + 1 < self.c.built_zones() {
+            return zone + 1;
+        }
+        self.c
+            .zones
+            .iter()
+            .position(|z| z.built && !z.branch_from.is_empty() && self.meta.beaten.contains(&z.boss))
+            .filter(|&b| b != zone && zone + 1 == self.c.built_zones())
+            .unwrap_or(usize::MAX)
     }
 
     /// The end of a practice: back to the Holding, the record untouched.
@@ -605,7 +762,7 @@ impl Game {
             return;
         };
         run.earned += run.world.earned;
-        let zone = self.next_zone(run.zone, run.mission);
+        let zone = self.next_zone(run.zone, run.mission, run.river);
         let have = Have::of(&run.world.player.build, run.world.held.level);
         let route = Route::build_for(&self.c, zone, self.meta.run_seed(), &have);
         let mut player = run.world.player.clone();
@@ -759,8 +916,13 @@ impl Game {
                 self.meta.beat(&boss);
                 run.earned += self.c.zones[run.zone].route.clemency_boss;
                 run.cleared += 1;
-                let (mission, zone) = (run.mission, run.zone);
-                let next = self.next_zone(zone, mission);
+                let (mission, zone, river, rush) = (run.mission, run.zone, run.river, run.rush);
+                let next = if rush {
+                    self.rush_next(zone)
+                } else {
+                    self.next_zone(zone, mission, river)
+                };
+                let leads_on = self.leads_on(next);
                 let run = self.run.as_mut().unwrap();
                 if mission {
                     if Some(run.zone) == self.c.mission_zone() {
@@ -779,7 +941,7 @@ impl Game {
                     return;
                 }
                 if run.rush {
-                    if next < self.c.built_zones() {
+                    if leads_on {
                         // straight on to the next boss, healed
                         run.earned += run.world.earned;
                         let mut player = run.world.player.clone();
@@ -803,7 +965,7 @@ impl Game {
                     self.mode = Mode::Won;
                     return;
                 }
-                if next < self.c.built_zones() {
+                if leads_on {
                     // the next zone: the interlude first
                     let year = self.c.zones[next].year.clone();
                     self.crossing_count = self.meta.record_crossing(&self.c, next, &year);
@@ -812,6 +974,14 @@ impl Game {
                     return;
                 }
                 let (total, cleared) = (run.total(), run.cleared);
+                if !self.c.zones[run.zone].branch_from.is_empty() {
+                    // the end of the river's timeline, for now
+                    let banked = self.meta.record_river(&self.c, total, cleared);
+                    self.last = (banked, cleared);
+                    self.win_count = None;
+                    self.mode = Mode::Won;
+                    return;
+                }
                 let year = self.c.zones[run.zone].year.clone();
                 let (banked, newest) = self.meta.record_win(&self.c, total, cleared, &year);
                 self.last = (banked, cleared);
@@ -1685,7 +1855,8 @@ impl Game {
                     })
                 }).collect::<Vec<_>>(),
             },
-            "zones": c.zones.iter().filter(|z| !z.mission).map(|z| json!({
+            "timeline": self.timeline_json(),
+            "zones": c.zones.iter().filter(|z| !z.mission && z.branch_from.is_empty()).map(|z| json!({
                 "name": z.name,
                 "year": z.year,
                 "built": z.built,
@@ -1746,12 +1917,24 @@ impl Game {
             let mission = self.run.as_ref().is_some_and(|r| r.mission);
             let briefing = self.run.as_ref().is_some_and(|r| !r.briefed);
             // the last mission's own words: its brief, then its interludes
+            let river = self.run.as_ref().is_some_and(|r| r.river);
+            let next = if briefing {
+                z
+            } else {
+                self.next_zone(z, mission, river)
+            };
+            // crossing onto another timeline is read in its own words
+            let branch = c
+                .zones
+                .get(next)
+                .and_then(|n| c.story.branches.get(&n.id))
+                .filter(|_| !briefing);
             let words = match (&c.story.mission, briefing) {
+                _ if branch.is_some() => branch.map(|b| &b.interlude),
                 (Some(ms), true) => Some(&ms.brief),
                 (Some(ms), false) if mission => ms.interludes.get(&c.zones[z].id),
                 _ => c.story.interludes.get(&c.zones[z].id),
             };
-            let next = if briefing { z } else { self.next_zone(z, mission) };
             s["interlude"] = json!({
                 "title": words.map(|w| w.title.clone()).unwrap_or_default(),
                 "lines": words.map(|w| w.lines.clone()).unwrap_or_default(),
@@ -1790,6 +1973,21 @@ impl Game {
                 "art": ms.verdict_art,
                 "title": ms.victory_title,
                 "lines": ms.victory,
+                "newest": "",
+                "clemency": self.last.0,
+                "cleared": self.last.1,
+            });
+        } else if let (Mode::Won, Some(b)) = (
+            self.mode,
+            self.run
+                .as_ref()
+                .filter(|r| !r.rush)
+                .and_then(|r| c.story.branches.get(&c.zones[r.zone].id)),
+        ) {
+            s["verdict"] = json!({
+                "art": b.verdict_art,
+                "title": b.victory_title,
+                "lines": b.victory,
                 "newest": "",
                 "clemency": self.last.0,
                 "cleared": self.last.1,
@@ -1838,6 +2036,7 @@ pub fn controls(held: u32, pressed: u32) -> Controls {
         alt_pressed: hit("alt"),
         grab_pressed: hit("grab"),
         stop_pressed: hit("stop"),
+        bench_pressed: hit("bench"),
     }
 }
 
@@ -2185,9 +2384,20 @@ pub(crate) mod tests {
                 assert_eq!(w.player.health, w.player.build.max_health, "healed");
             }
         }
+        // the Oak, once it has burnt, after the god
+        assert_eq!(g.mode, Mode::Play, "on to the river's boss");
+        assert_eq!(g.c.zones[g.run.as_ref().unwrap().zone].id, "water_gap");
+        bosses.push(run_down_the_boss(&mut g));
         assert_eq!(
             bosses,
-            ["bailiff", "witness", "executor", "defendant", "azathoth"]
+            [
+                "bailiff",
+                "witness",
+                "executor",
+                "defendant",
+                "azathoth",
+                "gallows_oak"
+            ]
         );
         assert_eq!(g.mode, Mode::Won);
         assert_eq!(g.meta.rush_wins, 1);
@@ -2209,10 +2419,14 @@ pub(crate) mod tests {
         if let Some(t) = e.tank.as_mut() {
             t.survive = 2;
         } else {
-            // the god is put to sleep at once, its song skipped
+            // the god is put to sleep at once, its song skipped; the Oak,
+            // never hurt, simply falls
             e.floor_hp = 0;
             e.hp = 1;
             e.hurt(5);
+            if e.shielded {
+                e.hp = 0;
+            }
         }
         let zone = g.run.as_ref().unwrap().zone;
         for _ in 0..ENDING_TICKS + 200 {
