@@ -67,7 +67,8 @@ impl B<'_> {
         self.solids.push(Solid::new(v3(x0, BED, z0), v3(x1, top, z1)));
         let body = self.c("sandstone");
         let lip = self.c("sandstone_pale");
-        let h = top - BED;
+        // the body stops inside the lip: two tops in one plane flicker
+        let h = top - dm(2) - BED;
         self.deco(
             Mesh::Cube,
             v3((x0 + x1) / 2, BED + h / 2, (z0 + z1) / 2),
@@ -99,10 +100,12 @@ impl B<'_> {
         let mut z = z0 + m(1);
         while z < z1 {
             for x in [x0 + dm(3), x1 - dm(3)] {
+                // up into the planks, not to their top
+                let post = top - dm(2);
                 self.deco(
                     Mesh::Cyl,
-                    v3(x, (top + BED) / 2, z),
-                    v3(dm(3), top - BED, dm(3)),
+                    v3(x, (post + BED) / 2, z),
+                    v3(dm(3), post - BED, dm(3)),
                     dark,
                 );
             }
@@ -129,14 +132,33 @@ impl B<'_> {
             let mut z = z0;
             let mut k = 0;
             while z < z1 {
-                let len = self.metres(10, 22).min(z1 - z);
+                // its joins off the tenth-metre grid too (a shelf's lip ends
+                // on it)
+                let first = if k == 0 { ONE / 40 } else { 0 };
+                let mut len = (self.metres(10, 22) + first).min(z1 - z);
+                if z1 - z - len < m(1) {
+                    // no sliver of a block at the end: its face would lie in
+                    // the one before it
+                    len = z1 - z;
+                }
                 let jut = self.metres(0, 2);
                 let mut y = BED;
                 let mut band = 0;
-                while y < high {
-                    let t = self.metres(3, 7).min(high - y);
+                // the top band stops a little short: a shelf's lip may
+                // lie at `high` (two tops in one plane flicker)
+                let top = high - dm(1);
+                // the bands' joins and faces stand a quarter of a tenth off
+                // the tenth-metre grid the ledges, beams and posts are laid
+                // on, so none of them lies in a stratum's plane
+                let off = ONE / 40;
+                while y < top {
+                    let mut t = (self.metres(3, 7) + if band == 0 { off } else { 0 }).min(top - y);
+                    if top - y - t < m(1) {
+                        // no sliver of a band at the top
+                        t = top - y;
+                    }
                     let rgb = colours[(k + band) % 3];
-                    let face = x + side * (m(3) - jut - dm(self.rng.range(0, 8)));
+                    let face = x + side * (m(3) - jut - dm(self.rng.range(0, 8)) + off);
                     self.deco(
                         Mesh::Cube,
                         v3(face, y + t / 2, z + len / 2),
@@ -313,12 +335,14 @@ impl B<'_> {
         });
         let dynamic = self.dynamic.len() - 1;
         let iron = self.c("iron");
-        // its frame stands whatever the gate does
-        for x in [min.x - dm(3), max.x + dm(3)] {
+        // its frame stands whatever the gate does, a hair clear of the
+        // gate's sides (the rock the gate is let into may lie in them)
+        let gap = ONE / 50;
+        for x in [min.x - dm(3) - gap / 2, max.x + dm(3) + gap / 2] {
             self.deco(
                 Mesh::Cube,
                 v3(x, (min.y + max.y) / 2 + dm(3), (min.z + max.z) / 2),
-                v3(dm(6), max.y - min.y + dm(6), max.z - min.z + dm(4)),
+                v3(dm(6) - gap, max.y - min.y + dm(6), max.z - min.z + dm(4)),
                 iron,
             );
         }

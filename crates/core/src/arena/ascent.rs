@@ -435,7 +435,9 @@ impl B<'_> {
         let hg = m(5);
         self.deck(-m(10), m(16), m(10), m(20), hg, &[(-m(6), m(18)), (m(6), m(18))]);
         let steps = (hg + dm(4) - 1) / dm(4);
-        self.stairs(m(8), 0, m(16) - dm(6) * steps, 0, ONE, hg, m(3));
+        // two centimetres on, so no step's front lies in a column's face
+        // (it ends under the gallery's lip)
+        self.stairs(m(8), 0, m(16) - dm(6) * steps + dm(1) / 5, 0, ONE, hg, m(3));
         // the fallen bell
         let bell = self.c("brass");
         let tilt = Affine::translate(v3(m(4), dm(9), -m(4)))

@@ -81,6 +81,27 @@ fn about(a: i32, r: i32, y: i32) -> V3 {
     v3(EYE.x + fx::mul(fx::sin(a), r), y, EYE.z + fx::mul(fx::cos(a), r))
 }
 
+/// A triangle `p0 p1 p2` drawn as a wedge a centimetre thick, its face
+/// looking toward `toward`: a wedge's sides are right triangles, and any
+/// triangle is a right triangle's image under some affine map.
+fn triangle(p0: V3, p1: V3, p2: V3, toward: V3) -> Affine {
+    // the wedge's +x side runs (y, z) = (−½, ½), (−½, −½), (½, ½)
+    let (p1, p2) = if p1.sub(p0).cross(p2.sub(p0)).dot(toward) < 0 {
+        (p2, p1)
+    } else {
+        (p1, p2)
+    };
+    let c1 = p2.sub(p0);
+    let c2 = p0.sub(p1);
+    let face = c1.cross(c2).norm();
+    Affine {
+        c0: face.scale(ONE / 100),
+        c1,
+        c2,
+        t: p1.add(p2).scale(ONE / 2),
+    }
+}
+
 /// The `j`th piece down arm `arm`: it is `j` pieces' spacing along its fall
 /// at tick 0.
 fn track(arm: i32, j: i32) -> Spiral {
@@ -288,7 +309,8 @@ impl B<'_> {
         let yard = about(a + fx::QUARTER, m(3), 0).sub(EYE);
         let y = top.add(v3(0, -m(2), 0));
         self.rod(y.sub(yard), y.add(yard), dm(3), dark, true);
-        let rag = about(a + fx::QUARTER, dm(5), 0).sub(EYE);
+        // hung a little off the mast: its edge in the mast's side flickers
+        let rag = about(a + fx::QUARTER, dm(5) + ONE / 25, 0).sub(EYE);
         self.deco(
             Mesh::Cube,
             y.add(rag).add(v3(0, -dm(15), 0)),
@@ -366,12 +388,16 @@ impl B<'_> {
                 } else {
                     shades[(j % 4) as usize]
                 };
-                self.wall_panel(a, inner, outer, fx::TURN / ROUND, rgb, 0, 0);
+                self.wall_tile(a, inner, outer, fx::TURN / ROUND, rgb);
             }
             if band < bands - 1 {
+                // the tiles are chords: in as far as a chord's middle comes,
+                // so the foam lies over the water and not in it
+                let k = fx::cos(fx::TURN / ROUND / 2);
+                let (fi, fo) = ((fx::mul(inner.0, k), inner.1), (fx::mul(outer.0, k), outer.1));
                 for arm in 0..ARMS {
                     let a = fx::TURN / ARMS * arm + twist * 2 + deg(7);
-                    self.wall_panel(a, inner, outer, fx::TURN / ROUND / 3, foam, ONE / 3, dm(1));
+                    self.wall_panel(a, fi, fo, fx::TURN / ROUND / 3, foam, ONE / 3, dm(1));
                 }
             }
         }
@@ -432,6 +458,29 @@ impl B<'_> {
                 let s = self.metres(1, 2);
                 self.deco(Mesh::Cube, at, v3(s, s, s), hull);
             }
+        }
+    }
+
+    /// One tile of the cone's wall at bearing `a`, `wide` of a turn, from
+    /// the ring `inner` to the ring `outer` (out, up): the four corners
+    /// exactly, as two triangles, so a tile meets its neighbours edge to
+    /// edge. Panels laid a little over each other to close the gaps lie in
+    /// one plane where they overlap (the flat band at the rim wholly), and
+    /// which shows there flickers as the camera moves.
+    fn wall_tile(&mut self, a: i32, inner: (i32, i32), outer: (i32, i32), wide: i32, rgb: [i32; 3]) {
+        let (l, r) = (a - wide / 2, a + wide / 2);
+        let (il, ir) = (about(l, inner.0, inner.1), about(r, inner.0, inner.1));
+        let (ol, or) = (about(l, outer.0, outer.1), about(r, outer.0, outer.1));
+        // the way the panels of old faced: into the cone
+        let (s, c) = (fx::sin(a), fx::cos(a));
+        let slant = v3(
+            fx::mul(s, outer.0 - inner.0),
+            outer.1 - inner.1,
+            fx::mul(c, outer.0 - inner.0),
+        );
+        let into = slant.norm().cross(v3(c, 0, -s)).norm();
+        for (p0, p1, p2) in [(il, ir, or), (il, or, ol)] {
+            self.shape(Mesh::Wedge, triangle(p0, p1, p2, into), rgb, 0, false);
         }
     }
 

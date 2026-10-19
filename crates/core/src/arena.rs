@@ -191,6 +191,10 @@ struct B<'a> {
     start_yaw: i32,
     /// solids that change in play (doors, roots, rotten floors)
     dynamic: Vec<crate::level::Dyn>,
+    /// buildings raised so far: neighbours' cornices, awnings and signs
+    /// stand a little differently, so none lies in another's plane (that
+    /// flickers)
+    kth: i32,
 }
 
 /// The dry canal's channel runs north to south between these two x values.
@@ -258,6 +262,69 @@ impl<'a> B<'a> {
 
     fn glow(&mut self, mesh: Mesh, c: V3, size: V3, rgb: Rgb) {
         self.shape(mesh, boxed(c, size), rgb, ONE, false);
+    }
+
+    /// A box from its centre and full size, grown a little on any side
+    /// that would lie in the plane of a box of another colour drawn
+    /// already and overlap it (two faces in one plane flicker as the
+    /// camera moves): for things set down at random that may overlap
+    /// (cornices of neighbours, signs, the things on a roof).
+    fn deco_clear(&mut self, c: V3, size: V3, rgb: Rgb, glow: i32) {
+        let (mut lo, mut hi) = (c.sub(size.scale(ONE / 2)), c.add(size.scale(ONE / 2)));
+        // the boxes drawn so far, square to the axes
+        // (a facade is a panel, its columns square to the axes in another
+        // order: its extent the columns' sum)
+        let one_axis = |c: V3| [c.x, c.y, c.z].iter().filter(|&&v| v != 0).count() <= 1;
+        let boxes: Vec<(V3, V3)> = self
+            .shapes
+            .iter()
+            .filter(|s| matches!(s.mesh, Mesh::Cube | Mesh::Facade) && s.rgb != rgb && !s.halo)
+            .filter(|s| one_axis(s.at.c0) && one_axis(s.at.c1) && one_axis(s.at.c2))
+            .map(|s| {
+                let a = &s.at;
+                let ext = |f: fn(V3) -> i32| f(a.c0).abs() + f(a.c1).abs() + f(a.c2).abs();
+                let half = v3(ext(|v| v.x), ext(|v| v.y), ext(|v| v.z)).scale(ONE / 2);
+                (a.t.sub(half), a.t.add(half))
+            })
+            .collect();
+        let get = |v: V3, k: usize| [v.x, v.y, v.z][k];
+        let set = |v: &mut V3, k: usize, x: i32| match k {
+            0 => v.x = x,
+            1 => v.y = x,
+            _ => v.z = x,
+        };
+        let near = dm(1) * 15 / 100;
+        for axis in 0..3 {
+            let (u, w) = ((axis + 1) % 3, (axis + 2) % 3);
+            for high in [false, true] {
+                for _ in 0..5 {
+                    let face = if high { get(hi, axis) } else { get(lo, axis) };
+                    let hit = boxes.iter().any(|(bl, bh)| {
+                        let other = if high { get(*bh, axis) } else { get(*bl, axis) };
+                        (other - face).abs() < near
+                            && get(*bl, u) < get(hi, u)
+                            && get(lo, u) < get(*bh, u)
+                            && get(*bl, w) < get(hi, w)
+                            && get(lo, w) < get(*bh, w)
+                    });
+                    if !hit {
+                        break;
+                    }
+                    if high {
+                        set(&mut hi, axis, face + dm(1) / 5);
+                    } else {
+                        set(&mut lo, axis, face - dm(1) / 5);
+                    }
+                }
+            }
+        }
+        self.shape(
+            Mesh::Cube,
+            boxed(lo.add(hi).scale(ONE / 2), hi.sub(lo)),
+            rgb,
+            glow,
+            glow == 0,
+        );
     }
 
     /// A solid box standing on `y`, drawn.
@@ -369,13 +436,14 @@ impl<'a> B<'a> {
         let col = self.pick(&self.pal.signs.clone());
         let ink = self.c("ink");
         let (sx, sz) = if normal_x { (dm(2), w) } else { (w, dm(2)) };
-        self.deco(Mesh::Cube, at, v3(sx, h, sz), ink);
+        // signs hang where they will and may overlap: clear of each other
+        self.deco_clear(at, v3(sx, h, sz), ink, 0);
         let (gx, gz) = if normal_x {
             (dm(3), w * 8 / 10)
         } else {
             (w * 8 / 10, dm(3))
         };
-        self.glow(Mesh::Cube, at, v3(gx, h * 7 / 10, gz), col);
+        self.deco_clear(at, v3(gx, h * 7 / 10, gz), col, ONE);
     }
 
     fn car(&mut self, x: i32, y: i32, z: i32, yaw: i32) {
@@ -484,7 +552,17 @@ impl<'a> B<'a> {
         let (stone, trim) = self.slab_colours();
         let (cx, cz) = ((x0 + x1) / 2, (z0 + z1) / 2);
         let (w, d) = ((x1 - x0).abs(), (z1 - z0).abs());
-        self.block(cx, h - DECK, cz, w, DECK, d, stone);
+        // drawn a little proud of its solid: a walkway at the floor's
+        // height lies over the floor at its ends (one plane flickers)
+        self.solids.push(Solid::stand(cx, h - DECK, cz, w, DECK, d));
+        // (four centimetres: decals on floors stand up to three)
+        let proud = dm(1) * 4 / 10;
+        self.deco(
+            Mesh::Cube,
+            v3(cx, h - DECK / 2 + proud / 2, cz),
+            v3(w, DECK + proud, d),
+            stone,
+        );
         self.deco(
             Mesh::Cube,
             v3(cx, h - DECK - dm(1), cz),
@@ -636,12 +714,16 @@ impl<'a> B<'a> {
         } else {
             self.deco(Mesh::Cube, v3(x, h / 2, z), v3(w, h, d), wall);
         }
+        // every other building's cornice, awnings and signs two
+        // centimetres out and up: a neighbour's may overlap them
+        self.kth += 1;
+        let jog = dm(1) / 5 * (self.kth % 2);
         // a cornice and a band at each storey
-        self.deco(
-            Mesh::Cube,
-            v3(x, h + dm(2), z),
-            v3(w + dm(4), dm(4), d + dm(4)),
+        self.deco_clear(
+            v3(x, h + dm(2) + jog / 2, z),
+            v3(w + dm(4) + jog * 2, dm(4) + jog, d + dm(4) + jog * 2),
             trim,
+            0,
         );
         let storey = dm(32);
         let floors = (h - m(2)) / storey;
@@ -671,16 +753,16 @@ impl<'a> B<'a> {
                 } else {
                     v3(span * 7 / 10, 0, 0)
                 };
-                let at = v3(x, dm(14), z).add(n.scale(half_depth + dm(1)));
+                let at = v3(x, dm(14), z).add(n.scale(half_depth + dm(1) + jog));
                 let size = along.add(n.scale(dm(1))).add(v3(0, dm(18), 0));
                 let sz = v3(size.x.abs().max(dm(1)), size.y, size.z.abs().max(dm(1)));
                 self.glow(Mesh::Cube, at, sz, lit);
                 let cloth = self.pick(&[self.c("cloth"), self.c("cloth_2")]);
-                let aw_at = v3(x, dm(26), z).add(n.scale(half_depth + dm(6)));
+                let aw_at = v3(x, dm(26) + jog, z).add(n.scale(half_depth + dm(6) + jog));
                 let aw = along.add(n.scale(dm(12))).add(v3(0, dm(2), 0));
                 let aws = v3(aw.x.abs().max(dm(2)), aw.y, aw.z.abs().max(dm(2)));
-                self.deco(Mesh::Cube, aw_at, aws, cloth);
-                let sign_at = v3(x, dm(31), z).add(n.scale(half_depth + dm(2)));
+                self.deco_clear(aw_at, aws, cloth, 0);
+                let sign_at = v3(x, dm(31), z).add(n.scale(half_depth + dm(2) + jog));
                 self.sign(sign_at, span / 3, dm(7), fi < 2);
             }
             // The windows: one facade panel over the face, its grid of
@@ -714,7 +796,7 @@ impl<'a> B<'a> {
                         let along = if fi < 2 { v3(0, 0, off) } else { v3(off, 0, 0) };
                         let ac = self.c("metal");
                         let below = v3(x, y - dm(11), z).add(along).add(n.scale(half_depth + dm(3)));
-                        self.deco(Mesh::Cube, below, v3(dm(7), dm(5), dm(7)), ac);
+                        self.deco_clear(below, v3(dm(7), dm(5), dm(7)), ac, 0);
                     }
                     if f > 0 && self.rng.chance(12) {
                         // a balcony slab
@@ -724,7 +806,7 @@ impl<'a> B<'a> {
                         } else {
                             v3(span / 3, dm(2), dm(10))
                         };
-                        self.deco(Mesh::Cube, at, size, trim);
+                        self.deco_clear(at, size, trim, 0);
                     }
                 }
             }
@@ -759,30 +841,39 @@ impl<'a> B<'a> {
         let dark = self.c("metal_dark");
         let wood = self.c("wood");
         let things = self.rng.range(1, 4);
-        for _ in 0..things {
+        for k in 0..things {
             let px = x + dm(self.rng.range(-4, 4)) * (w / m(1)).max(1) / 10;
             let pz = z + dm(self.rng.range(-4, 4)) * (d / m(1)).max(1) / 10;
+            // the things on one roof may overlap: each a few centimetres
+            // bigger than the one before, so no two faces lie in one
+            // plane (that flickers)
+            let j = dm(1) * 15 / 10 * k;
             match self.rng.range(0, 5) {
                 0 | 1 => {
                     // an air-conditioning unit with its fan
                     self.deco(
                         Mesh::Cube,
-                        v3(px, h + dm(6), pz),
-                        v3(dm(16), dm(12), dm(12)),
+                        v3(px, h + (dm(12) + j) / 2, pz),
+                        v3(dm(16) + j, dm(12) + j, dm(12) + j),
                         metal,
                     );
-                    self.deco(Mesh::Cyl, v3(px, h + dm(12), pz), v3(dm(9), dm(1), dm(9)), dark);
+                    self.deco(
+                        Mesh::Cyl,
+                        v3(px, h + dm(12) + j, pz),
+                        v3(dm(9), dm(1), dm(9)),
+                        dark,
+                    );
                 }
                 2 => {
                     // a water tank on legs with a cone roof
                     for (lx, lz) in [(-1, -1), (1, -1), (-1, 1), (1, 1)] {
                         let a = v3(px + lx * dm(8), h, pz + lz * dm(8));
-                        self.rod(a, a.add(v3(0, m(2), 0)), dm(1), dark, false);
+                        self.rod(a, a.add(v3(0, m(2) + j, 0)), dm(1), dark, false);
                     }
-                    self.deco(Mesh::Cyl, v3(px, h + m(3), pz), v3(m(2), m(2), m(2)), wood);
+                    self.deco(Mesh::Cyl, v3(px, h + m(3) + j, pz), v3(m(2), m(2), m(2)), wood);
                     self.deco(
                         Mesh::Cone,
-                        v3(px, h + dm(45), pz),
+                        v3(px, h + dm(45) + j, pz),
                         v3(dm(22), dm(9), dm(22)),
                         crate::render::shade(wood, 80),
                     );
@@ -819,22 +910,19 @@ impl<'a> B<'a> {
                         dark,
                         false,
                     );
-                    self.deco(
-                        Mesh::Cube,
-                        v3(px, h + dm(38), pz),
-                        v3(m(4), m(2), dm(3)),
-                        self.c("ink"),
-                    );
-                    self.glow(Mesh::Cube, v3(px, h + dm(38), pz), v3(dm(36), dm(16), dm(4)), col);
+                    let ink = self.c("ink");
+                    self.deco_clear(v3(px, h + dm(38), pz + j), v3(m(4), m(2), dm(3)), ink, 0);
+                    self.deco_clear(v3(px, h + dm(38), pz + j), v3(dm(36), dm(16), dm(4)), col, ONE);
                 }
                 _ => {
                     // a little shed
                     let c = self.pick(&self.pal.walls.clone());
-                    self.deco(Mesh::Cube, v3(px, h + m(1), pz), v3(m(2), m(2), m(2)), c);
+                    let s = m(2) + j;
+                    self.deco(Mesh::Cube, v3(px, h + s / 2, pz), v3(s, s, s), c);
                     self.deco(
                         Mesh::Wedge,
-                        v3(px, h + dm(23), pz),
-                        v3(dm(22), dm(6), dm(22)),
+                        v3(px, h + s + dm(3), pz),
+                        v3(dm(22) + j, dm(6), dm(22) + j),
                         self.c("roof"),
                     );
                 }
@@ -1107,11 +1195,16 @@ impl<'a> B<'a> {
                 0,
                 false,
             );
-            // the channel's walls
+            // the channel's walls, their tops a little under the paving's
+            // (which lies over them: one plane flickers)
             for x in [x0, x1] {
+                let top = dm(1) / 5;
                 self.shape(
                     Mesh::Cube,
-                    boxed(v3(x, -CANAL_DEPTH / 2, 0), v3(dm(2), CANAL_DEPTH, o * 2)),
+                    boxed(
+                        v3(x, -CANAL_DEPTH / 2 - top / 2, 0),
+                        v3(dm(2), CANAL_DEPTH - top, o * 2),
+                    ),
                     crate::render::shade(quay, 85),
                     0,
                     true,
@@ -1390,13 +1483,14 @@ impl<'a> B<'a> {
         let glass = self.c("window");
         self.glow(
             Mesh::Cube,
-            v3(-m(15), m(2) + dm(1), -m(14)),
+            // a little over the roof's cap, not level with it
+            v3(-m(15), m(2) + dm(1) + dm(1) / 5, -m(14)),
             v3(m(3), dm(2), m(2)),
             glass,
         );
         self.glow(
             Mesh::Cube,
-            v3(m(15), m(2) + dm(1), m(15)),
+            v3(m(15), m(2) + dm(1) + dm(1) / 5, m(15)),
             v3(m(2), dm(2), m(3)),
             glass,
         );
@@ -1418,7 +1512,16 @@ impl<'a> B<'a> {
             water,
         );
         for z in [-m(13), m(13)] {
-            self.block(mid, -dm(4), z, x1 - x0 + m(1), dm(4), m(4), stone);
+            // drawn a little proud of its solid: its ends lie on the
+            // paving (one plane flickers)
+            self.solids
+                .push(Solid::stand(mid, -dm(4), z, x1 - x0 + m(1), dm(4), m(4)));
+            self.deco(
+                Mesh::Cube,
+                v3(mid, -dm(2) + dm(1) / 10, z),
+                v3(x1 - x0 + m(1), dm(4) + dm(1) / 5, m(4)),
+                stone,
+            );
             for s in [-1, 1] {
                 let a = v3(x0, 0, z + s * m(2));
                 self.rod(
@@ -1849,6 +1952,7 @@ pub fn build_at(zone: &str, kind: &str, seed: u64, exits: &[Side], pal: &Palette
         course: None,
         start_yaw: 0,
         dynamic: Vec::new(),
+        kth: 0,
     };
     let is_court = kind == "boss";
     if zone == "white_waste" {

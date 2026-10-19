@@ -46,7 +46,13 @@ pub const PASS_ORDER: [u32; PASSES] = [
     PASS_GLOW,
 ];
 
-pub const NEAR: i32 = ONE / 5;
+/// The near plane. The depth buffer's steps grow with the square of the
+/// distance over this, so it is as far out as it can be: scenery within
+/// `SEE_NEAR` (0.9 m) of the lens is cut away anyway, the body is hidden
+/// within `CAMERA_HIDE_BODY`, and orbs fade near the lens. At 0.2 m two
+/// surfaces 5 cm apart could not be told apart 200 m off, and a far
+/// skyline's windows flickered on their walls.
+pub const NEAR: i32 = ONE / 2;
 pub const FAR: i32 = fx::int(900);
 
 /// The ink line is this thick on a small shape, and grows with a shape's

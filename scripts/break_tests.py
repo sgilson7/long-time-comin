@@ -331,6 +331,25 @@ BREAKS = [
  ("vault: the river waits for the Eraser", "crates/core/src/world.rs", "erasing.is_none_or(|er| er.erased > ERASE_TICKS)", "true", "the_oaks_fall_leads_into_the_anomaly"),
  ("vault: the step up onto the dais", "crates/core/src/arena/vault/eraser.rs", "        self.block(0, 0, DAIS + dm(6), m(4), DAIS_TOP / 2, dm(16), white);", "", "the_start_can_walk_up_onto_the_dais"),
  ("vault: the shut Eraser is drawn shut", "crates/core/src/draw/sea.rs", "    if open == 0 {", "    if true {", "the_erasers_ring_is_shut"),
+ # flicker: two surfaces in one plane (z-fighting), found and kept out
+ ("flicker: the detector sees a rug flush with the floor", "crates/core/src/flicker.rs", "        if si.rgb == sj.rgb && si.glow == sj.glow && si.pass == sj.pass {", "        if true || si.rgb == sj.rgb && si.glow == sj.glow && si.pass == sj.pass {", "two_boxes_whose_tops_meet"),
+ ("flicker: the detector leaves buried faces", "crates/core/src/flicker.rs", "                    .any(|&k| inside(&insts[k], front) || inside(&insts[k], deep))", "                    .any(|&k| false && (inside(&insts[k], front) || inside(&insts[k], deep)))", "a_side_in_a_walls_side"),
+ ("flicker: the detector leaves halos to the shader", "crates/core/src/flicker.rs", "    s.pass != render::PASS_INK && s.pass != render::PASS_GLOW", "    s.pass != render::PASS_INK", "a_side_in_a_walls_side"),
+ ("flicker: the detector judges from where a body stands", "crates/core/src/flicker.rs", "        let Some(level) = &self.level else {\n            return true;\n        };", "        let Some(level) = &self.level.as_ref().filter(|_| false) else {\n            return true;\n        };", "no_section_of_any_zone"),
+ ("flicker: the near plane", "crates/core/src/render.rs", "pub const NEAR: i32 = ONE / 2;", "pub const NEAR: i32 = ONE / 5;", "the_depth_buffer_tells"),
+ ("flicker: the ink is drawn back", "data/shaders/scene.vert", "  if (uPass == INK) gl_Position.z += INK_BIAS * gl_Position.w;\n", "", "the_shader_draws_ink_back"),
+ ("flicker: the river's shelves stop inside their lips", "crates/core/src/arena/river.rs", "        let h = top - dm(2) - BED;", "        let h = top - BED;", "no_section_of_any_zone"),
+ ("flicker: the canyon's strata off the tenth-metre grid", "crates/core/src/arena/river.rs", "                let off = ONE / 40;", "                let off = 0;", "no_section_of_any_zone"),
+ ("flicker: the Halls' black glass stands proud", "crates/core/src/arena/vault/halls.rs", "v3(side * (W + dm(1) - ONE / 20), m(10), z),", "v3(side * (W + dm(1)), m(10), z),", "no_section_of_any_zone"),
+ ("flicker: the Eye's wall in tiles that meet", "crates/core/src/arena/sea/eye.rs", "                self.wall_tile(a, inner, outer, fx::TURN / ROUND, rgb);", "                self.wall_panel(a, inner, outer, fx::TURN / ROUND, rgb, 0, 0);", "no_section_of_any_zone"),
+ ("flicker: the wreckage's ribs short of its ends", "crates/core/src/draw/sea.rs", "(v3(w * k / 3, dm(1), 0), v3(dm(3), dm(3), d - dm(2) / 5))", "(v3(w * k / 3, dm(1), 0), v3(dm(3), dm(3), d))", "no_section_of_any_zone"),
+ ("flicker: the orrery's segments sunk", "crates/core/src/arena/god.rs", "            let sunk = dm(1) / 5 * (1 + k % 2);", "            let sunk = 0;", "no_section_of_any_zone"),
+ ("flicker: a rotten floor under the lip", "crates/core/src/draw.rs", "            let sunk = v3(0, cm(2), 0);", "            let sunk = v3(0, 0, 0);", "no_section_of_any_zone"),
+ ("flicker: the cliffs' feet jog", "crates/core/src/arena/ice.rs", "        let jog = dm(1) / 5 * (k % 2) * 2;", "        let jog = 0;", "no_section_of_any_zone"),
+ ("flicker: cornices, signs and awnings kept clear", "crates/core/src/arena.rs", "        let near = dm(1) * 15 / 100;", "        let near = 0;", "no_section_of_any_zone"),
+ ("flicker: the house's window arch behind the window", "crates/core/src/arena/house.rs", "Affine::translate(at(mid, m(11) + dm(5), -dm(1) + dm(1) / 5))", "Affine::translate(at(mid, m(11) + dm(5), -dm(1)))", "no_section_of_any_zone"),
+ ("flicker: the bedroom's boards a centimetre in", "crates/core/src/arena/home.rs", "                    self.h_flat([a + 1, 0, r[1] + 1], [b - 1, 1, r[3] - 1], alt);", "                    self.h_flat([a, 0, r[1]], [b, 1, r[3]], alt);", "no_section_of_any_zone"),
+ ("flicker: the Eraser's cover walls' caps overhang", "crates/core/src/arena/vault/eraser.rs", "        let over = along.scale(ONE * 3 / 100);", "        let over = V3::ZERO;", "no_section_of_any_zone_draws_two_surfaces"),
 ]
 
 

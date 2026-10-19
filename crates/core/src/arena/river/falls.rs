@@ -178,7 +178,9 @@ impl B<'_> {
         self.solids.push(s);
         let body = self.c("sandstone_dark");
         let lip = self.c("sandstone_pale");
-        self.deco(Mesh::Cube, s.centre(), max.sub(min), body);
+        // the body stops inside the lip: two tops in one plane flicker
+        let under = v3(max.x, max.y - dm(2), max.z);
+        self.deco(Mesh::Cube, min.add(under).scale(ONE / 2), under.sub(min), body);
         self.deco(
             Mesh::Cube,
             v3(s.centre().x, max.y - dm(2), s.centre().z),
@@ -204,7 +206,9 @@ impl B<'_> {
         let blue = self.c("river_water");
         let foam = self.c("river_foam");
         let h = top - bottom;
-        let mut x = -W + dm(5);
+        // off the tenth-metre grid the canyon's strata stand on, so no
+        // strip's end lies in a stratum's face
+        let mut x = -W + dm(5) + ONE / 20;
         let mut k = 0;
         while x < W - m(1) {
             let w = self.metres(1, 3);

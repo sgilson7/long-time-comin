@@ -16,7 +16,16 @@ uniform vec4 uFx;
 uniform vec3 uEye;
 // the pass: 5 snaps corners to a coarse grid on screen, as a PlayStation did
 uniform float uPass;
+const float INK = 2.0;
+const float GLOW = 3.0;
 const float PS1 = 5.0;
+// A tie in depth with a solid (a shape's outline hull lying in another's
+// face, a glowing strip laid in a wall) flickers as the camera moves. The
+// ink is drawn a few depth steps back, so the solid wins the tie; a halo a
+// few forward, so it shows on the surface it lies in. In clip space, as a
+// share of w: about eight steps of a 24-bit depth buffer.
+const float INK_BIAS = 1.0e-6;
+const float HALO_BIAS = 1.0e-6;
 const vec2 PS1_GRID = vec2(160.0, 120.0);
 // near the eye space is flat, so aiming is as it looks; each shape is
 // lifted as one piece
@@ -52,6 +61,8 @@ void main() {
   vColor = iD;
   vFacade = vec2((aPos.z + 0.5) * length(iC.xyz), (aPos.x + 0.5) * length(iA.xyz));
   gl_Position = uVP * vec4(w, 1.0);
+  if (uPass == INK) gl_Position.z += INK_BIAS * gl_Position.w;
+  if (uPass == GLOW) gl_Position.z -= HALO_BIAS * gl_Position.w;
   if (uPass == PS1) {
     gl_Position.xy = floor(gl_Position.xy / gl_Position.w * PS1_GRID + 0.5) / PS1_GRID * gl_Position.w;
   }

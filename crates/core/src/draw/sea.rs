@@ -1632,10 +1632,12 @@ pub fn wreck(
             0,
         );
         for k in [-1, 1] {
+            // a little short of the deck's ends: an end in the deck's
+            // plane flickers
             let (off, rib) = if w > d {
-                (v3(w * k / 3, dm(1), 0), v3(dm(3), dm(3), d))
+                (v3(w * k / 3, dm(1), 0), v3(dm(3), dm(3), d - dm(2) / 5))
             } else {
-                (v3(0, dm(1), d * k / 3), v3(w, dm(3), dm(3)))
+                (v3(0, dm(1), d * k / 3), v3(w - dm(2) / 5, dm(3), dm(3)))
             };
             b.inked(Mesh::Cube, &boxed(top.add(off), rib), dark, 0);
         }

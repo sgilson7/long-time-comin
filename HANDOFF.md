@@ -214,3 +214,5 @@ The Vault's last boss is THE ARCHIVIST, a jet-packed alien that grows each bar; 
 Checked locally: fmt, clippy with warnings as errors, 340 core and 11 boundary tests, the release wasm build and the import audit passed; the browser check timed out on a click while the flicker analysis held the processor (load average about 41), as it has before under load. The Archivist's agent ran the whole `./scripts/check.sh`, browser check in three engines included, and it passed; CI's check is the gate.
 
 Live (2026-10-19): PR #20 passed its check on CI (run 39312525003, the browser check included) and merged as 70a55cd; main's run 39313401725 passed check and deploy, and the live `data/enemies.json` holds the Archivist.
+
+Round 21's flicker analysis (SECOND-ORDER L1 to L3; by an agent): z-fighting found by a detector over every section of every zone and by frame sequences of every walkthrough in the browser, fixed at the source, and held by a test with no section left out. Its agent's `./scripts/check.sh` passed in three engines.

@@ -353,7 +353,9 @@ pub fn world(
         let s = dm(9) - fx::mul(high, ONE / 20);
         b.push(
             Mesh::Cyl,
-            &boxed(v3(feet.x, floor + cm(2), feet.z), v3(s, cm(1), s)),
+            // over the decals laid a few centimetres proud of floors
+            // (tiles, puddles, rugs), not level with them: it flickered
+            &boxed(v3(feet.x, floor + cm(6), feet.z), v3(s, cm(1), s)),
             c.pal.c("shadow"),
             0,
             crate::render::PASS_SOLID,
@@ -1326,7 +1328,15 @@ fn course(b: &mut Batch, c: &Content, w: &World) {
         let mark = c.pal.c("brass");
         for &r in &k.rotten {
             let Some((true, s)) = solid_of(r) else { continue };
-            b.inked(Mesh::Cube, &boxed(s.centre(), s.size()), rotten, 0);
+            // its top a little under the floor's, which may lie over it at
+            // the edges (a rock's lip): one plane flickers
+            let sunk = v3(0, cm(2), 0);
+            b.inked(
+                Mesh::Cube,
+                &boxed(s.centre().sub(sunk.scale(ONE / 2)), s.size().sub(sunk)),
+                rotten,
+                0,
+            );
             // a ring on it that pulses: pound here
             let pulse = ONE / 2 + fx::sin(w.tick * fx::TURN / 50) / 2;
             let r = fx::mul(s.size().x.min(s.size().z) / 3, ONE * 3 / 4 + pulse / 4);

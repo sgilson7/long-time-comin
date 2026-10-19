@@ -186,12 +186,13 @@ impl B<'_> {
                 v3(m(2), H - DEEP, len),
                 white,
             );
-            // black glass let into the wall, a violet line under it
+            // black glass let into the wall, a violet line under it; its
+            // face stands a little proud of the wall's (one plane flickers)
             let mut z = NEAR - m(8);
             while z > FAR + m(8) {
                 self.deco(
                     Mesh::Cube,
-                    v3(side * (W + dm(1)), m(10), z),
+                    v3(side * (W + dm(1) - ONE / 20), m(10), z),
                     v3(dm(2), m(12), m(10)),
                     glass,
                 );
