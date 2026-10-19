@@ -1386,6 +1386,12 @@ impl Game {
             NodeKind::Arrival | NodeKind::Fight if course && fresh(0) && node.archetype == "maelstrom" => {
                 c.say("hint_maelstrom")
             }
+            NodeKind::Arrival | NodeKind::Fight if course && fresh(0) && node.archetype == "hurricane" => {
+                c.say("hint_hurricane")
+            }
+            NodeKind::Arrival | NodeKind::Fight if course && fresh(0) && node.archetype == "halls" => {
+                c.say("hint_halls")
+            }
             NodeKind::Arrival | NodeKind::Fight if course && fresh(0) => c.say("hint_course"),
             NodeKind::Arrival | NodeKind::Fight if course => String::new(),
             NodeKind::Arrival if first && fresh(0) => c.say("hint_mission"),
