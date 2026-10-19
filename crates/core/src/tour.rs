@@ -258,7 +258,10 @@ mod tests {
             "the camera went {} m",
             on.sub(from).len() / ONE
         );
-        // and the body nobody sees is still where it was parked, unhurt
+        // and the body nobody sees is still where it was parked, unhurt,
+        // however it is knocked away
+        t.world.player.pos = t.world.arena.start.add(v3(0, int(30), 0));
+        t.step(&c);
         assert_eq!(t.world.player.pos, t.world.arena.start);
         assert_eq!(t.world.player.health, t.world.player.build.max_health);
     }
@@ -278,6 +281,11 @@ mod tests {
             }
         }
         assert!(changed >= n, "changed {changed} times over {n} stops");
-        assert_eq!(seen[n], 0, "round again after the boss: {seen:?}");
+        let order: Vec<usize> = (0..n).chain([0]).collect();
+        assert_eq!(
+            seen[..=n],
+            order[..],
+            "each stop in turn, then round again after the boss"
+        );
     }
 }

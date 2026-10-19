@@ -280,6 +280,13 @@ BREAKS = [
  ("far: the sea's breath", "crates/core/src/course.rs", "            p.y < k.water - k.depth || k.wet > SEA_BREATH", "            p.y < k.water - k.depth", "the_sea_takes_you"),
  ("river: the Oak's leaves hang under its crown", "crates/core/src/arena/river/oak.rs", "v3(at.x, top - m(4), at.z), v3(w + m(2), m(4), w + m(2)), leaf);", "v3(at.x, top + m(4), at.z), v3(w, m(5), w), leaf);", "nothing_leafy_stands_over"),
  ("river: the drum-cap is broad", "crates/core/src/arena/river/falls.rs", "        self.drum_cap(0, S3 + m(1), -m(94), m(4));", "        self.drum_cap(0, S3 + m(1), -m(96), m(2));", "a_pound_thrown_early"),
+ ("map: 2031 at the top", "crates/core/src/atlas.rs", "        let y = ATLAS_ROW * (rows - 1) / 2 - ATLAS_ROW * row;", "        let y = ATLAS_ROW * row - ATLAS_ROW * (rows - 1) / 2;", "the_root_is_at_the_top"),
+ ("map: the River on the right", "crates/core/src/atlas.rs", "                at: place((f + 1 + n) as i32, 1),", "                at: place((f + 1 + n) as i32, -1),", "the_river_forks_after"),
+ ("map: a walkthrough keeps to the main path", "crates/core/src/tour.rs", "    while let Some(&to) = route.nodes[at].next.first() {", "    while let Some(&to) = route.nodes[at].next.last() {", "a_walkthrough_runs_the_main_path"),
+ ("map: the camera flies on", "crates/core/src/tour.rs", "            let s = fx::mul(total, f);", "            let s = 0;", "a_course_is_flown_along"),
+ ("map: the body is parked", "crates/core/src/tour.rs", "        p.pos = start;", "", "a_course_is_flown_along"),
+ ("map: on to the next stop", "crates/core/src/tour.rs", "            let next = (self.at + 1) % self.stops.len();", "            let next = self.at;", "each_stop_gives_way"),
+ ("map: a shut zone cannot start", "crates/core/src/game.rs", "        if self.mode != Mode::Tour || !self.zone_open(zone, &line) {", "        if self.mode != Mode::Tour {", "the_map_opens_from_the_holding"),
 ]
 
 
