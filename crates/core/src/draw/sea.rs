@@ -33,7 +33,7 @@ pub fn draw(
         "cockatrice" => cockatrice(b, c, e, &o, paint),
         "chimera" => chimera(b, c, e, &o, paint),
         "storm_harpy" => storm_harpy(b, c, e, &o, paint),
-        "enslaved_dragon" => dragon(b, c, e, &o, paint),
+        "captured_dragon" => dragon(b, c, e, &o, paint),
         "tentacle" => tentacle(b, c, e, &o.feet(d), paint),
         "dagon" => dagon(b, c, e, &o, paint),
         "custodian" => custodian(b, c, e, &o.feet(d), paint),
@@ -835,7 +835,7 @@ fn storm_harpy(b: &mut Batch, c: &Content, e: &Enemy, o: &Body, paint: &dyn Fn(R
     }
 }
 
-/// The Enslaved Dragon: a great wyvern of the fleet, an iron collar on
+/// The Captured Dragon: a great wyvern of the fleet, an iron collar on
 /// its neck with three brass locks and a chain trailing down from it to
 /// the mast. Freed, the locks are gone and a stub of chain swings. Its
 /// wings fold on a perch and beat in flight; fire gathers in its jaws
@@ -1447,7 +1447,7 @@ mod tests {
         ("chimera", 50),
         ("storm_harpy", 50),
         ("drowned", 50),
-        ("enslaved_dragon", 120),
+        ("captured_dragon", 120),
         ("tentacle", 40),
         ("dagon", 220),
         ("custodian", 50),
@@ -1469,7 +1469,7 @@ mod tests {
             }
         }
         // the dragon in flight, and freed of its chain
-        let (_, n) = drawn("enslaved_dragon", |e| {
+        let (_, n) = drawn("captured_dragon", |e| {
             e.flying = 10;
             e.phase = 1;
         });
@@ -1484,8 +1484,8 @@ mod tests {
 
     #[test]
     fn the_dragons_chain_and_locks_are_gone_once_it_is_free() {
-        let (_, chained) = drawn("enslaved_dragon", |_| {});
-        let (_, free) = drawn("enslaved_dragon", |e| e.phase = 1);
+        let (_, chained) = drawn("captured_dragon", |_| {});
+        let (_, free) = drawn("captured_dragon", |e| e.phase = 1);
         assert_eq!(chained, free + 9, "chained {chained}, free {free}");
     }
 

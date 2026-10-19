@@ -3065,8 +3065,8 @@
       ]
     },
     {
-      "id": "enslaved_dragon",
-      "name": "The Enslaved Dragon",
+      "id": "captured_dragon",
+      "name": "The Captured Dragon",
       "kind": "beast",
       "gait": "perch",
       "elite": true,

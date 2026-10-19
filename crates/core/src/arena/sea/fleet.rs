@@ -4,7 +4,7 @@
 //! gangplank from the first to the second, a rope bridge to the third, a
 //! Bench over open water to the fourth, the hook to the fifth's foremast,
 //! Bound Over to the sixth, and the hook again to the flagship's, where
-//! the Enslaved Dragon sits high on the mainmast. The way on is at the
+//! the Captured Dragon sits high on the mainmast. The way on is at the
 //! flagship's bow, and opens when every crew is down.
 
 use super::super::{dm, m, B};
@@ -202,7 +202,7 @@ impl B<'_> {
         self.crew_member(v3(-m(10), h + m(1), -m(210)), "chimera");
         self.crew_member(v3(-m(10), h + m(1), -m(228)), "bosun");
         self.crew_member(v3(m(4), h + m(1), -m(240)), "gunner");
-        self.crew_member(v3(m(2), h + m(23), -m(218)), "enslaved_dragon");
+        self.crew_member(v3(m(2), h + m(23), -m(218)), "captured_dragon");
         self.line(Step::To(v3(-m(6), h, -m(238))));
         self.way_on(-m(4), h, -m(242));
         self.k().fought = true;
