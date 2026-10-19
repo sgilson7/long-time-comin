@@ -91,6 +91,11 @@ fn numbers() -> Vec<(&'static str, String)> {
         ("stop", s(STOP_BASE)),
         ("bench_size", m(BENCH_SIZE)),
         ("bench_time", s(BENCH_TICKS)),
+        ("slash_arc", (SLASH_ARC * 360 / fx::TURN).to_string()),
+        ("slash_reach", m(SLASH_REACH)),
+        ("slash_damage", SLASH_DAMAGE.to_string()),
+        ("slash_lunge_reach", m(SLASH_REACH + SLASH_LUNGE_REACH)),
+        ("slash_cooldown", s(SLASH_COOLDOWN)),
     ]
 }
 
@@ -837,11 +842,33 @@ pub fn upgrade_effect(u: &Upgrade, pal: &crate::content::Palette) -> String {
             2 => "Two Benches may stand at once.".to_string(),
             _ => format!("A Bench stands {} s.", s(BENCH_LONG_TICKS)),
         },
+        "judgment" => match n {
+            1 => format!(
+                "E: a great blade swept through {}° in front of you, {} m out from your middle, for {} damage to every enemy in its arc whose body is between {} m under your feet and {} m over them: a harpy or a cockatrice diving at you is caught. Mid-dash, or within {} s of one ending, it lunges {} m for {} damage. A shield met from in front turns it; a tank is cut only at its weak points. {} s cooldown.",
+                SLASH_ARC * 360 / fx::TURN,
+                m(SLASH_REACH),
+                SLASH_DAMAGE,
+                m(SLASH_BELOW),
+                m(SLASH_ABOVE),
+                s(SLASH_LUNGE_GRACE),
+                m(SLASH_REACH + SLASH_LUNGE_REACH),
+                SLASH_DAMAGE * SLASH_LUNGE_PCT / 100,
+                s(SLASH_COOLDOWN)
+            ),
+            2 => format!("Summary Judgment is ready again after {} s.", s(SLASH_2_COOLDOWN)),
+            _ => format!(
+                "Summary Judgment deals {} damage ({} lunging) and reaches {} m ({} m lunging).",
+                SLASH_3_DAMAGE,
+                SLASH_3_DAMAGE * SLASH_LUNGE_PCT / 100,
+                m(SLASH_REACH + SLASH_3_REACH),
+                m(SLASH_REACH + SLASH_3_REACH + SLASH_LUNGE_REACH)
+            ),
+        },
         "precedent" => format!("Every run starts with Piercing Rounds: shots pass through {n} more enemy."),
         "conduct" => format!("+{n}% to all Clemency earned."),
         "bail" => format!("Clearing an arena restores {n} more health ({} in all).", HEAL_ON_CLEAR + n),
         "lien" => format!(
-            "A Ripsaw {} waits where every run arrives, and where every later zone begins. Press E by it to take it in place of your gun.",
+            "A Ripsaw {} waits where every run arrives, and where every later zone begins. Press X by it to take it in place of your gun.",
             crate::world::roman(crate::world::LIEN_LEVEL)
         ),
         _ => String::new(),
@@ -923,15 +950,15 @@ fn rules(c: &Content) -> Vec<String> {
         "An arena's gates open only when every enemy in it is defeated. Blue gates continue the main path; orange gates start a side path.".to_string(),
         "Side paths are one or two fights a tier harder than the main fight they leave. The last fight holds the reward shown on the map and over the gate, and the path rejoins the next main arena.".to_string(),
         format!("Rewards: a gun one level above the gun in your hand when you take it (up to level {}), +{HEALTH_PICKUP} maximum health, +{SPEED_PICKUP_PCT}% run speed, one more jump (up to {MAX_JUMPS}), a Purse of Clemency ({PURSE_TIMES} times the zone's side-path share, kept when you die), or one of four that last the run: Piercing Rounds (every shot passes through {PIERCE_BONUS} more enemy), Dash Pulse (a dash removes every enemy orb within {} m of you, at most once every {} s), Mending Parry (each orb you turn back heals {MEND_HEAL}), Contempt (an enemy you kill bursts for {CONTEMPT_PCT}% of its own maximum health on every other enemy within {} m, and what that kills bursts too; each further Contempt adds {} m, up to {CONTEMPT_MAX}; a boss never bursts).", crate::world::roman(MAX_GUN_LEVEL), m(PULSE_RADIUS), s(PULSE_COOLDOWN), m(CONTEMPT_RADIUS), m(CONTEMPT_WIDEN)),
-        format!("A side path's reward is rolled from the zone's table: no reward twice in a zone, and nothing you could not use. A path two fights long holds a choice of two: press E at one; the other is lost. About {} side paths in a hundred are sealed: the map does not show what one holds, and it holds more: a gun a level higher, or two rewards that are both yours.", c.zones[0].route.sealed_pct),
+        format!("A side path's reward is rolled from the zone's table: no reward twice in a zone, and nothing you could not use. A path two fights long holds a choice of two: press X at one; the other is lost. About {} side paths in a hundred are sealed: the map does not show what one holds, and it holds more: a gun a level higher, or two rewards that are both yours.", c.zones[0].route.sealed_pct),
         format!("The gun you carry into a run is chosen in the Holding: the Carbine, or any gun whose Exhibit you have bought. The Standing Armory starts it at level {} at most; side paths take it up to {}.", c.upgrades.iter().filter(|u| u.effect == "armory").map(|u| u.amount).max().unwrap_or(1), crate::world::roman(MAX_GUN_LEVEL)),
-        format!("The Antechamber offers a choice: {REST_HEAL_PCT}% of your maximum health back, or one reward. Press E at one; the other is lost."),
+        format!("The Antechamber offers a choice: {REST_HEAL_PCT}% of your maximum health back, or one reward. Press X at one; the other is lost."),
         format!("A wave of enemies comes {} s after the last one is defeated.", s(WAVE_GAP)),
         format!("An enemy that cannot see you when it finishes winding up holds that attack and tries again sooner; the next one it fires regardless. An enemy (not the boss) that has not seen you for {} s reappears where it can.", s(LOST_TICKS)),
-        format!("A gun on the floor is taken with E within {} m. Your old gun is left in its place.", m(PICKUP_REACH)),
+        format!("A gun on the floor is taken with X within {} m. Your old gun is left in its place.", m(PICKUP_REACH)),
         format!("Clemency: {}; plus each enemy's own value. You keep it all when you die. Dying mid-fight credits that fight's share for each of its enemies you killed. Your first death adds a grant of {FIRST_DEATH_GRANT}. Each 10 years of sentence add {SENTENCE_BONUS_PCT}% to all Clemency earned.", clemency.join("; ")),
         "Beating a zone's boss does not end the run: after an interlude the run goes on into the next zone, with your health restored and everything you carry kept. Once a zone's boss has been beaten, a run can also start at the next zone, from the Holding.".to_string(),
-        "Zone two's and zone three's arrivals hold a cache of two rewards: press E at one to take it; the other is lost.".to_string(),
+        "Zone two's and zone three's arrivals hold a cache of two rewards: press X at one to take it; the other is lost.".to_string(),
         format!(
             "In the house, people take cover: they hide where you cannot see them and step out to fire. Two who are ready wait for each other and fire on the same tick when they stand at least {}° apart round you; with a Handler alive, three or more fire at once from round you, and all of them rest {COMMAND_PCT}% less. One waits at most {} s.",
             deg(CROSSFIRE_APART),

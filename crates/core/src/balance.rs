@@ -444,7 +444,7 @@ pub const PURSE_TIMES: i32 = 3;
 pub const TREE_SIZE: i32 = 1000;
 /// the hub in the middle, and the ring every root upgrade stands on
 pub const TREE_HUB: i32 = 118;
-pub const TREE_RING: i32 = 226;
+pub const TREE_RING: i32 = 228;
 /// each upgrade further out than the one it needs by this much
 pub const TREE_STEP: i32 = 80;
 /// a branch's wedge reaches this far out; its name sits this far out
@@ -580,3 +580,28 @@ pub const TOUR_SHIELD: i32 = 60 * 60;
 pub const SEA_DEPTH: i32 = int(8);
 pub const SEA_SINK: i32 = per_tick(2, 1);
 pub const SEA_BREATH: i32 = secs(12, 1);
+
+// ---- Summary Judgment (round 20) --------------------------------------------
+
+/// Summary Judgment: a great blade swept through an arc in front of you,
+/// this far out from your middle and this wide, hurting every enemy in it
+/// whose body reaches from a little under your feet to well over your head
+/// (a diver overhead is caught). It is ready again after its cooldown
+/// (Judgment II sooner).
+pub const SLASH_REACH: i32 = ONE * 45 / 10;
+pub const SLASH_ARC: i32 = deg(140);
+pub const SLASH_BELOW: i32 = ONE;
+pub const SLASH_ABOVE: i32 = int(6);
+pub const SLASH_DAMAGE: i32 = 120;
+pub const SLASH_COOLDOWN: i32 = secs(6, 5);
+pub const SLASH_2_COOLDOWN: i32 = secs(7, 10);
+/// Judgment III: harder, and this much further
+pub const SLASH_3_DAMAGE: i32 = 170;
+pub const SLASH_3_REACH: i32 = ONE * 3 / 2;
+/// mid-dash (or this soon after it ends) the cut lunges: this much further
+/// and this share of the damage
+pub const SLASH_LUNGE_REACH: i32 = ONE * 35 / 10;
+pub const SLASH_LUNGE_PCT: i32 = 150;
+pub const SLASH_LUNGE_GRACE: i32 = secs(1, 10);
+/// the swept blade is drawn this long
+pub const SLASH_SHOW: i32 = secs(1, 5);

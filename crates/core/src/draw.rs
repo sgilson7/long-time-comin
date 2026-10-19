@@ -510,6 +510,63 @@ pub fn player_with(
         let r = PARRY_REACH * 2;
         b.glow(Mesh::Sphere, &boxed(at, v3(r, r, r)), c.pal.c("gold"), ONE / 3);
     }
+    if p.slash_left > 0 {
+        slash(b, c, p, feet, alpha);
+    }
+}
+
+/// Summary Judgment's blade: an arc of light swept across the way it was
+/// swung, out to its reach (further when it lunged), its leading edge
+/// bright, fading as it goes.
+fn slash(b: &mut Batch, c: &Content, p: &Player, feet: V3, alpha: i32) {
+    const SEGMENTS: i32 = 12;
+    let reach = p.build.slash_reach(p.slash_lunge);
+    let at = feet.add(v3(0, PLAYER_CHEST, 0));
+    // how far through its showing, 0 to ONE; the blade crosses the arc in
+    // the first half and the trail fades in the second
+    let gone = ((SLASH_SHOW - p.slash_left) * ONE + alpha).min(SLASH_SHOW * ONE) / SLASH_SHOW;
+    let swept = (gone * 2).min(ONE);
+    let fade = ONE - gone;
+    let rgb = c.pal.c("slash");
+    let edge = c.pal.c("slash_edge");
+    let half = SLASH_ARC / 2;
+    let angle = |k: i32| p.slash_yaw + half - fx::mul(SLASH_ARC, fx::div(k * ONE, SEGMENTS * ONE));
+    let lean = |k: i32| cm(40) - fx::mul(cm(80), fx::div(k * ONE, SEGMENTS * ONE));
+    let point = |k: i32, r: i32| at.add(facing(angle(k), 0).scale(r)).add(v3(0, lean(k), 0));
+    let shown = fx::mul(swept, SEGMENTS * ONE) / ONE;
+    for k in 0..shown.min(SEGMENTS) {
+        // the trail: an outer rim, an inner one, and a faint sheet between
+        let w = cm(10) + fx::mul(cm(14), fx::div(k * ONE, SEGMENTS * ONE));
+        rod(b, point(k, reach), point(k + 1, reach), w, rgb, fade, false);
+        rod(
+            b,
+            point(k, reach * 3 / 5),
+            point(k + 1, reach * 3 / 5),
+            w / 2,
+            rgb,
+            fade / 2,
+            false,
+        );
+        let mid = point(k, reach * 4 / 5).lerp(point(k + 1, reach * 4 / 5), ONE / 2);
+        let across = point(k + 1, reach).sub(point(k, reach)).len();
+        let sheet = Affine::translate(mid)
+            .then(&Affine::rot_y(angle(k) - SLASH_ARC / SEGMENTS / 2))
+            .then(&Affine::scale(v3(across, cm(6), reach * 2 / 5)));
+        b.glow(Mesh::Cube, &sheet, rgb, fade / 3);
+    }
+    if swept < ONE {
+        // the blade itself, at the front of the sweep
+        let lead = fx::mul(swept, SEGMENTS * ONE) / ONE;
+        rod(
+            b,
+            point(lead, cm(60)),
+            point(lead, reach + dm(3)),
+            cm(22),
+            edge,
+            ONE,
+            false,
+        );
+    }
 }
 
 /// A gun's model at `hand`, pointing along yaw and pitch. Also the icon

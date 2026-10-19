@@ -1253,6 +1253,7 @@ const EFFECTS: &[&str] = &[
     "stop",
     "stop_plus",
     "bench",
+    "judgment",
     "exhibit",
 ];
 

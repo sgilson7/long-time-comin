@@ -6,7 +6,7 @@ shows. Expected values are worked out by hand from the data files, never
 copied from the game's own output:
 
 - story.json's sentencing has 5 lines; its indictment has 10 counts.
-- the Codex has 5 tabs (copy.json codex_tabs), 19 control rows
+- the Codex has 5 tabs (copy.json codex_tabs), 20 control rows
   (copy.json controls), 7 guns (weapons.json) and 77 enemies (enemies.json:
   the 43 of the first four zones, then zone five's seven, the Recursion's
   two smaller orders, the Idiot God, and the last mission's ball of yarn
@@ -14,8 +14,8 @@ copied from the game's own output:
   the Summons).
 - the crater's gate is open, so its label shows; the first fight's gates
   stay dark and unlabelled until its enemies are defeated.
-- upgrades.json lists 41 upgrades in 4 branches (copy.json holding_branches),
-  drawn as the Holding's tree, a wedge a branch, 23 of them needing another
+- upgrades.json lists 44 upgrades in 4 branches (copy.json holding_branches),
+  drawn as the Holding's tree, a wedge a branch, 25 of them needing another
   (a line each); the cheapest (Constitution I) costs 8, so a new record with 0 Clemency can
   buy none of them.
 - zone.json lists 5 zones, all built: none is sealed (the last mission's
@@ -41,7 +41,7 @@ copied from the game's own output:
   is shut until the Executor is beaten and its kit bought; the test save
   opens it. A year on the map shows its walkthrough, whose Start here
   starts a run there; Back returns to the map, and Esc to the Holding.
-- the test save (clicked twice, as it asks) owns all 41 upgrades, so the
+- the test save (clicked twice, as it asks) owns all 44 upgrades, so the
   Carry in row offers all 7 guns (the Carbine and the six Exhibits), and opens
   the boss rush, whose first arena is the Bailiff's, "The Court of Hours".
 - it has put the Idiot God to sleep, so the last mission is open: its brief
@@ -83,11 +83,11 @@ def run(page, check, engine):
     check(mode(page) == "holding", "then the Holding")
     cards = page.query_selector_all("#upgrades .upgrade")
     buyable = page.query_selector_all("#upgrades .upgrade.can")
-    check(len(cards) == 41 and len(buyable) == 0, f"41 upgrades, none affordable with 0 Clemency ({len(cards)}, {len(buyable)})")
+    check(len(cards) == 44 and len(buyable) == 0, f"44 upgrades, none affordable with 0 Clemency ({len(cards)}, {len(buyable)})")
     branches = page.query_selector_all("#tree-lines .wedge")
     edges = page.query_selector_all("#tree-lines .edge")
     check(len(branches) == 4, f"in four branches, each a wedge of the tree ({len(branches)})")
-    check(len(edges) == 23, f"a line from each of the 23 upgrades that need another ({len(edges)})")
+    check(len(edges) == 25, f"a line from each of the 25 upgrades that need another ({len(edges)})")
     check(page.is_disabled("#tree-buy"), "the tree's card cannot buy with no Clemency")
     check(page.inner_text("#m-counts") == "0 / 10", f"no count read yet ({page.inner_text('#m-counts')!r})")
     sealed = page.query_selector_all("#m-route li.sealed")
@@ -116,7 +116,7 @@ def run(page, check, engine):
     check(page.is_visible("#codex"), "the Codex opens from the Holding")
     tabs = page.query_selector_all("#codex-tabs .tab")
     rows = page.query_selector_all("#codex-body table.stats tr")
-    check(len(tabs) == 5 and len(rows) == 19, f"5 tabs, 19 control rows ({len(tabs)}, {len(rows)})")
+    check(len(tabs) == 5 and len(rows) == 20, f"5 tabs, 20 control rows ({len(tabs)}, {len(rows)})")
     click(page, "#codex-tabs .tab:nth-child(2)")
     guns = page.query_selector_all("#codex-body .codex-card")
     check(len(guns) == 7, f"seven guns ({len(guns)})")
@@ -284,7 +284,7 @@ def run(page, check, engine):
     click(page, "#test-save")
     page.wait_for_timeout(300)
     owned = page.query_selector_all("#upgrades .upgrade.owned")
-    check(len(owned) == 41, f"the test save owns every upgrade ({len(owned)})")
+    check(len(owned) == 44, f"the test save owns every upgrade ({len(owned)})")
     click(page, "#open-map")
     check(page.is_enabled("#timeline-lines .line.river"), "and opens the river's timeline")
     gap = page.get_attribute("#timeline-nodes .year.river:has-text('2066')", "class")

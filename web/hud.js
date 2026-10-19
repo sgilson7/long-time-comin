@@ -61,6 +61,9 @@ export function makeHud(copy, play) {
       el("h-pound").hidden = !h.pound;
       el("h-pound").classList.toggle("ready", h.pound_ready);
       el("h-pound").classList.toggle("active", h.pounding);
+      el("h-slash").hidden = !h.slash;
+      el("h-slash").classList.toggle("ready", h.slash_ready);
+      el("h-slash").classList.toggle("active", h.slashing);
       text("h-saws", h.saws);
       text("h-alt", h.alt);
       text("h-rounds", h.rounds);

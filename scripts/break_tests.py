@@ -287,6 +287,26 @@ BREAKS = [
  ("map: the body is parked", "crates/core/src/tour.rs", "        p.pos = start;", "", "a_course_is_flown_along"),
  ("map: on to the next stop", "crates/core/src/tour.rs", "            let next = (self.at + 1) % self.stops.len();", "            let next = self.at;", "each_stop_gives_way"),
  ("map: a shut zone cannot start", "crates/core/src/game.rs", "        if self.mode != Mode::Tour || !self.zone_open(zone, &line) {", "        if self.mode != Mode::Tour {", "the_map_opens_from_the_holding"),
+ # round 20: Summary Judgment, the blade (edge:)
+ ("edge: the slash is heard and cuts", "crates/core/src/world.rs", "            if ev == Event::Slash {\n                self.slash(c);", "            if false {\n                self.slash(c);", "the_slash_cuts_what_is_in_front"),
+ ("edge: the arc", "crates/core/src/world.rs", "            let inside = d <= r + PLAYER_RADIUS || flat.norm().dot(ahead) >= edge;", "            let inside = true;", "the_slash_cuts_what_is_in_front"),
+ ("edge: the reach", "crates/core/src/world.rs", "            let within = d <= reach + r && at.y + r >= lo && at.y - r <= hi;", "            let within = at.y + r >= lo && at.y - r <= hi;", "the_slash_cuts_what_is_in_front"),
+ ("edge: the band reaches over your head", "crates/core/src/world.rs", "        let (lo, hi) = (feet.y - SLASH_BELOW, feet.y + SLASH_ABOVE);", "        let (lo, hi) = (feet.y - SLASH_BELOW, feet.y + PLAYER_HEIGHT);", "the_slash_catches_a_flyer"),
+ ("edge: the band ends", "crates/core/src/world.rs", "        let (lo, hi) = (feet.y - SLASH_BELOW, feet.y + SLASH_ABOVE);", "        let (lo, hi) = (feet.y - SLASH_BELOW, feet.y + SLASH_ABOVE * 3);", "the_slash_catches_a_flyer"),
+ ("edge: a wall keeps the blade off", "crates/core/src/world.rs", "            let seen = to.len() <= r || level.ray(chest, to.norm(), (to.len() - r).max(0)).is_none();", "            let seen = true;", "a_wall_between_keeps_the_blade_off"),
+ ("edge: mid-dash it lunges", "crates/core/src/player.rs", "            self.slash_lunge = self.dashing() || self.lunge_window > 0;", "            self.slash_lunge = false;", "mid_dash_the_slash_lunges"),
+ ("edge: a lunge reaches further", "crates/core/src/player.rs", "        base + if lunge { SLASH_LUNGE_REACH } else { 0 }", "        base", "mid_dash_the_slash_lunges"),
+ ("edge: a lunge cuts harder", "crates/core/src/player.rs", "            base * SLASH_LUNGE_PCT / 100", "            base", "mid_dash_the_slash_lunges"),
+ ("edge: the cooldown", "crates/core/src/player.rs", "            self.slash_cooldown = self.build.slash_cooldown();", "            self.slash_cooldown = 0;", "the_slash_waits_out"),
+ ("edge: only once bought", "crates/core/src/player.rs", "        if c.slash_pressed && self.build.judgment > 0 && self.slash_cooldown == 0 {", "        if c.slash_pressed && self.slash_cooldown == 0 {", "without_summary_judgment"),
+ ("edge: the upgrades' levels are bought", "crates/core/src/meta.rs", "                \"judgment\" => b.judgment = b.judgment.max(u.amount),", "                \"judgment\" => b.judgment = 1,", "judgment_ii_is_ready_sooner"),
+ ("edge: Judgment II is sooner", "crates/core/src/player.rs", "        if self.judgment >= 2 {\n            SLASH_2_COOLDOWN", "        if self.judgment >= 20 {\n            SLASH_2_COOLDOWN", "judgment_ii_is_ready_sooner"),
+ ("edge: Judgment III reaches further", "crates/core/src/player.rs", "        let base = SLASH_REACH + if self.judgment >= 3 { SLASH_3_REACH } else { 0 };", "        let base = SLASH_REACH;", "judgment_ii_is_ready_sooner"),
+ ("edge: Judgment III cuts harder", "crates/core/src/player.rs", "        let base = if self.judgment >= 3 { SLASH_3_DAMAGE } else { SLASH_DAMAGE };", "        let base = SLASH_DAMAGE;", "judgment_ii_is_ready_sooner"),
+ ("edge: a shield turns the blade", "crates/core/src/world.rs", "            if d.armour > 0 && from.dot(facing(e.yaw, 0)) > fx::cos(d.armour) && from.y < ONE / 2 {\n                turned", "            if false {\n                turned", "a_shield_turns_the_blade"),
+ ("edge: what cannot be hurt is not cut", "crates/core/src/enemy.rs", "            && !self.shielded\n", "", "a_shield_turns_the_blade"),
+ ("edge: a diver is cut down over your head", "crates/core/src/world.rs", "        let (lo, hi) = (feet.y - SLASH_BELOW, feet.y + SLASH_ABOVE);", "        let (lo, hi) = (feet.y - SLASH_BELOW, feet.y + PLAYER_HEIGHT);", "a_diving_storm_harpy_or_cockatrice"),
+ ("edge: a diver is cut down by the lunge", "crates/core/src/player.rs", "        base + if lunge { SLASH_LUNGE_REACH } else { 0 }", "        base", "a_diving_storm_harpy_or_cockatrice"),
 ]
 
 

@@ -151,6 +151,8 @@
     "tank_gun": "#3A4048",
     "shot_saw": "#E8F0F5",
     "pound": "#FFC94A",
+    "slash": "#BFF6FF",
+    "slash_edge": "#FFF6DA",
     "pickup_trigger": "#FFD166",
     "pickup_plating": "#9AA7B3",
     "pickup_contempt": "#F26B38",

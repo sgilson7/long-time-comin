@@ -46,6 +46,7 @@ pub const ACTIONS: &[(&str, u32)] = &[
     ("grab", 1 << 14),
     ("stop", 1 << 15),
     ("bench", 1 << 16),
+    ("slash", 1 << 17),
 ];
 
 fn bit(name: &str) -> u32 {
@@ -1769,6 +1770,9 @@ impl Game {
             "pound": p.build.pound > 0,
             "pound_ready": p.build.pound > 0 && p.pound_cooldown == 0 && !p.pounding,
             "pounding": p.pounding,
+            "slash": p.build.judgment > 0,
+            "slash_ready": p.build.judgment > 0 && p.slash_cooldown == 0,
+            "slashing": p.slash_left > 0,
             // the gun's own trait: blades in hand, the spin, the orbs struck
             "saws": if let Some(s) = gl_saw {
                 c.say("hud_saws").replace("{n}", &(s.saws - w.held.saws_out).max(0).to_string()).replace("{max}", &s.saws.to_string())
@@ -2336,6 +2340,7 @@ pub fn controls(held: u32, pressed: u32) -> Controls {
         grab_pressed: hit("grab"),
         stop_pressed: hit("stop"),
         bench_pressed: hit("bench"),
+        slash_pressed: hit("slash"),
     }
 }
 

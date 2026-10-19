@@ -687,7 +687,8 @@ impl World {
             keys = [
                 ctl.fire_pressed,
                 ctl.parry_pressed,
-                ctl.interact_pressed,
+                // the third note is the E key's: Summary Judgment's
+                ctl.slash_pressed,
                 ctl.wall_pressed,
                 ctl.grapple_pressed,
             ];
@@ -703,6 +704,7 @@ impl World {
                 grab_pressed: false,
                 stop_pressed: false,
                 pound_pressed: false,
+                slash_pressed: false,
                 ..*ctl
             };
             &quiet
@@ -774,6 +776,7 @@ impl World {
                 Event::Pound => "pound",
                 Event::Stop => "time_stop",
                 Event::Bench => "bench",
+                Event::Slash => "slash",
             };
             let text = match ev {
                 Event::Recess => c.say("callout_recess"),
@@ -784,6 +787,9 @@ impl World {
             self.note(sound, text);
             if ev == Event::Pound {
                 self.pound(c);
+            }
+            if ev == Event::Slash {
+                self.slash(c);
             }
             if ev == Event::Stop && self.stop.is_none() {
                 let n = self.player.build.stop_ticks;
@@ -2688,6 +2694,78 @@ impl World {
         );
         self.sparks(feet, rgb, 24, ONE / 4);
         self.shake = self.shake.max(SHAKE_TICKS / 4);
+        self.fell(c, killed);
+    }
+
+    /// Summary Judgment is swung: every enemy in the arc in front of you,
+    /// within its reach and from a little under your feet to well over your
+    /// head, and in sight, is cut. A shield met from in front turns it; a
+    /// tank is cut only at its weak points.
+    fn slash(&mut self, c: &Content) {
+        let p = &self.player;
+        let lunge = p.slash_lunge;
+        let reach = p.build.slash_reach(lunge);
+        let damage = p.build.slash_damage(lunge);
+        let feet = p.pos;
+        let chest = p.chest();
+        let ahead = facing(p.slash_yaw, 0);
+        let edge = fx::cos(SLASH_ARC / 2);
+        let (lo, hi) = (feet.y - SLASH_BELOW, feet.y + SLASH_ABOVE);
+        let level = &self.arena.level;
+        // within the arc, the reach and the band, and no wall between
+        let cuts = |at: V3, r: i32| -> bool {
+            let flat = v3(at.x - chest.x, 0, at.z - chest.z);
+            let d = flat.len_xz();
+            let within = d <= reach + r && at.y + r >= lo && at.y - r <= hi;
+            let inside = d <= r + PLAYER_RADIUS || flat.norm().dot(ahead) >= edge;
+            let to = at.sub(chest);
+            let seen = to.len() <= r || level.ray(chest, to.norm(), (to.len() - r).max(0)).is_none();
+            within && inside && seen
+        };
+        let mut killed = Vec::new();
+        let mut cut = Vec::new();
+        let mut turned = Vec::new();
+        let mut weak = Vec::new();
+        for (i, e) in self.enemies.iter().enumerate() {
+            if !e.hurtable() {
+                continue;
+            }
+            let d = &c.enemies[e.def];
+            if d.kind == Kind::Tank {
+                for (wp, wr, k) in tank::weak_points(e, d) {
+                    if cuts(wp, wr) {
+                        weak.push((i, k, wp));
+                    }
+                }
+                continue;
+            }
+            if !cuts(e.pos, d.radius) {
+                continue;
+            }
+            // a shield turns a blade that comes at it from in front, as it
+            // turns a shot, unless it comes from well above
+            let from = chest.sub(e.pos).norm();
+            if d.armour > 0 && from.dot(facing(e.yaw, 0)) > fx::cos(d.armour) && from.y < ONE / 2 {
+                turned.push(e.pos);
+            } else {
+                cut.push(i);
+            }
+        }
+        for i in cut {
+            if self.enemies[i].hurt(damage) {
+                killed.push(i);
+            }
+            let at = self.enemies[i].pos;
+            self.sparks(at, c.pal.c("slash"), 10, ONE / 5);
+            self.note("hit", String::new());
+        }
+        for (i, k, wp) in weak {
+            self.hurt_weak(c, i, k, damage, wp);
+            self.sparks(wp, c.pal.c("slash"), 10, ONE / 5);
+        }
+        for at in turned {
+            self.sparks(at, c.pal.c("spark"), 6, ONE / 6);
+        }
         self.fell(c, killed);
     }
 
@@ -4890,7 +4968,7 @@ mod god {
             let ctl = Controls {
                 fire_pressed: k[0],
                 parry_pressed: k[1],
-                interact_pressed: k[2],
+                slash_pressed: k[2],
                 wall_pressed: k[3],
                 grapple_pressed: k[4],
                 ..Controls::default()
@@ -5343,5 +5421,295 @@ mod arsenal {
         );
         let blue = still_orb(&w, 0, 0, 1, false);
         assert!(erasable(&blue, WARDS + 1));
+    }
+}
+
+#[cfg(test)]
+mod judgment {
+    use super::*;
+    use crate::content::tests::content;
+    use crate::enemy::State;
+    use crate::level::{Level, Solid};
+    use crate::meta::Meta;
+    use crate::player::Build;
+    use crate::route::{Have, Route};
+
+    /// The body Summary Judgment's upgrades make, bought up to `level`.
+    fn bought(c: &Content, level: usize) -> Build {
+        let owned = ["judgment", "judgment_2", "judgment_3"][..level]
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
+        Meta {
+            owned,
+            ..Meta::default()
+        }
+        .build(c)
+        .0
+    }
+
+    /// A fight of zone `zone`'s, emptied, on a wide flat floor, you at
+    /// the middle facing north (−z) with the slash bought to `level`.
+    fn floor_in(zone: usize, level: usize) -> (Content, World) {
+        let c = content();
+        let r = Route::build_for(&c, zone, 11, &Have::level(1));
+        let i = r.nodes.iter().position(|n| n.kind == NodeKind::Fight).unwrap();
+        let b = bought(&c, level);
+        let mut w = World::new(
+            &c,
+            &r.nodes[i],
+            &[],
+            Player::new(V3::ZERO, 0, b),
+            Held::new(0, 1),
+            7,
+        );
+        w.waves_left.clear();
+        w.enemies.clear();
+        w.orbs.clear();
+        w.arena.level = Level::new(vec![Solid::new(
+            v3(-int(60), -ONE, -int(60)),
+            v3(int(60), 0, int(60)),
+        )]);
+        // a course's moving parts stood on the old ground
+        w.course = None;
+        w.player = Player::new(V3::ZERO, 0, b);
+        (c, w)
+    }
+
+    fn floor(level: usize) -> (Content, World) {
+        floor_in(0, level)
+    }
+
+    /// An enemy held still with its centre at `at`, with health to spare
+    /// so what a cut takes can be read.
+    fn dummy(c: &Content, w: &mut World, id: &str, at: V3) -> usize {
+        let d = c.enemy(id).unwrap();
+        let mut e = Enemy::new(d, &c.enemies[d], at, 1);
+        e.state = State::Rest(10_000);
+        e.hp = 5000;
+        e.max_hp = 5000;
+        w.enemies.push(e);
+        w.enemies.len() - 1
+    }
+
+    /// A point `ahead_cm` north of you, `right_cm` east and `up_cm` over
+    /// your chest.
+    fn spot(ahead_cm: i32, right_cm: i32, up_cm: i32) -> V3 {
+        v3(
+            ONE * right_cm / 100,
+            PLAYER_CHEST + ONE * up_cm / 100,
+            -ONE * ahead_cm / 100,
+        )
+    }
+
+    fn tick(c: &Content, w: &mut World, ctl: &Controls) {
+        let f = facing(w.player.yaw, 0);
+        let eye = w.player.chest().sub(f.scale(int(4)));
+        w.tick(c, ctl, eye, f);
+    }
+
+    fn swing() -> Controls {
+        Controls {
+            slash_pressed: true,
+            ..Controls::default()
+        }
+    }
+
+    fn lost(w: &World, i: usize) -> i32 {
+        5000 - w.enemies[i].hp
+    }
+
+    #[test]
+    fn the_slash_cuts_what_is_in_front_within_reach_and_not_behind_beside_or_beyond() {
+        let (c, mut w) = floor(1);
+        let front = dummy(&c, &mut w, "greyman", spot(400, 0, 0));
+        let edge = dummy(&c, &mut w, "greyman", spot(250, -250, 0));
+        let behind = dummy(&c, &mut w, "greyman", spot(-300, 0, 0));
+        let beside = dummy(&c, &mut w, "greyman", spot(30, 300, 0));
+        let beyond = dummy(&c, &mut w, "greyman", spot(650, 0, 0));
+        tick(&c, &mut w, &swing());
+        assert_eq!(lost(&w, front), SLASH_DAMAGE, "in front, within reach");
+        assert_eq!(lost(&w, edge), SLASH_DAMAGE, "45° off, within the arc");
+        assert_eq!(lost(&w, behind), 0, "behind");
+        assert_eq!(lost(&w, beside), 0, "beside, outside the arc");
+        assert_eq!(lost(&w, beyond), 0, "beyond reach");
+        assert!(w.player.slash_left > 0, "its blade is drawn");
+    }
+
+    #[test]
+    fn the_slash_catches_a_flyer_overhead_but_not_one_far_above() {
+        let (c, mut w) = floor(1);
+        let low = dummy(&c, &mut w, "storm_harpy", spot(300, 0, 400));
+        let high = dummy(&c, &mut w, "storm_harpy", spot(300, 0, 900));
+        tick(&c, &mut w, &swing());
+        assert_eq!(lost(&w, low), SLASH_DAMAGE, "a flyer four metres over your chest");
+        assert_eq!(lost(&w, high), 0, "nine metres over it");
+    }
+
+    #[test]
+    fn mid_dash_the_slash_lunges_further_and_harder() {
+        let (c, mut w) = floor(1);
+        let far = dummy(&c, &mut w, "greyman", spot(750, 0, 0));
+        tick(&c, &mut w, &swing());
+        assert_eq!(lost(&w, far), 0, "standing, out of reach");
+        w.player.slash_cooldown = 0;
+        tick(
+            &c,
+            &mut w,
+            &Controls {
+                dash_pressed: true,
+                ..Controls::default()
+            },
+        );
+        assert!(w.player.dashing());
+        let moved = -w.player.pos.z;
+        assert!(moved < ONE, "the dash has barely begun: {moved}");
+        tick(&c, &mut w, &swing());
+        assert!(w.player.slash_lunge, "a lunge");
+        assert_eq!(lost(&w, far), SLASH_DAMAGE * SLASH_LUNGE_PCT / 100, "lunging");
+    }
+
+    #[test]
+    fn the_slash_waits_out_its_cooldown() {
+        let (c, mut w) = floor(1);
+        let i = dummy(&c, &mut w, "greyman", spot(300, 0, 0));
+        tick(&c, &mut w, &swing());
+        assert_eq!(lost(&w, i), SLASH_DAMAGE);
+        for t in 1..SLASH_COOLDOWN {
+            tick(&c, &mut w, &swing());
+            assert_eq!(lost(&w, i), SLASH_DAMAGE, "tick {t}: not yet ready");
+        }
+        tick(&c, &mut w, &swing());
+        assert_eq!(
+            lost(&w, i),
+            SLASH_DAMAGE * 2,
+            "ready again after {SLASH_COOLDOWN} ticks"
+        );
+    }
+
+    #[test]
+    fn without_summary_judgment_the_key_does_nothing() {
+        let (c, mut w) = floor(0);
+        assert_eq!(w.player.build.judgment, 0);
+        let i = dummy(&c, &mut w, "greyman", spot(300, 0, 0));
+        tick(&c, &mut w, &swing());
+        assert_eq!(lost(&w, i), 0);
+        assert_eq!(w.player.slash_left, 0, "no blade drawn");
+    }
+
+    #[test]
+    fn judgment_ii_is_ready_sooner_and_judgment_iii_cuts_harder_and_further() {
+        let c = content();
+        assert_eq!(bought(&c, 1).slash_cooldown(), SLASH_COOLDOWN);
+        assert_eq!(bought(&c, 2).slash_cooldown(), SLASH_2_COOLDOWN);
+        const { assert!(SLASH_2_COOLDOWN < SLASH_COOLDOWN) };
+        // II: ready again after its own cooldown
+        let (c, mut w) = floor(2);
+        let i = dummy(&c, &mut w, "greyman", spot(300, 0, 0));
+        tick(&c, &mut w, &swing());
+        for _ in 1..SLASH_2_COOLDOWN {
+            tick(&c, &mut w, &Controls::default());
+        }
+        tick(&c, &mut w, &swing());
+        assert_eq!(lost(&w, i), SLASH_DAMAGE * 2, "twice in {SLASH_2_COOLDOWN} ticks");
+        // III: further, and harder
+        let (c, mut w) = floor(3);
+        let past = dummy(&c, &mut w, "greyman", spot(560, 0, 0));
+        tick(&c, &mut w, &swing());
+        assert_eq!(lost(&w, past), SLASH_3_DAMAGE, "past the first reach");
+        const { assert!(SLASH_3_DAMAGE > SLASH_DAMAGE) };
+        let (c, mut w) = floor(2);
+        let past = dummy(&c, &mut w, "greyman", spot(560, 0, 0));
+        tick(&c, &mut w, &swing());
+        assert_eq!(lost(&w, past), 0, "II does not reach so far");
+    }
+
+    #[test]
+    fn a_shield_turns_the_blade_from_in_front_and_what_cannot_be_hurt_is_untouched() {
+        let (c, mut w) = floor(1);
+        let facing_you = dummy(&c, &mut w, "warder", spot(300, 0, 0));
+        // south (+z), toward you, is yaw HALF
+        w.enemies[facing_you].yaw = fx::HALF;
+        let warded = dummy(&c, &mut w, "greyman", spot(300, 150, 0));
+        w.enemies[warded].shielded = true;
+        tick(&c, &mut w, &swing());
+        assert_eq!(lost(&w, facing_you), 0, "the shield took it");
+        assert_eq!(lost(&w, warded), 0, "unhurtable");
+        // its back to you, the blade lands
+        let (c, mut w) = floor(1);
+        let back = dummy(&c, &mut w, "warder", spot(300, 0, 0));
+        w.enemies[back].yaw = 0;
+        tick(&c, &mut w, &swing());
+        assert_eq!(lost(&w, back), SLASH_DAMAGE, "from behind it lands");
+    }
+
+    #[test]
+    fn a_wall_between_keeps_the_blade_off() {
+        let (c, mut w) = floor(1);
+        let mut solids = w.arena.level.solids.clone();
+        // a wall 2 m north of you, 3 m tall, 2 m wide; one in the open beside it
+        solids.push(Solid::new(
+            v3(-ONE, 0, -int(2) - ONE / 5),
+            v3(ONE, int(3), -int(2)),
+        ));
+        w.arena.level = Level::new(solids);
+        let hidden = dummy(&c, &mut w, "greyman", spot(350, 0, 0));
+        let open = dummy(&c, &mut w, "greyman", spot(300, -250, 0));
+        tick(&c, &mut w, &swing());
+        assert_eq!(lost(&w, hidden), 0, "behind the wall");
+        assert_eq!(lost(&w, open), SLASH_DAMAGE, "in the open");
+    }
+
+    /// The Far Shore's diving flyers, flying as they do: turned toward,
+    /// dashed at as one dives and cut mid-dash, each falls.
+    #[test]
+    fn a_diving_storm_harpy_or_cockatrice_is_cut_down_by_a_lunging_slash() {
+        let shore = content().zones.iter().position(|z| z.id == "far_shore").unwrap();
+        for id in ["storm_harpy", "cockatrice"] {
+            let (c, mut w) = floor_in(shore, 1);
+            let d = c.enemy(id).unwrap();
+            let start = v3(int(12), c.enemies[d].hover, -int(12));
+            let mut e = Enemy::new(d, &c.enemies[d], start, 1);
+            e.state = State::Rest(secs(1, 2));
+            w.enemies.push(e);
+            let mut cuts = 0;
+            let mut since_dash = 1000;
+            let mut fell = None;
+            for t in 0..secs(20, 1) {
+                w.player.iframes = 1000;
+                w.player.health = w.player.build.max_health;
+                let e = &w.enemies[0];
+                if !e.alive() {
+                    fell = Some(t);
+                    break;
+                }
+                // turned toward it
+                let to = e.pos.sub(w.player.chest());
+                w.player.yaw = crate::geom::yaw_pitch_of(to).0;
+                let low = e.pos.y - w.player.pos.y <= SLASH_ABOVE;
+                let near = to.len_xz() <= SLASH_REACH + SLASH_LUNGE_REACH + DASH_SPEED * DASH_TICKS / 2;
+                let mut ctl = Controls::default();
+                if low
+                    && near
+                    && w.player.slash_cooldown == 0
+                    && w.player.dash_left > 0
+                    && !w.player.dashing()
+                {
+                    ctl.dash_pressed = true;
+                    ctl.move_z = ONE;
+                    since_dash = 0;
+                } else if since_dash == DASH_TICKS / 2 {
+                    ctl.slash_pressed = true;
+                    cuts += 1;
+                }
+                since_dash += 1;
+                tick(&c, &mut w, &ctl);
+            }
+            assert!(
+                fell.is_some(),
+                "the {id} fell to the blade ({cuts} swung, {} hp left)",
+                w.enemies[0].hp
+            );
+        }
     }
 }

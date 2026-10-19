@@ -50,11 +50,11 @@
   "reward_jump": "+1 jump",
   "reward_health": "+max health",
   "reward_speed": "+speed",
-  "prompt_take": "E: take the {gun} (leave the {held})",
+  "prompt_take": "X: take the {gun} (leave the {held})",
   "hint_arrival": "W A S D move · mouse aims · hold left mouse to fire · Space jumps · Shift dashes · walk into the lit gate to leave",
   "hint_fight": "Enemy orbs hurt on contact. Jump over ground waves. You cannot be hit during the opening part of a dash.",
   "hint_cleared": "Area clear. Blue gates advance the story. Orange gates lead to harder optional fights and the reward shown.",
-  "hint_rest": "Choose one reward. Press E at the left pedestal for health or the right for its item. The other will be lost. The boss waits beyond the gate.",
+  "hint_rest": "Choose one reward. Press X at the left pedestal for health or the right for its item. The other will be lost. The boss waits beyond the gate.",
   "callout_cleared": "ARENA CLEARED",
   "callout_recess": "RECESS: FATAL HIT CANCELLED",
   "callout_fell": "FELL: RETURNED TO THE LAST FLOOR",
@@ -72,6 +72,7 @@
   "hud_dash": "Dash",
   "hud_hook": "Hook (F)",
   "hud_parry": "Parry (Q)",
+  "hud_slash": "Slash (E)",
   "hud_enemies": "{n} left",
   "hud_clemency": "{n} Clemency",
   "click_to_play": "Click to take control",
@@ -107,8 +108,12 @@
       "Bound Over: dash and jump together, Shift first or on the same press, for a long, low leap that keeps the dash's speed."
     ],
     [
+      "X",
+      "Take a gun from the floor within {pickup_reach} m. Your old gun is left in its place. Also takes a reward from a pedestal or a cache."
+    ],
+    [
       "E",
-      "Take a gun from the floor within {pickup_reach} m. Your old gun is left in its place."
+      "Summary Judgment, once bought: a great blade swept through {slash_arc}° in front of you, {slash_reach} m out, for {slash_damage} damage to every enemy in its arc, from your feet to well over your head. Mid-dash it lunges {slash_lunge_reach} m for half as much again. Ready again after {slash_cooldown} s."
     ],
     [
       "F (hold)",
@@ -214,13 +219,13 @@
   "reward_pierce": "Piercing Rounds",
   "reward_pulse": "Dash Pulse",
   "reward_mend": "Mending Parry",
-  "prompt_choose": "E: take {thing}. The other choice here is lost.",
+  "prompt_choose": "X: take {thing}. The other choice here is lost.",
   "prompt_heal": "health +{n}",
   "jump_cue": "JUMP",
   "start_later": "Start in {year}: {zone}",
   "interlude_next": "Sail north",
   "hud_wall": "Wall (R)",
-  "hint_landing": "Choose one supply reward with E. The other will be lost. Stand on a glowing grate to ride its updraft.",
+  "hint_landing": "Choose one supply reward with X. The other will be lost. Stand on a glowing grate to ride its updraft.",
   "build_wall": "the Injunction",
   "callout_trigger": "HAIR TRIGGER: GUNS FIRE FASTER",
   "callout_plating": "PLATING: HITS DO LESS",
@@ -234,7 +239,7 @@
   "hud_saws": "Blades {n} of {max}",
   "hud_survive": "Outlast it: {n} s",
   "build_pound": "Gavel Drop",
-  "hint_vestibule": "Choose one reward with E. The other is lost. The grey men use cover and coordinated fire. Watch your flanks.",
+  "hint_vestibule": "Choose one reward with X. The other is lost. The grey men use cover and coordinated fire. Watch your flanks.",
   "hint_tank": "Its hull and turret turn shots aside. Get behind it and break the glowing weak points.",
   "holding_branches": [
     [

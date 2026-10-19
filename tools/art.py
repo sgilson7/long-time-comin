@@ -709,6 +709,15 @@ def icon(kind):
         s += "\\filldraw[inked,fill=bench] (0.6,1.7) -- (3.4,1.7) -- (3.4,2.3) -- (0.6,2.3) -- cycle;\n"
         s += "\\draw[goldtrim, line width=1.8pt] (0.7,2.25) -- (3.3,2.25);\n\\draw[goldtrim, line width=1.8pt] (0.7,1.75) -- (3.3,1.75);\n"
         s += circle(2.0, 2.95, 0.42, "coat")
+    elif kind == "blade":
+        # Summary Judgment: a great blade swung, and the arc of light it cuts
+        s += "\\draw[iceglow, line width=3.2pt, opacity=0.85] (0.55,2.9) .. controls (0.9,0.9) and (2.6,0.5) .. (3.5,1.4);\n"
+        s += "\\draw[chalk, line width=1.4pt] (0.75,2.7) .. controls (1.05,1.1) and (2.55,0.75) .. (3.3,1.45);\n"
+        s += poly([(1.2, 1.0), (3.15, 2.95), (3.4, 3.4), (2.95, 3.15), (1.0, 1.2)], "sawsteel")
+        s += "\\draw[metal, line width=0.8pt] (1.15,1.15) -- (3.15,3.15);\n"
+        s += poly([(0.55, 1.3), (1.3, 0.55), (1.45, 0.7), (0.7, 1.45)], "goldtrim")
+        s += poly([(0.95, 0.8), (0.55, 0.4), (0.4, 0.55), (0.8, 0.95)], "wood")
+        s += circle(0.42, 0.42, 0.13, "goldtrim")
     elif kind == "sealed":
         # a letter, and the court's wax seal on it
         s += rect(0.7, 1.1, 3.3, 2.9, "lamp")
@@ -1737,7 +1746,7 @@ PICTURES = {
 }
 for g in ("carbine", "scattergun", "launcher", "ripsaw", "big_iron", "filibuster", "redactor"):
     PICTURES[f"guns/{g}"] = (lambda g=g: gun_art(g))
-for k in ("heart", "jump", "speed", "gun", "parry", "hook", "dash", "gavel", "pierce", "pulse", "mend", "wall", "pound", "saw", "conduct", "trigger", "plating", "stop", "contempt", "purse", "sealed", "bench"):
+for k in ("heart", "jump", "speed", "gun", "parry", "hook", "dash", "gavel", "pierce", "pulse", "mend", "wall", "pound", "saw", "conduct", "trigger", "plating", "stop", "contempt", "purse", "sealed", "bench", "blade"):
     PICTURES[f"icons/{k}"] = (lambda k=k: icon(k))
 
 # dpi for each kind: big pictures fill a screen, icons are small
