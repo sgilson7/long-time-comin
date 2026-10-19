@@ -1940,6 +1940,38 @@
         "gain": 0.4
       }
     ],
+    "slash": [
+      {
+        "type": "noise",
+        "filter": "bandpass",
+        "freq": 3200,
+        "q": 1.2,
+        "at": 0,
+        "attack": 0.004,
+        "dur": 0.16,
+        "gain": 0.4
+      },
+      {
+        "type": "osc",
+        "wave": "sawtooth",
+        "from": 900,
+        "to": 240,
+        "at": 0,
+        "attack": 0.003,
+        "dur": 0.14,
+        "gain": 0.16
+      },
+      {
+        "type": "osc",
+        "wave": "triangle",
+        "from": 1800,
+        "to": 1500,
+        "at": 0.02,
+        "attack": 0.002,
+        "dur": 0.2,
+        "gain": 0.08
+      }
+    ],
     "thunder": [
       {
         "type": "noise",

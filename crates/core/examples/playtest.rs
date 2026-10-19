@@ -662,6 +662,8 @@ impl Harness {
             }
             Mode::Paused => self.say("Paused. 'resume' to continue."),
             Mode::Map => self.say("Map open. 'resume' to close."),
+            Mode::Atlas => self.say("The Holding's map is open."),
+            Mode::Tour => self.say("A zone's walkthrough is showing."),
             Mode::Play => self.play_status(),
         }
     }

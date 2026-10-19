@@ -46,6 +46,7 @@ pub const ACTIONS: &[(&str, u32)] = &[
     ("grab", 1 << 14),
     ("stop", 1 << 15),
     ("bench", 1 << 16),
+    ("slash", 1 << 17),
 ];
 
 fn bit(name: &str) -> u32 {
@@ -68,6 +69,10 @@ pub enum Mode {
     Play,
     Paused,
     Map,
+    /// the Holding's map: the timeline as a hologram of its zones
+    Atlas,
+    /// a zone's walkthrough, opened from the map
+    Tour,
     Interlude,
     Dead,
     Won,
@@ -119,6 +124,10 @@ pub struct Game {
     crossing_count: Option<String>,
     hub: Arena,
     hub_seed: u64,
+    /// a zone's walkthrough, while one is shown
+    tour: Option<crate::tour::Tour>,
+    /// the zone the pointer is over on the map
+    pointed: Option<usize>,
     menu_us: i64,
     scene_version: u32,
     prev_bits: u32,
@@ -175,6 +184,8 @@ impl Game {
             crossing_count: None,
             hub,
             hub_seed,
+            tour: None,
+            pointed: None,
             menu_us: 0,
             scene_version: 0,
             prev_bits: 0,
@@ -412,13 +423,107 @@ impl Game {
         true
     }
 
+    /// The map, from the Holding: the timeline as a hologram.
+    pub fn open_map(&mut self) {
+        if self.mode == Mode::Holding {
+            self.mode = Mode::Atlas;
+            self.pointed = None;
+        }
+    }
+
+    /// Back to the Holding from the map.
+    pub fn close_map(&mut self) {
+        if self.mode == Mode::Atlas {
+            self.mode = Mode::Holding;
+        }
+    }
+
+    /// The zone the pointer is over on the map (−1: none), lit up there.
+    pub fn point_at(&mut self, zone: i32) {
+        self.pointed = usize::try_from(zone).ok().filter(|&z| z < self.c.zones.len());
+    }
+
+    /// A zone's walkthrough, from the map: any built zone may be shown,
+    /// started or not. Its line is the one a run from it follows.
+    pub fn show_zone(&mut self, zone: usize) -> bool {
+        if self.mode != Mode::Atlas || !self.c.zones.get(zone).is_some_and(|z| z.built && !z.mission) {
+            return false;
+        }
+        let line = match crate::atlas::spots(&self.c)
+            .0
+            .iter()
+            .find(|s| s.zone == zone)
+            .map(|s| s.line)
+        {
+            Some("river") => "river",
+            Some("both") if self.meta.on_river(&self.c) => "river",
+            Some(_) => "peak",
+            None => return false,
+        };
+        self.tour = Some(crate::tour::Tour::new(&self.c, zone, line));
+        self.mode = Mode::Tour;
+        self.acc = 0;
+        self.build_scene();
+        true
+    }
+
+    /// The walkthrough's stop `k`, at once.
+    pub fn tour_to(&mut self, k: usize) {
+        if let (Mode::Tour, Some(t)) = (self.mode, self.tour.as_mut()) {
+            t.enter(&self.c, k);
+            self.build_scene();
+        }
+    }
+
+    /// The walkthrough's stop shown now; −1 with none.
+    pub fn tour_stop(&self) -> i32 {
+        match (self.mode, self.tour.as_ref()) {
+            (Mode::Tour, Some(t)) => t.at as i32,
+            _ => -1,
+        }
+    }
+
+    /// Back to the map from a walkthrough.
+    pub fn tour_back(&mut self) {
+        if self.mode == Mode::Tour {
+            self.tour = None;
+            self.mode = Mode::Atlas;
+            self.build_scene();
+        }
+    }
+
+    /// A run started from the zone a walkthrough shows, on its line.
+    pub fn tour_start(&mut self) -> bool {
+        let Some((zone, line)) = self.tour.as_ref().map(|t| (t.zone, t.line.clone())) else {
+            return false;
+        };
+        if self.mode != Mode::Tour || !self.zone_open(zone, &line) {
+            return false;
+        }
+        self.tour = None;
+        self.mode = Mode::Holding;
+        self.start_on(&line, zone);
+        self.mode == Mode::Play
+    }
+
+    /// May a run start in `zone` on `line` now? A zone off the main line
+    /// once the boss before it has fallen; a year of the main line once it
+    /// has been reached; on the River, only while the River is open.
+    fn zone_open(&self, zone: usize, line: &str) -> bool {
+        let reached = if self.c.zones[zone].branch_from.is_empty() {
+            zone as i32 <= self.meta.unlocked
+        } else {
+            self.meta.branch_open(&self.c, zone)
+        };
+        reached && (line != "river" || self.meta.river_shut(&self.c).is_none())
+    }
+
     /// The Holding's timeline: the main line of years, and each zone off it
     /// forking from the zone it follows; where each stands on the panel (in
     /// percent), whether a run may start there, and why not.
     fn timeline_json(&self) -> Value {
         let c = &self.c;
         let m = &self.meta;
-        let main = c.built_zones();
         let shut = m.river_shut(c);
         let river_on = m.on_river(c);
         let why = |r: &Refusal| match r {
@@ -435,66 +540,42 @@ impl Game {
             ),
             _ => String::new(),
         };
-        let x_of = |k: usize| TIMELINE_LEFT + TIMELINE_SPAN * k as i32 / main.saturating_sub(1).max(1) as i32;
-        let step = TIMELINE_SPAN / main.saturating_sub(1).max(1) as i32;
-        let mut nodes = Vec::new();
-        let mut edges = Vec::new();
-        // the branch's zones fork after the zone they follow
-        let fork = c
-            .zones
+        // each zone where its diorama lands on screen, its label to the
+        // outside of its line's column
+        let (spots, _) = crate::atlas::spots(c);
+        let cam = crate::atlas::camera();
+        let aspect = self.aspect();
+        let nodes: Vec<Value> = spots
             .iter()
-            .find(|z| z.built && !z.branch_from.is_empty())
-            .and_then(|z| c.zones.iter().position(|f| f.id == z.branch_from));
-        for k in 0..main {
-            let z = &c.zones[k];
-            let line = if fork.is_some_and(|f| k <= f) {
-                "both"
-            } else {
-                "peak"
-            };
-            let start_ok = k as i32 <= m.unlocked;
-            nodes.push(json!({
-                "zone": k, "line": line, "year": z.year, "name": z.name,
-                "boss": c.story.bosses.get(&z.boss).map(|b| b.name.clone()).unwrap_or_default(),
-                "x": x_of(k), "y": TIMELINE_MAIN_Y,
-                "open": start_ok, "beaten": m.beaten.contains(&z.boss), "sealed": false,
-                "why": if start_ok { String::new() } else { c.say("why_not_reached") },
-            }));
-            if k > 0 {
-                edges.push(json!({ "x1": x_of(k - 1), "y1": TIMELINE_MAIN_Y, "x2": x_of(k), "y2": TIMELINE_MAIN_Y, "line": line }));
-            }
-        }
-        if let Some(f) = fork {
-            let mut from = (x_of(f), TIMELINE_MAIN_Y);
-            let mut n = 0;
-            for (k, z) in c
-                .zones
-                .iter()
-                .enumerate()
-                .filter(|(_, z)| !z.branch_from.is_empty())
-            {
-                n += 1;
-                let at = (x_of(f) + step * n, TIMELINE_RIVER_Y);
-                let open = m.branch_open(c, k);
-                nodes.push(json!({
-                    "zone": k, "line": "river", "year": z.year, "name": z.name,
+            .map(|s| {
+                let z = &c.zones[s.zone];
+                let line = if s.line == "river" || s.line == "both" && river_on {
+                    "river"
+                } else {
+                    "peak"
+                };
+                let open = self.zone_open(s.zone, line);
+                let (x, y) = cam.screen(aspect, s.at).unwrap_or((0, 0));
+                let why = if !z.built {
+                    c.say("sealed")
+                } else if open {
+                    String::new()
+                } else if let (true, Some(r)) = (s.line == "river", shut.as_ref()) {
+                    why(r)
+                } else {
+                    c.say("why_not_reached")
+                };
+                json!({
+                    "zone": s.zone, "line": s.line, "year": z.year, "name": z.name,
                     "boss": c.story.bosses.get(&z.boss).map(|b| b.name.clone()).unwrap_or_default(),
-                    "x": at.0, "y": at.1,
+                    "x": x / ONE, "y": y / ONE,
+                    "side": if s.line == "river" { "right" } else { "left" },
                     "open": open, "beaten": m.beaten.contains(&z.boss), "sealed": !z.built,
-                    "why": if !z.built {
-                        c.say("sealed")
-                    } else if let Some(r) = shut.as_ref() {
-                        why(r)
-                    } else if !open {
-                        c.say("why_not_reached")
-                    } else {
-                        String::new()
-                    },
-                }));
-                edges.push(json!({ "x1": from.0, "y1": from.1, "x2": at.0, "y2": at.1, "line": "river" }));
-                from = at;
-            }
-        }
+                    "pointed": self.pointed == Some(s.zone),
+                    "why": why,
+                })
+            })
+            .collect();
         let branch_words = c.zones.iter().find_map(|z| c.story.branches.get(&z.id));
         json!({
             "lines": [
@@ -502,7 +583,54 @@ impl Game {
                 { "id": "river", "name": branch_words.map(|b| b.timeline.clone()).unwrap_or_default(), "chosen": river_on, "open": shut.is_none(), "why": shut.as_ref().map(why).unwrap_or_default() },
             ],
             "nodes": nodes,
-            "edges": edges,
+        })
+    }
+
+    /// What the walkthrough's card says: the zone, its boss, the creatures
+    /// met there, each stop and its line, and whether a run may start here.
+    fn tour_json(&self) -> Value {
+        let Some(t) = self.tour.as_ref() else {
+            return Value::Null;
+        };
+        let c = &self.c;
+        let z = &c.zones[t.zone];
+        let boss = c.story.bosses.get(&z.boss);
+        let creatures: Vec<String> = (0..c.enemies.len())
+            .filter(|&e| c.zone_of_enemy(e) == Some(t.zone) && c.enemies[e].id != z.boss)
+            .map(|e| c.enemies[e].name.clone())
+            .collect();
+        let stops: Vec<Value> = t
+            .stops
+            .iter()
+            .enumerate()
+            .map(|(k, &n)| {
+                let node = &t.route.nodes[n];
+                let key = match node.kind {
+                    NodeKind::Arrival => "arrival",
+                    NodeKind::Rest => "rest",
+                    NodeKind::Boss => "boss",
+                    _ => node.archetype.as_str(),
+                };
+                let line = z
+                    .tour
+                    .get(key)
+                    .or_else(|| z.tour.get(&node.archetype))
+                    .cloned()
+                    .unwrap_or_default();
+                json!({ "name": z.place_name(key), "line": line, "here": k == t.at })
+            })
+            .collect();
+        let open = self.zone_open(t.zone, &t.line);
+        json!({
+            "zone": t.zone, "name": z.name, "year": z.year,
+            "blurb": z.tour.get("blurb").cloned().unwrap_or_default(),
+            "boss": boss.map(|b| b.name.clone()).unwrap_or_default(),
+            "boss_line": boss.map(|b| b.title.clone()).unwrap_or_default(),
+            "creatures": creatures,
+            "stops": stops, "at": t.at, "stop_ticks": t.len,
+            "open": open,
+            "why": if open { String::new() } else { c.say("tour_shut") },
+            "beaten": self.meta.beaten.contains(&z.boss),
         })
     }
 
@@ -853,6 +981,24 @@ impl Game {
         };
         self.last_us = Some(now_us);
         self.menu_us += dt;
+        if self.mode == Mode::Tour {
+            // a walkthrough runs its arenas at play's pace
+            self.acc += dt * TICKS_PER_SECOND as i64;
+            let mut ran = 0;
+            while self.acc >= TICK_UNITS && ran < MAX_TICKS_PER_FRAME {
+                if let Some(t) = self.tour.as_mut() {
+                    if t.step(&self.c) {
+                        self.build_scene();
+                    }
+                }
+                self.acc -= TICK_UNITS;
+                ran += 1;
+            }
+            if ran == MAX_TICKS_PER_FRAME {
+                self.acc = self.acc.min(TICK_UNITS - 1);
+            }
+            self.alpha = (self.acc * ONE as i64 / TICK_UNITS) as i32;
+        }
         if self.mode != Mode::Play {
             self.draw();
             return;
@@ -1070,24 +1216,32 @@ impl Game {
 
     /// The zone the scene is in: the run's, or zone one's for the menus.
     fn scene_zone(&self) -> &crate::content::Zone {
+        if let (Mode::Tour, Some(t)) = (self.mode, self.tour.as_ref()) {
+            return &self.c.zones[t.zone];
+        }
         &self.c.zones[self.run.as_ref().map_or(0, |r| r.zone)]
     }
 
     /// The scene the run is lit by: its section's own, else its zone's.
     fn scene(&self) -> &crate::content::Scene {
         let z = self.scene_zone();
-        self.run
-            .as_ref()
-            .and_then(|r| r.route.nodes.get(r.at))
-            .and_then(|n| z.scenes.get(&n.archetype))
-            .unwrap_or(&z.scene)
+        let archetype = match (self.mode, self.tour.as_ref()) {
+            (Mode::Tour, Some(t)) => Some(t.archetype(&self.c)),
+            _ => self
+                .run
+                .as_ref()
+                .and_then(|r| r.route.nodes.get(r.at))
+                .map(|n| n.archetype.as_str()),
+        };
+        archetype.and_then(|a| z.scenes.get(a)).unwrap_or(&z.scene)
     }
 
     fn build_scene(&mut self) {
         let ink = self.c.pal.c(&self.scene().ink);
-        let arena = match &self.run {
-            Some(r) => &r.world.arena,
-            None => &self.hub,
+        let arena = match (&self.tour, &self.run) {
+            (Some(t), _) if self.mode == Mode::Tour => &t.world.arena,
+            (_, Some(r)) => &r.world.arena,
+            _ => &self.hub,
         };
         let mut b = Batch::new(ink);
         for s in &arena.shapes {
@@ -1097,6 +1251,64 @@ impl Game {
         self.static_values = values;
         self.static_draws = draws;
         self.scene_version += 1;
+    }
+
+    /// The map's hologram: each zone's diorama turning in its place, the
+    /// beams between them, the line followed lit.
+    fn draw_atlas(&self, b: &mut Batch, clock: i32) {
+        let c = &self.c;
+        let (spots, beams) = crate::atlas::spots(c);
+        let river_on = self.meta.on_river(c);
+        // the hologram's dark field, behind it and filling the view, so the
+        // dioramas read against the night and not the city
+        let field = ATLAS_CENTRE.add(v3(0, 0, -ATLAS_FIELD_BACK));
+        b.push(
+            Mesh::Cube,
+            &render::boxed(field, ATLAS_FIELD),
+            c.pal.c("atlas_field"),
+            ONE / 6,
+            render::PASS_SOLID,
+        );
+        for &(a, z) in &beams {
+            let line = spots[z].line;
+            let followed = line != "river" && !river_on
+                || line == "river" && river_on
+                || spots[a].line == "both" && line == "both";
+            let rgb = c.pal.c(if line == "river" {
+                "atlas_river"
+            } else {
+                "atlas_beam"
+            });
+            draw::beam(
+                b,
+                spots[a].at,
+                spots[z].at,
+                ATLAS_BEAM,
+                rgb,
+                if followed { ONE } else { ONE / 4 },
+            );
+        }
+        for (k, s) in spots.iter().enumerate() {
+            let z = &c.zones[s.zone];
+            let line = if s.line == "river" || s.line == "both" && river_on {
+                "river"
+            } else {
+                "peak"
+            };
+            let standing = if !z.built {
+                draw::atlas::Standing::Sealed
+            } else if self.meta.beaten.contains(&z.boss) {
+                draw::atlas::Standing::Beaten
+            } else if self.zone_open(s.zone, line) {
+                draw::atlas::Standing::Open
+            } else {
+                draw::atlas::Standing::Locked
+            };
+            let spin =
+                (clock + k as i32 * ATLAS_SPIN_TICKS / 7) % ATLAS_SPIN_TICKS * fx::TURN / ATLAS_SPIN_TICKS;
+            let hover = if self.pointed == Some(s.zone) { ONE } else { 0 };
+            draw::atlas::diorama(b, c, &z.id, s.at, ATLAS_DIORAMA, spin, hover, standing);
+        }
     }
 
     fn draw(&mut self) {
@@ -1109,6 +1321,17 @@ impl Game {
         // the head the scenery is cut away in front of, and the floor under it
         let mut focus = None;
         match (&self.run, in_run) {
+            _ if self.mode == Mode::Tour && self.tour.is_some() => {
+                let t = self.tour.as_ref().unwrap();
+                let cam = t.camera(self.alpha);
+                self.camera = cam;
+                focus = t.focus();
+                draw::world(&mut b, &self.c, &t.world, self.alpha, clock, false, &cam);
+            }
+            _ if self.mode == Mode::Atlas => {
+                self.camera = crate::atlas::camera();
+                self.draw_atlas(&mut b, clock);
+            }
             (Some(run), true) => {
                 self.camera = play_camera(&run.world, self.alpha);
                 let p = &run.world.player;
@@ -1548,6 +1771,9 @@ impl Game {
             "pound": p.build.pound > 0,
             "pound_ready": p.build.pound > 0 && p.pound_cooldown == 0 && !p.pounding,
             "pounding": p.pounding,
+            "slash": p.build.judgment > 0,
+            "slash_ready": p.build.judgment > 0 && p.slash_cooldown == 0,
+            "slashing": p.slash_left > 0,
             // the gun's own trait: blades in hand, the spin, the orbs struck
             "saws": if let Some(s) = gl_saw {
                 c.say("hud_saws").replace("{n}", &(s.saws - w.held.saws_out).max(0).to_string()).replace("{max}", &s.saws.to_string())
@@ -1933,6 +2159,7 @@ impl Game {
                 }).collect::<Vec<_>>(),
             },
             "timeline": self.timeline_json(),
+            "tour": self.tour_json(),
             "zones": c.zones.iter().filter(|z| !z.mission && z.branch_from.is_empty()).map(|z| json!({
                 "name": z.name,
                 "year": z.year,
@@ -2114,6 +2341,7 @@ pub fn controls(held: u32, pressed: u32) -> Controls {
         grab_pressed: hit("grab"),
         stop_pressed: hit("stop"),
         bench_pressed: hit("bench"),
+        slash_pressed: hit("slash"),
     }
 }
 
@@ -2401,7 +2629,7 @@ pub(crate) mod tests {
         assert_eq!(s["interlude"]["title"], "THE DOOR");
         g.continue_run();
         let h: Value = serde_json::from_str(&g.hud_json()).unwrap();
-        assert_eq!(h["zone"], "The Idiot God");
+        assert_eq!(h["zone"], "????");
         assert_eq!(h["node"], "The Gullet");
         // the god, sung to sleep (here, at once)
         let boss = g.run.as_ref().unwrap().route.boss();
@@ -2974,6 +3202,73 @@ pub(crate) mod tests {
     }
     /// A record that has beaten the house and owns the river's kit.
     const RIVER_READY: &str = r#"{"seen_intro": true, "unlocked": 3, "beaten": ["bailiff", "witness", "executor"], "owned": ["writ", "gavel", "bench"]}"#;
+
+    #[test]
+    fn the_map_opens_from_the_holding_and_a_zone_on_it_shows_its_walkthrough() {
+        let mut g = game_with(RIVER_READY);
+        g.begin();
+        assert_eq!(g.mode, Mode::Holding);
+        g.open_map();
+        assert_eq!(g.mode, Mode::Atlas);
+        let far = g.c.zones.iter().position(|z| z.id == "far_shore").unwrap();
+        assert!(g.show_zone(far), "any built zone may be shown, started or not");
+        assert_eq!(g.mode, Mode::Tour);
+        let s: Value = serde_json::from_str(&g.screen_json()).unwrap();
+        let t = &s["tour"];
+        assert_eq!(t["name"], "The Far Shore");
+        assert_eq!(t["open"], false, "not before the Oak");
+        assert!(
+            t["creatures"].as_array().unwrap().len() >= 8,
+            "the fleet's crews: {}",
+            t["creatures"]
+        );
+        assert!(
+            t["stops"][0]["line"].as_str().unwrap().len() > 10,
+            "each stop says what it is"
+        );
+        // the walkthrough runs on and the stops change
+        let first = g.tour.as_ref().unwrap().at;
+        for k in 0..(TOUR_MAX as i64 * 2) {
+            g.advance(k * 1_000_000 / 60, 0, 0, 0);
+        }
+        assert_ne!(g.tour.as_ref().unwrap().at, first, "on to the next stop");
+        // shut: no run from here; back to the map, and to the Holding
+        assert!(!g.tour_start());
+        g.tour_back();
+        assert_eq!(g.mode, Mode::Atlas);
+        g.close_map();
+        assert_eq!(g.mode, Mode::Holding);
+    }
+
+    #[test]
+    fn a_walkthrough_of_an_open_zone_starts_a_run_there_on_its_line() {
+        let mut g = game_with(RIVER_READY);
+        g.begin();
+        g.open_map();
+        let gap = g.c.zones.iter().position(|z| z.id == "water_gap").unwrap();
+        assert!(g.show_zone(gap));
+        assert!(g.tour_start(), "the Water Gap is open");
+        assert_eq!(g.mode, Mode::Play);
+        assert_eq!(g.run.as_ref().unwrap().zone, gap);
+        assert!(g.tour.is_none());
+    }
+
+    #[test]
+    fn the_maps_labels_are_where_its_dioramas_are_drawn() {
+        let mut g = game_with(RIVER_READY);
+        g.begin();
+        g.open_map();
+        let s: Value = serde_json::from_str(&g.screen_json()).unwrap();
+        let nodes = s["timeline"]["nodes"].as_array().unwrap();
+        assert_eq!(nodes.len(), 8, "five years on the main line, three on the River");
+        let first = nodes.iter().find(|n| n["year"] == "2031").unwrap();
+        let last = nodes.iter().find(|n| n["year"] == "Outside").unwrap();
+        assert!(first["y"].as_i64() < last["y"].as_i64(), "2031 at the top");
+        for n in nodes {
+            let side = if n["line"] == "river" { "right" } else { "left" };
+            assert_eq!(n["side"], side);
+        }
+    }
 
     #[test]
     fn the_river_stays_shut_until_the_executor_is_beaten_and_its_kit_bought() {

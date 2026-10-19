@@ -72,6 +72,74 @@ pub struct Mover {
     pub round: V3,
     /// how it is drawn
     pub look: Look,
+    /// wreckage falling into a whirlpool: down and in along its track, and
+    /// again from the top (the Eye)
+    pub spiral: Option<Spiral>,
+}
+
+/// A whirlpool's cone of water: its eye, and its wall ring by ring from
+/// the throat out and up (how far out, how high).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Whirl {
+    pub eye: V3,
+    pub wall: Vec<(i32, i32)>,
+}
+
+/// A piece of wreckage's way down a whirlpool's cone: from the rim to the
+/// eye along a track that winds in faster as it narrows, then under, then
+/// again from the rim. It bears weight only on its way down: in its last
+/// stretch it sinks out from under whoever stands on it, and it comes back
+/// to the rim empty.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Spiral {
+    /// the eye it falls toward
+    pub eye: V3,
+    /// ticks from the rim to the eye, and how far along it is at tick 0
+    pub ticks: i32,
+    pub start: i32,
+    /// ticks of each descent it bears weight; after them it sinks
+    pub live: i32,
+    /// how far out from the eye, and how high its top, at the rim and at
+    /// the eye's end of its track
+    pub from: (i32, i32),
+    pub to: (i32, i32),
+    /// its bearing at the rim, how far round it goes evenly on the way
+    /// down, and how much further it is whirled as it nears the eye
+    pub bearing: i32,
+    pub sweep: i32,
+    pub whirl: i32,
+    /// how much further it drops while it sinks
+    pub sink: i32,
+}
+
+impl Spiral {
+    /// Ticks into its present descent.
+    pub fn along(&self, tick: i32) -> i32 {
+        (tick as i64 + self.start as i64).rem_euclid(self.ticks.max(1) as i64) as i32
+    }
+
+    /// Does it bear weight at `tick`?
+    pub fn on(&self, tick: i32) -> bool {
+        self.along(tick) < self.live
+    }
+
+    /// The middle of its top at `tick`.
+    pub fn place(&self, tick: i32) -> V3 {
+        let n = self.along(tick);
+        let s = (n as i64 * ONE as i64 / self.ticks.max(1) as i64) as i32;
+        let r = self.from.0 + fx::mul(self.to.0 - self.from.0, s);
+        let mut y = self.from.1 + fx::mul(self.to.1 - self.from.1, s);
+        if n >= self.live {
+            let gone = self.ticks - self.live;
+            y -= (self.sink as i64 * (n - self.live) as i64 / gone.max(1) as i64) as i32;
+        }
+        let a = self.bearing + fx::mul(self.sweep, s) + fx::mul(self.whirl, fx::mul(s, s));
+        v3(
+            self.eye.x + fx::mul(fx::sin(a), r),
+            y,
+            self.eye.z + fx::mul(fx::cos(a), r),
+        )
+    }
 }
 
 /// How moving ground is drawn.
@@ -101,11 +169,21 @@ impl Mover {
             orbit: 0,
             round: V3::ZERO,
             look: Look::Root,
+            spiral: None,
         }
+    }
+
+    /// Does it bear weight at `tick`? (Only falling wreckage ever stops.)
+    pub fn on(&self, tick: i32) -> bool {
+        self.spiral.is_none_or(|sp| sp.on(tick))
     }
 
     /// Where its lowest corner is at tick `tick`.
     pub fn corner(&self, tick: i32) -> V3 {
+        if let Some(sp) = self.spiral {
+            // laid where its track has it at tick 0
+            return self.base.min.add(sp.place(tick).sub(sp.place(0)));
+        }
         let t = (fx::TURN as i64 * tick as i64 / self.period.max(1) as i64) as i32 + self.phase;
         let up = self.rise / 2 - fx::mul(self.rise / 2, fx::cos(t));
         let sway = self.swing.scale(fx::sin(t));
@@ -258,6 +336,11 @@ pub struct OakSite {
 pub struct Course {
     /// the water's surface: below it you drown
     pub water: i32,
+    /// in the open sea, how far under the surface you may sink before it
+    /// takes you (0: at once, as the river does); there you swim
+    pub depth: i32,
+    /// ticks spent in the sea since you were last out of it
+    pub wet: i32,
     /// mooring posts, in the order they are reached; the first is the start
     pub posts: Vec<V3>,
     pub doors: Vec<Door>,
@@ -285,6 +368,8 @@ pub struct Course {
     /// lightning marked and coming: where, and ticks left
     pub strikes: Vec<(V3, i32)>,
     pub underwater: Option<Underwater>,
+    /// a whirlpool's cone, its water drawn turning (the Eye)
+    pub whirl: Option<Whirl>,
     /// where the boss comes up (Dagon, in the eye)
     pub boss_at: Option<V3>,
     pub charge: Option<Charge>,
@@ -425,9 +510,20 @@ impl World {
         for (i, m) in k.movers.iter().enumerate() {
             let d = &mut level.dynamic[m.dynamic];
             let delta = k.waves.corner(i, m, self.tick).sub(d.solid.min);
+            // falling wreckage sinks from under you and comes back to the
+            // rim empty: only what bore weight last tick and still does
+            // carries anyone
+            let bears = if m.spiral.is_some() {
+                let was = d.on;
+                d.on = m.on(self.tick);
+                was && d.on
+            } else {
+                true
+            };
             // what stands on it goes with it, down as well as up, and so
             // keeps its footing (a fall would leave it hanging each tick)
-            let riding = self.player.grounded
+            let riding = bears
+                && self.player.grounded
                 && (feet.y - d.solid.max.y).abs() <= ONE / 20
                 && feet.x >= d.solid.min.x - PLAYER_RADIUS
                 && feet.x <= d.solid.max.x + PLAYER_RADIUS
@@ -439,7 +535,7 @@ impl World {
             d.solid.max = d.solid.max.add(delta);
             if riding {
                 self.player.pos = self.player.pos.add(delta);
-            } else if delta.y > 0 {
+            } else if delta.y > 0 && bears {
                 // rising into a body coming down on it: the body lands on
                 // its top, not thrown out of its side
                 let b = &self.player;
@@ -454,7 +550,7 @@ impl World {
                     self.player.grounded = true;
                 }
             }
-            if delta != V3::ZERO {
+            if delta != V3::ZERO && bears {
                 for e in self.enemies.iter_mut().filter(|e| e.alive()) {
                     let p = e.pos;
                     if p.x >= lo.x
@@ -597,7 +693,10 @@ impl World {
             k.strikes.retain(|s| s.1 > 0);
         }
         // under the water: lighter, a stroke to swim, a current to the eye
-        self.player.swimming = k.underwater.is_some();
+        let in_sea = k.depth > 0 && p.y < k.water;
+        k.wet = if in_sea { k.wet + 1 } else { 0 };
+        self.player.swimming = k.underwater.is_some() || in_sea;
+        self.player.afloat = in_sea;
         if let Some(u) = k.underwater {
             if !self.player.grounded {
                 shove = shove.add(v3(u.eye.x - p.x, 0, u.eye.z - p.z).norm().scale(u.pull));
@@ -630,8 +729,14 @@ impl World {
             }
         }
 
-        // the water
-        if p.y < k.water {
+        // the water: at once in the river; in the sea, too deep or too long
+        let drowned = if k.depth > 0 {
+            p.y < k.water - k.depth || k.wet > SEA_BREATH
+        } else {
+            p.y < k.water
+        };
+        if drowned {
+            k.wet = 0;
             let back = k.posts.get(k.post).copied().unwrap_or(self.arena.start);
             let back = back.add(v3(0, k.waves.lift_under(&k.movers, back, self.tick), 0));
             let pl = &mut self.player;
@@ -1593,6 +1698,139 @@ pub(crate) mod tests {
     }
 
     #[test]
+    fn nothing_leafy_stands_over_the_oaks_crown_to_hide_the_summons() {
+        let (c, w) = course_world_in("water_gap", "boss");
+        let site = w.course.as_ref().unwrap().oak.unwrap();
+        let leaf = c.pal.c("oak_leaf");
+        let crown = site.axis.y + site.crown_y;
+        for s in w.arena.shapes.iter().filter(|s| s.rgb == leaf) {
+            let at = s.at.t;
+            let near = v3(at.x - site.axis.x, 0, at.z - site.axis.z).len_xz() < site.crown_r + int(10);
+            assert!(
+                !near || at.y < crown,
+                "leaves over the crown at {at:?} (its floor at {crown})"
+            );
+        }
+    }
+
+    #[test]
+    fn overboard_in_the_open_sea_you_sink_slowly_and_can_hook_yourself_back_aboard() {
+        let (c, mut w) = course_world_in("far_shore", "fleet");
+        for e in w.enemies.iter_mut() {
+            e.hp = 0;
+        }
+        let k = w.course.clone().unwrap();
+        assert!(k.depth > 0, "the sea lets you swim");
+        // the first ship's tallest mast, and the sea off her side
+        let flag = &k.flags[0];
+        let mast = k.movers[flag.mast].base;
+        let deck = k.movers[flag.deck].base;
+        let foot = v3(mast.centre().x, deck.max.y, mast.centre().z);
+        w.player.pos = v3(deck.min.x - int(6), k.water + int(1), foot.z);
+        w.player.prev_pos = w.player.pos;
+        let health = w.player.health;
+        let mut fastest = 0;
+        for _ in 0..90 {
+            tick(&c, &mut w, idle());
+            // once in, the sea slows the fall
+            if w.player.pos.y < k.water - ONE {
+                fastest = fastest.max(-w.player.vel.y);
+            }
+        }
+        assert!(!w.notes.iter().any(|n| n.sound == "drown"), "not drowned yet");
+        assert!(
+            w.player.pos.y < k.water && w.player.pos.y > k.water - k.depth,
+            "in the sea: {}",
+            w.player.pos.y
+        );
+        assert!(fastest <= SEA_SINK, "sank at {fastest}");
+        assert_eq!(w.player.health, health);
+        // the hook, at her mast, pulls you out and up over her deck
+        let line = [
+            Step::Hook(foot.add(v3(0, int(4), 0))),
+            Step::Air(foot.add(v3(int(1), 0, 0))),
+        ];
+        let mut pilot = Pilot::default();
+        for _ in 0..60 * 8 {
+            let Some(d) = pilot.drive(&line, &w.player) else {
+                break;
+            };
+            w.player.yaw = d.yaw;
+            let eye = w.player.chest();
+            w.tick(&c, &d.controls, eye, d.aim);
+        }
+        assert!(!w.notes.iter().any(|n| n.sound == "drown"), "drowned on the way");
+        assert!(
+            w.player.pos.y >= deck.max.y - ONE,
+            "back aboard: {:?}",
+            w.player.pos
+        );
+    }
+
+    #[test]
+    fn the_sea_takes_you_if_you_stay_in_it_too_long_or_sink_too_deep() {
+        let (c, mut w) = course_world_in("far_shore", "fleet");
+        for e in w.enemies.iter_mut() {
+            e.hp = 0;
+        }
+        let k = w.course.clone().unwrap();
+        let off = v3(-int(60), k.water - int(1), int(40));
+        let mut drowned_at = None;
+        for t in 0..SEA_BREATH + 30 {
+            w.player.pos = off;
+            w.player.vel = V3::ZERO;
+            tick(&c, &mut w, idle());
+            if w.notes.iter().any(|n| n.sound == "drown") {
+                drowned_at = Some(t);
+                break;
+            }
+        }
+        let t = drowned_at.expect("treading water forever");
+        assert!(t >= SEA_BREATH - 2, "drowned after {t} ticks");
+        // and below the depth, at once
+        let (c, mut w) = course_world_in("far_shore", "fleet");
+        w.player.pos = v3(off.x, k.water - k.depth - ONE, off.z);
+        tick(&c, &mut w, idle());
+        assert!(w.notes.iter().any(|n| n.sound == "drown"), "too deep");
+    }
+
+    #[test]
+    fn the_fleets_decks_and_masts_are_cut_away_between_the_camera_and_you() {
+        use crate::render::{Batch, Camera, DRAW_VALUES, DYNAMIC_BUFFER};
+        let (c, w) = course_world_in("far_shore", "fleet");
+        let cam = Camera {
+            eye: w.player.pos.add(v3(0, int(3), int(6))),
+            fwd: v3(0, 0, -ONE),
+            fov: FOV,
+        };
+        let mut b = Batch::new([0; 3]);
+        crate::draw::world(&mut b, &c, &w, ONE, 0, true, &cam);
+        let (_, draws) = b.finish(DYNAMIC_BUFFER);
+        let cut: u32 = draws
+            .iter()
+            .flat_map(|d| d.chunks(DRAW_VALUES))
+            .filter(|v| v[5] == 1)
+            .map(|v| v[3])
+            .sum();
+        let movers = w.course.as_ref().unwrap().movers.len() as u32;
+        assert!(
+            cut >= movers,
+            "{cut} instances cut away, for {movers} decks and masts"
+        );
+        assert!(
+            !b_is_scenery_after(&c, &w, &cam),
+            "and the batch is left as it was"
+        );
+    }
+
+    /// Is a batch still marking scenery once the world is drawn?
+    fn b_is_scenery_after(c: &Content, w: &World, cam: &crate::render::Camera) -> bool {
+        let mut b = crate::render::Batch::new([0; 3]);
+        crate::draw::world(&mut b, c, w, ONE, 0, true, cam);
+        b.scenery
+    }
+
+    #[test]
     fn each_ship_of_the_fleet_strikes_her_colours_when_her_crew_is_down() {
         let (c, mut w) = course_world_in("far_shore", "fleet");
         let k = w.course.clone().unwrap();
@@ -1820,5 +2058,60 @@ pub(crate) mod tests {
             }
         }
         assert!(landed);
+    }
+}
+
+#[cfg(test)]
+mod drum_cap {
+    use super::tests::*;
+    use super::*;
+
+    /// Hooked toward the Falls' drum-cap, a pound thrown from a third of a
+    /// second into the pull onward lands on the cap and bounces twice as
+    /// high.
+    #[test]
+    fn a_pound_thrown_early_in_the_pull_still_lands_on_the_drum_cap() {
+        let mut report = Vec::new();
+        for delay in [20, 25, 30, 40, 50, 60] {
+            let (c, mut w) = course_world_in("water_gap", "falls");
+            let k = w.course.clone().unwrap();
+            let drum = k.drums[0];
+            // stand where the line hooks from
+            w.player.pos = v3(0, drum.max.y - ONE, drum.centre().z + int(11));
+            w.player.prev_pos = w.player.pos;
+            for _ in 0..10 {
+                let eye = w.player.chest();
+                w.tick(
+                    &c,
+                    &crate::player::Controls::default(),
+                    eye,
+                    crate::geom::facing(w.player.yaw, 0),
+                );
+            }
+            let ring = v3(0, drum.max.y + int(4), drum.centre().z - ONE);
+            let line = [Step::Hook(ring)];
+            let mut pilot = Pilot::default();
+            let mut bounced = false;
+            let mut t0 = None;
+            for t in 0..200 {
+                let mut d = pilot.drive(&line, &w.player);
+                if w.player.grapple.is_some() && t0.is_none() {
+                    t0 = Some(t);
+                }
+                let mut ctl = d.map(|d| d.controls).unwrap_or_default();
+                if let Some(d) = d.as_mut() {
+                    w.player.yaw = d.yaw;
+                }
+                if t0.is_some_and(|s| t == s + delay) {
+                    ctl.pound_pressed = true;
+                }
+                let eye = w.player.chest();
+                let aim = d.map(|d| d.aim).unwrap_or(crate::geom::facing(w.player.yaw, 0));
+                w.tick(&c, &ctl, eye, aim);
+                bounced |= w.notes.iter().any(|n| n.sound == "drum_cap");
+            }
+            report.push((delay, bounced));
+        }
+        assert!(report.iter().all(|r| r.1), "missed the cap: {report:?}");
     }
 }

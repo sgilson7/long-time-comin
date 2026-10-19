@@ -10,8 +10,8 @@
 //! - the Maelstrom (`maelstrom`): under the water, the wreckage turning down
 //!   and in toward the eye
 //!
-//! and the Eye (the boss): a ring of wreckage turning round the whirlpool,
-//! Dagon rising in the middle.
+//! and the Eye (the boss): the whirlpool a cone of water round you, the
+//! wreckage falling in down its arms, Dagon rising in the eye.
 
 use super::{dm, m, B};
 use crate::course::{Chain, Course, Flag, Gust, Look, Mover, Storm, Underwater};
@@ -30,6 +30,9 @@ impl B<'_> {
     pub(super) fn sea(&mut self, kind: &str) {
         self.course = Some(Course {
             water: -ONE / 2,
+            // the open sea: fall in and you may swim a while, and hook
+            // yourself back aboard, before it takes you
+            depth: crate::balance::SEA_DEPTH,
             ..Course::default()
         });
         self.start_yaw = 0;

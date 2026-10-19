@@ -114,6 +114,26 @@ Done means, for this round: the rotten timber says how it is broken (hook the ri
 
 Done means, for this round: the Fleet's ships strike their colours as their crews fall, and the dragon fights on its chain until its three locks are broken (the design's defaults); the Hurricane's waves, green washes over the decks and big rogue waves; the Enslaved Dragon renamed the Captured Dragon; deployed under the standing approval.
 
+## The twenty-first request, word for word (2026-10-19, in eight messages while the work went on)
+
+> the under stillwater box on the timeline overruns the edge of the box, so the timeline should maybe be pinned at the root at the top, and then flow downwards so there is more lhs / rhs space to work with. the map screen should also be a button you press to bring up, and should have the same 3d render of each area like iron vector does with its planets, just give maybe like a fishing game splash screen type walkthrough of a zone when you click it on the map screen
+
+> your view when on the boats in the far shore often clips into them and doesnt give you the opacity bubble, so its really hard to be on the boat and shoot up from it
+
+> you should also be able to go into the water pretty deep before you die, so you can hook yourself back onto the boats if you fall of
+
+> also all of the extremely fast moving bird enemies in the far shore move too fast to be reliably hittable by the big iron and stuff ,we should add a melee attack to the game, like a giant sword slash you can do in front of you thats increased in length if you use it mid dash, thats pretty quick and its recharge and stats can be new abilities to buy in the holding
+
+> also rename the idiot god to ???? everywhere in the game
+
+> the dagon fight should also be a lot more vertically arranged, like the whirlpool is a conical shape around you and the platforms are falling in so you need to jump from platform to platform as you fight. also the oak tree as the boss battle arena is great, id say remove those bushes on top of it cause it makes the boss hard to see. also there is still a broken ground pound in the water gap section 3 i believe
+
+> the melee should be on E, and pickup should be on x
+
+> make sure you're keeping track of all these edits in the design log!!
+
+Done means, for this round: the timeline as a map opened by a button, rooted at 2031 and flowing down, each zone a 3D diorama after Iron Vector's planets, and a walkthrough of a zone's arenas when it is clicked; the decks cut away round the camera; the open sea swum before it drowns; a melee slash on E (longer mid-dash) with upgrades in the Holding, and pickup on X; ???? for the Idiot God; Dagon's fight on wreckage falling down a whirlpool cone; the Oak's crown clear; the Falls' pound fixed; every edit in the design journal; deployed under the standing approval.
+
 ## The tool
 
 A third-person bullet-hell shooter that runs in a desktop browser with a keyboard and mouse. Roguelike runs across a graph of arenas; meta-progression between runs; a story told by an indictment that is revealed one count at a time, on each death.

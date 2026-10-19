@@ -160,47 +160,6 @@ export function makeScreens(game, copy, changed, startAt, tryChumbles) {
           return button;
         }),
       );
-      // the timeline: the years on each line, where a run may start, and
-      // which line runs follow past the house
-      const tl = s.timeline;
-      const followed = (tl.lines.find((l) => l.chosen) || tl.lines[0]).id;
-      el("timeline-lines").replaceChildren(
-        ...tl.lines.map((l) => {
-          const button = make("button", `small line ${l.id} ${l.chosen ? "on" : ""}`, `${copy.timeline_choose}: ${l.name}`);
-          button.disabled = !l.open;
-          button.title = l.why;
-          button.setAttribute("aria-pressed", l.chosen ? "true" : "false");
-          button.addEventListener("click", () => {
-            if (game.choose_timeline(l.id)) changed();
-          });
-          return button;
-        }),
-      );
-      const tsvg = el("timeline-edges");
-      const tns = tsvg.namespaceURI;
-      tsvg.replaceChildren(
-        ...tl.edges.map((e) => {
-          const line = document.createElementNS(tns, "line");
-          for (const k of ["x1", "y1", "x2", "y2"]) line.setAttribute(k, e[k]);
-          line.setAttribute("class", `${e.line} ${e.line === followed || e.line === "both" ? "followed" : ""}`);
-          return line;
-        }),
-      );
-      el("timeline-nodes").replaceChildren(
-        ...tl.nodes.map((n) => {
-          const line = n.line === "both" ? followed : n.line;
-          const node = make("button", `year ${n.line} ${n.open ? "open" : ""} ${n.beaten ? "beaten" : ""} ${n.sealed ? "sealed" : ""}`);
-          node.style.left = `${n.x}%`;
-          node.style.top = `${n.y}%`;
-          node.append(make("strong", "", n.year), make("span", "", n.name));
-          if (n.boss) node.append(make("em", "", n.boss));
-          if (!n.open) node.append(make("small", "", n.why));
-          node.disabled = !n.open;
-          node.addEventListener("click", () => startAt(line, n.zone));
-          return node;
-        }),
-      );
-
       // the bars the Chumbles practice may begin from, behind the paw
       el("chumbles-bars").replaceChildren(
         ...s.chumbles_bars.map((name, bar) => {
@@ -295,6 +254,84 @@ export function makeScreens(game, copy, changed, startAt, tryChumbles) {
           return li;
         }),
       );
+    },
+
+    // the map: the dioramas are the core's; the page labels each where the
+    // core says it lands, to the outside of its line, and lights it on hover
+    atlas(s) {
+      const tl = s.timeline;
+      el("timeline-lines").replaceChildren(
+        ...tl.lines.map((l) => {
+          const button = make("button", `small line ${l.id} ${l.chosen ? "on" : ""}`, `${copy.timeline_choose}: ${l.name}`);
+          button.disabled = !l.open;
+          button.title = l.why;
+          button.setAttribute("aria-pressed", l.chosen ? "true" : "false");
+          button.addEventListener("click", () => {
+            if (game.choose_timeline(l.id)) changed();
+          });
+          return button;
+        }),
+      );
+      el("timeline-nodes").replaceChildren(
+        ...tl.nodes.map((n) => {
+          const node = make(
+            "button",
+            `year ${n.line} ${n.side} ${n.open ? "open" : ""} ${n.beaten ? "beaten" : ""} ${n.sealed ? "sealed" : ""}`,
+          );
+          node.style.left = `${n.x}%`;
+          node.style.top = `${n.y}%`;
+          node.append(make("strong", "", n.year), make("span", "", n.name));
+          if (n.boss) node.append(make("em", "", n.boss));
+          if (!n.open) node.append(make("small", "", n.why));
+          node.disabled = n.sealed;
+          node.addEventListener("mouseenter", () => game.point_at(n.zone));
+          node.addEventListener("focus", () => game.point_at(n.zone));
+          node.addEventListener("mouseleave", () => game.point_at(-1));
+          node.addEventListener("blur", () => game.point_at(-1));
+          node.addEventListener("click", () => {
+            if (game.show_zone(n.zone)) changed();
+          });
+          return node;
+        }),
+      );
+    },
+
+    // a zone's walkthrough: its card, and the stop the camera is at
+    tour(s) {
+      const t = s.tour;
+      if (!t) return;
+      el("t-year").textContent = t.year;
+      el("t-name").textContent = t.name;
+      el("t-blurb").textContent = t.blurb;
+      el("t-stops").replaceChildren(
+        ...t.stops.map((p, k) => {
+          const li = make("li", p.here ? "here" : "");
+          const b = make("button", "small", p.name);
+          b.addEventListener("click", () => {
+            game.tour_to(k);
+            changed();
+          });
+          li.append(b);
+          return li;
+        }),
+      );
+      el("t-creatures").textContent = t.creatures.join(" · ");
+      el("t-boss").textContent = t.boss;
+      el("t-boss-line").textContent = t.boss_line;
+      el("tour-start").disabled = !t.open;
+      el("t-why").textContent = t.why;
+      const here = t.stops[t.at];
+      el("t-stop-name").textContent = here.name;
+      el("t-stop-line").textContent = here.line;
+      // the bar fills over the stop: a fresh element restarts its fill
+      const bar = make("i", "");
+      bar.id = "t-bar";
+      bar.style.setProperty("--ticks", t.stop_ticks);
+      el("t-bar").replaceWith(bar);
+      const caption = el("t-caption");
+      caption.classList.remove("shown");
+      void caption.offsetWidth;
+      caption.classList.add("shown");
     },
 
     map(s) {

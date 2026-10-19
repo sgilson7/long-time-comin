@@ -29,7 +29,7 @@
   "time_served": "Years added: {years}. Total sentence: {total}.",
   "victory_title": "THE LULLABY",
   "victory": [
-    "The final note holds. The Idiot God closes its eyes. Time stops in a small space around it, and for the first time the dancers play quietly.",
+    "The final note holds. ???? closes its eyes. Time stops in a small space around it, and for the first time the dancers play quietly.",
     "Far away, the clock on Mount Meridian moves. 21:14 becomes 21:15. The city has a tomorrow again.",
     "You understand why your older self stopped time. The Long Door had let the god through. Holding the whole world still was the only way they knew to keep it from waking.",
     "Your song can hold it here without stopping everyone else. But someone must keep playing. You sit beside the sleeping god, set the trumpet to your lips, and begin again.",
@@ -58,7 +58,7 @@
       "title": "He has orders to clear the house. Your scientists are first on his list."
     },
     "azathoth": {
-      "name": "THE IDIOT GOD",
+      "name": "????",
       "title": "Something from outside time. It hears the Long Door opening. Its dancers keep it awake.",
       "bars": [
         "THE BLIND MASS",

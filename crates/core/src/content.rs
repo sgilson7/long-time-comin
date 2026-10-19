@@ -724,6 +724,9 @@ struct EnemyFile {
     id: String,
     name: String,
     kind: String,
+    /// the zone whose Codex page lists it, by id
+    #[serde(default)]
+    zone: String,
     hp: i32,
     radius_cm: i32,
     hover_cm: i32,
@@ -1007,6 +1010,8 @@ pub struct Phase {
 pub struct EnemyDef {
     pub id: String,
     pub name: String,
+    /// the zone it is listed under, by id (empty: found by where it fights)
+    pub zone: String,
     pub kind: Kind,
     pub hp: i32,
     pub radius: i32,
@@ -1139,6 +1144,9 @@ struct ZoneFileEntry {
     archetypes: Vec<String>,
     #[serde(default)]
     names: BTreeMap<String, String>,
+    /// the map's walkthrough: a line for the zone, and one for each section
+    #[serde(default)]
+    tour: BTreeMap<String, String>,
     #[serde(default)]
     encounters: Vec<EncounterFile>,
 }
@@ -1173,6 +1181,9 @@ pub struct Zone {
     pub route: RouteRules,
     pub archetypes: Vec<String>,
     pub names: BTreeMap<String, String>,
+    /// the map's walkthrough: `blurb` for the zone, and a line for each
+    /// section by its archetype (or arrival, rest, boss)
+    pub tour: BTreeMap<String, String>,
     pub encounters: Vec<Encounter>,
 }
 
@@ -1242,6 +1253,7 @@ const EFFECTS: &[&str] = &[
     "stop",
     "stop_plus",
     "bench",
+    "judgment",
     "exhibit",
 ];
 
@@ -1416,6 +1428,7 @@ impl Content {
                     },
                     archetypes: Vec::new(),
                     names: z.names,
+                    tour: z.tour,
                     encounters,
                 });
                 continue;
@@ -1476,6 +1489,7 @@ impl Content {
                 route,
                 archetypes: z.archetypes,
                 names: z.names,
+                tour: z.tour,
                 encounters,
             });
         }
@@ -1583,12 +1597,17 @@ impl Content {
             }
         }
         let id = &self.enemies[def].id;
-        self.zones.iter().position(|z| {
-            &z.boss == id
-                || z.encounters
-                    .iter()
-                    .any(|e| e.waves.iter().any(|w| w.contains(&def)))
-        })
+        self.zones
+            .iter()
+            .position(|z| {
+                &z.boss == id
+                    || z.encounters
+                        .iter()
+                        .any(|e| e.waves.iter().any(|w| w.contains(&def)))
+            })
+            // a course's crews and emitters fight in no encounter: their
+            // zone is the one the data names
+            .or_else(|| self.zones.iter().position(|z| z.id == self.enemies[def].zone))
     }
 }
 
@@ -2088,6 +2107,7 @@ fn parse_enemies(text: &str, patterns: &[Pattern]) -> Result<Vec<EnemyDef>, Stri
         out.push(EnemyDef {
             id: e.id.clone(),
             name: e.name.clone(),
+            zone: e.zone.clone(),
             kind,
             hp: e.hp,
             radius: cm(e.radius_cm),
@@ -2388,8 +2408,15 @@ pub mod tests {
             .collect();
         let (met, boss) = roster(&c, 3);
         let zone = &c.zones[3].id;
+        // its mini-boss is met on the route, not in an encounter
+        let minis: Vec<usize> = c.zones[3]
+            .route
+            .minibosses
+            .iter()
+            .filter_map(|m| c.enemy(&m.enemy))
+            .collect();
         let own: Vec<usize> = (0..c.enemies.len())
-            .filter(|&e| c.zone_of_enemy(e) == Some(3) && e != boss)
+            .filter(|&e| c.zone_of_enemy(e) == Some(3) && e != boss && !minis.contains(&e))
             .collect();
         let agents = own.iter().filter(|&&e| c.enemies[e].kind == Kind::Agent).count();
         let creatures: Vec<usize> = own

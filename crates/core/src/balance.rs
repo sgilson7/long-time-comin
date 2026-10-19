@@ -444,7 +444,7 @@ pub const PURSE_TIMES: i32 = 3;
 pub const TREE_SIZE: i32 = 1000;
 /// the hub in the middle, and the ring every root upgrade stands on
 pub const TREE_HUB: i32 = 118;
-pub const TREE_RING: i32 = 226;
+pub const TREE_RING: i32 = 228;
 /// each upgrade further out than the one it needs by this much
 pub const TREE_STEP: i32 = 80;
 /// a branch's wedge reaches this far out; its name sits this far out
@@ -479,13 +479,6 @@ pub const POST_REACH: i32 = int(3);
 /// the water returns you to the last post, this share of your health the
 /// poorer
 pub const DROWN_PCT: i32 = 10;
-/// the Holding's timeline, in percent of its panel: the main line's first
-/// year this far in, its last this much further, the main line this far
-/// down and the river's below it
-pub const TIMELINE_LEFT: i32 = 10;
-pub const TIMELINE_SPAN: i32 = 80;
-pub const TIMELINE_MAIN_Y: i32 = 34;
-pub const TIMELINE_RIVER_Y: i32 = 74;
 /// the Summons' Husk grows back over this many ticks once it has gone
 /// unhit its time
 pub const HUSK_REGROW_TICKS: i32 = secs(1, 1);
@@ -542,3 +535,93 @@ pub const WASH_PUSH: i32 = ratio(1, 25);
 pub const WASH_KNOCK: i32 = per_tick(11, 1);
 pub const WASH_HEAVE: i32 = per_tick(4, 1);
 pub const WASH_DAMAGE: i32 = 8;
+
+/// the map: the timeline as a hologram over the crater, its root (2031) at
+/// the top and each later zone a row below; the main line's column and the
+/// River's either side of the middle, rows this far apart, each row a little
+/// further back; the camera this far in front, looking at its middle; each
+/// zone's diorama this wide, turning once in this long
+pub const ATLAS_CENTRE: crate::geom::V3 = crate::geom::v3(0, int(34), int(-6));
+pub const ATLAS_ROW: i32 = ratio(23, 10);
+pub const ATLAS_COL: i32 = ratio(19, 10);
+pub const ATLAS_LEAN: i32 = ratio(3, 10);
+pub const ATLAS_BACK: i32 = int(12);
+pub const ATLAS_DIORAMA: i32 = ratio(17, 10);
+pub const ATLAS_SPIN_TICKS: i32 = 60 * 40;
+pub const ATLAS_BEAM: i32 = ratio(6, 100);
+/// the hologram's dark field: this far behind its middle, this big
+pub const ATLAS_FIELD_BACK: i32 = int(6);
+pub const ATLAS_FIELD: crate::geom::V3 = crate::geom::v3(int(90), int(60), ratio(1, 5));
+
+/// a zone's walkthrough: the route it shows (a fixed seed, so it is the same
+/// each time); a course flown at this speed, each stop shown at least and at
+/// most this long; an arena that is not a course circled this long, from this
+/// angle through this much, this far out (within these) and this high; the
+/// camera this far behind and above the line, looking this far ahead; the
+/// parked body's shield
+pub const TOUR_SEED: u64 = 7;
+pub const TOUR_SPEED: i32 = per_tick(24, 1);
+pub const TOUR_MIN: i32 = 60 * 6;
+pub const TOUR_MAX: i32 = 60 * 14;
+pub const TOUR_CIRCLE: i32 = 60 * 7;
+pub const TOUR_ORBIT_FROM: i32 = deg(200);
+pub const TOUR_ORBIT_SWEEP: i32 = deg(110);
+pub const TOUR_ORBIT_MIN: i32 = int(14);
+pub const TOUR_ORBIT_MAX: i32 = int(34);
+pub const TOUR_ORBIT_UP: i32 = int(10);
+pub const TOUR_BEHIND: i32 = int(16);
+pub const TOUR_ABOVE: i32 = int(18);
+pub const TOUR_AHEAD: i32 = int(14);
+pub const TOUR_SHIELD: i32 = 60 * 60;
+/// the camera keeps this far over whatever stands under it, looked for from
+/// this high
+pub const TOUR_CLEAR: i32 = int(4);
+pub const TOUR_SKY: i32 = int(400);
+/// a course's line, for the camera, smoothed over this far either side, in
+/// this many steps a side
+pub const TOUR_SMOOTH: i32 = int(20);
+pub const TOUR_SMOOTH_STEPS: i32 = 4;
+
+/// the open sea (the Far Shore): you may sink this far under the surface,
+/// at no more than this speed, and stay in it this long, before it takes
+/// you back to your post
+pub const SEA_DEPTH: i32 = int(8);
+pub const SEA_SINK: i32 = per_tick(2, 1);
+pub const SEA_BREATH: i32 = secs(12, 1);
+
+// ---- Summary Judgment (round 20) --------------------------------------------
+
+/// Summary Judgment: a great blade swept through an arc in front of you,
+/// this far out from your middle and this wide, hurting every enemy in it
+/// whose body reaches from a little under your feet to well over your head
+/// (a diver overhead is caught). It is ready again after its cooldown
+/// (Judgment II sooner).
+pub const SLASH_REACH: i32 = ONE * 45 / 10;
+pub const SLASH_ARC: i32 = deg(140);
+pub const SLASH_BELOW: i32 = ONE;
+pub const SLASH_ABOVE: i32 = int(6);
+pub const SLASH_DAMAGE: i32 = 120;
+pub const SLASH_COOLDOWN: i32 = secs(6, 5);
+pub const SLASH_2_COOLDOWN: i32 = secs(7, 10);
+/// Judgment III: harder, and this much further
+pub const SLASH_3_DAMAGE: i32 = 170;
+pub const SLASH_3_REACH: i32 = ONE * 3 / 2;
+/// mid-dash (or this soon after it ends) the cut lunges: this much further
+/// and this share of the damage
+pub const SLASH_LUNGE_REACH: i32 = ONE * 35 / 10;
+pub const SLASH_LUNGE_PCT: i32 = 150;
+pub const SLASH_LUNGE_GRACE: i32 = secs(1, 10);
+/// the swept blade is drawn this long
+pub const SLASH_SHOW: i32 = secs(1, 5);
+
+/// the Eye (Dagon's whirlpool): a piece of wreckage takes this long to
+/// fall from the cone's rim to the eye, and for this long at the end of it
+/// it is sinking (it bears no weight); this many pieces fall down each of
+/// the cone's arms, evenly, so one comes over each arm's rim this often
+pub const EYE_FALL_TICKS: i32 = secs(35, 1);
+pub const EYE_SINK_TICKS: i32 = secs(5, 2);
+pub const EYE_PIECES: i32 = 12;
+/// foam boils round a piece for this long before it sinks
+pub const EYE_WARN_TICKS: i32 = secs(2, 1);
+/// the whirlpool's water goes once round in this long (drawn only)
+pub const EYE_WHIRL_TICKS: i32 = secs(20, 1);

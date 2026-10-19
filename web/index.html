@@ -61,6 +61,7 @@
         <span class="ability" id="h-parry" data-copy="hud_parry" hidden></span>
         <span class="ability" id="h-wall" data-copy="hud_wall" hidden></span>
         <span class="ability" id="h-pound" data-copy="hud_pound" hidden></span>
+        <span class="ability" id="h-slash" data-copy="hud_slash" hidden></span>
         <span class="ability ready" id="h-grab" data-copy="hud_grab"></span>
         <span class="ability" id="h-stop" data-copy="hud_stop" hidden></span>
       </div>
@@ -121,6 +122,7 @@
         </div>
         <p class="lede" id="m-bonus"></p>
         <button id="start-run" class="big" data-copy="start_run"></button>
+        <button id="open-map" class="big map-button" data-copy="map_open"></button>
         <button id="start-rush" class="big later" data-copy="start_rush" hidden></button>
         <button id="start-mission" class="big last" data-copy="start_mission" hidden></button>
         <p id="mission-note" class="lede" data-copy="mission_note" hidden></p>
@@ -161,15 +163,43 @@
         <h3 data-copy="route_heading"></h3>
         <ol id="m-route"></ol>
       </section>
-      <section class="timeline">
-        <h3 data-copy="timeline_heading"></h3>
-        <p class="lede" data-copy="timeline_text"></p>
-        <div id="timeline-lines"></div>
-        <div class="timeline-map">
-          <svg id="timeline-edges" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"></svg>
-          <div id="timeline-nodes"></div>
-        </div>
-      </section>
+    </div>
+  </div>
+
+  <!-- the Holding's map: the timeline as a hologram the core draws; each
+       zone's label where the core says its diorama lands on screen -->
+  <div id="atlas" class="overlay" hidden>
+    <header class="atlas-head">
+      <h2 data-copy="atlas_heading"></h2>
+      <p class="lede" data-copy="atlas_hint"></p>
+      <div id="timeline-lines"></div>
+      <button id="atlas-close" data-copy="atlas_close"></button>
+    </header>
+    <div id="timeline-nodes"></div>
+  </div>
+
+  <!-- a zone's walkthrough: the camera flies through its arenas behind -->
+  <div id="tour" class="overlay" hidden>
+    <aside class="tour-card">
+      <p class="tour-year" id="t-year"></p>
+      <h2 id="t-name"></h2>
+      <p class="lede" id="t-blurb"></p>
+      <h4 data-copy="tour_sections"></h4>
+      <ol id="t-stops"></ol>
+      <h4 data-copy="tour_creatures"></h4>
+      <p id="t-creatures" class="creatures"></p>
+      <h4 data-copy="tour_boss"></h4>
+      <p class="boss"><strong id="t-boss"></strong> <span id="t-boss-line"></span></p>
+      <div class="tour-buttons">
+        <button id="tour-start" class="big" data-copy="tour_start"></button>
+        <button id="tour-back" data-copy="tour_back"></button>
+      </div>
+      <p class="why" id="t-why"></p>
+    </aside>
+    <div class="tour-caption" id="t-caption">
+      <strong id="t-stop-name"></strong>
+      <span id="t-stop-line"></span>
+      <div class="tour-bar"><i id="t-bar"></i></div>
     </div>
   </div>
 

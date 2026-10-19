@@ -36,6 +36,8 @@ pub struct Controls {
     pub stop_pressed: bool,
     /// the Bench's key went down
     pub bench_pressed: bool,
+    /// Summary Judgment's key went down
+    pub slash_pressed: bool,
 }
 
 /// What a run has made of the body: the upgrades bought and the pickups found.
@@ -79,6 +81,9 @@ pub struct Build {
     pub contempt: i32,
     /// the Bench: 0 without it, 1, 2 (two at once), 3 (it lasts longer)
     pub bench: i32,
+    /// Summary Judgment: 0 without it, 1, 2 (sooner ready), 3 (harder and
+    /// further)
+    pub judgment: i32,
 }
 
 impl Default for Build {
@@ -108,6 +113,7 @@ impl Default for Build {
             stop_ticks: 0,
             contempt: 0,
             bench: 0,
+            judgment: 0,
         }
     }
 }
@@ -129,6 +135,35 @@ impl Build {
     /// Recesses a run starts with.
     pub fn recesses(&self) -> i32 {
         self.recess as i32 + (self.recess && self.appeal) as i32
+    }
+
+    /// Summary Judgment's reach from your middle, lunging (mid-dash) or not.
+    pub fn slash_reach(&self, lunge: bool) -> i32 {
+        let base = SLASH_REACH + if self.judgment >= 3 { SLASH_3_REACH } else { 0 };
+        base + if lunge { SLASH_LUNGE_REACH } else { 0 }
+    }
+
+    /// Summary Judgment's damage, lunging or not.
+    pub fn slash_damage(&self, lunge: bool) -> i32 {
+        let base = if self.judgment >= 3 {
+            SLASH_3_DAMAGE
+        } else {
+            SLASH_DAMAGE
+        };
+        if lunge {
+            base * SLASH_LUNGE_PCT / 100
+        } else {
+            base
+        }
+    }
+
+    /// Until Summary Judgment can be swung again.
+    pub fn slash_cooldown(&self) -> i32 {
+        if self.judgment >= 2 {
+            SLASH_2_COOLDOWN
+        } else {
+            SLASH_COOLDOWN
+        }
     }
 
     /// How many Benches may stand at once, and how long each stands.
@@ -184,9 +219,19 @@ pub struct Player {
     pub stop_cooldown: i32,
     /// until a Bench can be laid again
     pub bench_cooldown: i32,
+    /// Summary Judgment: until it can be swung again; ticks its blade is
+    /// still drawn, the way it was swung and whether it lunged; ticks a
+    /// swing would yet lunge (a dash and a moment after)
+    pub slash_cooldown: i32,
+    pub slash_left: i32,
+    pub slash_yaw: i32,
+    pub slash_lunge: bool,
+    pub lunge_window: i32,
     /// under the water (the world says): lighter, and a stroke on the jump
     /// key whenever it is ready
     pub swimming: bool,
+    /// in the open sea: you sink slowly
+    pub afloat: bool,
     pub stroke_cooldown: i32,
     /// ticks it is slowed yet (a Cockatrice's gaze)
     pub slowed: i32,
@@ -225,6 +270,8 @@ pub enum Event {
     Stop,
     /// you asked for a Bench (the world lays it)
     Bench,
+    /// you swung Summary Judgment (the world cuts what it meets)
+    Slash,
 }
 
 impl Player {
@@ -257,7 +304,13 @@ impl Player {
             pound_cooldown: 0,
             stop_cooldown: 0,
             bench_cooldown: 0,
+            slash_cooldown: 0,
+            slash_left: 0,
+            slash_yaw: 0,
+            slash_lunge: false,
+            lunge_window: 0,
             swimming: false,
+            afloat: false,
             stroke_cooldown: 0,
             slowed: 0,
             shove: V3::ZERO,
@@ -443,8 +496,22 @@ impl Player {
             self.dash_ticks = DASH_TICKS;
             self.iframes = self.iframes.max(DASH_IFRAMES);
             self.dash_left -= 1;
+            self.lunge_window = DASH_TICKS + SLASH_LUNGE_GRACE;
             self.events.push(Event::Dash);
         }
+
+        // Summary Judgment: swung on the press, lunging if mid-dash; the
+        // world cuts what is in its arc
+        self.slash_cooldown = (self.slash_cooldown - 1).max(0);
+        self.slash_left = (self.slash_left - 1).max(0);
+        if c.slash_pressed && self.build.judgment > 0 && self.slash_cooldown == 0 {
+            self.slash_cooldown = self.build.slash_cooldown();
+            self.slash_left = SLASH_SHOW;
+            self.slash_yaw = self.yaw;
+            self.slash_lunge = self.dashing() || self.lunge_window > 0;
+            self.events.push(Event::Slash);
+        }
+        self.lunge_window = (self.lunge_window - 1).max(0);
 
         // under the water, the jump key strokes up whenever it is ready
         self.stroke_cooldown = (self.stroke_cooldown - 1).max(0);
@@ -518,7 +585,9 @@ impl Player {
             }
         } else {
             self.run(wish, top, flat);
-            let (g, fall) = if self.swimming {
+            let (g, fall) = if self.afloat {
+                (GRAVITY * SWIM_GRAVITY_PCT / 100, SEA_SINK)
+            } else if self.swimming {
                 (
                     GRAVITY * SWIM_GRAVITY_PCT / 100,
                     MAX_FALL * SWIM_GRAVITY_PCT / 100,

@@ -6,7 +6,7 @@ shows. Expected values are worked out by hand from the data files, never
 copied from the game's own output:
 
 - story.json's sentencing has 5 lines; its indictment has 10 counts.
-- the Codex has 5 tabs (copy.json codex_tabs), 19 control rows
+- the Codex has 5 tabs (copy.json codex_tabs), 20 control rows
   (copy.json controls), 7 guns (weapons.json) and 77 enemies (enemies.json:
   the 43 of the first four zones, then zone five's seven, the Recursion's
   two smaller orders, the Idiot God, and the last mission's ball of yarn
@@ -14,8 +14,8 @@ copied from the game's own output:
   the Summons).
 - the crater's gate is open, so its label shows; the first fight's gates
   stay dark and unlabelled until its enemies are defeated.
-- upgrades.json lists 41 upgrades in 4 branches (copy.json holding_branches),
-  drawn as the Holding's tree, a wedge a branch, 23 of them needing another
+- upgrades.json lists 44 upgrades in 4 branches (copy.json holding_branches),
+  drawn as the Holding's tree, a wedge a branch, 25 of them needing another
   (a line each); the cheapest (Constitution I) costs 8, so a new record with 0 Clemency can
   buy none of them.
 - zone.json lists 5 zones, all built: none is sealed (the last mission's
@@ -36,11 +36,12 @@ copied from the game's own output:
 - the faint practice marks in the Holding start in the last zone a run
   crosses (the god's) and in the last mission's home (Chumbles), and
   abandoning either returns to the Holding with no death added.
-- the Holding's timeline draws the main line's years and the river's two
-  (the Water Gap and the sealed Far Shore); a new record may start only in
-  2031, and the river's line is shut until the Executor is beaten and its
-  kit bought; the test save opens it.
-- the test save (clicked twice, as it asks) owns all 41 upgrades, so the
+- the Holding's map (a button) draws the main line's five years and the
+  river's three; a new record may start only in 2031, and the river's line
+  is shut until the Executor is beaten and its kit bought; the test save
+  opens it. A year on the map shows its walkthrough, whose Start here
+  starts a run there; Back returns to the map, and Esc to the Holding.
+- the test save (clicked twice, as it asks) owns all 44 upgrades, so the
   Carry in row offers all 7 guns (the Carbine and the six Exhibits), and opens
   the boss rush, whose first arena is the Bailiff's, "The Court of Hours".
 - it has put the Idiot God to sleep, so the last mission is open: its brief
@@ -82,25 +83,40 @@ def run(page, check, engine):
     check(mode(page) == "holding", "then the Holding")
     cards = page.query_selector_all("#upgrades .upgrade")
     buyable = page.query_selector_all("#upgrades .upgrade.can")
-    check(len(cards) == 41 and len(buyable) == 0, f"41 upgrades, none affordable with 0 Clemency ({len(cards)}, {len(buyable)})")
+    check(len(cards) == 44 and len(buyable) == 0, f"44 upgrades, none affordable with 0 Clemency ({len(cards)}, {len(buyable)})")
     branches = page.query_selector_all("#tree-lines .wedge")
     edges = page.query_selector_all("#tree-lines .edge")
     check(len(branches) == 4, f"in four branches, each a wedge of the tree ({len(branches)})")
-    check(len(edges) == 23, f"a line from each of the 23 upgrades that need another ({len(edges)})")
+    check(len(edges) == 25, f"a line from each of the 25 upgrades that need another ({len(edges)})")
     check(page.is_disabled("#tree-buy"), "the tree's card cannot buy with no Clemency")
     check(page.inner_text("#m-counts") == "0 / 10", f"no count read yet ({page.inner_text('#m-counts')!r})")
     sealed = page.query_selector_all("#m-route li.sealed")
     check(len(sealed) == 0, f"no zone sealed in this build ({len(sealed)})")
+    click(page, "#open-map")
+    check(mode(page) == "atlas", f"the map opens from the Holding ({mode(page)})")
+    years = page.query_selector_all("#timeline-nodes .year")
+    check(len(years) == 8, f"eight years on the map ({len(years)})")
     later = page.query_selector_all("#timeline-nodes .year.open")
     check(len(later) == 1, f"a new record can start only in 2031 ({len(later)})")
     river = page.query_selector_all("#timeline-nodes .year.river")
     check(len(river) == 3 and page.is_disabled("#timeline-lines .line.river"), f"the river's timeline is drawn and shut ({len(river)})")
+    click(page, "#timeline-nodes .year:has-text('2046')")
+    check(mode(page) == "tour", f"a year shows its walkthrough ({mode(page)})")
+    check(page.text_content("#t-name") == "The White Waste", f"of the White Waste ({page.text_content('#t-name')!r})")
+    stops = page.query_selector_all("#t-stops li")
+    check(len(stops) >= 4 and page.inner_text("#t-stop-name") != "", f"its way through, and the stop shown ({len(stops)})")
+    check(page.is_disabled("#tour-start"), "not reached, so it cannot start there")
+    click(page, "#tour-back")
+    check(mode(page) == "atlas", f"back to the map ({mode(page)})")
+    page.keyboard.press("Escape")
+    page.wait_for_timeout(300)
+    check(mode(page) == "holding", f"and Esc to the Holding ({mode(page)})")
 
     click(page, "#holding .open-codex")
     check(page.is_visible("#codex"), "the Codex opens from the Holding")
     tabs = page.query_selector_all("#codex-tabs .tab")
     rows = page.query_selector_all("#codex-body table.stats tr")
-    check(len(tabs) == 5 and len(rows) == 19, f"5 tabs, 19 control rows ({len(tabs)}, {len(rows)})")
+    check(len(tabs) == 5 and len(rows) == 20, f"5 tabs, 20 control rows ({len(tabs)}, {len(rows)})")
     click(page, "#codex-tabs .tab:nth-child(2)")
     guns = page.query_selector_all("#codex-body .codex-card")
     check(len(guns) == 7, f"seven guns ({len(guns)})")
@@ -179,9 +195,11 @@ def run(page, check, engine):
     page.reload()
     page.wait_for_selector("body[data-ready='true']", state="attached", timeout=20000)
     click(page, "#begin")
+    click(page, "#open-map")
     later = page.query_selector_all("#timeline-nodes .year.open")
     check(len(later) == 2, f"one more start, on the ice ({len(later)})")
     click(page, "#timeline-nodes .year.open:has-text('2046')")
+    click(page, "#tour-start")
     check(mode(page) == "play", f"it plays ({mode(page)})")
     page.wait_for_timeout(500)
     check(page.text_content("#h-zone") == "The White Waste", f"in the White Waste ({page.text_content('#h-zone')!r})")
@@ -204,10 +222,12 @@ def run(page, check, engine):
     page.reload()
     page.wait_for_selector("body[data-ready='true']", state="attached", timeout=20000)
     click(page, "#begin")
+    click(page, "#open-map")
     page.wait_for_selector("#timeline-nodes .year.open", timeout=10000)
     later = page.query_selector_all("#timeline-nodes .year.open")
     check(len(later) == 3, f"two more starts, on the ice and in the house ({len(later)})")
     click(page, "#timeline-nodes .year.open:has-text('2056')")
+    click(page, "#tour-start")
     check(mode(page) == "play", f"it plays ({mode(page)})")
     page.wait_for_timeout(500)
     check(page.text_content("#h-zone") == "The Glass House", f"in the Glass House ({page.text_content('#h-zone')!r})")
@@ -264,9 +284,12 @@ def run(page, check, engine):
     click(page, "#test-save")
     page.wait_for_timeout(300)
     owned = page.query_selector_all("#upgrades .upgrade.owned")
-    check(len(owned) == 41, f"the test save owns every upgrade ({len(owned)})")
+    check(len(owned) == 44, f"the test save owns every upgrade ({len(owned)})")
+    click(page, "#open-map")
     check(page.is_enabled("#timeline-lines .line.river"), "and opens the river's timeline")
-    check(page.is_enabled("#timeline-nodes .year.river:has-text('2066')"), "its Water Gap a start")
+    gap = page.get_attribute("#timeline-nodes .year.river:has-text('2066')", "class")
+    check("open" in gap, f"its Water Gap a start ({gap})")
+    click(page, "#atlas-close")
     check(page.is_visible("#start-rush"), "and opens the boss rush")
     check(page.is_visible("#start-mission"), "and the last mission")
     carry = page.query_selector_all("#carry-guns .carry-gun")

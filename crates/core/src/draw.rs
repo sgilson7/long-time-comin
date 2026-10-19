@@ -13,6 +13,7 @@ use crate::player::Player;
 use crate::render::{boxed, mix, shade, Batch};
 use crate::world::{FxKind, PickupKind, World};
 
+pub mod atlas;
 mod beasts;
 mod cat;
 mod fauna;
@@ -41,6 +42,12 @@ fn rod(b: &mut Batch, a: V3, c: V3, w: i32, rgb: Rgb, glow: i32, ink: bool) {
             b.push(Mesh::Cyl, &af, rgb, glow, crate::render::PASS_SOLID);
         }
     }
+}
+
+/// A beam of light from `a` to `c` (the map's lines between zones), lit by
+/// `glow`.
+pub fn beam(b: &mut Batch, a: V3, c: V3, w: i32, rgb: Rgb, glow: i32) {
+    rod(b, a, c, w, rgb, glow, false);
 }
 
 /// A basis turned to `yaw` at `at`, so a body's parts are placed in its own
@@ -102,8 +109,12 @@ pub fn world(
             b.glow(Mesh::Cube, &boxed(p.centre, p.size), glass, ONE / 3);
         }
     }
+    // a course's moving ground (decks, masts, wreckage, doors) and its
+    // waves are scenery: cut away between the camera and you
+    b.scenery = true;
     course(b, c, w);
     waves::waves(b, c, w);
+    b.scenery = false;
     orbs(b, c, w, alpha, cam);
     if w.ending > 0 && !w.mission {
         house::azathoth(b, c, clock, w.melt());
@@ -498,6 +509,63 @@ pub fn player_with(
         let at = feet.add(v3(0, PLAYER_CHEST, 0));
         let r = PARRY_REACH * 2;
         b.glow(Mesh::Sphere, &boxed(at, v3(r, r, r)), c.pal.c("gold"), ONE / 3);
+    }
+    if p.slash_left > 0 {
+        slash(b, c, p, feet, alpha);
+    }
+}
+
+/// Summary Judgment's blade: an arc of light swept across the way it was
+/// swung, out to its reach (further when it lunged), its leading edge
+/// bright, fading as it goes.
+fn slash(b: &mut Batch, c: &Content, p: &Player, feet: V3, alpha: i32) {
+    const SEGMENTS: i32 = 12;
+    let reach = p.build.slash_reach(p.slash_lunge);
+    let at = feet.add(v3(0, PLAYER_CHEST, 0));
+    // how far through its showing, 0 to ONE; the blade crosses the arc in
+    // the first half and the trail fades in the second
+    let gone = ((SLASH_SHOW - p.slash_left) * ONE + alpha).min(SLASH_SHOW * ONE) / SLASH_SHOW;
+    let swept = (gone * 2).min(ONE);
+    let fade = ONE - gone;
+    let rgb = c.pal.c("slash");
+    let edge = c.pal.c("slash_edge");
+    let half = SLASH_ARC / 2;
+    let angle = |k: i32| p.slash_yaw + half - fx::mul(SLASH_ARC, fx::div(k * ONE, SEGMENTS * ONE));
+    let lean = |k: i32| cm(40) - fx::mul(cm(80), fx::div(k * ONE, SEGMENTS * ONE));
+    let point = |k: i32, r: i32| at.add(facing(angle(k), 0).scale(r)).add(v3(0, lean(k), 0));
+    let shown = fx::mul(swept, SEGMENTS * ONE) / ONE;
+    for k in 0..shown.min(SEGMENTS) {
+        // the trail: an outer rim, an inner one, and a faint sheet between
+        let w = cm(10) + fx::mul(cm(14), fx::div(k * ONE, SEGMENTS * ONE));
+        rod(b, point(k, reach), point(k + 1, reach), w, rgb, fade, false);
+        rod(
+            b,
+            point(k, reach * 3 / 5),
+            point(k + 1, reach * 3 / 5),
+            w / 2,
+            rgb,
+            fade / 2,
+            false,
+        );
+        let mid = point(k, reach * 4 / 5).lerp(point(k + 1, reach * 4 / 5), ONE / 2);
+        let across = point(k + 1, reach).sub(point(k, reach)).len();
+        let sheet = Affine::translate(mid)
+            .then(&Affine::rot_y(angle(k) - SLASH_ARC / SEGMENTS / 2))
+            .then(&Affine::scale(v3(across, cm(6), reach * 2 / 5)));
+        b.glow(Mesh::Cube, &sheet, rgb, fade / 3);
+    }
+    if swept < ONE {
+        // the blade itself, at the front of the sweep
+        let lead = fx::mul(swept, SEGMENTS * ONE) / ONE;
+        rod(
+            b,
+            point(lead, cm(60)),
+            point(lead, reach + dm(3)),
+            cm(22),
+            edge,
+            ONE,
+            false,
+        );
     }
 }
 
@@ -1152,19 +1220,11 @@ fn course(b: &mut Batch, c: &Content, w: &World) {
                         0,
                     );
                 }
-                crate::course::Look::Wreck => {
-                    b.inked(Mesh::Cube, &boxed(mid, size), plank, 0);
-                    b.inked(
-                        Mesh::Cube,
-                        &boxed(
-                            v3(mid.x, s.min.y - dm(3), mid.z),
-                            v3(size.x * 3 / 4, dm(6), size.z * 3 / 4),
-                        ),
-                        hull,
-                        0,
-                    );
-                }
+                crate::course::Look::Wreck => sea::wreck(b, c, m, &s, w.tick, k.water),
             }
+        }
+        if let Some(wh) = &k.whirl {
+            sea::whirl(b, c, wh, w.tick);
         }
         // each ship's colours at her masthead, black on red, until her
         // crew is down: then struck, a white rag at the mast's foot

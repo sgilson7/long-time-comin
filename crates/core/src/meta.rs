@@ -196,6 +196,7 @@ impl Meta {
                 "lien" => b.lien = true,
                 "stop_plus" => b.stop_ticks += STOP_PLUS,
                 "bench" => b.bench = b.bench.max(u.amount),
+                "judgment" => b.judgment = b.judgment.max(u.amount),
                 "armory" => gun_level = gun_level.max(u.amount),
                 _ => {}
             }
