@@ -302,7 +302,7 @@ BREAKS = [
  ("edge: the upgrades' levels are bought", "crates/core/src/meta.rs", "                \"judgment\" => b.judgment = b.judgment.max(u.amount),", "                \"judgment\" => b.judgment = 1,", "judgment_ii_is_ready_sooner"),
  ("edge: Judgment II is sooner", "crates/core/src/player.rs", "        if self.judgment >= 2 {\n            SLASH_2_COOLDOWN", "        if self.judgment >= 20 {\n            SLASH_2_COOLDOWN", "judgment_ii_is_ready_sooner"),
  ("edge: Judgment III reaches further", "crates/core/src/player.rs", "        let base = SLASH_REACH + if self.judgment >= 3 { SLASH_3_REACH } else { 0 };", "        let base = SLASH_REACH;", "judgment_ii_is_ready_sooner"),
- ("edge: Judgment III cuts harder", "crates/core/src/player.rs", "        let base = if self.judgment >= 3 { SLASH_3_DAMAGE } else { SLASH_DAMAGE };", "        let base = SLASH_DAMAGE;", "judgment_ii_is_ready_sooner"),
+ ("edge: Judgment III cuts harder", "crates/core/src/player.rs", "            SLASH_3_DAMAGE\n        } else {", "            SLASH_DAMAGE\n        } else {", "judgment_ii_is_ready_sooner"),
  ("edge: a shield turns the blade", "crates/core/src/world.rs", "            if d.armour > 0 && from.dot(facing(e.yaw, 0)) > fx::cos(d.armour) && from.y < ONE / 2 {\n                turned", "            if false {\n                turned", "a_shield_turns_the_blade"),
  ("edge: what cannot be hurt is not cut", "crates/core/src/enemy.rs", "            && !self.shielded\n", "", "a_shield_turns_the_blade"),
  ("edge: a diver is cut down over your head", "crates/core/src/world.rs", "        let (lo, hi) = (feet.y - SLASH_BELOW, feet.y + SLASH_ABOVE);", "        let (lo, hi) = (feet.y - SLASH_BELOW, feet.y + PLAYER_HEIGHT);", "a_diving_storm_harpy_or_cockatrice"),
