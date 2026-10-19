@@ -106,6 +106,14 @@ Done means, for this round: the Water Gap built with the journal's defaults (WG-
 
 Done means, for this round: the rotten timber says how it is broken (hook the ring, then pound); the Far Shore and the Vault designed in the journal with mockups, structure and flow diagrams, and Sam's questions (FS-Q1 to FS-Q14); then built on the defaults: the Far Shore inside the anomaly under Lake Stillwater (the Fleet, the Hurricane, the Lee, the Maelstrom, Dagon), the Drowned Fleet and its beasts, and the Vault (the Shaft, the Halls, the Eraser) ending in THE GREY ENDING; deployed under the standing approval.
 
+## The twentieth request, word for word (2026-10-19)
+
+> go with the defaults, deploy when it's done. make sure to add the waves, big waves if you can. how do you open the first area gate in the far shore? by killing everyone on the map?
+
+> also it shouldn't be enslaved dragon, it should be captured dragon
+
+Done means, for this round: the Fleet's ships strike their colours as their crews fall, and the dragon fights on its chain until its three locks are broken (the design's defaults); the Hurricane's waves, green washes over the decks and big rogue waves; the Enslaved Dragon renamed the Captured Dragon; deployed under the standing approval.
+
 ## The tool
 
 A third-person bullet-hell shooter that runs in a desktop browser with a keyboard and mouse. Roguelike runs across a graph of arenas; meta-progression between runs; a story told by an indictment that is revealed one count at a time, on each death.

@@ -3065,8 +3065,8 @@
       ]
     },
     {
-      "id": "enslaved_dragon",
-      "name": "The Enslaved Dragon",
+      "id": "captured_dragon",
+      "name": "The Captured Dragon",
       "kind": "beast",
       "gait": "perch",
       "elite": true,
@@ -3089,7 +3089,60 @@
           "windup_ms": 600,
           "rest_ms": 1500
         }
+      ],
+      "phases": [
+        {
+          "from_pct": 100,
+          "summons": [],
+          "attacks": [
+            {
+              "pattern": "dragon_cone",
+              "windup_ms": 700,
+              "rest_ms": 1300
+            },
+            {
+              "pattern": "dragon_rain",
+              "windup_ms": 600,
+              "rest_ms": 1500
+            }
+          ]
+        },
+        {
+          "from_pct": 0,
+          "summons": [],
+          "attacks": [
+            {
+              "pattern": "dragon_cone",
+              "windup_ms": 450,
+              "rest_ms": 600
+            },
+            {
+              "pattern": "dragon_rain",
+              "windup_ms": 400,
+              "rest_ms": 700
+            },
+            {
+              "pattern": "dragon_cone",
+              "windup_ms": 450,
+              "rest_ms": 500
+            }
+          ]
+        }
       ]
+    },
+    {
+      "id": "chain_lock",
+      "name": "Chain Lock",
+      "kind": "turret",
+      "hp": 240,
+      "radius_cm": 45,
+      "hover_cm": 60,
+      "speed_cms": 0,
+      "range_cm": 0,
+      "contact": 0,
+      "clemency": 2,
+      "zone": "far_shore",
+      "attacks": []
     },
     {
       "id": "tentacle",

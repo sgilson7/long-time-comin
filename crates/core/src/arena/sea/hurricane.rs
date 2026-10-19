@@ -4,11 +4,14 @@
 //! closes. You work forward from the rearmost ship to the flagship's bow:
 //! the hook onto a mast as it swings past, Bound Over when two decks line
 //! up, gusts that shove you while their rain slants, lightning on the decks
-//! and harpies out of the cloud. At the flagship's bow a wave the size of a
+//! and harpies out of the cloud. A rogue wave rolls under the line every
+//! fourteen seconds, lifting each ship seven metres in turn, and green
+//! washes run across the decks: jump them or go over the side. At the flagship's bow a wave the size of a
 //! cliff rises over everything: the way on.
 
 use super::super::{boxed, dm, m, B};
-use crate::course::Step;
+use crate::balance::*;
+use crate::course::{Rogue, Step, Wash};
 use crate::fx::{deg, ONE};
 use crate::geom::{v3, V3};
 use crate::level::Solid;
@@ -140,6 +143,25 @@ const LINE: [Hull; 6] = [
     },
 ];
 
+/// the rogue wave's way across the line (for each metre to starboard, this
+/// far along it), and where in its cycle it starts
+const ROGUE_SLANT: i32 = -ONE / 5;
+const ROGUE_PHASE: i32 = 0;
+
+/// The green washes: the ship (by its place in the line), the middle of
+/// the stretch of its deck it comes over (z) and half that stretch's length,
+/// which way it runs (+1 to starboard), how often, and where in its cycle it
+/// starts. One over each deck, each timed to come aboard just ahead of the
+/// line or just behind it (jump it, if you are caught).
+const WASHES: [(usize, i32, i32, i32, i32, i32); 6] = [
+    (0, -11 * ONE, 8 * ONE, 1, 6 * 60, 100),
+    (1, -71 * ONE, 8 * ONE, -1, 6 * 60, 80),
+    (2, -119 * ONE, 8 * ONE, 1, 6 * 60, 180),
+    (3, -162 * ONE, 8 * ONE, -1, 6 * 60, 80),
+    (4, -210 * ONE, 8 * ONE, 1, 6 * 60, 60),
+    (5, -273 * ONE, 8 * ONE, -1, 7 * 60, 80),
+];
+
 impl B<'_> {
     pub(super) fn hurricane(&mut self) {
         self.k().fought = true;
@@ -225,6 +247,16 @@ impl B<'_> {
         );
         self.thunder_storm(3 * 60, 60, dm(25), 15);
 
+        // the waves: a rogue wave rolling across the line from port, and
+        // green washes over the decks
+        self.rogue_wave(v3(ONE, 0, ROGUE_SLANT), ROGUE_PHASE);
+        for &(n, z, reach, side, period, phase) in &WASHES {
+            self.green_wash(&LINE[n], z, reach, side, period, phase);
+        }
+        let k = self.k();
+        let movers = k.movers.clone();
+        k.waves.anchor(&movers);
+
         // the strand: a capsized hulk off the third ship's beam, still in
         // the water; Bound Over to it and back
         let hulk = v3(m(17), LOW, (c.stern + c.bow) / 2);
@@ -284,24 +316,66 @@ impl B<'_> {
         self.line(Step::To(v3(m(3), to.mean(), to.stern - m(10))));
     }
 
-    /// The boat you come aboard from, astern of the rearmost ship: a fixed
-    /// raft of planks, its top at `top`, its bow at `z`.
+    /// A rogue wave rolling along `dir` across the whole line, and on past
+    /// it before it comes again: so it lifts no ship as its cycle turns.
+    fn rogue_wave(&mut self, dir: V3, phase: i32) {
+        let dir = dir.norm();
+        let mut lo = i32::MAX;
+        for h in &LINE {
+            let (sx, sz) = (BEAM + h.swing.x.abs(), h.swing.z.abs());
+            for (x, z) in [
+                (-sx, h.stern + sz),
+                (sx, h.stern + sz),
+                (-sx, h.bow - sz),
+                (sx, h.bow - sz),
+            ] {
+                let d = v3(x, 0, z).dot(dir);
+                lo = lo.min(d);
+            }
+        }
+        let speed = ROGUE_SPEED;
+        let start = lo - ROGUE_HALF - speed * ROGUE_WARN;
+        let mid = v3(0, 0, (LINE[0].stern + LINE[5].bow) / 2);
+        let from = mid.add(dir.scale(start - mid.dot(dir)));
+        self.k().waves.rogues.push(Rogue {
+            from,
+            dir,
+            speed,
+            period: ROGUE_PERIOD,
+            phase,
+            height: ROGUE_HEIGHT,
+            half: ROGUE_HALF,
+            reach: m(260),
+        });
+    }
+
+    /// A green wash over `h`'s deck, the stretch `reach` either way of `z`,
+    /// running across it to `side` (+1 starboard) every `period` ticks.
+    fn green_wash(&mut self, h: &Hull, z: i32, reach: i32, side: i32, period: i32, phase: i32) {
+        let edge = BEAM + h.swing.x.abs() + m(1);
+        let run = 2 * edge / WASH_SPEED;
+        self.k().waves.washes.push(Wash {
+            from: v3(-edge * side, h.mean(), z),
+            dir: v3(ONE * side, 0, 0),
+            speed: WASH_SPEED,
+            run,
+            period,
+            phase,
+            reach,
+        });
+    }
+
+    /// The boat you come aboard from, astern of the rearmost ship: still
+    /// on the swell but lifted with the rest when a rogue wave comes
+    /// through, its top at `top`, its bow at `z`.
     fn jolly_boat(&mut self, z: i32, top: i32) {
-        self.solids
-            .push(Solid::new(v3(-m(2), top - m(1), z), v3(m(2), top, z + m(8))));
-        let hull = self.c("hull");
-        let dark = self.c("hull_dark");
-        self.deco(
-            Mesh::Cube,
-            v3(0, top - dm(2), z + m(4)),
-            v3(m(4), dm(4), m(8)),
-            hull,
-        );
-        self.deco(
-            Mesh::Blob,
-            v3(0, top - dm(8), z + m(4)),
-            v3(m(5), dm(16), m(9)),
-            dark,
+        self.ship_deck(
+            v3(-m(2), top - m(1), z),
+            v3(m(2), top, z + m(8)),
+            0,
+            V3::ZERO,
+            300,
+            0,
         );
     }
 
@@ -355,9 +429,162 @@ impl B<'_> {
 
 #[cfg(test)]
 mod tests {
+    use crate::course::tests::course_world_in;
+    use crate::course::{Look, Pilot};
+    use crate::fx::ONE;
+    use crate::world::{Outcome, World};
+
+    /// Drives a body along the Hurricane's line as `cross_in` does,
+    /// fighting, after `set` has had the world, showing `watch` the world
+    /// each tick: the ticks it took and the health it lost, or where it went
+    /// wrong.
+    pub(crate) fn cross_watching(
+        mut set: impl FnMut(&mut World),
+        mut watch: impl FnMut(&World, usize),
+    ) -> Result<(i32, i32), String> {
+        let (c, mut w) = course_world_in("far_shore", "hurricane");
+        set(&mut w);
+        let line = w.course.as_ref().unwrap().line.clone();
+        let mut pilot = Pilot::default();
+        let start = w.player.health;
+        for tick in 0..60 * 60 * 4 {
+            let at = w.player.pos;
+            let reach = if pilot.step >= line.len() { 90 } else { 30 } * ONE;
+            for e in w
+                .enemies
+                .iter_mut()
+                .filter(|e| e.alive() && e.pos.dist(at) < reach)
+            {
+                e.hp = 0;
+            }
+            let d = match pilot.drive(&line, &w.player) {
+                Some(d) => d,
+                None => {
+                    // the line done: on to the way on, once it opens
+                    let to = w.course.as_ref().unwrap().finish.sub(w.player.pos);
+                    let yaw = crate::geom::yaw_pitch_of(to).0;
+                    crate::course::Drive {
+                        controls: crate::player::Controls {
+                            move_z: ONE,
+                            ..Default::default()
+                        },
+                        yaw,
+                        aim: crate::geom::facing(yaw, 0),
+                    }
+                }
+            };
+            w.player.yaw = d.yaw;
+            let eye = w.player.chest();
+            let before = w.notes.iter().filter(|n| n.sound == "drown").count();
+            w.tick(&c, &d.controls, eye, d.aim);
+            watch(&w, pilot.step);
+            if w.notes.iter().filter(|n| n.sound == "drown").count() > before {
+                return Err(format!(
+                    "drowned on step {} ({:?}) at tick {tick}, from {:?}",
+                    pilot.step,
+                    line.get(pilot.step),
+                    w.player.prev_pos
+                ));
+            }
+            if pilot.t > 60 * 20 {
+                return Err(format!(
+                    "stuck on step {} ({:?}) at {:?}",
+                    pilot.step,
+                    line.get(pilot.step),
+                    w.player.pos
+                ));
+            }
+            if matches!(w.outcome, Outcome::Through(_)) {
+                return Ok((tick, start - w.player.health));
+            }
+        }
+        Err("out of time".into())
+    }
+
     #[test]
     fn the_hurricane_can_be_crossed_on_its_line() {
         let (ticks, _) = crate::course::tests::cross_in("far_shore", "hurricane", true).unwrap();
         assert!(ticks < 60 * 200, "{ticks}");
+    }
+
+    #[test]
+    fn the_hurricane_is_crossed_through_its_waves_a_rogue_lifting_the_ships_and_washes_over_the_decks() {
+        use crate::balance::*;
+        let mut lifted = 0;
+        let mut carried = 0;
+        let mut ran = Vec::new();
+        let (ticks, lost) = cross_watching(
+            |_| {},
+            |w, _| {
+                let k = w.course.as_ref().unwrap();
+                let decks = (0..k.movers.len()).filter(|&i| k.movers[i].look == Look::Deck);
+                lifted = decks
+                    .map(|i| k.waves.lift_of(i, w.tick))
+                    .max()
+                    .unwrap_or(0)
+                    .max(lifted);
+                if w.player.grounded {
+                    let p = w.player.pos;
+                    carried = carried.max(k.waves.lift_under(&k.movers, p, w.tick));
+                }
+                ran.resize(k.waves.washes.len(), false);
+                for (n, s) in k.waves.washes.iter().enumerate() {
+                    ran[n] |= s.until(w.tick) == Some(0);
+                }
+            },
+        )
+        .unwrap();
+        assert!(
+            lifted > ROGUE_HEIGHT - ONE / 10,
+            "a ship lifted the rogue's height: {lifted}"
+        );
+        assert!(carried > 2 * ONE, "the line itself lifted by it: {carried}");
+        assert!(
+            !ran.is_empty() && ran.iter().all(|&r| r),
+            "every wash came aboard: {ran:?}"
+        );
+        assert!(ticks < 60 * 200, "{ticks}");
+        let _ = lost;
+    }
+
+    #[test]
+    fn a_rogue_wave_lifts_no_ship_as_its_cycle_turns() {
+        let (_, w) = course_world_in("far_shore", "hurricane");
+        let k = w.course.as_ref().unwrap();
+        let r = k.waves.rogues[0];
+        assert!(
+            k.waves.anchors.iter().all(|a| a.is_some()),
+            "every mover tied to its ship"
+        );
+        for (i, _) in k.movers.iter().enumerate() {
+            for tick in [r.period - r.phase - 1, r.period - r.phase] {
+                assert_eq!(k.waves.lift_of(i, tick), 0, "mover {i} at {tick}");
+            }
+        }
+    }
+
+    #[test]
+    fn the_boat_you_start_on_rides_the_rogue_wave_with_the_ships() {
+        let (_, w) = course_world_in("far_shore", "hurricane");
+        let k = w.course.as_ref().unwrap();
+        let start = k.posts[0];
+        let (i, boat) = k
+            .movers
+            .iter()
+            .enumerate()
+            .find(|(_, m)| {
+                let b = &m.base;
+                m.look == Look::Deck
+                    && b.min.x <= start.x
+                    && start.x <= b.max.x
+                    && b.min.z <= start.z
+                    && start.z <= b.max.z
+            })
+            .expect("the boat under the start is a deck on the sea");
+        let most = (0..crate::balance::ROGUE_PERIOD)
+            .map(|t| k.waves.corner(i, boat, t).y - boat.corner(t).y)
+            .max()
+            .unwrap_or(0);
+        assert!(most > crate::balance::ROGUE_HEIGHT / 2, "the boat lifted {most}");
     }
 }

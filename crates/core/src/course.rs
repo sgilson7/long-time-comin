@@ -19,6 +19,9 @@ use crate::level::{Dyn, Solid};
 use crate::player::{bounce_speed, Event};
 use crate::world::{FxKind, World};
 
+mod waves;
+pub use waves::{Rogue, Wash, Waves};
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SwitchKind {
     /// hook its ring: the pull throws it
@@ -124,6 +127,31 @@ pub struct Emitter {
     pub pos: V3,
     /// the enemy it is, by id
     pub enemy: String,
+}
+
+/// A ship of a fought fleet and her colours: struck once her crew is down.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Flag {
+    /// her deck and the mast the colours fly from, by mover index
+    pub deck: usize,
+    pub mast: usize,
+    /// her crew, by emitter index
+    pub crew: Vec<usize>,
+    pub struck: bool,
+}
+
+/// The Captured Dragon's chain: while any of its locks holds, the dragon
+/// flies only round the flagship's masts and cannot be hurt.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Chain {
+    /// the dragon and the locks, by emitter index
+    pub dragon: usize,
+    pub locks: Vec<usize>,
+    /// where the chain is made fast (the mainmast's foot), and the mast
+    /// tops it may perch on while chained
+    pub mast: V3,
+    pub perches: Vec<V3>,
+    pub free: bool,
 }
 
 /// One step of a course's intended line, as its builder lays it: the line
@@ -260,8 +288,13 @@ pub struct Course {
     /// where the boss comes up (Dagon, in the eye)
     pub boss_at: Option<V3>,
     pub charge: Option<Charge>,
+    /// a fleet's ships and their colours
+    pub flags: Vec<Flag>,
+    pub chain: Option<Chain>,
     /// the Gallows Oak's arena: where the tree stands
     pub oak: Option<OakSite>,
+    /// the sea's rogue waves and green washes (the Hurricane)
+    pub waves: Waves,
     /// the highest the climb has reached (the Oak's first bar)
     pub climbed: i32,
     /// the Summons, by enemy index, once the crown is reached
@@ -389,9 +422,9 @@ impl World {
         }
 
         // moving ground, carrying whoever stands on it: you, and enemies
-        for m in &k.movers {
+        for (i, m) in k.movers.iter().enumerate() {
             let d = &mut level.dynamic[m.dynamic];
-            let delta = m.corner(self.tick).sub(d.solid.min);
+            let delta = k.waves.corner(i, m, self.tick).sub(d.solid.min);
             // what stands on it goes with it, down as well as up, and so
             // keeps its footing (a fall would leave it hanging each tick)
             let riding = self.player.grounded
@@ -474,6 +507,48 @@ impl World {
             said.push(("post", c.say("callout_post")));
         }
 
+        // a ship whose crew is all down strikes her colours
+        let fleet = k.flags.len();
+        for n in 0..fleet {
+            let down = |i: &usize| k.foes.get(*i).is_none_or(|&f| !self.enemies[f].alive());
+            if !k.flags[n].struck && k.flags[n].crew.iter().all(down) {
+                k.flags[n].struck = true;
+                let struck = k.flags.iter().filter(|f| f.struck).count();
+                let words = c
+                    .say("callout_struck")
+                    .replace("{n}", &struck.to_string())
+                    .replace("{of}", &fleet.to_string());
+                said.push(("struck", words));
+            }
+        }
+        // the dragon on its chain: kept to the flagship's masts and never
+        // hurt until its three locks are shot off
+        if let Some(ch) = k.chain.as_mut().filter(|ch| !ch.free) {
+            let foe = |i: usize| k.foes.get(i).copied();
+            let held = ch
+                .locks
+                .iter()
+                .any(|&l| foe(l).is_some_and(|f| self.enemies[f].alive()));
+            if let Some(e) = foe(ch.dragon).map(|f| &mut self.enemies[f]).filter(|e| e.alive()) {
+                if held {
+                    e.shielded = true;
+                    e.leash = Some((ch.mast, CHAIN_LEASH));
+                    if e.perches != ch.perches {
+                        e.perches = ch.perches.clone();
+                        e.perch = 0;
+                    }
+                } else {
+                    ch.free = true;
+                    e.shielded = false;
+                    e.leash = None;
+                    e.perches.clear();
+                    e.phase = 1;
+                    e.attack = 0;
+                    said.push(("roar", c.say("callout_dragon_free")));
+                }
+            }
+        }
+
         // a fought course is cleared when its crews and its waves are down;
         // whoever goes over the side drowns
         for e in self.enemies.iter_mut().filter(|e| e.alive()) {
@@ -529,6 +604,7 @@ impl World {
             }
         }
         self.player.shove = shove;
+        self.sea_step(c, &mut k, &mut said);
         // the Eraser: held pylon by pylon; the boss's bar is what is left
         if let Some(ch) = k.charge.as_mut() {
             if let Some(n) = ch.next() {
@@ -557,6 +633,7 @@ impl World {
         // the water
         if p.y < k.water {
             let back = k.posts.get(k.post).copied().unwrap_or(self.arena.start);
+            let back = back.add(v3(0, k.waves.lift_under(&k.movers, back, self.tick), 0));
             let pl = &mut self.player;
             pl.release_grapple();
             pl.pounding = false;
@@ -1513,6 +1590,83 @@ pub(crate) mod tests {
         }
         assert!(!w.enemies[last].alive(), "drowned");
         assert!(w.cleared, "open once all are down");
+    }
+
+    #[test]
+    fn each_ship_of_the_fleet_strikes_her_colours_when_her_crew_is_down() {
+        let (c, mut w) = course_world_in("far_shore", "fleet");
+        let k = w.course.clone().unwrap();
+        assert_eq!(k.flags.len(), 7, "seven ships flying colours");
+        let mut crewed: Vec<usize> = k.flags.iter().flat_map(|f| f.crew.clone()).collect();
+        crewed.sort();
+        crewed.dedup();
+        assert_eq!(crewed.len(), k.emitters.len(), "every hand on one ship");
+        for &i in &k.flags[2].crew[1..] {
+            w.enemies[k.foes[i]].hp = 0;
+        }
+        tick(&c, &mut w, idle());
+        assert!(
+            !w.course.as_ref().unwrap().flags[2].struck,
+            "one hand still standing"
+        );
+        w.enemies[k.foes[k.flags[2].crew[0]]].hp = 0;
+        tick(&c, &mut w, idle());
+        let flags = &w.course.as_ref().unwrap().flags;
+        assert!(flags[2].struck, "her colours struck");
+        assert_eq!(flags.iter().filter(|f| f.struck).count(), 1, "and only hers");
+    }
+
+    #[test]
+    fn the_captured_dragon_keeps_to_its_chain_unhurt_until_its_three_locks_are_shot_off() {
+        let (c, mut w) = course_world_in("far_shore", "fleet");
+        tick(&c, &mut w, idle());
+        let k = w.course.clone().unwrap();
+        let ch = k.chain.clone().expect("the dragon's chain");
+        assert_eq!(ch.locks.len(), 3);
+        assert!(
+            ch.perches.len() >= 2,
+            "the flagship's mast tops: {:?}",
+            ch.perches
+        );
+        let dragon = k.foes[ch.dragon];
+        let e = &w.enemies[dragon];
+        assert!(e.shielded && e.leash.is_some(), "on its chain");
+        assert_eq!(e.perches, ch.perches, "perching on her masts");
+        for (n, &l) in ch.locks.iter().enumerate() {
+            w.enemies[k.foes[l]].hp = 0;
+            tick(&c, &mut w, idle());
+            let e = &w.enemies[dragon];
+            if n < 2 {
+                assert!(e.shielded, "{} locks left and it is still held", 2 - n);
+            } else {
+                assert!(!e.shielded && e.leash.is_none(), "free");
+                assert_eq!(e.phase, 1, "and fighting all-out");
+                assert!(w.course.as_ref().unwrap().chain.as_ref().unwrap().free);
+            }
+        }
+    }
+
+    #[test]
+    fn on_its_chain_the_dragon_swoops_no_further_than_the_chain_reaches() {
+        let (c, mut w) = course_world_in("far_shore", "fleet");
+        let ch = w.course.as_ref().unwrap().chain.clone().unwrap();
+        tick(&c, &mut w, idle());
+        let dragon = w.course.as_ref().unwrap().foes[ch.dragon];
+        // you stand on the flagship's bow, beyond the chain's reach
+        let bow = v3(ch.mast.x - int(12), ch.mast.y, ch.mast.z + int(22));
+        let mut furthest = 0;
+        let mut swooped = false;
+        for _ in 0..60 * 60 {
+            w.player.pos = bow;
+            w.player.vel = V3::ZERO;
+            w.player.iframes = 1000;
+            tick(&c, &mut w, idle());
+            let e = &w.enemies[dragon];
+            swooped |= e.diving;
+            furthest = furthest.max(e.pos.sub(ch.mast).len_xz());
+        }
+        assert!(swooped, "it never swooped at you");
+        assert!(furthest <= CHAIN_LEASH + ONE, "it flew {furthest} from the mast");
     }
 
     #[test]

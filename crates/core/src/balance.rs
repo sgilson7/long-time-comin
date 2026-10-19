@@ -513,3 +513,32 @@ pub const SLOWED_PCT: i32 = 50;
 pub const SLOWED_TICKS: i32 = secs(1, 1);
 /// a gust's rain slants this long before it blows
 pub const WARN: i32 = secs(1, 1);
+
+/// how far the Captured Dragon reaches from the mainmast on its chain
+pub const CHAIN_LEASH: i32 = 24 * ONE;
+
+/// how near the chained dragon's mast the HUD says how to free it
+pub const DRAGON_HINT_NEAR: i32 = 40 * ONE;
+
+/// a rogue wave (the Hurricane): this high, rising out of the sea this
+/// long before it rolls, this wide from crest to foot either way, rolling this
+/// fast and in again this often; in the water it shoves a swimmer this hard at its
+/// crest
+pub const ROGUE_HEIGHT: i32 = int(7);
+pub const ROGUE_WARN: i32 = secs(2, 1);
+pub const ROGUE_HALF: i32 = int(22);
+pub const ROGUE_SPEED: i32 = per_tick(13, 1);
+pub const ROGUE_PERIOD: i32 = secs(14, 1);
+pub const ROGUE_SWIM_PUSH: i32 = ratio(1, 30);
+/// a green wash over a deck: a wall this high over the floor and this deep,
+/// running this fast, its foam line showing this long first; what it
+/// catches under its height is shoved this hard while in it, thrown this
+/// fast along it and up, and hurt this much, once a wash
+pub const WASH_HEIGHT: i32 = ratio(6, 5);
+pub const WASH_THICK: i32 = int(1);
+pub const WASH_SPEED: i32 = per_tick(8, 1);
+pub const WASH_WARN: i32 = secs(3, 2);
+pub const WASH_PUSH: i32 = ratio(1, 25);
+pub const WASH_KNOCK: i32 = per_tick(11, 1);
+pub const WASH_HEAVE: i32 = per_tick(4, 1);
+pub const WASH_DAMAGE: i32 = 8;

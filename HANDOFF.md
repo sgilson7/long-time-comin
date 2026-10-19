@@ -190,3 +190,9 @@ Rotten timber now says how it breaks (hook the ring, then pound). The River goes
 Checked locally: `./scripts/check.sh` passed (BUILDER CHECK PASSED: fmt, clippy with warnings as errors, 293 core and 11 boundary tests, the release wasm build and the import audit, and the browser check in Chromium, Firefox and WebKit); `python3 scripts/break_tests.py far:` each of the 20 breaks fails its test (B18).
 
 Live (2026-10-19): PR #16 passed its check on CI (run 39202235613) and merged as ac5b92b; main's run 39203105656 passed check and deploy, and the live `data/zone.json` holds the Vault. The fixes F13 to F15 followed in PR #17, which passed its check (run 39204547626) and merged as 81a8819; main's run 39205123838 passed check and deploy, and the live `data/zone.json` names the Lock. The break tests on CI were still running at each merge.
+
+## Round 19 (2026-10-19): colours, the chain, and the waves
+
+The Enslaved Dragon is the Captured Dragon. The Fleet's ships strike their colours as their crews fall, and the hint says the way on opens when all seven have struck. The dragon is chained to the flagship's mainmast, unhurt until its three Chain Locks are shot off, then free and fighting all-out. The Hurricane has its waves: a rogue wave 7 m high every 14 s that lifts each ship (and the boat you start on) as it rolls through, and green washes over the decks to jump. `PLAN.md` Round 19; SECOND-ORDER R19, G1 to G6, B19, T19. The waves were built by an agent in a worktree and merged.
+
+Checked locally: `./scripts/check.sh` passed (BUILDER CHECK PASSED: fmt, clippy with warnings as errors, 303 core and 11 boundary tests, the release wasm build and the import audit, and the browser check in Chromium, Firefox and WebKit); each of the 14 new `far:` breaks fails its test (B19).
