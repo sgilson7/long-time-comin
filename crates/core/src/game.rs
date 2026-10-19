@@ -1559,10 +1559,17 @@ impl Game {
     pub fn screen_json(&self) -> String {
         let c = &self.c;
         let m = &self.meta;
+        let branch_ids: Vec<String> = c
+            .copy_rows("holding_branches")
+            .into_iter()
+            .map(|(id, _)| id)
+            .collect();
+        let tree = crate::tree::lay_out(&c.upgrades, &branch_ids);
         let upgrades: Vec<Value> = c
             .upgrades
             .iter()
-            .map(|u| {
+            .zip(&tree.places)
+            .map(|(u, at)| {
                 let why = match m.check(c, &u.id) {
                     Ok(()) => String::new(),
                     Err(Refusal::Owned) => c.say("why_owned"),
@@ -1603,6 +1610,10 @@ impl Game {
                     "owned": m.owns(&u.id),
                     "can": m.check(c, &u.id).is_ok(),
                     "why": why,
+                    // its place on the tree, as percentages of the square
+                    "x": crate::tree::pct(at.x),
+                    "y": crate::tree::pct(at.y),
+                    "ring": at.ring,
                 })
             })
             .collect();
@@ -1647,6 +1658,33 @@ impl Game {
                 "pound": build.pound > 0,
             },
             "branches": c.copy_rows("holding_branches").into_iter().map(|(id, name)| json!({ "id": id, "name": name })).collect::<Vec<_>>(),
+            // the shop drawn as a passive tree: a wedge for each branch, a
+            // line from each upgrade to the one it needs, the ring between
+            "tree": {
+                "view": format!("0 0 {s} {s}", s = crate::balance::TREE_SIZE),
+                "centre": crate::balance::TREE_SIZE / 2,
+                "ring": crate::balance::TREE_RING,
+                "hub": crate::balance::TREE_HUB,
+                "wedges": tree.wedges.iter().map(|w| json!({
+                    "branch": w.branch,
+                    "name": c.copy_rows("holding_branches").into_iter().find(|(id, _)| *id == w.branch).map(|(_, n)| n).unwrap_or_default(),
+                    "d": crate::tree::wedge_path(w),
+                    "x": crate::tree::pct(w.label.0),
+                    "y": crate::tree::pct(w.label.1),
+                    "turn": format!("{}deg", crate::tree::label_turn(w)),
+                })).collect::<Vec<_>>(),
+                "edges": tree.edges.iter().map(|&(a, b)| {
+                    let (pa, pb) = (&tree.places[a], &tree.places[b]);
+                    let (ua, ub) = (&c.upgrades[a], &c.upgrades[b]);
+                    json!({
+                        "x1": pa.x, "y1": pa.y, "x2": pb.x, "y2": pb.y,
+                        "branch": ub.branch,
+                        // walked: both ends owned; open: the next can be bought
+                        "lit": m.owns(&ua.id) && m.owns(&ub.id),
+                        "open": m.owns(&ua.id) && !m.owns(&ub.id),
+                    })
+                }).collect::<Vec<_>>(),
+            },
             "zones": c.zones.iter().filter(|z| !z.mission).map(|z| json!({
                 "name": z.name,
                 "year": z.year,

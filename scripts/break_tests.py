@@ -82,8 +82,8 @@ BREAKS = [
  ("the summit melts", "crates/core/src/world.rs", "            fx::div(self.ending.min(ENDING_TICKS) * ONE, ENDING_TICKS * ONE)", "            0", "when_the_defendant_falls"),
  ("the mech ascends", "crates/core/src/enemy.rs", "(secs(9, 1), int(7), secs(4, 1))", "(secs(9, 1), 0, secs(4, 1))", "the_pioneer_boosts"),
  ("the mech boosts", "crates/core/src/enemy.rs", "(secs(3, 1), secs(1, 2), per_tick(22, 1))", "(secs(3, 1), 0, per_tick(22, 1))", "the_pioneer_boosts"),
- ("the escort is small", "crates/core/src/tank.rs", "            scale: fx::div(d.radius, crate::content::cm(320)).clamp(ONE / 4, ONE * 2),", "            scale: ONE,", "the_escort_is_a_smaller"),
- ("the escort falls", "crates/core/src/world.rs", "            self.enemies[i].hp = 0;\n            self.fell(c, vec![i]);\n            return;", "            return;", "the_escort_is_a_smaller"),
+ ("the blaster is small", "crates/core/src/tank.rs", "            scale: fx::div(d.radius, crate::content::cm(320)).clamp(ONE / 4, ONE * 2),", "            scale: ONE,", "the_blaster_is_a_smaller"),
+ ("the blaster falls", "crates/core/src/world.rs", "            self.enemies[i].hp = 0;\n            self.fell(c, vec![i]);\n            return;", "            return;", "the_blaster_is_a_smaller"),
  ("a dry cylinder waits", "crates/core/src/weapons.rs", " || held.dry))", "))", "the_big_iron_fires_six"),
  ("one shell at a time", "crates/core/src/weapons.rs", "                self.rounds += 1;", "                self.rounds = mag;", "every_gun_has_a_second_fire"),
  ("the clocks wait for the Defendant", "crates/core/src/meta.rs", "        if !u.unlock.is_empty() && !self.beaten.contains(&u.unlock) {", "        if false {", "the_stopped_clocks_wait"),
@@ -111,7 +111,7 @@ BREAKS = [
  ("corruption by height", "crates/core/src/world.rs", "        e.corrupt = self.corrupt;", "        e.corrupt = CORRUPT_LEAST;", "more_corrupted_the_higher"),
  ("a beast's body clears the floor", "crates/core/src/enemy.rs", "let body = d.radius.min(d.hover * 9 / 10).max(ONE / 10);", "let body = d.radius;", "a_toad_hops"),
 
- ("a mini-boss is not the zone's boss", "crates/core/src/world.rs", "            Kind::Boss | Kind::Tank | Kind::Double | Kind::God | Kind::Cat\n        ) && !d.elite", "            Kind::Boss | Kind::Tank | Kind::Double | Kind::God | Kind::Cat\n        )", "the_escort_is_a_smaller"),
+ ("a mini-boss is not the zone's boss", "crates/core/src/world.rs", "            Kind::Boss | Kind::Tank | Kind::Double | Kind::God | Kind::Cat\n        ) && !d.elite", "            Kind::Boss | Kind::Tank | Kind::Double | Kind::God | Kind::Cat\n        )", "the_blaster_is_a_smaller"),
  # round ten: the Great Horned, big waves
  ("the owl perches high", "crates/core/src/enemy.rs", "Some(v3(p.x, f + PERCH_HEIGHT, p.z))", "Some(v3(p.x, f, p.z))", "the_great_horned_perches"),
  ("the owl swoops through you", "crates/core/src/enemy.rs", "self.fly_to(target.add(way.scale(SWOOP_PAST)), SWOOP_SPEED);", "self.fly_to(self.perches[self.perch], SWOOP_SPEED);", "the_great_horned_perches"),
@@ -209,6 +209,11 @@ BREAKS = [
  ("arsenal: no name twice on side paths", "crates/core/src/route.rs", ".filter(|n| !used.contains(n) && have.wants(n)", ".filter(|n| have.wants(n)", "side_paths_vary_hold"),
  ("arsenal: a long path holds a choice", "crates/core/src/route.rs", "                        if len > 1 {", "                        if len > 5 {", "side_paths_vary_hold"),
  ("arsenal: nothing twice in a zone", "crates/core/src/route.rs", "            let pick = draw(&r.rest_rewards, &mut used, have, true, &mut rng);", "            let pick = draw(&r.rest_rewards, &mut Vec::new(), have, true, &mut rng);", "side_paths_vary_hold"),
+ # round sixteen: the Holding's tree
+ ("tree: a step out from what it needs", "crates/core/src/tree.rs", "            place(k, at_h, ring + 1, parent, angle_of, places);", "            place(k, at_h, ring, parent, angle_of, places);", "every_upgrade_that_needs_nothing_stands_on_the_ring"),
+ ("tree: each its own share", "crates/core/src/tree.rs", "            at_h += 2 * leaves(k, parent);", "            at_h += 0;", "no_two_upgrades_crowd"),
+ ("tree: a branch's wedge", "crates/core/src/tree.rs", "        cursor += TREE_GAP_HALVES;\n        for &r in list {", "        for &r in list {", "each_branch_bursts_out"),
+ ("tree: the petal's reach", "crates/core/src/tree.rs", "            reach: (TREE_RING + outer * TREE_STEP + TREE_PETAL).min(TREE_EDGE),", "            reach: TREE_RING,", "each_branch_bursts_out"),
 ]
 
 

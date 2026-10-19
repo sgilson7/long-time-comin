@@ -70,7 +70,7 @@ table.controls td:first-child { font-weight: 700; white-space: nowrap; }
 
 /* ---- the Holding ---- */
 #holding { padding: 3vh 2vw; }
-.holding-grid { display: grid; grid-template-columns: minmax(260px, 1fr) minmax(320px, 1.6fr) minmax(260px, 1fr); gap: 18px; align-items: start; }
+.holding-grid { display: grid; grid-template-columns: minmax(250px, 1fr) minmax(360px, 2.2fr) minmax(240px, 1fr); gap: 18px; align-items: start; }
 .holding-grid section { background: var(--paper); border: 4px solid var(--ink); border-radius: 14px; box-shadow: 7px 7px 0 var(--ink); padding: 16px 18px; }
 .holding-grid h2 { margin: 0; font-size: 2rem; text-transform: uppercase; }
 .holding-grid h3 { margin: 0 0 8px; text-transform: uppercase; }
@@ -90,18 +90,37 @@ button.carry-gun img { width: 72px; height: 29px; object-fit: contain; }
 button.carry-gun.chosen { background: var(--salmon); opacity: 1; font-weight: 800; }
 .tools { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
 .credit { font-size: 0.75rem; opacity: 0.75; margin: 8px 0 0; }
-#upgrades { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; align-items: start; }
-.branch { display: flex; flex-direction: column; gap: 8px; }
-.branch h3 { margin: 0; text-transform: uppercase; letter-spacing: 0.08em; font-size: 0.85rem; border-bottom: 3px solid var(--ink); }
-.upgrade { display: flex; flex-direction: column; align-items: flex-start; text-align: left; gap: 4px; padding: 10px; border-radius: 12px; background: #fff3d6; margin-left: calc(var(--depth, 0) * 12px); border-left-width: calc(3px + var(--depth, 0) * 2px); }
-.upgrade .icon { width: 56px; height: 56px; object-fit: contain; }
-.upgrade h4 { margin: 0; font-size: 1.05rem; }
-.upgrade p { margin: 0; font-size: 0.8rem; line-height: 1.3; flex: 1; }
-.upgrade .cost { font-weight: 800; font-size: 0.85rem; background: var(--paper-2); border: 2px solid var(--ink); border-radius: 6px; padding: 1px 8px; }
-.upgrade.can { background: #fde3c4; }
-.upgrade.can .cost { background: var(--sage); }
-.upgrade.owned { background: #d9ebc9; opacity: 1; }
-.upgrade.owned .cost { background: var(--sage); }
+/* the shop: a passive tree after Path of Exile 2's, a ring round a hub and a
+   wedge for each branch bursting out of it; the core places everything */
+.tree { position: relative; width: 100%; aspect-ratio: 1; }
+#tree-lines { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.wedge { stroke: var(--ink); stroke-width: 3; stroke-opacity: 0.35; }
+.wedge.body { fill: #f3b4a2; } .wedge.motion { fill: #bfe0e6; } .wedge.arms { fill: #f4cf8a; } .wedge.writs { fill: #cdbbe8; }
+.wedge { fill-opacity: 0.55; }
+.ring { fill: none; stroke: var(--ink); stroke-width: 7; stroke-opacity: 0.5; }
+.hub { fill: var(--paper-2); stroke: var(--ink); stroke-width: 6; }
+.edge { stroke: var(--ink); stroke-width: 6; stroke-opacity: 0.35; stroke-linecap: round; }
+.edge.open { stroke: var(--orange); stroke-opacity: 0.9; stroke-dasharray: 10 8; }
+.edge.lit { stroke: var(--gold); stroke-opacity: 1; stroke-width: 10; }
+#tree-labels, #upgrades { position: absolute; inset: 0; pointer-events: none; }
+.branch-name { position: absolute; translate: -50% -50%; font-size: clamp(0.6rem, 1.1vw, 0.85rem); font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; opacity: 0.75; }
+.tree-hub { position: absolute; left: 50%; top: 50%; translate: -50% -50%; display: flex; flex-direction: column; align-items: center; font-size: 0.7rem; text-transform: uppercase; pointer-events: none; }
+.upgrade { pointer-events: auto; position: absolute; translate: -50% -50%; width: 4.8%; aspect-ratio: 1; padding: 0; border-radius: 50%; border-width: 2px; box-shadow: 2px 2px 0 var(--ink); background: #e9dcc0; display: grid; place-items: center; }
+.upgrade .icon { width: 82%; height: 82%; object-fit: contain; filter: grayscale(0.85) opacity(0.6); }
+.upgrade[data-ring="0"] { width: 5.4%; }
+.upgrade.can { background: #fde3c4; border-color: var(--orange); }
+.upgrade.can .icon { filter: none; }
+.upgrade.owned { background: var(--gold); }
+.upgrade.owned .icon { filter: none; }
+.upgrade.picked { outline: 4px solid var(--magenta); outline-offset: 2px; }
+.upgrade:hover:not(:disabled) { background: #fff3d6; scale: 1.15; z-index: 1; }
+.upgrade.owned:hover { background: var(--gold); }
+.tree-card { border-top: 3px solid var(--ink); margin-top: 10px; padding-top: 8px; display: grid; gap: 4px; min-height: 9rem; align-content: start; }
+.tree-card h4 { margin: 0; font-size: 1.15rem; }
+.tree-card p { margin: 0; font-size: 0.85rem; line-height: 1.3; }
+.tree-card .needs { opacity: 0.7; }
+.tree-card button { justify-self: start; margin-top: 6px; font-size: 0.95rem; padding: 6px 16px; }
+.tree-card button.can { background: var(--sage); }
 .case-file ol { padding-left: 20px; margin: 0 0 14px; font-family: var(--type); font-size: 0.8rem; }
 .case-file li { margin-bottom: 6px; }
 .case-file li.none { list-style: none; margin-left: -20px; opacity: 0.7; }

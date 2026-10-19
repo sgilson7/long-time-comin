@@ -437,3 +437,26 @@ pub const CONTEMPT_WIDEN: i32 = ONE * 3 / 2;
 pub const CONTEMPT_MAX: i32 = 3;
 /// a Purse is this many times the zone's side-path Clemency
 pub const PURSE_TIMES: i32 = 3;
+
+// ---- the Holding's tree (round 16) ---------------------------------------------
+
+/// the tree is drawn in a square this many units across, round its centre
+pub const TREE_SIZE: i32 = 1000;
+/// the hub in the middle, and the ring every root upgrade stands on
+pub const TREE_HUB: i32 = 118;
+pub const TREE_RING: i32 = 212;
+/// each upgrade further out than the one it needs by this much
+pub const TREE_STEP: i32 = 84;
+/// a branch's wedge reaches this far out; its name sits this far out
+pub const TREE_EDGE: i32 = 494;
+/// each wedge, a petal, reaches this far past its outermost upgrade
+pub const TREE_PETAL: i32 = 52;
+pub const TREE_LABEL: i32 = 150;
+/// the room inside each end of a branch's wedge, in halves of one upgrade's
+/// share
+pub const TREE_GAP_HALVES: i32 = 1;
+/// the first branch's wedge starts this far clockwise of straight up
+pub const TREE_START: i32 = -crate::fx::QUARTER / 2;
+/// no two upgrades closer than this, centre to centre (a node is drawn
+/// a little smaller)
+pub const TREE_ROOM: i32 = 52;

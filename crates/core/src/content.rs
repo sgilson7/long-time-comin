@@ -2283,7 +2283,11 @@ pub mod tests {
                 let (r, boss) = roster(&c, z);
                 r.into_iter().chain(std::iter::once(boss))
             })
-            .chain(["chief", "pioneer", "escort"].iter().filter_map(|id| c.enemy(id)))
+            .chain(
+                ["chief", "pioneer", "blaster"]
+                    .iter()
+                    .filter_map(|id| c.enemy(id)),
+            )
             .collect();
         let (met, boss) = roster(&c, 3);
         let zone = &c.zones[3].id;
