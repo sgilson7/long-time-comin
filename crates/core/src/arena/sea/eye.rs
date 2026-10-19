@@ -157,6 +157,9 @@ impl B<'_> {
                 self.k().spawns.push(v3(rock.x + dx, rock.y, rock.z + dz));
             }
         }
+        // you come in looking down into the cone, at the eye
+        let start = self.k().posts[0];
+        self.start_yaw = crate::geom::yaw_pitch_of(v3(EYE.x - start.x, 0, EYE.z - start.z)).0;
 
         // the wreckage falling in down each arm
         for arm in 0..ARMS {
@@ -701,5 +704,14 @@ mod tests {
         // and up one again: the last stood on higher than the one before
         let n = stood.len();
         assert!(stood[n - 1].1 > stood[n - 2].1, "up again: {stood:?}");
+    }
+
+    #[test]
+    fn you_come_in_facing_the_eye() {
+        let c = crate::content::tests::content();
+        let a = crate::arena::build("far_shore", "boss", 3, &[], &c.pal);
+        let look = crate::geom::facing(a.start_yaw, 0);
+        let to = v3(EYE.x - a.start.x, 0, EYE.z - a.start.z).norm();
+        assert!(look.dot(to) > ONE * 9 / 10, "facing {look:?}, the eye {to:?}");
     }
 }

@@ -287,6 +287,7 @@ BREAKS = [
  ("map: the body is parked", "crates/core/src/tour.rs", "        p.pos = start;", "", "a_course_is_flown_along"),
  ("map: on to the next stop", "crates/core/src/tour.rs", "            let next = (self.at + 1) % self.stops.len();", "            let next = self.at;", "each_stop_gives_way"),
  ("map: a shut zone cannot start", "crates/core/src/game.rs", "        if self.mode != Mode::Tour || !self.zone_open(zone, &line) {", "        if self.mode != Mode::Tour {", "the_map_opens_from_the_holding"),
+ ("far: you come in facing the eye", "crates/core/src/arena/sea/eye.rs", "        self.start_yaw = crate::geom::yaw_pitch_of(v3(EYE.x - start.x, 0, EYE.z - start.z)).0;", "        self.start_yaw = fx::QUARTER;", "you_come_in_facing_the_eye"),
  # round 20: Summary Judgment, the blade (edge:)
  ("edge: the slash is heard and cuts", "crates/core/src/world.rs", "            if ev == Event::Slash {\n                self.slash(c);", "            if false {\n                self.slash(c);", "the_slash_cuts_what_is_in_front"),
  ("edge: the arc", "crates/core/src/world.rs", "            let inside = d <= r + PLAYER_RADIUS || flat.norm().dot(ahead) >= edge;", "            let inside = true;", "the_slash_cuts_what_is_in_front"),
