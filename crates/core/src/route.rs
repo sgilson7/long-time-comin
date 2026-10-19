@@ -585,7 +585,7 @@ mod tests {
         for seed in 0..30 {
             let r = Route::build_for(&c, 2, seed, &Have::level(1));
             let elites: Vec<&Node> = r.nodes.iter().filter(|n| n.elite.is_some()).collect();
-            // the Escort in the Great Hall, the Section Chief in the Ballroom
+            // the Blaster in the Great Hall, the Section Chief in the Ballroom
             assert_eq!(elites.len(), 2, "two mini-bosses");
             let rooms: Vec<&str> = elites.iter().map(|n| n.archetype.as_str()).collect();
             assert_eq!(rooms, ["hall", "ballroom"]);

@@ -2299,7 +2299,7 @@
       ]
     },
     {
-      "id": "escort_burst",
+      "id": "blaster_burst",
       "volleys": [
         {
           "shape": "form",
@@ -2315,7 +2315,7 @@
       ]
     },
     {
-      "id": "escort_shell",
+      "id": "blaster_shell",
       "volleys": [
         {
           "shape": "aimed",
@@ -2324,12 +2324,12 @@
           "size_cm": 50,
           "colour": "scarlet",
           "damage": 20,
-          "plant": "escort_burst"
+          "plant": "blaster_burst"
         }
       ]
     },
     {
-      "id": "escort_coax",
+      "id": "blaster_coax",
       "volleys": [
         {
           "shape": "aimed",
@@ -2344,7 +2344,7 @@
       ]
     },
     {
-      "id": "escort_ricochet",
+      "id": "blaster_ricochet",
       "volleys": [
         {
           "shape": "ring",

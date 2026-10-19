@@ -28,6 +28,8 @@ function table(rows) {
 
 export function makeScreens(game, copy, changed, startAt, tryChumbles) {
   let tab = copy.codex_tabs[0][0];
+  // the upgrade picked on the Holding's tree, whose card is read below it
+  let picked = "";
 
   // each tab of the Codex, built from the core's numbers
   const pages = {
@@ -178,44 +180,76 @@ export function makeScreens(game, copy, changed, startAt, tryChumbles) {
       el("start-rush").hidden = !s.rush;
       el("start-mission").hidden = !s.mission;
       el("mission-note").hidden = !s.mission;
-      // the shop as a tree: a column for each branch, each upgrade under
-      // the one it needs
-      const card = (u) => {
-        const node = make("button", `upgrade ${u.owned ? "owned" : ""} ${u.can ? "can" : ""}`);
-        node.dataset.id = u.id;
-        node.style.setProperty("--depth", u.depth);
-        const icon = make("img", "icon");
-        icon.src = `art/icons/${u.icon}.png`;
-        icon.alt = "";
-        const label = u.owned ? copy.owned : u.can ? copy.buy.replace("{n}", u.cost) : u.why;
-        node.append(icon, make("h4", "", u.name), make("p", "", u.text), make("span", "cost", label));
-        node.disabled = !u.can;
-        node.addEventListener("click", () => {
-          if (game.buy(u.id)) changed();
-        });
+      // the shop as a passive tree: each branch a wedge bursting out from
+      // the ring round the hub, every place and line where the core puts it
+      const t = s.tree;
+      const svg = el("tree-lines");
+      const ns = svg.namespaceURI;
+      const shape = (tag, cls, attrs) => {
+        const node = document.createElementNS(ns, tag);
+        node.setAttribute("class", cls);
+        for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
         return node;
       };
-      // each upgrade after the one it needs, deepest last
-      const ordered = (list) => {
-        const out = [];
-        const place = (needs) => {
-          for (const u of list.filter((x) => x.needs === needs)) {
-            out.push(u);
-            place(u.name);
-          }
-        };
-        place("");
-        for (const u of list) if (!out.includes(u)) out.push(u);
-        return out;
-      };
-      el("upgrades").replaceChildren(
-        ...s.branches.map((b) => {
-          const column = make("div", "branch");
-          column.append(make("h3", "", b.name));
-          column.append(...ordered(s.upgrades.filter((u) => u.branch === b.id)).map(card));
-          return column;
+      svg.setAttribute("viewBox", t.view);
+      svg.replaceChildren(
+        ...t.wedges.map((w) => shape("path", `wedge ${w.branch}`, { d: w.d })),
+        shape("circle", "ring", { cx: t.centre, cy: t.centre, r: t.ring }),
+        ...t.edges.map((e) =>
+          shape("line", `edge ${e.branch} ${e.lit ? "lit" : ""} ${e.open ? "open" : ""}`, { x1: e.x1, y1: e.y1, x2: e.x2, y2: e.y2 }),
+        ),
+        shape("circle", "hub", { cx: t.centre, cy: t.centre, r: t.hub }),
+      );
+      el("tree-labels").replaceChildren(
+        ...t.wedges.map((w) => {
+          const label = make("span", `branch-name ${w.branch}`, w.name);
+          label.style.left = w.x;
+          label.style.top = w.y;
+          label.style.rotate = w.turn;
+          return label;
         }),
       );
+      el("tree-clemency").textContent = s.clemency;
+      if (!s.upgrades.some((u) => u.id === picked)) picked = (s.upgrades.find((u) => u.can) || s.upgrades[0]).id;
+      // the card under the tree reads the upgrade pointed at, or the one picked
+      const read = (u) => {
+        el("tree-name").textContent = u.name;
+        el("tree-text").textContent = u.text;
+        el("tree-needs").textContent = u.needs ? `${copy.codex_needs} ${u.needs}` : "";
+        const buy = el("tree-buy");
+        buy.textContent = u.owned ? copy.owned : u.can ? copy.buy.replace("{n}", u.cost) : u.why;
+        buy.disabled = !u.can || u.id !== picked;
+        buy.classList.toggle("can", u.can);
+      };
+      const chosen = () => s.upgrades.find((u) => u.id === picked);
+      el("tree-buy").onclick = () => {
+        if (game.buy(picked)) changed();
+      };
+      el("upgrades").replaceChildren(
+        ...s.upgrades.map((u) => {
+          const node = make("button", `upgrade ${u.branch} ${u.owned ? "owned" : ""} ${u.can ? "can" : ""} ${u.id === picked ? "picked" : ""}`);
+          node.dataset.id = u.id;
+          node.dataset.ring = u.ring;
+          node.style.left = u.x;
+          node.style.top = u.y;
+          node.setAttribute("aria-label", u.name);
+          node.setAttribute("aria-pressed", u.id === picked ? "true" : "false");
+          const icon = make("img", "icon");
+          icon.src = `art/icons/${u.icon}.png`;
+          icon.alt = "";
+          node.append(icon);
+          node.addEventListener("mouseenter", () => read(u));
+          node.addEventListener("focus", () => read(u));
+          node.addEventListener("mouseleave", () => read(chosen()));
+          node.addEventListener("blur", () => read(chosen()));
+          node.addEventListener("click", () => {
+            picked = u.id;
+            changed();
+          });
+          return node;
+        }),
+      );
+      read(chosen());
 
       const counts = el("m-indictment");
       if (s.counts.length) counts.replaceChildren(...s.counts.map((t) => make("li", "", t)));

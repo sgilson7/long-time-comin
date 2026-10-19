@@ -13,8 +13,9 @@ copied from the game's own output:
   and Chumbles).
 - the crater's gate is open, so its label shows; the first fight's gates
   stay dark and unlabelled until its enemies are defeated.
-- upgrades.json lists 38 upgrades in 4 branches (copy.json holding_branches);
-  the cheapest (Constitution I) costs 8, so a new record with 0 Clemency can
+- upgrades.json lists 38 upgrades in 4 branches (copy.json holding_branches),
+  drawn as the Holding's tree, a wedge a branch, 21 of them needing another
+  (a line each); the cheapest (Constitution I) costs 8, so a new record with 0 Clemency can
   buy none of them.
 - zone.json lists 5 zones, all built: none is sealed (the last mission's
   home is listed after them and not shown on the Holding's route).
@@ -75,10 +76,13 @@ def run(page, check, engine):
 
     check(mode(page) == "holding", "then the Holding")
     cards = page.query_selector_all("#upgrades .upgrade")
-    buyable = page.query_selector_all("#upgrades .upgrade:not(:disabled)")
+    buyable = page.query_selector_all("#upgrades .upgrade.can")
     check(len(cards) == 38 and len(buyable) == 0, f"38 upgrades, none affordable with 0 Clemency ({len(cards)}, {len(buyable)})")
-    branches = page.query_selector_all("#upgrades .branch")
-    check(len(branches) == 4, f"in four branches ({len(branches)})")
+    branches = page.query_selector_all("#tree-lines .wedge")
+    edges = page.query_selector_all("#tree-lines .edge")
+    check(len(branches) == 4, f"in four branches, each a wedge of the tree ({len(branches)})")
+    check(len(edges) == 21, f"a line from each of the 21 upgrades that need another ({len(edges)})")
+    check(page.is_disabled("#tree-buy"), "the tree's card cannot buy with no Clemency")
     check(page.inner_text("#m-counts") == "0 / 10", f"no count read yet ({page.inner_text('#m-counts')!r})")
     sealed = page.query_selector_all("#m-route li.sealed")
     check(len(sealed) == 0, f"no zone sealed in this build ({len(sealed)})")

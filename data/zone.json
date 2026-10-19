@@ -755,7 +755,7 @@
             "arena": "ballroom"
           },
           {
-            "enemy": "escort",
+            "enemy": "blaster",
             "at": 1,
             "arena": "hall"
           }

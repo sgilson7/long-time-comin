@@ -29,5 +29,6 @@ pub mod route;
 pub mod song;
 pub mod squad;
 pub mod tank;
+pub mod tree;
 pub mod weapons;
 pub mod world;

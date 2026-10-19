@@ -580,7 +580,7 @@ impl World {
             t.drive = tank::Drive::Turn;
             t.timer = secs(1, 1);
         }
-        // the zone's boss; a mini-boss (the Escort, a tank too) is not, and
+        // the zone's boss; a mini-boss (the Blaster, a tank too) is not, and
         // felling it only clears its arena (SECOND-ORDER Q25)
         if matches!(
             d.kind,
@@ -4471,13 +4471,13 @@ mod ascent {
     }
 
     #[test]
-    fn the_escort_is_a_smaller_tank_that_falls_when_its_last_weak_point_breaks() {
-        let (c, mut w) = world_in(2, NodeKind::Fight, Some("escort"));
+    fn the_blaster_is_a_smaller_tank_that_falls_when_its_last_weak_point_breaks() {
+        let (c, mut w) = world_in(2, NodeKind::Fight, Some("blaster"));
         w.player.iframes = 1_000_000;
         for _ in 0..90 {
             step(&c, &mut w, &still());
         }
-        let k = w.elite.expect("the Escort came");
+        let k = w.elite.expect("the Blaster came");
         let d = c.enemies[w.enemies[k].def].clone();
         assert!(
             w.enemies[k].tank.as_ref().unwrap().scale < ONE * 3 / 4,
