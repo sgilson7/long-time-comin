@@ -1073,8 +1073,18 @@ impl Game {
         &self.c.zones[self.run.as_ref().map_or(0, |r| r.zone)]
     }
 
+    /// The scene the run is lit by: its section's own, else its zone's.
+    fn scene(&self) -> &crate::content::Scene {
+        let z = self.scene_zone();
+        self.run
+            .as_ref()
+            .and_then(|r| r.route.nodes.get(r.at))
+            .and_then(|n| z.scenes.get(&n.archetype))
+            .unwrap_or(&z.scene)
+    }
+
     fn build_scene(&mut self) {
-        let ink = self.c.pal.c(&self.scene_zone().scene.ink);
+        let ink = self.c.pal.c(&self.scene().ink);
         let arena = match &self.run {
             Some(r) => &r.world.arena,
             None => &self.hub,
@@ -1090,7 +1100,7 @@ impl Game {
     }
 
     fn draw(&mut self) {
-        let mut b = Batch::new(self.c.pal.c(&self.scene_zone().scene.ink));
+        let mut b = Batch::new(self.c.pal.c(&self.scene().ink));
         let clock = (self.menu_us * TICKS_PER_SECOND as i64 / 1_000_000) as i32;
         let in_run = matches!(
             self.mode,
@@ -1165,7 +1175,7 @@ impl Game {
             ),
             _ => (0, 0, [0; 4]),
         };
-        let warp = self.scene_zone().scene.warp_pct * ONE / 100;
+        let warp = self.scene().warp_pct * ONE / 100;
         let seconds = ((self.menu_us % 1_000_000_000) * ONE as i64 / 1_000_000) as i32;
         self.view.extend([melt, stopped, warp, seconds]);
         self.view.extend(bubble);
@@ -1193,7 +1203,7 @@ impl Game {
     }
 
     pub fn scene_uniforms(&self) -> Vec<i32> {
-        let s = &self.scene_zone().scene;
+        let s = self.scene();
         let pal = &self.c.pal;
         let l = v3(-ONE * 4 / 10, ONE * 8 / 10, ONE * 45 / 100).norm();
         let mut u = vec![l.x, l.y, l.z];
@@ -1209,7 +1219,7 @@ impl Game {
     }
 
     pub fn clear_color(&self) -> Vec<i32> {
-        self.c.pal.c(&self.scene_zone().scene.fog).to_vec()
+        self.c.pal.c(&self.scene().fog).to_vec()
     }
 
     // ---- the HUD ---------------------------------------------------------
@@ -3118,5 +3128,37 @@ pub(crate) mod tests {
         assert!(!g.meta.branch_open(&g.c, vault), "not before Dagon");
         g.meta.beat("dagon");
         assert!(g.meta.branch_open(&g.c, vault));
+    }
+
+    #[test]
+    fn the_hurricane_has_its_own_storm_sky_and_the_fleet_the_zones() {
+        let mut g = game_with(RIVER_READY);
+        g.begin();
+        g.meta.beat("gallows_oak");
+        let far = g.c.zones.iter().position(|z| z.id == "far_shore").unwrap();
+        g.start_on("river", far);
+        assert_eq!(g.run.as_ref().unwrap().zone, far);
+        let sky = |g: &Game| g.scene_uniforms()[3..6].to_vec();
+        let fleet = sky(&g);
+        assert_eq!(
+            fleet,
+            g.c.pal.c("sea_sky").to_vec(),
+            "the Fleet under the zone's sky"
+        );
+        let at = g
+            .run
+            .as_ref()
+            .unwrap()
+            .route
+            .nodes
+            .iter()
+            .position(|n| n.archetype == "hurricane")
+            .unwrap();
+        g.go_to(at);
+        assert_eq!(
+            sky(&g),
+            g.c.pal.c("storm_sky").to_vec(),
+            "the Hurricane under a storm"
+        );
     }
 }

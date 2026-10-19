@@ -1130,6 +1130,9 @@ struct ZoneFileEntry {
     branch_from: String,
     #[serde(default)]
     scene: Option<Scene>,
+    /// a section's own sky and light, by archetype, over the zone's
+    #[serde(default)]
+    scenes: BTreeMap<String, Scene>,
     #[serde(default)]
     route: Option<RouteRules>,
     #[serde(default)]
@@ -1165,6 +1168,8 @@ pub struct Zone {
     /// own timeline (empty: on the main line)
     pub branch_from: String,
     pub scene: Scene,
+    /// a section's own sky and light, by archetype, over the zone's
+    pub scenes: BTreeMap<String, Scene>,
     pub route: RouteRules,
     pub archetypes: Vec<String>,
     pub names: BTreeMap<String, String>,
@@ -1391,6 +1396,7 @@ impl Content {
                         fog_far_m: 520,
                         warp_pct: 0,
                     },
+                    scenes: BTreeMap::new(),
                     route: RouteRules {
                         main_fights: 0,
                         main_tiers: Vec::new(),
@@ -1448,13 +1454,10 @@ impl Content {
                         ));
                     }
                 }
-                for name in [
-                    &scene.sky,
-                    &scene.fog,
-                    &scene.light,
-                    &scene.window_dark,
-                    &scene.ink,
-                ] {
+                for name in std::iter::once(&scene)
+                    .chain(z.scenes.values())
+                    .flat_map(|s| [&s.sky, &s.fog, &s.light, &s.window_dark, &s.ink])
+                {
                     if !pal.has(name) {
                         return Err(format!("zone {}: the scene names no colour {name}", z.id));
                     }
@@ -1469,6 +1472,7 @@ impl Content {
                 mission: z.mission,
                 branch_from: z.branch_from,
                 scene,
+                scenes: z.scenes,
                 route,
                 archetypes: z.archetypes,
                 names: z.names,

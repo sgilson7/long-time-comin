@@ -256,6 +256,9 @@ BREAKS = [
 
  ("far: a rising deck lands you", "crates/core/src/course.rs", "                if over && b.pos.y >= top - ONE / 4 && b.pos.y < d.solid.max.y {", "                if false {", "a_deck_rising_into_a_body"),
  ("far: the last overspeed bleeds off", "crates/core/src/player.rs", "        let next = if speed - decel > top {", "        let next = if speed > top {", "let_go_at_full_speed"),
+ ("far: the boss comes where the course puts it", "crates/core/src/world.rs", "            .filter(|_| matches!(d.kind, Kind::Boss | Kind::Double))", "            .filter(|_| false)", "dagon_and_your_older_self"),
+ ("far: the Vault rests in the Lock", "crates/core/src/arena/vault.rs", "            \"rest\" => self.the_lock(),", "", "the_vaults_rest_is_the_lock"),
+ ("far: a section's own sky", "crates/core/src/game.rs", "            .and_then(|n| z.scenes.get(&n.archetype))", "            .and_then(|_| None)", "the_hurricane_has_its_own"),
 ]
 
 

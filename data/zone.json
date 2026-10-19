@@ -2164,6 +2164,10 @@
         "fog_near_m": 140,
         "fog_far_m": 800
       },
+      "scenes": {
+        "hurricane": { "sky": "storm_sky", "fog": "storm_fog", "light": "storm_light", "window_dark": "river_window_dark", "ink": "river_ink", "fog_near_m": 60, "fog_far_m": 420 },
+        "maelstrom": { "sky": "deep_sky", "fog": "deep_fog", "light": "deep_light", "window_dark": "river_window_dark", "ink": "river_ink", "fog_near_m": 30, "fog_far_m": 260 }
+      },
       "route": {
         "course": true,
         "main_fights": 0,
@@ -2300,6 +2304,7 @@
         "arrival": "The Shaft",
         "shaft": "The Shaft",
         "halls": "The Halls",
+        "rest": "The Lock",
         "boss": "The Eraser"
       },
       "encounters": [
