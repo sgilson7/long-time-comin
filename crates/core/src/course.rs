@@ -474,6 +474,8 @@ impl World {
             said.push(("cleared", c.say("callout_course_cleared")));
         }
 
+        // the wind and the current shove you on top of how you move
+        let mut shove = V3::ZERO;
         // the wind: a gust shoves you while it blows
         for g in &k.gusts {
             let inside =
@@ -482,7 +484,7 @@ impl World {
                 let push = g
                     .dir
                     .scale(if self.player.grounded { g.push / 2 } else { g.push });
-                self.player.vel = self.player.vel.add(v3(push.x, 0, push.z));
+                shove = shove.add(v3(push.x, 0, push.z));
             }
         }
         // lightning: marked, then struck
@@ -509,10 +511,10 @@ impl World {
         self.player.swimming = k.underwater.is_some();
         if let Some(u) = k.underwater {
             if !self.player.grounded {
-                let to = v3(u.eye.x - p.x, 0, u.eye.z - p.z).norm().scale(u.pull);
-                self.player.vel = self.player.vel.add(to);
+                shove = shove.add(v3(u.eye.x - p.x, 0, u.eye.z - p.z).norm().scale(u.pull));
             }
         }
+        self.player.shove = shove;
         // the Eraser: held pylon by pylon; the boss's bar is what is left
         if let Some(ch) = k.charge.as_mut() {
             if let Some(n) = ch.next() {
@@ -1345,5 +1347,194 @@ pub(crate) mod tests {
             e.step(&c, &level, v3(0, int(2), int(14)), 0);
         }
         assert_eq!(e.husk, e.husk_max);
+    }
+    #[test]
+    fn a_gust_shoves_you_only_while_it_blows_and_its_rain_slants_first() {
+        let (c, mut w) = course_world("spillway");
+        w.player.pos = v3(0, int(2), -int(10));
+        let zone = Solid::new(v3(-int(20), -int(5), -int(30)), v3(int(20), int(20), int(10)));
+        let g = Gust {
+            zone,
+            dir: v3(ONE, 0, 0),
+            push: ONE / 20,
+            period: 300,
+            on: 60,
+            phase: 0,
+        };
+        w.course.as_mut().unwrap().gusts.push(g);
+        // still: nothing moves you until it blows
+        let mut blown_at = None;
+        for k in 0..300 {
+            let x = w.player.pos.x;
+            tick(&c, &mut w, idle());
+            if w.player.pos.x > x + ONE / 100 && blown_at.is_none() {
+                blown_at = Some(k);
+            }
+        }
+        let at = blown_at.expect("blown sideways");
+        assert!(at >= 300 - 60 - 2, "not before it blows ({at})");
+        assert!(g.until(239) > 0 && g.until(240) == 0, "a warning, then the gust");
+    }
+
+    #[test]
+    fn lightning_is_marked_where_it_will_strike_and_hurts_only_there() {
+        let (c, mut w) = course_world("spillway");
+        w.player.pos = v3(0, int(2), -int(20));
+        w.player.build.max_health = 1000;
+        w.player.health = 1000;
+        w.course.as_mut().unwrap().storm = Some(Storm {
+            every: 30,
+            warn: 40,
+            radius: int(3),
+            damage: 25,
+        });
+        tick(&c, &mut w, idle());
+        for _ in 0..29 {
+            tick(&c, &mut w, idle());
+        }
+        let strikes = w.course.as_ref().unwrap().strikes.clone();
+        assert!(!strikes.is_empty(), "a strike marked");
+        // stand on the first mark until it strikes
+        let (at, left) = strikes[0];
+        let before = w.player.health;
+        for _ in 0..left + 1 {
+            w.player.pos = at;
+            w.player.iframes = 0;
+            tick(&c, &mut w, idle());
+        }
+        assert!(w.player.health < before, "struck where it was marked");
+    }
+
+    #[test]
+    fn under_the_water_you_fall_slower_stroke_up_again_and_are_drawn_toward_the_eye() {
+        let (c, mut w) = course_world("spillway");
+        w.course.as_mut().unwrap().underwater = Some(Underwater {
+            gravity_pct: SWIM_GRAVITY_PCT,
+            eye: v3(int(30), 0, -int(20)),
+            pull: ONE / 400,
+        });
+        w.course.as_mut().unwrap().water = -int(100);
+        w.player.pos = v3(0, int(40), -int(20));
+        w.player.grounded = false;
+        w.player.jumps_used = w.player.build.jumps;
+        tick(&c, &mut w, idle());
+        for _ in 0..30 {
+            tick(&c, &mut w, idle());
+        }
+        let slow = w.player.vel.y;
+        assert!(slow > -GRAVITY * 30 * 6 / 10, "falls slower: {}", slow);
+        assert!(w.player.pos.x > 0, "drawn toward the eye");
+        tick(
+            &c,
+            &mut w,
+            crate::player::Controls {
+                jump_pressed: true,
+                ..idle()
+            },
+        );
+        assert!(w.player.vel.y > 0, "a stroke up with no jumps left");
+    }
+
+    #[test]
+    fn wreckage_turns_round_its_eye_and_carries_whoever_stands_on_it() {
+        let (c, mut w) = course_world("spillway");
+        // a plank in the open air over the race, turning round a point
+        let base = Solid::new(v3(int(4), int(18), -int(46)), v3(int(8), int(20), -int(42)));
+        let i = w.arena.level.add_dynamic(Dyn {
+            solid: base,
+            on: true,
+            one_way: false,
+        });
+        let mut mv = Mover::breathing(i, base, 0, 600, 0);
+        mv.orbit = fx::TURN / 600;
+        mv.round = v3(0, 0, -int(44));
+        w.course.as_mut().unwrap().movers.push(mv);
+        w.player.pos = v3(int(6), int(20), -int(44));
+        w.player.grounded = true;
+        for _ in 0..150 {
+            tick(&c, &mut w, idle());
+        }
+        // a quarter of a turn: from the east of the point to its north or south
+        let p = w.player.pos;
+        assert!(
+            p.x.abs() < int(3) && (p.z + int(44)).abs() > int(4),
+            "carried round: {p:?}"
+        );
+        assert!(w.player.grounded);
+    }
+
+    #[test]
+    fn a_fought_course_opens_only_when_its_crews_are_down_and_one_overboard_drowns() {
+        let (c, mut w) = course_world("spillway");
+        w.course.as_mut().unwrap().fought = true;
+        w.cleared = false;
+        // only this crew: the weir-lamps put out
+        for e in w.enemies.iter_mut() {
+            e.hp = 0;
+        }
+        let def = c.enemy("deckhand").unwrap();
+        let mut e = crate::enemy::Enemy::new(def, &c.enemies[def], v3(0, int(3), -int(60)), 1);
+        e.home = e.pos;
+        w.enemies.push(e);
+        for _ in 0..10 {
+            tick(&c, &mut w, idle());
+        }
+        assert!(!w.cleared, "shut while a crew stands");
+        // over the side
+        let last = w.enemies.len() - 1;
+        w.enemies[last].pos.y = -int(5);
+        for _ in 0..3 {
+            tick(&c, &mut w, idle());
+        }
+        assert!(!w.enemies[last].alive(), "drowned");
+        assert!(w.cleared, "open once all are down");
+    }
+
+    #[test]
+    fn the_erasers_charge_fills_only_while_you_hold_its_lit_pylon_and_its_end_is_the_bosss() {
+        let c = content();
+        let zone = c.zones.iter().position(|z| z.id == "vault").unwrap();
+        let r = Route::build_for(&c, zone, 7, &Have::level(1));
+        let node = r.nodes.iter().find(|n| n.kind == NodeKind::Boss).unwrap().clone();
+        let mut w = World::new(
+            &c,
+            &node,
+            &[],
+            Player::new(V3::ZERO, 0, river_kit()),
+            Held::new(0, 1),
+            3,
+        );
+        for _ in 0..90 {
+            tick(&c, &mut w, idle());
+        }
+        let b = w.boss.expect("your older self came");
+        let ch = w.course.as_ref().unwrap().charge.clone().unwrap();
+        assert_eq!(ch.next(), Some(0));
+        // away from the pylon, nothing
+        let away = ch.pylons[0].add(v3(ch.radius * 3, 0, 0));
+        for _ in 0..60 {
+            w.player.pos = away;
+            w.player.iframes = 1000;
+            tick(&c, &mut w, idle());
+        }
+        assert_eq!(w.course.as_ref().unwrap().charge.as_ref().unwrap().held[0], 0);
+        // in its ring, it charges, and the bar falls with it
+        for _ in 0..ch.need / 2 {
+            w.player.pos = ch.pylons[0];
+            w.player.iframes = 1000;
+            tick(&c, &mut w, idle());
+        }
+        assert!(w.course.as_ref().unwrap().charge.as_ref().unwrap().held[0] > 0);
+        assert!(w.enemies[b].hp < w.enemies[b].max_hp, "the bar is the charge");
+        assert!(w.enemies[b].shielded, "your older self cannot be hurt here");
+        // all three held: the boss is gone
+        for k in 0..3 {
+            for _ in 0..ch.need {
+                w.player.pos = ch.pylons[k];
+                w.player.iframes = 1000;
+                tick(&c, &mut w, idle());
+            }
+        }
+        assert!(!w.enemies[b].alive(), "erased");
     }
 }

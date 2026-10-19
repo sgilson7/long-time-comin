@@ -190,6 +190,9 @@ pub struct Player {
     pub stroke_cooldown: i32,
     /// ticks it is slowed yet (a Cockatrice's gaze)
     pub slowed: i32,
+    /// a push the world gives each tick on top of how it moves (a gust, a
+    /// current)
+    pub shove: V3,
     pub last_ground: V3,
     /// ticks since a hit landed, for the screen's red flash
     pub hurt_age: i32,
@@ -257,6 +260,7 @@ impl Player {
             swimming: false,
             stroke_cooldown: 0,
             slowed: 0,
+            shove: V3::ZERO,
             last_ground: pos,
             hurt_age: 1000,
             stride: 0,
@@ -525,6 +529,8 @@ impl Player {
             self.vel.y = (self.vel.y - g).max(-fall);
         }
 
+        self.vel.x += self.shove.x;
+        self.vel.z += self.shove.z;
         let was_grounded = self.grounded;
         self.collide_move(level);
         if self.grounded && self.pounding {
