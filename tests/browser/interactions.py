@@ -36,10 +36,11 @@ copied from the game's own output:
 - the faint practice marks in the Holding start in the last zone a run
   crosses (the god's) and in the last mission's home (Chumbles), and
   abandoning either returns to the Holding with no death added.
-- the Holding's timeline draws the main line's years and the river's two
-  (the Water Gap and the sealed Far Shore); a new record may start only in
-  2031, and the river's line is shut until the Executor is beaten and its
-  kit bought; the test save opens it.
+- the Holding's map (a button) draws the main line's five years and the
+  river's three; a new record may start only in 2031, and the river's line
+  is shut until the Executor is beaten and its kit bought; the test save
+  opens it. A year on the map shows its walkthrough, whose Start here
+  starts a run there; Back returns to the map, and Esc to the Holding.
 - the test save (clicked twice, as it asks) owns all 41 upgrades, so the
   Carry in row offers all 7 guns (the Carbine and the six Exhibits), and opens
   the boss rush, whose first arena is the Bailiff's, "The Court of Hours".
@@ -91,10 +92,25 @@ def run(page, check, engine):
     check(page.inner_text("#m-counts") == "0 / 10", f"no count read yet ({page.inner_text('#m-counts')!r})")
     sealed = page.query_selector_all("#m-route li.sealed")
     check(len(sealed) == 0, f"no zone sealed in this build ({len(sealed)})")
+    click(page, "#open-map")
+    check(mode(page) == "atlas", f"the map opens from the Holding ({mode(page)})")
+    years = page.query_selector_all("#timeline-nodes .year")
+    check(len(years) == 8, f"eight years on the map ({len(years)})")
     later = page.query_selector_all("#timeline-nodes .year.open")
     check(len(later) == 1, f"a new record can start only in 2031 ({len(later)})")
     river = page.query_selector_all("#timeline-nodes .year.river")
     check(len(river) == 3 and page.is_disabled("#timeline-lines .line.river"), f"the river's timeline is drawn and shut ({len(river)})")
+    click(page, "#timeline-nodes .year:has-text('2046')")
+    check(mode(page) == "tour", f"a year shows its walkthrough ({mode(page)})")
+    check(page.text_content("#t-name") == "The White Waste", f"of the White Waste ({page.text_content('#t-name')!r})")
+    stops = page.query_selector_all("#t-stops li")
+    check(len(stops) >= 4 and page.inner_text("#t-stop-name") != "", f"its way through, and the stop shown ({len(stops)})")
+    check(page.is_disabled("#tour-start"), "not reached, so it cannot start there")
+    click(page, "#tour-back")
+    check(mode(page) == "atlas", f"back to the map ({mode(page)})")
+    page.keyboard.press("Escape")
+    page.wait_for_timeout(300)
+    check(mode(page) == "holding", f"and Esc to the Holding ({mode(page)})")
 
     click(page, "#holding .open-codex")
     check(page.is_visible("#codex"), "the Codex opens from the Holding")
@@ -179,9 +195,11 @@ def run(page, check, engine):
     page.reload()
     page.wait_for_selector("body[data-ready='true']", state="attached", timeout=20000)
     click(page, "#begin")
+    click(page, "#open-map")
     later = page.query_selector_all("#timeline-nodes .year.open")
     check(len(later) == 2, f"one more start, on the ice ({len(later)})")
     click(page, "#timeline-nodes .year.open:has-text('2046')")
+    click(page, "#tour-start")
     check(mode(page) == "play", f"it plays ({mode(page)})")
     page.wait_for_timeout(500)
     check(page.text_content("#h-zone") == "The White Waste", f"in the White Waste ({page.text_content('#h-zone')!r})")
@@ -204,10 +222,12 @@ def run(page, check, engine):
     page.reload()
     page.wait_for_selector("body[data-ready='true']", state="attached", timeout=20000)
     click(page, "#begin")
+    click(page, "#open-map")
     page.wait_for_selector("#timeline-nodes .year.open", timeout=10000)
     later = page.query_selector_all("#timeline-nodes .year.open")
     check(len(later) == 3, f"two more starts, on the ice and in the house ({len(later)})")
     click(page, "#timeline-nodes .year.open:has-text('2056')")
+    click(page, "#tour-start")
     check(mode(page) == "play", f"it plays ({mode(page)})")
     page.wait_for_timeout(500)
     check(page.text_content("#h-zone") == "The Glass House", f"in the Glass House ({page.text_content('#h-zone')!r})")
@@ -265,8 +285,11 @@ def run(page, check, engine):
     page.wait_for_timeout(300)
     owned = page.query_selector_all("#upgrades .upgrade.owned")
     check(len(owned) == 41, f"the test save owns every upgrade ({len(owned)})")
+    click(page, "#open-map")
     check(page.is_enabled("#timeline-lines .line.river"), "and opens the river's timeline")
-    check(page.is_enabled("#timeline-nodes .year.river:has-text('2066')"), "its Water Gap a start")
+    gap = page.get_attribute("#timeline-nodes .year.river:has-text('2066')", "class")
+    check("open" in gap, f"its Water Gap a start ({gap})")
+    click(page, "#atlas-close")
     check(page.is_visible("#start-rush"), "and opens the boss rush")
     check(page.is_visible("#start-mission"), "and the last mission")
     carry = page.query_selector_all("#carry-guns .carry-gun")
