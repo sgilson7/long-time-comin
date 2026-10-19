@@ -272,6 +272,7 @@ BREAKS = [
  ("far: a rogue wave rolls past the line before it comes again", "crates/core/src/arena/sea/hurricane.rs", "        let speed = ROGUE_SPEED;", "        let speed = ROGUE_SPEED / 2;", "a_rogue_wave_lifts_no_ship"),
  ("far: the Hurricane has its waves", "crates/core/src/arena/sea/hurricane.rs", "        self.rogue_wave(v3(ONE, 0, ROGUE_SLANT), ROGUE_PHASE);", "", "the_hurricane_is_crossed_through"),
  ("far: the waves are drawn", "crates/core/src/draw/waves.rs", "    let Some(k) = &w.course else { return };", "    let Some(k) = w.course.as_ref().filter(|_| false) else { return };", "the_hurricanes_waves_draw"),
+ ("far: the start boat rides the rogue", "crates/core/src/arena/sea/hurricane.rs", "        self.jolly_boat(a.stern, a.crest());", "", "the_boat_you_start_on_rides"),
 ]
 
 

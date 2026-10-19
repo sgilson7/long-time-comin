@@ -365,24 +365,17 @@ impl B<'_> {
         });
     }
 
-    /// The boat you come aboard from, astern of the rearmost ship: a fixed
-    /// raft of planks, its top at `top`, its bow at `z`.
+    /// The boat you come aboard from, astern of the rearmost ship: still
+    /// on the swell but lifted with the rest when a rogue wave comes
+    /// through, its top at `top`, its bow at `z`.
     fn jolly_boat(&mut self, z: i32, top: i32) {
-        self.solids
-            .push(Solid::new(v3(-m(2), top - m(1), z), v3(m(2), top, z + m(8))));
-        let hull = self.c("hull");
-        let dark = self.c("hull_dark");
-        self.deco(
-            Mesh::Cube,
-            v3(0, top - dm(2), z + m(4)),
-            v3(m(4), dm(4), m(8)),
-            hull,
-        );
-        self.deco(
-            Mesh::Blob,
-            v3(0, top - dm(8), z + m(4)),
-            v3(m(5), dm(16), m(9)),
-            dark,
+        self.ship_deck(
+            v3(-m(2), top - m(1), z),
+            v3(m(2), top, z + m(8)),
+            0,
+            V3::ZERO,
+            300,
+            0,
         );
     }
 
@@ -568,5 +561,30 @@ mod tests {
                 assert_eq!(k.waves.lift_of(i, tick), 0, "mover {i} at {tick}");
             }
         }
+    }
+
+    #[test]
+    fn the_boat_you_start_on_rides_the_rogue_wave_with_the_ships() {
+        let (_, w) = course_world_in("far_shore", "hurricane");
+        let k = w.course.as_ref().unwrap();
+        let start = k.posts[0];
+        let (i, boat) = k
+            .movers
+            .iter()
+            .enumerate()
+            .find(|(_, m)| {
+                let b = &m.base;
+                m.look == Look::Deck
+                    && b.min.x <= start.x
+                    && start.x <= b.max.x
+                    && b.min.z <= start.z
+                    && start.z <= b.max.z
+            })
+            .expect("the boat under the start is a deck on the sea");
+        let most = (0..crate::balance::ROGUE_PERIOD)
+            .map(|t| k.waves.corner(i, boat, t).y - boat.corner(t).y)
+            .max()
+            .unwrap_or(0);
+        assert!(most > crate::balance::ROGUE_HEIGHT / 2, "the boat lifted {most}");
     }
 }

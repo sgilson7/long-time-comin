@@ -1605,7 +1605,10 @@ pub(crate) mod tests {
             w.enemies[k.foes[i]].hp = 0;
         }
         tick(&c, &mut w, idle());
-        assert!(!w.course.as_ref().unwrap().flags[2].struck, "one hand still standing");
+        assert!(
+            !w.course.as_ref().unwrap().flags[2].struck,
+            "one hand still standing"
+        );
         w.enemies[k.foes[k.flags[2].crew[0]]].hp = 0;
         tick(&c, &mut w, idle());
         let flags = &w.course.as_ref().unwrap().flags;
@@ -1620,7 +1623,11 @@ pub(crate) mod tests {
         let k = w.course.clone().unwrap();
         let ch = k.chain.clone().expect("the dragon's chain");
         assert_eq!(ch.locks.len(), 3);
-        assert!(ch.perches.len() >= 2, "the flagship's mast tops: {:?}", ch.perches);
+        assert!(
+            ch.perches.len() >= 2,
+            "the flagship's mast tops: {:?}",
+            ch.perches
+        );
         let dragon = k.foes[ch.dragon];
         let e = &w.enemies[dragon];
         assert!(e.shielded && e.leash.is_some(), "on its chain");

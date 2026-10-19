@@ -252,3 +252,12 @@ The request is in `BRIEF.md`; the design and Sam's defaults are the journal's Fa
 - **The flow**: the Oak's fall reads THE ANOMALY and the next run on the River starts on the Far Shore; Dagon's fall reads THE DESCENT, and the next the Vault; the Eraser reads THE GREY ENDING (art `grey_ending.png`) and banks a river win. Each later start on the River's timeline opens once the boss before it has fallen.
 - **Art**: `anomaly.png`, `descent.png`, `grey_ending.png`, `ship_side`; `draw/sea.rs` models for the fleet, its beasts, Dagon and the Vault's machines.
 - Built in parts: the Fleet, the Hurricane, the Maelstrom and the Eye, the Vault, and the models by agents in their own worktrees, each proving its section with the Pilot.
+
+## Round 19: colours, the chain, and the waves (2026-10-19)
+
+The request is in `BRIEF.md`; SECOND-ORDER R19, G1 to G6, B19, T19.
+
+- **The Captured Dragon** (was the Enslaved Dragon).
+- **Struck colours** (`Course::flags`, `B::fly_colours`): each crewed ship of the Fleet flies red colours, struck when her crew is down, with a count; the hint says the way on opens when all seven have struck.
+- **The dragon's chain** (`Course::chain`, `B::chain_dragon`, `Enemy::leash`, `CHAIN_LEASH`): three Chain Locks at the flagship's mainmast foot; while any holds, the dragon is unhurt, keeps to the flagship's mast tops and swoops within the chain's reach; shot off, it is free and fights in its second phase.
+- **The Hurricane's waves** (`course/waves.rs`, `draw/waves.rs`, `ROGUE_*`, `WASH_*`): a rogue wave lifting each ship in turn as it rolls through, and green washes over the decks to jump; the boat you start on rides them too.
