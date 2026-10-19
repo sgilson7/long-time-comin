@@ -513,3 +513,9 @@ pub const SLOWED_PCT: i32 = 50;
 pub const SLOWED_TICKS: i32 = secs(1, 1);
 /// a gust's rain slants this long before it blows
 pub const WARN: i32 = secs(1, 1);
+
+/// how far the Captured Dragon reaches from the mainmast on its chain
+pub const CHAIN_LEASH: i32 = 24 * ONE;
+
+/// how near the chained dragon's mast the HUD says how to free it
+pub const DRAGON_HINT_NEAR: i32 = 40 * ONE;

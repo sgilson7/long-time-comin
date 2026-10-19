@@ -1961,6 +1961,50 @@
         "dur": 0.15,
         "gain": 0.35
       }
+    ],
+    "struck": [
+      {
+        "type": "osc",
+        "wave": "sine",
+        "from": 660,
+        "to": 660,
+        "at": 0,
+        "attack": 0.005,
+        "dur": 0.5,
+        "gain": 0.35
+      },
+      {
+        "type": "osc",
+        "wave": "sine",
+        "from": 495,
+        "to": 495,
+        "at": 0.18,
+        "attack": 0.005,
+        "dur": 0.7,
+        "gain": 0.3
+      }
+    ],
+    "roar": [
+      {
+        "type": "noise",
+        "filter": "lowpass",
+        "freq": 500,
+        "q": 1.2,
+        "at": 0,
+        "attack": 0.08,
+        "dur": 1.2,
+        "gain": 0.55
+      },
+      {
+        "type": "osc",
+        "wave": "sawtooth",
+        "from": 160,
+        "to": 70,
+        "at": 0,
+        "attack": 0.05,
+        "dur": 1.1,
+        "gain": 0.25
+      }
     ]
   }
 }

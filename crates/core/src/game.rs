@@ -1381,6 +1381,12 @@ impl Game {
                     && (p.pos.y - d.solid.max.y).abs() < int(6)
             })
         });
+        // by the flagship while the dragon is on its chain: how it is freed
+        let chained = w
+            .course
+            .as_ref()
+            .and_then(|k| k.chain.as_ref())
+            .is_some_and(|ch| !ch.free && p.pos.sub(ch.mast).len_xz() < DRAGON_HINT_NEAR);
         let hint = match node.kind {
             NodeKind::Arrival | NodeKind::Fight if rotten => c.say("hint_rotten"),
             NodeKind::Boss if learning => c.say("hint_song"),
@@ -1390,6 +1396,7 @@ impl Game {
             NodeKind::Boss if course && fresh(0) && w.course.as_ref().is_some_and(|k| k.oak.is_some()) => {
                 c.say("hint_oak")
             }
+            NodeKind::Arrival | NodeKind::Fight if chained => c.say("hint_dragon"),
             NodeKind::Arrival | NodeKind::Fight if course && fresh(0) && node.archetype == "fleet" => {
                 c.say("hint_fleet")
             }

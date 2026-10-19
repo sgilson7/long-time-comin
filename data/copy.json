@@ -329,7 +329,10 @@
   "callout_pylon": "PYLON CHARGED",
   "hint_eraser": "Stand in the lit pylon's ring to charge the Eraser. Your older self cannot be hurt here: hold on until it fires.",
   "hint_maelstrom": "Under the water: Space again to swim up. The current pulls you toward the eye.",
-  "hint_fleet": "Seven ships, seven crews. Clear them all and the way on opens. Their masts and yards take the hook.",
+  "hint_fleet": "Seven ships, seven crews. Fell a ship's crew and she strikes her colours; when all seven have struck, the way on opens at the flagship's bow. Their masts and yards take the hook.",
   "hint_hurricane": "The rain slants before a gust shoves you; lightning marks its circle first. Work forward, ship to ship, to the flagship's bow.",
-  "hint_halls": "The Vault's machines wake as you pass. Fell them all and the far door opens."
+  "hint_halls": "The Vault's machines wake as you pass. Fell them all and the far door opens.",
+  "callout_struck": "She strikes her colours: {n} of {of}.",
+  "callout_dragon_free": "The chain breaks. The dragon is free!",
+  "hint_dragon": "The dragon can't be hurt on its chain. Shoot the three brass locks at the mainmast's foot to free it, then bring it down."
 }

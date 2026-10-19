@@ -170,6 +170,8 @@ pub struct Enemy {
     pub stagger_len: i32,
     /// never hurt (the Gallows Oak)
     pub shielded: bool,
+    /// held within this far of a point (the Captured Dragon on its chain)
+    pub leash: Option<(V3, i32)>,
 }
 
 /// What an enemy did this tick that the world must act on.
@@ -260,6 +262,7 @@ impl Enemy {
             stagger: 0,
             stagger_len: d.stagger.max(1),
             shielded: d.kind == Kind::Oak,
+            leash: None,
         }
     }
 
@@ -1049,8 +1052,14 @@ impl Enemy {
         if self.moves % SWOOP_EVERY == 0 {
             // through where you stand, and on past
             let way = target.sub(self.pos).norm();
+            let mut to = target.add(way.scale(SWOOP_PAST));
+            if let Some((at, reach)) = self.leash {
+                // no further than its chain lets it
+                let off = v3(to.x - at.x, 0, to.z - at.z).clamp_len(reach);
+                to = v3(at.x + off.x, to.y, at.z + off.z);
+            }
             self.diving = true;
-            self.fly_to(target.add(way.scale(SWOOP_PAST)), SWOOP_SPEED);
+            self.fly_to(to, SWOOP_SPEED);
         } else {
             self.fly_to(self.perches[self.perch], PERCH_GLIDE);
         }

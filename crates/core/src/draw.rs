@@ -1164,6 +1164,44 @@ fn course(b: &mut Batch, c: &Content, w: &World) {
                 }
             }
         }
+        // each ship's colours at her masthead, black on red, until her
+        // crew is down: then struck, a white rag at the mast's foot
+        let red = c.pal.c("pirate_red");
+        let bone = c.pal.c("fauna_antler");
+        for f in &k.flags {
+            let Some((_, s)) = k.movers.get(f.mast).and_then(|m| solid_of(m.dynamic)) else {
+                continue;
+            };
+            let mid = s.centre();
+            let flap = fx::mul(fx::sin(w.tick * fx::TURN / 40), dm(3));
+            if f.struck {
+                let at = v3(mid.x + dm(6), s.min.y + int(1), mid.z);
+                b.inked(Mesh::Cube, &boxed(at, v3(dm(9), dm(6), dm(1))), bone, 0);
+            } else {
+                let at = v3(mid.x + int(1) + dm(3), s.max.y + int(1), mid.z + flap);
+                b.inked(
+                    Mesh::Cube,
+                    &boxed(at, v3(int(2) + dm(4), int(1) + dm(4), dm(1))),
+                    red,
+                    0,
+                );
+                b.inked(
+                    Mesh::Sphere,
+                    &boxed(at.add(v3(0, 0, -dm(1))), v3(dm(5), dm(5), dm(1))),
+                    bone,
+                    0,
+                );
+                b.inked(
+                    Mesh::Cyl,
+                    &boxed(
+                        v3(mid.x, s.max.y + int(1), mid.z),
+                        v3(dm(1), int(2) + dm(4), dm(1)),
+                    ),
+                    rail,
+                    0,
+                );
+            }
+        }
         // the storm: lightning marked where it will strike, then the bolt
         let bolt = c.pal.c("lightning");
         if let Some(st) = k.storm {

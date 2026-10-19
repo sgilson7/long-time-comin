@@ -205,6 +205,8 @@ impl B<'_> {
         self.crew_member(v3(m(2), h + m(23), -m(218)), "captured_dragon");
         self.line(Step::To(v3(-m(6), h, -m(238))));
         self.way_on(-m(4), h, -m(242));
+        self.fly_colours();
+        self.chain_dragon("captured_dragon", "chain_lock");
         self.k().fought = true;
         // a wave, if the section has one, comes in on the decks
         for (x, z) in [

@@ -7,7 +7,7 @@ copied from the game's own output:
 
 - story.json's sentencing has 5 lines; its indictment has 10 counts.
 - the Codex has 5 tabs (copy.json codex_tabs), 19 control rows
-  (copy.json controls), 7 guns (weapons.json) and 76 enemies (enemies.json:
+  (copy.json controls), 7 guns (weapons.json) and 77 enemies (enemies.json:
   the 43 of the first four zones, then zone five's seven, the Recursion's
   two smaller orders, the Idiot God, and the last mission's ball of yarn
   and Chumbles, then the Water Gap's three emitters, the Gallows Oak and
@@ -106,7 +106,7 @@ def run(page, check, engine):
     check(len(guns) == 7, f"seven guns ({len(guns)})")
     click(page, "#codex-tabs .tab:nth-child(3)")
     foes = page.query_selector_all("#codex-body .codex-card")
-    check(len(foes) == 76, f"seventy-six enemies ({len(foes)})")
+    check(len(foes) == 77, f"seventy-seven enemies ({len(foes)})")
     body = page.inner_text("#codex-body")
     check("{" not in body, "no unfilled placeholder in the Codex")
     click(page, "#codex-close")

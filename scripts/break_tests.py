@@ -259,6 +259,9 @@ BREAKS = [
  ("far: the boss comes where the course puts it", "crates/core/src/world.rs", "            .filter(|_| matches!(d.kind, Kind::Boss | Kind::Double))", "            .filter(|_| false)", "dagon_and_your_older_self"),
  ("far: the Vault rests in the Lock", "crates/core/src/arena/vault.rs", "            \"rest\" => self.the_lock(),", "", "the_vaults_rest_is_the_lock"),
  ("far: a section's own sky", "crates/core/src/game.rs", "            .and_then(|n| z.scenes.get(&n.archetype))", "            .and_then(|_| None)", "the_hurricane_has_its_own"),
+ ("far: a ship strikes her colours", "crates/core/src/course.rs", "            if !k.flags[n].struck && k.flags[n].crew.iter().all(down) {", "            if false {", "each_ship_of_the_fleet_strikes"),
+ ("far: the dragon is held by its locks", "crates/core/src/course.rs", "                .any(|&l| foe(l).is_some_and(|f| self.enemies[f].alive()));", "                .any(|_| false);", "the_captured_dragon_keeps_to_its_chain"),
+ ("far: the chain's reach", "crates/core/src/enemy.rs", "            if let Some((at, reach)) = self.leash {", "            if let Some((at, reach)) = self.leash.filter(|_| false) {", "on_its_chain_the_dragon_swoops"),
 ]
 
 

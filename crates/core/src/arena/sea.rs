@@ -14,7 +14,7 @@
 //! Dagon rising in the middle.
 
 use super::{dm, m, B};
-use crate::course::{Course, Gust, Look, Mover, Storm, Underwater};
+use crate::course::{Chain, Course, Flag, Gust, Look, Mover, Storm, Underwater};
 use crate::fx::{self, ONE};
 use crate::geom::{v3, V3};
 use crate::level::{Dyn, Solid};
@@ -176,6 +176,82 @@ impl B<'_> {
     }
 
     /// A crew member, on board from the start, waking as you come near.
+    /// Each crewed ship's colours on her tallest mast, her crew those
+    /// standing over her deck (a lookout in her rigging, the dragon on her
+    /// mast). Called once the fleet and its crews are laid.
+    pub(super) fn fly_colours(&mut self) {
+        let k = self.k();
+        let over = |s: &Solid, p: V3| {
+            p.x >= s.min.x - ONE && p.x <= s.max.x + ONE && p.z >= s.min.z - ONE && p.z <= s.max.z + ONE
+        };
+        let mut flags = Vec::new();
+        for (deck, d) in k.movers.iter().enumerate().filter(|(_, d)| d.look == Look::Deck) {
+            let mast = k
+                .movers
+                .iter()
+                .enumerate()
+                .filter(|(_, m)| m.look == Look::Mast && over(&d.base, m.base.centre()))
+                .max_by_key(|(_, m)| m.base.max.y)
+                .map(|(i, _)| i);
+            let crew: Vec<usize> = (0..k.emitters.len())
+                .filter(|&i| over(&d.base, k.emitters[i].pos))
+                .collect();
+            if let (Some(mast), false) = (mast, crew.is_empty()) {
+                flags.push(Flag {
+                    deck,
+                    mast,
+                    crew,
+                    struck: false,
+                });
+            }
+        }
+        k.flags = flags;
+    }
+
+    /// The Captured Dragon chained to the mainmast of the ship it sits
+    /// over: three locks round the mast's foot, its perches her mast tops.
+    pub(super) fn chain_dragon(&mut self, dragon: &str, lock: &str) {
+        let k = self.k();
+        let Some(d) = k.emitters.iter().position(|e| e.enemy == dragon) else {
+            return;
+        };
+        let Some(f) = k.flags.iter().position(|f| f.crew.contains(&d)) else {
+            return;
+        };
+        let (deck, main) = (k.flags[f].deck, k.flags[f].mast);
+        let foot = {
+            let b = &k.movers[main].base;
+            v3(b.centre().x, b.min.y, b.centre().z)
+        };
+        let perches: Vec<V3> = k
+            .movers
+            .iter()
+            .filter(|m| {
+                m.look == Look::Mast
+                    && k.movers[deck].base.min.x <= m.base.centre().x
+                    && m.base.centre().x <= k.movers[deck].base.max.x
+                    && k.movers[deck].base.min.z <= m.base.centre().z
+                    && m.base.centre().z <= k.movers[deck].base.max.z
+            })
+            .map(|m| v3(m.base.centre().x, m.base.max.y + ONE, m.base.centre().z))
+            .collect();
+        let mut locks = Vec::new();
+        for a in 0..3 {
+            let at = foot.add(crate::geom::facing(fx::TURN / 3 * a, 0).scale(ONE * 3 / 2));
+            locks.push(self.k().emitters.len());
+            self.crew_member(v3(at.x, foot.y, at.z), lock);
+        }
+        let k = self.k();
+        k.flags[f].crew.extend(locks.iter().copied());
+        k.chain = Some(Chain {
+            dragon: d,
+            locks,
+            mast: foot,
+            perches,
+            free: false,
+        });
+    }
+
     pub(super) fn crew_member(&mut self, at: V3, enemy: &str) {
         self.rock_emitter(at.x, at.y, at.z, enemy);
     }

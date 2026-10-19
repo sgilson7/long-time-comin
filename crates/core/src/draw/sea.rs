@@ -34,6 +34,7 @@ pub fn draw(
         "chimera" => chimera(b, c, e, &o, paint),
         "storm_harpy" => storm_harpy(b, c, e, &o, paint),
         "captured_dragon" => dragon(b, c, e, &o, paint),
+        "chain_lock" => chain_lock(b, c, e, &o.feet(d), paint),
         "tentacle" => tentacle(b, c, e, &o.feet(d), paint),
         "dagon" => dagon(b, c, e, &o, paint),
         "custodian" => custodian(b, c, e, &o.feet(d), paint),
@@ -835,6 +836,43 @@ fn storm_harpy(b: &mut Batch, c: &Content, e: &Enemy, o: &Body, paint: &dyn Fn(R
     }
 }
 
+/// A lock on the dragon's chain, made fast round the mainmast's foot: a
+/// brass padlock as big as a chest, its shackle through an iron ring, and
+/// the chain's links going up the mast. It shakes as it is shot.
+fn chain_lock(b: &mut Batch, c: &Content, e: &Enemy, o: &Body, paint: &dyn Fn(Rgb) -> Rgb) {
+    let brass = paint(c.pal.c("brass"));
+    let iron = paint(c.pal.c("iron"));
+    // it shakes for a moment after each hit
+    let rattle = if e.flash < 12 {
+        fx::mul(fx::sin(e.age * fx::TURN / 9), 4)
+    } else {
+        0
+    };
+    b.inked(Mesh::Cube, &o.at([rattle, 40, 0], [80, 60, 36]), brass, 0);
+    b.push(
+        Mesh::Sphere,
+        &o.at([rattle, 34, -19], [14, 18, 6]),
+        shade(brass, 40),
+        0,
+        PASS_SOLID,
+    );
+    let up = Affine::rot_x(deg(90));
+    b.inked(Mesh::Ring, &o.place([rattle, 84, 0], &up, [56, 56, 14]), brass, 0);
+    for k in 0..3 {
+        let turn = if k % 2 == 0 {
+            Affine::rot_x(deg(90))
+        } else {
+            Affine::rot_y(deg(90)).then(&Affine::rot_x(deg(90)))
+        };
+        b.inked(
+            Mesh::Ring,
+            &o.place([0, 124 + k * 34, 0], &turn, [34, 44, 10]),
+            iron,
+            0,
+        );
+    }
+}
+
 /// The Captured Dragon: a great wyvern of the fleet, an iron collar on
 /// its neck with three brass locks and a chain trailing down from it to
 /// the mast. Freed, the locks are gone and a stub of chain swings. Its
@@ -1437,7 +1475,7 @@ mod tests {
         (mine, b.count())
     }
 
-    const BUDGETS: [(&str, usize); 15] = [
+    const BUDGETS: [(&str, usize); 16] = [
         ("deckhand", 50),
         ("gunner", 50),
         ("powder_monkey", 50),
@@ -1448,6 +1486,7 @@ mod tests {
         ("storm_harpy", 50),
         ("drowned", 50),
         ("captured_dragon", 120),
+        ("chain_lock", 20),
         ("tentacle", 40),
         ("dagon", 220),
         ("custodian", 50),
