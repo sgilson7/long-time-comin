@@ -216,3 +216,5 @@ Checked locally: fmt, clippy with warnings as errors, 340 core and 11 boundary t
 Live (2026-10-19): PR #20 passed its check on CI (run 39312525003, the browser check included) and merged as 70a55cd; main's run 39313401725 passed check and deploy, and the live `data/enemies.json` holds the Archivist.
 
 Round 21's flicker analysis (SECOND-ORDER L1 to L3; by an agent): z-fighting found by a detector over every section of every zone and by frame sequences of every walkthrough in the browser, fixed at the source, and held by a test with no section left out. Its agent's `./scripts/check.sh` passed in three engines.
+
+Live (2026-10-19): PR #21 passed its check on CI (run 39320323802) and merged as f4d2eff; main's run 39321069279 passed check and deploy, and the live `data/shaders/scene.vert` carries the outline and glow biases.
