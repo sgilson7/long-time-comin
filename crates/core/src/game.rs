@@ -1377,8 +1377,12 @@ impl Game {
             NodeKind::Boss if course && fresh(0) && w.course.as_ref().is_some_and(|k| k.charge.is_some()) => {
                 c.say("hint_eraser")
             }
-            NodeKind::Boss if course && fresh(0) && w.course.as_ref().is_some_and(|k| k.oak.is_some()) => c.say("hint_oak"),
-            NodeKind::Arrival | NodeKind::Fight if course && fresh(0) && node.archetype == "fleet" => c.say("hint_fleet"),
+            NodeKind::Boss if course && fresh(0) && w.course.as_ref().is_some_and(|k| k.oak.is_some()) => {
+                c.say("hint_oak")
+            }
+            NodeKind::Arrival | NodeKind::Fight if course && fresh(0) && node.archetype == "fleet" => {
+                c.say("hint_fleet")
+            }
             NodeKind::Arrival | NodeKind::Fight if course && fresh(0) && node.archetype == "maelstrom" => {
                 c.say("hint_maelstrom")
             }
@@ -3098,12 +3102,15 @@ pub(crate) mod tests {
         let vault = g.c.zones.iter().position(|z| z.id == "vault").unwrap();
         assert!(!g.meta.branch_open(&g.c, far), "not before the Oak");
         g.start_on("river", far);
-        assert_ne!(g.run.as_ref().unwrap().zone, far, "a refused start begins in 2031");
+        assert_ne!(
+            g.run.as_ref().unwrap().zone,
+            far,
+            "a refused start begins in 2031"
+        );
         g.meta.beat("gallows_oak");
         assert!(g.meta.branch_open(&g.c, far));
         assert!(!g.meta.branch_open(&g.c, vault), "not before Dagon");
         g.meta.beat("dagon");
         assert!(g.meta.branch_open(&g.c, vault));
     }
-
 }

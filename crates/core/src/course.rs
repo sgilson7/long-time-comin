@@ -406,6 +406,20 @@ impl World {
             d.solid.max = d.solid.max.add(delta);
             if riding {
                 self.player.pos = self.player.pos.add(delta);
+            } else if delta.y > 0 {
+                // rising into a body coming down on it: the body lands on
+                // its top, not thrown out of its side
+                let b = &self.player;
+                let (bmin, bmax) = body(b.pos);
+                let over = d.solid.min.x < bmax.x
+                    && d.solid.max.x > bmin.x
+                    && d.solid.min.z < bmax.z
+                    && d.solid.max.z > bmin.z;
+                if over && b.pos.y >= top - ONE / 4 && b.pos.y < d.solid.max.y {
+                    self.player.pos.y = d.solid.max.y;
+                    self.player.vel.y = 0;
+                    self.player.grounded = true;
+                }
             }
             if delta != V3::ZERO {
                 for e in self.enemies.iter_mut().filter(|e| e.alive()) {
@@ -1461,7 +1475,10 @@ pub(crate) mod tests {
             tick(&c, &mut w, idle());
         }
         let q = w.enemies[rider].pos;
-        assert!(q.x.abs() < int(4) && (q.z + int(44)).abs() > int(4), "the crewman rode it too: {q:?}");
+        assert!(
+            q.x.abs() < int(4) && (q.z + int(44)).abs() > int(4),
+            "the crewman rode it too: {q:?}"
+        );
         // a quarter of a turn: from the east of the point to its north or south
         let p = w.player.pos;
         assert!(
@@ -1552,8 +1569,14 @@ pub(crate) mod tests {
         let p = c.patterns.iter().position(|p| p.id == "gaze_wall").unwrap();
         assert!(c.patterns[p].volleys[0].slow);
         let chest = w.player.chest();
-        let mut o = crate::orbs::formation_for_test(&c.patterns[p].volleys[0], chest.add(v3(0, 0, -int(6))), chest, 0, &c.pal)
-            .remove(0);
+        let mut o = crate::orbs::formation_for_test(
+            &c.patterns[p].volleys[0],
+            chest.add(v3(0, 0, -int(6))),
+            chest,
+            0,
+            &c.pal,
+        )
+        .remove(0);
         o.pos = chest;
         o.prev = chest;
         o.wait = 0;
@@ -1563,4 +1586,41 @@ pub(crate) mod tests {
         assert!(w.player.top_speed() < full, "and slower");
     }
 
+    #[test]
+    fn a_deck_rising_into_a_body_coming_down_on_it_lands_it_on_top_not_off_the_side() {
+        let (c, mut w) = course_world("spillway");
+        let base = Solid::new(v3(-int(4), int(16), -int(48)), v3(int(4), int(18), -int(40)));
+        let i = w.arena.level.add_dynamic(Dyn {
+            solid: base,
+            on: true,
+            one_way: false,
+        });
+        // rising fast at the start of its breath
+        w.course
+            .as_mut()
+            .unwrap()
+            .movers
+            .push(Mover::breathing(i, base, int(6), 120, fx::TURN / 4));
+        let mut landed = false;
+        // just over its top at the top of a jump, as it comes up fast
+        tick(&c, &mut w, idle());
+        let top = w.arena.level.dynamic[i].solid.max.y;
+        w.player.pos = v3(0, top + ONE / 50, -int(42));
+        // and coming in fast along it, as off a Bound Over
+        w.player.vel = v3(0, ONE / 100, -ONE * 3 / 10);
+        w.player.grounded = false;
+        for _ in 0..90 {
+            tick(&c, &mut w, idle());
+            let top = w.arena.level.dynamic[i].solid.max.y;
+            if w.player.grounded && (w.player.pos.y - top).abs() <= ONE / 20 {
+                landed = true;
+            }
+            let p = w.player.pos;
+            assert!(p.z < -int(42) + ONE / 2, "never thrown back off its side: {p:?}");
+            if landed {
+                break;
+            }
+        }
+        assert!(landed);
+    }
 }
