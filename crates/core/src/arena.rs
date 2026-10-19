@@ -2166,6 +2166,14 @@ mod size {
             ("water_gap", "shallows"),
             ("water_gap", "rest"),
             ("water_gap", "boss"),
+            ("far_shore", "fleet"),
+            ("far_shore", "hurricane"),
+            ("far_shore", "rest"),
+            ("far_shore", "maelstrom"),
+            ("far_shore", "boss"),
+            ("vault", "shaft"),
+            ("vault", "halls"),
+            ("vault", "boss"),
         ];
         for (zone, kind) in kinds {
             let a = build_at(zone, kind, 9, &[Side::North, Side::East], &c.pal, int(200));

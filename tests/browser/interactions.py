@@ -7,7 +7,7 @@ copied from the game's own output:
 
 - story.json's sentencing has 5 lines; its indictment has 10 counts.
 - the Codex has 5 tabs (copy.json codex_tabs), 19 control rows
-  (copy.json controls), 7 guns (weapons.json) and 60 enemies (enemies.json:
+  (copy.json controls), 7 guns (weapons.json) and 76 enemies (enemies.json:
   the 43 of the first four zones, then zone five's seven, the Recursion's
   two smaller orders, the Idiot God, and the last mission's ball of yarn
   and Chumbles, then the Water Gap's three emitters, the Gallows Oak and
@@ -94,7 +94,7 @@ def run(page, check, engine):
     later = page.query_selector_all("#timeline-nodes .year.open")
     check(len(later) == 1, f"a new record can start only in 2031 ({len(later)})")
     river = page.query_selector_all("#timeline-nodes .year.river")
-    check(len(river) == 2 and page.is_disabled("#timeline-lines .line.river"), f"the river's timeline is drawn and shut ({len(river)})")
+    check(len(river) == 3 and page.is_disabled("#timeline-lines .line.river"), f"the river's timeline is drawn and shut ({len(river)})")
 
     click(page, "#holding .open-codex")
     check(page.is_visible("#codex"), "the Codex opens from the Holding")
@@ -106,7 +106,7 @@ def run(page, check, engine):
     check(len(guns) == 7, f"seven guns ({len(guns)})")
     click(page, "#codex-tabs .tab:nth-child(3)")
     foes = page.query_selector_all("#codex-body .codex-card")
-    check(len(foes) == 60, f"sixty enemies ({len(foes)})")
+    check(len(foes) == 76, f"seventy-six enemies ({len(foes)})")
     body = page.inner_text("#codex-body")
     check("{" not in body, "no unfilled placeholder in the Codex")
     click(page, "#codex-close")
