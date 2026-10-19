@@ -165,7 +165,16 @@ impl B<'_> {
             0,
             true,
         );
-        self.rod(a.add(v3(0, h, 0)), b.add(v3(0, h, 0)), dm(2), chrome, false);
+        // the cap overhangs the glass a little at each end, so its ends do
+        // not lie in the wall's
+        let over = along.scale(ONE * 3 / 100);
+        self.rod(
+            a.add(over).add(v3(0, h, 0)),
+            b.sub(over).add(v3(0, h, 0)),
+            dm(2),
+            chrome,
+            false,
+        );
     }
 
     /// The Eraser: a white dais with a step up from the south, two chrome

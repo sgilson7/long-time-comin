@@ -759,7 +759,7 @@ mod tests {
     /// boss, `arena/vault/eraser.rs`) is being rebuilt elsewhere; when this
     /// was written one fight stood there, a pylon's chrome post with a side
     /// in the plane of its black glass base's (151 cm², facing south-west).
-    const LEFT_OUT: &[(&str, &str)] = &[("vault", "boss")];
+    const LEFT_OUT: &[(&str, &str)] = &[];
 
     /// Every section of every built zone: what fights, counted.
     #[test]

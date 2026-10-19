@@ -349,6 +349,7 @@ BREAKS = [
  ("flicker: cornices, signs and awnings kept clear", "crates/core/src/arena.rs", "        let near = dm(1) * 15 / 100;", "        let near = 0;", "no_section_of_any_zone"),
  ("flicker: the house's window arch behind the window", "crates/core/src/arena/house.rs", "Affine::translate(at(mid, m(11) + dm(5), -dm(1) + dm(1) / 5))", "Affine::translate(at(mid, m(11) + dm(5), -dm(1)))", "no_section_of_any_zone"),
  ("flicker: the bedroom's boards a centimetre in", "crates/core/src/arena/home.rs", "                    self.h_flat([a + 1, 0, r[1] + 1], [b - 1, 1, r[3] - 1], alt);", "                    self.h_flat([a, 0, r[1]], [b, 1, r[3]], alt);", "no_section_of_any_zone"),
+ ("flicker: the Eraser's cover walls' caps overhang", "crates/core/src/arena/vault/eraser.rs", "        let over = along.scale(ONE * 3 / 100);", "        let over = V3::ZERO;", "no_section_of_any_zone_draws_two_surfaces"),
 ]
 
 
