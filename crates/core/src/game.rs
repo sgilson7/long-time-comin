@@ -1374,7 +1374,14 @@ impl Game {
         let hint = match node.kind {
             NodeKind::Arrival | NodeKind::Fight if rotten => c.say("hint_rotten"),
             NodeKind::Boss if learning => c.say("hint_song"),
-            NodeKind::Boss if course && fresh(0) => c.say("hint_oak"),
+            NodeKind::Boss if course && fresh(0) && w.course.as_ref().is_some_and(|k| k.charge.is_some()) => {
+                c.say("hint_eraser")
+            }
+            NodeKind::Boss if course && fresh(0) && w.course.as_ref().is_some_and(|k| k.oak.is_some()) => c.say("hint_oak"),
+            NodeKind::Arrival | NodeKind::Fight if course && fresh(0) && node.archetype == "fleet" => c.say("hint_fleet"),
+            NodeKind::Arrival | NodeKind::Fight if course && fresh(0) && node.archetype == "maelstrom" => {
+                c.say("hint_maelstrom")
+            }
             NodeKind::Arrival | NodeKind::Fight if course && fresh(0) => c.say("hint_course"),
             NodeKind::Arrival | NodeKind::Fight if course => String::new(),
             NodeKind::Arrival if first && fresh(0) => c.say("hint_mission"),
@@ -3083,4 +3090,20 @@ pub(crate) mod tests {
         let s: Value = serde_json::from_str(&g.screen_json()).unwrap();
         assert_eq!(s["verdict"]["title"], "THE GREY ENDING");
     }
+    #[test]
+    fn the_far_shore_starts_once_the_oak_has_burnt_and_the_vault_once_dagon_has_fallen() {
+        let mut g = game_with(RIVER_READY);
+        g.begin();
+        let far = g.c.zones.iter().position(|z| z.id == "far_shore").unwrap();
+        let vault = g.c.zones.iter().position(|z| z.id == "vault").unwrap();
+        assert!(!g.meta.branch_open(&g.c, far), "not before the Oak");
+        g.start_on("river", far);
+        assert_ne!(g.run.as_ref().unwrap().zone, far, "a refused start begins in 2031");
+        g.meta.beat("gallows_oak");
+        assert!(g.meta.branch_open(&g.c, far));
+        assert!(!g.meta.branch_open(&g.c, vault), "not before Dagon");
+        g.meta.beat("dagon");
+        assert!(g.meta.branch_open(&g.c, vault));
+    }
+
 }

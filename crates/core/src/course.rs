@@ -1451,9 +1451,17 @@ pub(crate) mod tests {
         w.course.as_mut().unwrap().movers.push(mv);
         w.player.pos = v3(int(6), int(20), -int(44));
         w.player.grounded = true;
+        // a crewman on it too, asleep where he stands
+        let def = c.enemy("gunner").unwrap();
+        let mut e = crate::enemy::Enemy::new(def, &c.enemies[def], v3(int(7), int(21), -int(45)), 1);
+        e.state = crate::enemy::State::Rest(100_000);
+        w.enemies.push(e);
+        let rider = w.enemies.len() - 1;
         for _ in 0..150 {
             tick(&c, &mut w, idle());
         }
+        let q = w.enemies[rider].pos;
+        assert!(q.x.abs() < int(4) && (q.z + int(44)).abs() > int(4), "the crewman rode it too: {q:?}");
         // a quarter of a turn: from the east of the point to its north or south
         let p = w.player.pos;
         assert!(
@@ -1465,10 +1473,10 @@ pub(crate) mod tests {
 
     #[test]
     fn a_fought_course_opens_only_when_its_crews_are_down_and_one_overboard_drowns() {
-        let (c, mut w) = course_world("spillway");
-        w.course.as_mut().unwrap().fought = true;
-        w.cleared = false;
-        // only this crew: the weir-lamps put out
+        let (c, mut w) = course_world_in("far_shore", "fleet");
+        assert!(w.course.as_ref().unwrap().fought);
+        assert!(!w.cleared, "a fought course begins shut");
+        // only this crew: the ships' own crews put down
         for e in w.enemies.iter_mut() {
             e.hp = 0;
         }
@@ -1537,4 +1545,22 @@ pub(crate) mod tests {
         }
         assert!(!w.enemies[b].alive(), "erased");
     }
+    #[test]
+    fn a_cockatrices_gaze_slows_what_it_hits() {
+        let (c, mut w) = course_world("spillway");
+        let full = w.player.top_speed();
+        let p = c.patterns.iter().position(|p| p.id == "gaze_wall").unwrap();
+        assert!(c.patterns[p].volleys[0].slow);
+        let chest = w.player.chest();
+        let mut o = crate::orbs::formation_for_test(&c.patterns[p].volleys[0], chest.add(v3(0, 0, -int(6))), chest, 0, &c.pal)
+            .remove(0);
+        o.pos = chest;
+        o.prev = chest;
+        o.wait = 0;
+        w.orbs.push(o);
+        tick(&c, &mut w, idle());
+        assert!(w.player.slowed > 0, "slowed");
+        assert!(w.player.top_speed() < full, "and slower");
+    }
+
 }

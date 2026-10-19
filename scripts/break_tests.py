@@ -222,8 +222,8 @@ BREAKS = [
  ("river: a lever opens its gate", "crates/core/src/course.rs", "                level.dynamic[door.dynamic].on = false;", "", "a_lever_hooked_opens"),
  ("river: a gate never shuts on you", "crates/core/src/course.rs", "                        door.left = 1;", "                        d.on = true;", "a_lever_hooked_opens"),
  ("river: a lever answers the hook's strike", "crates/core/src/course.rs", "                    self.hooked.is_some_and(|t| near_box(&sw.at, t, ONE / 2))", "                    self.hooked.is_some_and(|t| near_box(&sw.at, t, -ONE))", "the_spillway_can_be_crossed"),
- ("river: a root rises", "crates/core/src/course.rs", "            let dy = m.base.min.y + off - d.solid.min.y;", "            let dy = 0;", "a_root_rises_and_sinks"),
- ("river: a root carries you down", "crates/core/src/course.rs", "                self.player.pos.y += dy;", "", "a_root_rises_and_sinks"),
+ ("river: a root rises", "crates/core/src/course.rs", "            let delta = m.corner(self.tick).sub(d.solid.min);", "            let delta = V3::ZERO;", "a_root_rises_and_sinks"),
+ ("river: a root carries you down", "crates/core/src/course.rs", "                self.player.pos = self.player.pos.add(delta);", "", "a_root_rises_and_sinks"),
  ("river: a pound breaks rotten timber", "crates/core/src/course.rs", "                level.dynamic[r].on = false;", "", "a_pound_breaks_a_rotten"),
  ("river: a drum-cap doubles the bounce", "crates/core/src/course.rs", "                self.player.vel.y = bounce_speed(h * 2);", "                self.player.vel.y = bounce_speed(h);", "a_pound_breaks_a_rotten"),
  ("river: a curtain's hole", "crates/core/src/orbs.rs", "                    if (hole_i..hole_i + g).contains(&i) && (hole_j..hole_j + g).contains(&j) {", "                    if false {", "a_curtain_leaves_a_hole"),
@@ -237,6 +237,22 @@ BREAKS = [
  ("river: the Husk first", "crates/core/src/enemy.rs", "            self.husk -= damage;", "            self.husk -= 0;\n            self.hp -= damage;", "the_summons_husk"),
  ("river: staggered, double damage", "crates/core/src/enemy.rs", "        let damage = if self.stagger > 0 { damage * 2 } else { damage };", "", "the_summons_husk"),
  ("river: the Husk grows back", "crates/core/src/enemy.rs", "            if self.unhit > d.husk_regen && self.husk < self.husk_max {", "            if false {", "the_summons_husk"),
+
+ # round eighteen: the Far Shore and the Vault
+ ("far: a gust shoves", "crates/core/src/course.rs", "                shove = shove.add(v3(push.x, 0, push.z));", "", "a_gust_shoves"),
+ ("far: the shove reaches the body", "crates/core/src/player.rs", "        self.vel.x += self.shove.x;", "", "a_gust_shoves"),
+ ("far: lightning strikes", "crates/core/src/course.rs", "                    self.player.hurt(st.damage);", "", "lightning_is_marked"),
+ ("far: the current to the eye", "crates/core/src/course.rs", "                shove = shove.add(v3(u.eye.x - p.x, 0, u.eye.z - p.z).norm().scale(u.pull));", "", "under_the_water_you_fall"),
+ ("far: lighter under the water", "crates/core/src/player.rs", "                    GRAVITY * SWIM_GRAVITY_PCT / 100,", "                    GRAVITY,", "under_the_water_you_fall"),
+ ("far: a stroke up", "crates/core/src/player.rs", "            self.vel.y = self.vel.y.max(SWIM_STROKE);", "", "under_the_water_you_fall"),
+ ("far: wreckage turns", "crates/core/src/course.rs", "            let turned = crate::geom::rotate_y(r, self.orbit.wrapping_mul(tick));", "            let turned = r;", "wreckage_turns_round"),
+ ("far: a crew rides its deck", "crates/core/src/course.rs", "                        e.pos = e.pos.add(delta);", "", "wreckage_turns_round"),
+ ("far: overboard is drowned", "crates/core/src/course.rs", "            if e.pos.y < k.water - ENEMY_DROWN {", "            if false {", "a_fought_course_opens"),
+ ("far: a fought course is shut until clear", "crates/core/src/course.rs", "        self.cleared = !k.fought && self.kind != crate::route::NodeKind::Boss;", "        self.cleared = self.kind != crate::route::NodeKind::Boss;", "a_fought_course_opens"),
+ ("far: the Eraser charges in the ring", "crates/core/src/course.rs", "                    ch.held[n] += 1;", "", "the_erasers_charge"),
+ ("far: your older self cannot be hurt", "crates/core/src/course.rs", "                e.shielded = true;", "", "the_erasers_charge"),
+ ("far: the gaze slows", "crates/core/src/world.rs", "                    self.player.slowed = SLOWED_TICKS;", "", "a_cockatrices_gaze"),
+ ("far: later river starts wait for their boss", "crates/core/src/meta.rs", "        self.river_shut(c).is_none() && (first || before.is_some_and(|p| self.beaten.contains(&p.boss)))", "        self.river_shut(c).is_none()", "the_far_shore_starts_once"),
 
 ]
 
