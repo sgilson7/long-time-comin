@@ -80,6 +80,19 @@ impl Solid {
     }
 }
 
+/// A solid that can change while the arena is played: a gate that opens,
+/// a rotten floor that breaks, a root that rises and sinks, a Bench laid in
+/// the air. Few at once, so they are asked one by one, not through the grid.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Dyn {
+    pub solid: Solid,
+    /// there now (a gate shut, a floor whole, a Bench laid)
+    pub on: bool,
+    /// stood on from above only: a body rises through it, shots and orbs
+    /// pass through it, and only a body's fall stops on its top (the Bench)
+    pub one_way: bool,
+}
+
 /// Grid cells are this wide.
 const CELL: i32 = int(8);
 
@@ -92,6 +105,9 @@ pub struct Level {
     /// each solid's first cell, so a query that spans several cells calls
     /// back once per solid without keeping a list of what it has seen
     first: Vec<(i32, i32)>,
+    /// the solids that change, asked after the grid's; their indices follow
+    /// the fixed solids'
+    pub dynamic: Vec<Dyn>,
 }
 
 /// What a ray met first.
@@ -132,7 +148,38 @@ impl Level {
             dims,
             cells,
             first,
+            dynamic: Vec::new(),
         }
+    }
+
+    /// A solid by its index: a fixed one, or a changing one after them.
+    pub fn solid(&self, i: usize) -> &Solid {
+        match i.checked_sub(self.solids.len()) {
+            Some(k) => &self.dynamic[k].solid,
+            None => &self.solids[i],
+        }
+    }
+
+    /// Adds a changing solid; its index among `dynamic`.
+    pub fn add_dynamic(&mut self, d: Dyn) -> usize {
+        self.dynamic.push(d);
+        self.dynamic.len() - 1
+    }
+
+    /// The tops of the one-way solids there now under the box's footprint
+    /// that a body falling from `from_y` to the box's bottom passes down
+    /// through: the highest, if any.
+    pub fn one_way_catch(&self, min: V3, max: V3, from_y: i32) -> Option<i32> {
+        self.dynamic
+            .iter()
+            .filter(|d| d.on && d.one_way)
+            .filter(|d| {
+                let s = d.solid;
+                s.min.x < max.x && s.max.x > min.x && s.min.z < max.z && s.max.z > min.z
+            })
+            .map(|d| d.solid.max.y)
+            .filter(|&top| from_y >= top && min.y < top)
+            .max()
     }
 
     fn cell_of(origin: (i32, i32), dims: (i32, i32), x: i32, z: i32) -> (i32, i32) {
@@ -160,6 +207,17 @@ impl Level {
                         f(i as usize, &self.solids[i as usize]);
                     }
                 }
+            }
+        }
+        let n = self.solids.len();
+        for (k, d) in self.dynamic.iter().enumerate() {
+            let s = &d.solid;
+            let near = s.min.x <= max.x + CELL
+                && s.max.x >= min.x - CELL
+                && s.min.z <= max.z + CELL
+                && s.max.z >= min.z - CELL;
+            if d.on && !d.one_way && near {
+                f(n + k, s);
             }
         }
     }
@@ -227,6 +285,13 @@ impl Level {
                 best = Some(best.map_or(s.max.y, |b| b.max(s.max.y)));
             }
         });
+        // a Bench is floor too, seen from above
+        for d in self.dynamic.iter().filter(|d| d.on && d.one_way) {
+            let s = d.solid;
+            if x >= s.min.x && x <= s.max.x && z >= s.min.z && z <= s.max.z && s.max.y <= y {
+                best = Some(best.map_or(s.max.y, |b| b.max(s.max.y)));
+            }
+        }
         best
     }
 }

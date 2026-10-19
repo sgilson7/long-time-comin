@@ -111,7 +111,7 @@ BREAKS = [
  ("corruption by height", "crates/core/src/world.rs", "        e.corrupt = self.corrupt;", "        e.corrupt = CORRUPT_LEAST;", "more_corrupted_the_higher"),
  ("a beast's body clears the floor", "crates/core/src/enemy.rs", "let body = d.radius.min(d.hover * 9 / 10).max(ONE / 10);", "let body = d.radius;", "a_toad_hops"),
 
- ("a mini-boss is not the zone's boss", "crates/core/src/world.rs", "            Kind::Boss | Kind::Tank | Kind::Double | Kind::God | Kind::Cat\n        ) && !d.elite", "            Kind::Boss | Kind::Tank | Kind::Double | Kind::God | Kind::Cat\n        )", "the_blaster_is_a_smaller"),
+ ("a mini-boss is not the zone's boss", "crates/core/src/world.rs", "            Kind::Boss | Kind::Tank | Kind::Double | Kind::God | Kind::Cat | Kind::Oak\n        ) && !d.elite", "            Kind::Boss | Kind::Tank | Kind::Double | Kind::God | Kind::Cat | Kind::Oak\n        )", "the_blaster_is_a_smaller"),
  # round ten: the Great Horned, big waves
  ("the owl perches high", "crates/core/src/enemy.rs", "Some(v3(p.x, f + PERCH_HEIGHT, p.z))", "Some(v3(p.x, f, p.z))", "the_great_horned_perches"),
  ("the owl swoops through you", "crates/core/src/enemy.rs", "self.fly_to(target.add(way.scale(SWOOP_PAST)), SWOOP_SPEED);", "self.fly_to(self.perches[self.perch], SWOOP_SPEED);", "the_great_horned_perches"),
@@ -214,6 +214,30 @@ BREAKS = [
  ("tree: each its own share", "crates/core/src/tree.rs", "            at_h += 2 * leaves(k, parent);", "            at_h += 0;", "no_two_upgrades_crowd"),
  ("tree: a branch's wedge", "crates/core/src/tree.rs", "        cursor += TREE_GAP_HALVES;\n        for &r in list {", "        for &r in list {", "each_branch_bursts_out"),
  ("tree: the petal's reach", "crates/core/src/tree.rs", "            reach: (TREE_RING + outer * TREE_STEP + TREE_PETAL).min(TREE_EDGE),", "            reach: TREE_RING,", "each_branch_bursts_out"),
+ # round seventeen: the Water Gap
+ ("river: Bound Over on one tick", "crates/core/src/player.rs", "                    flat = v3(d.x, 0, d.z);", "", "bound_over_dash_and_jump"),
+ ("river: a Bench is stood on", "crates/core/src/player.rs", "                if let Some(top) = level.one_way_catch(min, max, self.pos.y) {", "                if let Some(top) = level.one_way_catch(min, max, self.pos.y).filter(|_| false) {", "a_bench_laid_in_the_air"),
+ ("river: a Bench is taken up", "crates/core/src/course.rs", "                    self.arena.level.dynamic[b.0].on = false;", "", "a_bench_laid_in_the_air"),
+ ("river: the water's cost", "crates/core/src/course.rs", "            let cost = (pl.build.max_health * DROWN_PCT / 100).max(1);", "            let cost = 0;", "the_water_returns_you"),
+ ("river: a lever opens its gate", "crates/core/src/course.rs", "                level.dynamic[door.dynamic].on = false;", "", "a_lever_hooked_opens"),
+ ("river: a gate never shuts on you", "crates/core/src/course.rs", "                        door.left = 1;", "                        d.on = true;", "a_lever_hooked_opens"),
+ ("river: a lever answers the hook's strike", "crates/core/src/course.rs", "                    self.hooked.is_some_and(|t| near_box(&sw.at, t, ONE / 2))", "                    self.hooked.is_some_and(|t| near_box(&sw.at, t, -ONE))", "the_spillway_can_be_crossed"),
+ ("river: a root rises", "crates/core/src/course.rs", "            let dy = m.base.min.y + off - d.solid.min.y;", "            let dy = 0;", "a_root_rises_and_sinks"),
+ ("river: a root carries you down", "crates/core/src/course.rs", "                self.player.pos.y += dy;", "", "a_root_rises_and_sinks"),
+ ("river: a pound breaks rotten timber", "crates/core/src/course.rs", "                level.dynamic[r].on = false;", "", "a_pound_breaks_a_rotten"),
+ ("river: a drum-cap doubles the bounce", "crates/core/src/course.rs", "                self.player.vel.y = bounce_speed(h * 2);", "                self.player.vel.y = bounce_speed(h);", "a_pound_breaks_a_rotten"),
+ ("river: a curtain's hole", "crates/core/src/orbs.rs", "                    if (hole_i..hole_i + g).contains(&i) && (hole_j..hole_j + g).contains(&j) {", "                    if false {", "a_curtain_leaves_a_hole"),
+ ("river: nothing erases the river's orbs", "crates/core/src/world.rs", "    !o.gold && ward > 0 && o.ward <= WARDS && ((1..=ward).contains(&o.ward) || ward > WARDS)", "    !o.gold && ward > 0 && ((1..=ward).contains(&o.ward) || ward > WARDS)", "the_wards_a_redactor_counts"),
+ ("river: shut until the Executor falls", "crates/core/src/meta.rs", "        if !self.beaten.iter().any(|b| b == RIVER_OPENER) {", "        if false {", "the_river_stays_shut"),
+ ("river: the fork after the house", "crates/core/src/game.rs", "                return b;", "                let _ = b;", "on_the_river_the_executors_fall"),
+ ("river: the Oak's own verdict", "crates/core/src/game.rs", "                    let banked = self.meta.record_river(&self.c, total, cleared);", "                    let banked = self.meta.record_win(&self.c, total, cleared, \"\").0;", "the_oaks_fall_ends_the_river"),
+ ("river: a course is crossed, not cleared", "crates/core/src/course.rs", "        self.cleared = self.kind != crate::route::NodeKind::Boss;", "        self.cleared = false;", "the_water_gap_is_its_four"),
+ ("river: the Oak's bar is the climb", "crates/core/src/course.rs", "                o.hp = climb_line + ((max - climb_line) as i64 * left as i64 / span as i64) as i32;", "                o.hp = max;", "the_oak_can_be_climbed"),
+ ("river: the crown calls the Summons", "crates/core/src/course.rs", "                    self.elite = Some(i);", "", "the_oak_can_be_climbed"),
+ ("river: the Husk first", "crates/core/src/enemy.rs", "            self.husk -= damage;", "            self.husk -= 0;\n            self.hp -= damage;", "the_summons_husk"),
+ ("river: staggered, double damage", "crates/core/src/enemy.rs", "        let damage = if self.stagger > 0 { damage * 2 } else { damage };", "", "the_summons_husk"),
+ ("river: the Husk grows back", "crates/core/src/enemy.rs", "            if self.unhit > d.husk_regen && self.husk < self.husk_max {", "            if false {", "the_summons_husk"),
+
 ]
 
 

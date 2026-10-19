@@ -322,6 +322,22 @@ fn formation(v: &Volley, origin: V3, target: V3, repeat: i32, owner: usize, rgb:
                 }
             }
         }
+        Form::Curtain => {
+            let off = |k: i32, n: i32| r * (2 * k - (n - 1)) / 2;
+            let g = v.gap;
+            // the hole moves along the wall, repeat by repeat
+            let hole_i =
+                [n / 4, (n - g) / 2, n - n / 4 - g][(repeat.rem_euclid(3)) as usize].clamp(0, (n - g).max(0));
+            let hole_j = (v.rows - g) / 2;
+            for j in 0..v.rows {
+                for i in 0..n {
+                    if (hole_i..hole_i + g).contains(&i) && (hole_j..hole_j + g).contains(&j) {
+                        continue;
+                    }
+                    spots.push(hub.add(e1.scale(off(i, n))).add(e2.scale(off(j, v.rows))));
+                }
+            }
+        }
         Form::Line => {
             for i in 0..n {
                 spots.push(hub.add(e1.scale(span(i, n))));
@@ -625,6 +641,18 @@ impl Wave {
         let hi = self.radius + WAVE_WIDTH / 2 + PLAYER_RADIUS;
         d >= lo && d <= hi
     }
+}
+
+/// A held formation's orbs as placed, for tests elsewhere in the core.
+#[cfg(test)]
+pub(crate) fn formation_for_test(
+    v: &Volley,
+    origin: V3,
+    target: V3,
+    repeat: i32,
+    pal: &crate::content::Palette,
+) -> Vec<Orb> {
+    formation(v, origin, target, repeat, 0, pal.c(&v.colour))
 }
 
 #[cfg(test)]

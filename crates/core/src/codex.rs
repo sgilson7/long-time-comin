@@ -89,6 +89,8 @@ fn numbers() -> Vec<(&'static str, String)> {
         ("pound_radius", m(POUND_RADIUS)),
         ("throw_damage", THROW_DAMAGE.to_string()),
         ("stop", s(STOP_BASE)),
+        ("bench_size", m(BENCH_SIZE)),
+        ("bench_time", s(BENCH_TICKS)),
     ]
 }
 
@@ -296,6 +298,10 @@ fn formation(v: &Volley, size: &str, speed: &str) -> String {
     let shape = match v.form {
         Form::Ring => format!("a ring of {} {size} {r} m in radius", v.count),
         Form::Grid => format!("a grid of {} by {} {size}, {r} m apart", v.count, v.rows),
+        Form::Curtain => format!(
+            "a wall of {} by {} {size}, {r} m apart, with a hole {} across that moves each time",
+            v.count, v.rows, v.gap
+        ),
         Form::Line => format!("a line of {} {size} {} m long", v.count, m(v.radius * 2)),
         Form::Column => format!("a column of {} {size} {r} m tall", v.count),
         Form::Star => format!("a star of {} arms of {} {size}, {r} m long", v.count, v.rows),
@@ -418,6 +424,7 @@ fn movement(d: &EnemyDef, c: &Content) -> String {
             ),
             Gait::None => String::new(),
         },
+        Kind::Oak => "Rooted on the shore and never hurt. Its first bar is your climb up its trunk; its eyes open just above you as you go. At its crown it calls the Summons out of the lake, and its bar follows the Summons' health.".to_string(),
         Kind::God => {
             let bars: Vec<String> = d
                 .phases
@@ -820,6 +827,16 @@ pub fn upgrade_effect(u: &Upgrade, pal: &crate::content::Palette) -> String {
             s(STOP_BASE + STOP_PLUS * 3),
             s(STOP_COOLDOWN)
         ),
+        "bench" => match n {
+            1 => format!(
+                "V lays a Bench: a {} m plank, under you in the air or where you aim, that stands {} s. You stand on it; shots and orbs pass through. {} s cooldown. The river's timeline needs it.",
+                m(BENCH_SIZE),
+                s(BENCH_TICKS),
+                s(BENCH_COOLDOWN)
+            ),
+            2 => "Two Benches may stand at once.".to_string(),
+            _ => format!("A Bench stands {} s.", s(BENCH_LONG_TICKS)),
+        },
         "precedent" => format!("Every run starts with Piercing Rounds: shots pass through {n} more enemy."),
         "conduct" => format!("+{n}% to all Clemency earned."),
         "bail" => format!("Clearing an arena restores {n} more health ({} in all).", HEAL_ON_CLEAR + n),

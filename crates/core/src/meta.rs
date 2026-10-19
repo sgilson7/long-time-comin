@@ -39,7 +39,17 @@ pub struct Meta {
     /// the gun a run carries in, by id: the Carbine, or one an Exhibit
     /// bought (empty: the Carbine)
     pub carry: String,
+    /// the timeline a run follows past the house: the Peak (empty) or the
+    /// River (`river`), chosen on the Holding's timeline
+    pub timeline: String,
+    /// runs won on the river's timeline (the Gallows Oak burnt)
+    pub river_wins: i32,
 }
+
+/// The boss whose fall opens the river's timeline.
+pub const RIVER_OPENER: &str = "executor";
+/// What the river asks of a body: the hook, the ground pound and the Bench.
+pub const RIVER_NEEDS: [&str; 3] = ["writ", "gavel", "bench"];
 
 /// What a death adds to the record, for the indictment screen.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -185,6 +195,7 @@ impl Meta {
                 "bail" => b.bail += u.amount,
                 "lien" => b.lien = true,
                 "stop_plus" => b.stop_ticks += STOP_PLUS,
+                "bench" => b.bench = b.bench.max(u.amount),
                 "armory" => gun_level = gun_level.max(u.amount),
                 _ => {}
             }
@@ -277,6 +288,32 @@ impl Meta {
             && self.beaten.iter().any(|b| *b == c.zones[last].boss)
     }
 
+    /// Why the river's timeline is shut, or nothing when it is open: its
+    /// boss not yet beaten, or a part of its kit not yet bought.
+    pub fn river_shut(&self, c: &Content) -> Option<Refusal> {
+        if !self.beaten.iter().any(|b| b == RIVER_OPENER) {
+            return Some(Refusal::Locked(RIVER_OPENER.to_string()));
+        }
+        RIVER_NEEDS
+            .iter()
+            .find(|id| !self.owns(id) && c.upgrades.iter().any(|u| u.id == **id))
+            .map(|id| Refusal::Requires(id.to_string()))
+    }
+
+    /// Is a run on the river's timeline?
+    pub fn on_river(&self, c: &Content) -> bool {
+        self.timeline == "river" && self.river_shut(c).is_none()
+    }
+
+    /// A won run on the river's timeline: bank its Clemency. It is not the
+    /// game beaten (the Idiot God is still to sleep).
+    pub fn record_river(&mut self, c: &Content, earned: i32, nodes: i32) -> i32 {
+        self.runs += 1;
+        self.river_wins += 1;
+        self.bosses_beaten += 1;
+        self.bank(c, earned, nodes)
+    }
+
     /// A won last mission: bank its Clemency.
     pub fn record_mission(&mut self, c: &Content, earned: i32, nodes: i32) -> i32 {
         self.runs += 1;
@@ -304,6 +341,8 @@ impl Meta {
             rush_wins: 0,
             carry: String::new(),
             mission_wins: 0,
+            timeline: String::new(),
+            river_wins: 0,
             beaten: c
                 .zones
                 .iter()
@@ -339,7 +378,10 @@ impl Meta {
     /// reads a count.
     pub fn record_crossing(&mut self, c: &Content, next: usize, year: &str) -> Option<String> {
         self.bosses_beaten += 1;
-        self.unlocked = self.unlocked.max(next as i32).min(c.built_zones() as i32 - 1);
+        if next < c.built_zones() {
+            // a zone off the main line opens no later start of the main line
+            self.unlocked = self.unlocked.max(next as i32).min(c.built_zones() as i32 - 1);
+        }
         (self.bosses_beaten == 1).then(|| self.read_next(c, year))
     }
 

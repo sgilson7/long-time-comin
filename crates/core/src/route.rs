@@ -157,6 +157,9 @@ impl Route {
             choose: false,
             sealed: false,
         };
+        if r.course {
+            return Route::course(c, zone, have, &mut rng);
+        }
         // the main path
         let mut arrival = node(NodeKind::Arrival, "arrival", 0, 0, &mut rng);
         // names offered anywhere in this zone so far: nothing twice
@@ -258,6 +261,72 @@ impl Route {
                 prev = idx;
             }
             nodes[prev].next.push(from + 1);
+        }
+        Route {
+            nodes,
+            steps: rest_step + STRIDE,
+        }
+    }
+
+    /// A zone of courses: its sections in order (the first is the
+    /// arrival), each holding a strand's reward rolled from the table, then
+    /// the rest and the boss. No side paths.
+    fn course(c: &Content, zone: usize, have: &Have, rng: &mut Rng) -> Route {
+        let z = &c.zones[zone];
+        let r = &z.route;
+        let mut used: Vec<String> = Vec::new();
+        let mut nodes: Vec<Node> = Vec::new();
+        for (i, arch) in z.archetypes.iter().enumerate() {
+            let kind = if i == 0 {
+                NodeKind::Arrival
+            } else {
+                NodeKind::Fight
+            };
+            let name = draw(&r.rewards, &mut used, have, true, rng);
+            let reward = Some(reward_of(c, zone, &name, r.weapon_steps[0], rng));
+            nodes.push(Node {
+                zone,
+                kind,
+                archetype: arch.clone(),
+                tier: 0,
+                detour: false,
+                reward,
+                next: Vec::new(),
+                step: STRIDE * i as i32,
+                lane: 0,
+                seed: rng.next(),
+                encounter: None,
+                cache: Vec::new(),
+                elite: None,
+                extra: Vec::new(),
+                choose: false,
+                sealed: false,
+            });
+        }
+        let rest_step = STRIDE * z.archetypes.len() as i32;
+        let mut rest = Node {
+            kind: NodeKind::Rest,
+            archetype: "rest".into(),
+            reward: None,
+            step: rest_step,
+            seed: rng.next(),
+            ..nodes[0].clone()
+        };
+        if !r.rest_rewards.is_empty() {
+            let pick = draw(&r.rest_rewards, &mut used, have, true, rng);
+            rest.reward = Some(reward_of(c, zone, &pick, r.weapon_steps[1], rng));
+        }
+        nodes.push(rest);
+        nodes.push(Node {
+            kind: NodeKind::Boss,
+            archetype: "boss".into(),
+            reward: None,
+            step: rest_step + STRIDE,
+            seed: rng.next(),
+            ..nodes[0].clone()
+        });
+        for i in 0..nodes.len() - 1 {
+            nodes[i].next.push(i + 1);
         }
         Route {
             nodes,

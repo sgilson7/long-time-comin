@@ -230,6 +230,12 @@ pub struct World {
     /// a practice that begins partway through the boss: the bar (0 first)
     /// it arrives at
     pub from_bar: usize,
+    /// a course's ground in play (the Water Gap)
+    pub course: Option<crate::course::Course>,
+    /// Benches laid: each its changing solid and the ticks it stands yet
+    pub benches: Vec<(usize, i32)>,
+    /// where a hook thrown this tick struck (before any lift over a ledge)
+    pub hooked: Option<V3>,
 }
 
 /// The sounds of the lullaby's five notes, on the trumpet and on the
@@ -345,6 +351,9 @@ impl World {
             remix: false,
             mission: false,
             from_bar: 0,
+            course: None,
+            benches: Vec::new(),
+            hooked: None,
         };
         w.broken = vec![0; w.arena.panes.len()];
         if let Some(def) = node.elite {
@@ -383,6 +392,7 @@ impl World {
                 });
             }
         }
+        w.course_begin(c);
         if node.kind == NodeKind::Rest {
             // the Antechamber's choice: half your health back from the
             // fountain, or its reward; taking one loses the other
@@ -486,7 +496,8 @@ impl World {
             .map_or(max, |h| h.t + skip);
         let mut who = None;
         for (i, e) in self.enemies.iter().enumerate() {
-            if !e.alive() || e.buried || e.held {
+            // the Oak's eye, never hurt, neither stops the aim nor holds a hook
+            if !e.alive() || e.buried || e.held || e.shielded {
                 continue;
             }
             for (at, r) in body_spheres(c, e) {
@@ -534,12 +545,21 @@ impl World {
             // the Defendant waits before the Long Door
             let f = self.arena.level.floor_below(0, int(3), -int(4)).unwrap_or(0);
             v3(0, f, -int(4))
+        } else if let Some(site) = self
+            .arena
+            .course
+            .as_ref()
+            .and_then(|k| k.oak)
+            .filter(|_| d.kind == Kind::Oak)
+        {
+            // the Oak's eye, on its trunk by the roots
+            site.axis.add(v3(0, int(4), site.trunk + ONE))
         } else if d.kind == Kind::Boss || list.is_empty() {
             self.arena.centre
         } else {
             list[self.rng.range(0, list.len() as i32 - 1) as usize]
         };
-        if !air && !matches!(d.kind, Kind::Boss | Kind::God | Kind::Cat) {
+        if !air && !matches!(d.kind, Kind::Boss | Kind::God | Kind::Cat | Kind::Oak) {
             at.y += standing_lift(d);
         }
         self.spawn_at(c, def, at);
@@ -584,7 +604,7 @@ impl World {
         // felling it only clears its arena (SECOND-ORDER Q25)
         if matches!(
             d.kind,
-            Kind::Boss | Kind::Tank | Kind::Double | Kind::God | Kind::Cat
+            Kind::Boss | Kind::Tank | Kind::Double | Kind::God | Kind::Cat | Kind::Oak
         ) && !d.elite
         {
             self.boss = Some(self.enemies.len());
@@ -681,6 +701,7 @@ impl World {
             ctl
         };
         let stopped = self.stop.is_some();
+        self.hooked = None;
         // stopped by an enemy, you are as still as everything else
         let frozen = self.stop.is_some_and(|s| s.caster.is_some());
 
@@ -698,6 +719,7 @@ impl World {
                     } else {
                         self.mantle(eye, fwd, p)
                     };
+                    self.hooked = Some(p);
                     self.player.start_grapple(anchor, self.aim_enemy)
                 }
                 None => self.note("hook_miss", c.say("callout_hook_miss")),
@@ -742,6 +764,7 @@ impl World {
                 Event::Vent => "vent",
                 Event::Pound => "pound",
                 Event::Stop => "time_stop",
+                Event::Bench => "bench",
             };
             let text = match ev {
                 Event::Recess => c.say("callout_recess"),
@@ -777,6 +800,10 @@ impl World {
         }
         self.pulse_cooldown = (self.pulse_cooldown - 1).max(0);
         self.hit_age = (self.hit_age + 1).min(1000);
+        if !frozen {
+            let events = self.player.events.clone();
+            self.course_step(c, &events);
+        }
 
         // an updraft under the feet throws you up
         let feet = self.player.pos;
@@ -889,6 +916,7 @@ impl World {
                 && e.unseen > LOST_TICKS
                 && Some(i) != self.boss
                 && !walks
+                && self.course.is_none()
             {
                 self.relocate(c, i, chest);
             }
@@ -929,6 +957,9 @@ impl World {
                 continue;
             }
             if stopped && self.stop.is_none_or(|s| s.caster != Some(i)) {
+                continue;
+            }
+            if self.course.as_ref().is_some_and(|k| k.asleep(i, chest)) {
                 continue;
             }
             let deeds = self.enemies[i].step(c, &self.arena.level, chest, i);
@@ -1006,6 +1037,7 @@ impl World {
             }
         }
         self.glass_step(c);
+        self.oak_step(c);
         self.shake = (self.shake - 1).max(0);
         self.lullaby(c, keys, chest);
         self.feed(c);
@@ -1889,7 +1921,7 @@ impl World {
         let Some(hit) = self.arena.level.ray(start, fwd, GRAPPLE_RANGE + skip) else {
             return p;
         };
-        let s = &self.arena.level.solids[hit.solid];
+        let s = self.arena.level.solid(hit.solid);
         let below_top = s.max.y - hit.point.y;
         if below_top > ONE / 20 && below_top <= MANTLE_REACH {
             let flat = v3(fwd.x, 0, fwd.z).norm();
@@ -2782,7 +2814,8 @@ pub fn ray_sphere(o: V3, d: V3, c: V3, r: i32) -> Option<i32> {
 /// Does a Redactor's round of `ward` erase this orb? Gold never; past the
 /// last ward, every other orb.
 pub fn erasable(o: &Orb, ward: i32) -> bool {
-    !o.gold && ward > 0 && ((1..=ward).contains(&o.ward) || ward > WARDS)
+    // the river's own ward, past the Injunction's three, nothing erases
+    !o.gold && ward > 0 && o.ward <= WARDS && ((1..=ward).contains(&o.ward) || ward > WARDS)
 }
 
 /// the Injunction's wards: blue, then a Standing Order's, then a Permanent
@@ -5285,6 +5318,15 @@ mod arsenal {
     #[test]
     fn the_wards_a_redactor_counts_are_the_palettes() {
         let c = content();
-        assert_eq!(c.pal.wards.len() as i32, WARDS);
+        // the Injunction's three, then the river's, which nothing breaks
+        assert_eq!(c.pal.wards.len() as i32, WARDS + 1);
+        let (_, w) = empty_fight();
+        let river = still_orb(&w, 0, 0, WARDS + 1, false);
+        assert!(
+            !erasable(&river, WARDS + 1),
+            "the river's orbs stand against every gun"
+        );
+        let blue = still_orb(&w, 0, 0, 1, false);
+        assert!(erasable(&blue, WARDS + 1));
     }
 }

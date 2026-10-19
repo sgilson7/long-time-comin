@@ -160,11 +160,44 @@ export function makeScreens(game, copy, changed, startAt, tryChumbles) {
           return button;
         }),
       );
-      el("start-later").replaceChildren(
-        ...s.starts.map((st) => {
-          const button = make("button", "big later", st.label);
-          button.addEventListener("click", () => startAt(st.zone));
+      // the timeline: the years on each line, where a run may start, and
+      // which line runs follow past the house
+      const tl = s.timeline;
+      const followed = (tl.lines.find((l) => l.chosen) || tl.lines[0]).id;
+      el("timeline-lines").replaceChildren(
+        ...tl.lines.map((l) => {
+          const button = make("button", `small line ${l.id} ${l.chosen ? "on" : ""}`, `${copy.timeline_choose}: ${l.name}`);
+          button.disabled = !l.open;
+          button.title = l.why;
+          button.setAttribute("aria-pressed", l.chosen ? "true" : "false");
+          button.addEventListener("click", () => {
+            if (game.choose_timeline(l.id)) changed();
+          });
           return button;
+        }),
+      );
+      const tsvg = el("timeline-edges");
+      const tns = tsvg.namespaceURI;
+      tsvg.replaceChildren(
+        ...tl.edges.map((e) => {
+          const line = document.createElementNS(tns, "line");
+          for (const k of ["x1", "y1", "x2", "y2"]) line.setAttribute(k, e[k]);
+          line.setAttribute("class", `${e.line} ${e.line === followed || e.line === "both" ? "followed" : ""}`);
+          return line;
+        }),
+      );
+      el("timeline-nodes").replaceChildren(
+        ...tl.nodes.map((n) => {
+          const line = n.line === "both" ? followed : n.line;
+          const node = make("button", `year ${n.line} ${n.open ? "open" : ""} ${n.beaten ? "beaten" : ""} ${n.sealed ? "sealed" : ""}`);
+          node.style.left = `${n.x}%`;
+          node.style.top = `${n.y}%`;
+          node.append(make("strong", "", n.year), make("span", "", n.name));
+          if (n.boss) node.append(make("em", "", n.boss));
+          if (!n.open) node.append(make("small", "", n.why));
+          node.disabled = !n.open;
+          node.addEventListener("click", () => startAt(line, n.zone));
+          return node;
         }),
       );
 

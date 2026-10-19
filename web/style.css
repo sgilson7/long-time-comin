@@ -121,6 +121,25 @@ button.carry-gun.chosen { background: var(--salmon); opacity: 1; font-weight: 80
 .tree-card .needs { opacity: 0.7; }
 .tree-card button { justify-self: start; margin-top: 6px; font-size: 0.95rem; padding: 6px 16px; }
 .tree-card button.can { background: var(--sage); }
+/* the timeline: the years along the Peak, the River forking below 2056 */
+.holding-grid section.timeline { grid-column: 1 / -1; }
+#timeline-lines { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
+#timeline-lines .line.on { background: var(--sage); }
+#timeline-lines .line.river.on { background: #8fd1dc; }
+.timeline-map { position: relative; height: 230px; }
+#timeline-edges { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+#timeline-edges line { stroke: var(--ink); stroke-width: 3px; stroke-opacity: 0.25; vector-effect: non-scaling-stroke; stroke-dasharray: 6 6; }
+#timeline-edges line.followed { stroke-opacity: 0.9; stroke-dasharray: none; stroke-width: 5px; }
+#timeline-edges line.river { stroke: #2a8fa8; }
+#timeline-nodes { position: absolute; inset: 0; }
+.year { position: absolute; translate: -50% -50%; display: flex; flex-direction: column; align-items: center; gap: 0; padding: 6px 10px; min-width: 104px; font-size: 0.75rem; line-height: 1.15; border-radius: 12px; }
+.year strong { font-size: 1.1rem; }
+.year em { font-style: normal; opacity: 0.7; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.04em; }
+.year small { font-size: 0.65rem; opacity: 0.8; }
+.year.open { background: #fde3c4; }
+.year.beaten { background: var(--sage); }
+.year.river { border-color: #2a8fa8; }
+.year.sealed { border-style: dashed; }
 .case-file ol { padding-left: 20px; margin: 0 0 14px; font-family: var(--type); font-size: 0.8rem; }
 .case-file li { margin-bottom: 6px; }
 .case-file li.none { list-style: none; margin-left: -20px; opacity: 0.7; }
@@ -182,6 +201,9 @@ button.carry-gun.chosen { background: var(--salmon); opacity: 1; font-weight: 80
 .bar { position: relative; height: 18px; border: 3px solid var(--ink); border-radius: 9px; background: rgba(59, 35, 64, 0.5); overflow: hidden; }
 .bar .fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--coral); transition: width 120ms; }
 #boss .bar .fill { background: linear-gradient(90deg, var(--violet), var(--magenta)); }
+#boss .bar.husk { height: 8px; margin-bottom: 3px; }
+#boss .bar.husk .fill { background: #b07be8; }
+#boss.staggered .bar:not(.husk) .fill { background: linear-gradient(90deg, var(--gold), var(--orange)); }
 /* a bar for each phase (the Idiot God): the ones left lit; the lullaby's
    bar is the sleep, in pale gold */
 .boss-bars { justify-content: center; margin-top: 4px; }
@@ -294,3 +316,7 @@ button.big.last { background: #e8b6b0; font-size: 1rem; margin-top: 8px; }
 button.big.last:hover:not(:disabled) { background: #f2cdc8; }
 
 #stopped { position: absolute; left: 50%; top: 40%; translate: -50% 0; font-size: 2rem; font-weight: 900; letter-spacing: 0.2em; color: var(--paper); text-shadow: 3px 3px 0 var(--ink); pointer-events: none; }
+/* the tree's and the timeline's buttons are centred on their place by
+   translate; pressed, they keep it (the page's buttons shift by translate
+   when pressed, which would move these out from under the pointer) */
+.upgrade:active:not(:disabled), .year:active:not(:disabled) { translate: -50% -50%; scale: 0.95; }

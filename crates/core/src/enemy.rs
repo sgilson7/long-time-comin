@@ -161,6 +161,15 @@ pub struct Enemy {
     pub size: i32,
     /// on the last mission: it fires its patterns' remixes
     pub remix: bool,
+    /// its Husk (the Summons' shield) and its most; ticks since it was hit;
+    /// ticks of a stagger left (the Husk broken: no attacks, double damage)
+    pub husk: i32,
+    pub husk_max: i32,
+    pub unhit: i32,
+    pub stagger: i32,
+    pub stagger_len: i32,
+    /// never hurt (the Gallows Oak)
+    pub shielded: bool,
 }
 
 /// What an enemy did this tick that the world must act on.
@@ -245,6 +254,12 @@ impl Enemy {
             },
             size: if d.kind == Kind::Cat { CAT_SMALL } else { ONE },
             remix: false,
+            husk: d.husk,
+            husk_max: d.husk,
+            unhit: 0,
+            stagger: 0,
+            stagger_len: d.stagger.max(1),
+            shielded: d.kind == Kind::Oak,
         }
     }
 
@@ -253,7 +268,10 @@ impl Enemy {
     }
 
     pub fn hurtable(&self) -> bool {
-        self.alive() && !self.buried && !matches!(self.state, State::Spawning(_) | State::Changing(_))
+        self.alive()
+            && !self.buried
+            && !self.shielded
+            && !matches!(self.state, State::Spawning(_) | State::Changing(_))
     }
 
     /// An agent's feet, from its centre.
@@ -266,8 +284,19 @@ impl Enemy {
         if !self.hurtable() {
             return false;
         }
-        self.hp = (self.hp - damage).max(self.floor_hp);
         self.flash = 0;
+        self.unhit = 0;
+        if self.husk > 0 {
+            // the Husk takes it first; broken, it staggers
+            self.husk -= damage;
+            if self.husk <= 0 {
+                self.husk = 0;
+                self.stagger = self.stagger_len;
+            }
+            return false;
+        }
+        let damage = if self.stagger > 0 { damage * 2 } else { damage };
+        self.hp = (self.hp - damage).max(self.floor_hp);
         self.hp <= 0
     }
 
@@ -375,6 +404,24 @@ impl Enemy {
             };
             return deeds;
         }
+        if self.husk_max > 0 {
+            if self.stagger > 0 {
+                // staggered, the Husk broken: it sinks a little, fires
+                // nothing, and takes double; then the Husk is whole again
+                self.stagger -= 1;
+                self.lunge = Lunge::None;
+                self.state = State::Rest(secs(1, 2));
+                self.pos.y = fx::approach(self.pos.y, self.home.y, ONE / 20);
+                if self.stagger == 0 {
+                    self.husk = self.husk_max;
+                }
+                return deeds;
+            }
+            self.unhit += 1;
+            if self.unhit > d.husk_regen && self.husk < self.husk_max {
+                self.husk = (self.husk + self.husk_max / HUSK_REGROW_TICKS).min(self.husk_max);
+            }
+        }
 
         if d.kind == Kind::Tank {
             tank::drive(self, level, target, d.speed);
@@ -390,7 +437,11 @@ impl Enemy {
             }
         }
         // a boss changes phase the moment its health crosses the line
-        if matches!(d.kind, Kind::Boss | Kind::Double | Kind::God | Kind::Cat) {
+        if matches!(
+            d.kind,
+            Kind::Boss | Kind::Double | Kind::God | Kind::Cat | Kind::Oak
+        ) || d.phases.len() > 1
+        {
             let next = self.phase + 1;
             if next < d.phases.len() && self.health_pct() <= d.phases[next].from_pct {
                 self.phase = next;
@@ -1125,9 +1176,20 @@ impl Enemy {
             self.orbit = -self.orbit;
             self.boost = 0;
         }
-        let ground = level
-            .floor_below(self.pos.x, self.pos.y + ONE, self.pos.z)
-            .unwrap_or(0);
+        let ground = if d.aloft {
+            // over the crown and its gaps alike, kept near its home
+            let off = v3(self.pos.x - self.home.x, 0, self.pos.z - self.home.z);
+            if off.len_xz() > ALOFT_LEASH {
+                let back = off.norm().scale(ALOFT_LEASH);
+                self.pos.x = self.home.x + back.x;
+                self.pos.z = self.home.z + back.z;
+            }
+            self.home.y
+        } else {
+            level
+                .floor_below(self.pos.x, self.pos.y + ONE, self.pos.z)
+                .unwrap_or(0)
+        };
         self.pos.y = fx::approach(self.pos.y, ground + d.hover + self.lift, ONE / 4);
     }
 
@@ -1275,7 +1337,7 @@ impl Enemy {
         let towards = flat.norm();
         let side = v3(-towards.z, 0, towards.x).scale(self.orbit * ONE);
         match d.kind {
-            Kind::Turret | Kind::Tank => {}
+            Kind::Turret | Kind::Tank | Kind::Oak => {}
             Kind::God => {
                 // vast and slow, over its home, heaving
                 let bob = v3(

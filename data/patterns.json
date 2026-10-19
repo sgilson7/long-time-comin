@@ -1,5 +1,5 @@
 {
-  "_about": "Orb patterns. A pattern is a list of volleys fired from the enemy's centre. Shapes: ring (count orbs around the enemy, flat unless pitch_deg), aimed (a fan of count orbs, spread_deg wide in all, toward the player), sphere (rings at pitches spread over the sky), wave (a ring along the ground: jump it). Units: speed_cms cm/s, accel_cms2 cm/s\u00b2 (negative slows), min_cms and max_cms bound the speed, curl_degs turns each orb this many degrees a second (alternate: every other orb turns the other way, which draws petals), spin_deg turns the volley between repeats (a spiral), every_ms between repeats, delay_ms before the first, size_cm the orb's radius, gold orbs can be parried with Objection. aim: a ring turns to face the player first. damage (optional) overrides the default hit damage (balance.rs ORB_DAMAGE, WAVE_DAMAGE) for that volley. Zone two's patterns use held formations (shape form): form is ring, grid, line, column, star, spiral, arc or ribbon, of count orbs (rows: a grid's rows, a star's orbs to an arm, a spiral's turns, a ribbon's rises), radius_cm across (a grid's spacing, a column's height); at places it round the enemy (self), at_cm toward you (front), round you (target) or at_cm over you (above); plane flat (in the plane through you, or level round or over you) or face (standing, facing you). Each orb hangs still for hold_ms, plus stagger_ms for each orb after the first, then flies by launch: out, in, aim (at you then), lead (at where you will be, from how you move), down, along (the line from the enemy to you), spin (round the centre), keep. Any orb may stop after stop_ms of flight, wait rehold_ms and fly again by relaunch at relaunch_cms. Colour blue (and zone one's cyan) is broken by the Injunction. Zone three's patterns add: bounce (walls the orb glances off before one stops it), fall_cms2 (gravity: a lobbed aimed orb arcs to land at your feet, or round them by its spread) and plant (the pattern a lobbed or shell orb fires where it lands on a solid), sweep_deg (an aimed volley's repeats sweep across this angle, one end to the other), and form lane (two walls of count orbs, length_cm long, radius_cm either side of the line to you; launch close sends them straight across, toward its middle). remix: on the last mission (new game plus) an enemy fires the named pattern in this one's place; a remix is not itself remixed.",
+  "_about": "Orb patterns. A pattern is a list of volleys fired from the enemy's centre. Shapes: ring (count orbs around the enemy, flat unless pitch_deg), aimed (a fan of count orbs, spread_deg wide in all, toward the player), sphere (rings at pitches spread over the sky), wave (a ring along the ground: jump it). Units: speed_cms cm/s, accel_cms2 cm/s² (negative slows), min_cms and max_cms bound the speed, curl_degs turns each orb this many degrees a second (alternate: every other orb turns the other way, which draws petals), spin_deg turns the volley between repeats (a spiral), every_ms between repeats, delay_ms before the first, size_cm the orb's radius, gold orbs can be parried with Objection. aim: a ring turns to face the player first. damage (optional) overrides the default hit damage (balance.rs ORB_DAMAGE, WAVE_DAMAGE) for that volley. Zone two's patterns use held formations (shape form): form is ring, grid, line, column, star, spiral, arc or ribbon, of count orbs (rows: a grid's rows, a star's orbs to an arm, a spiral's turns, a ribbon's rises), radius_cm across (a grid's spacing, a column's height); at places it round the enemy (self), at_cm toward you (front), round you (target) or at_cm over you (above); plane flat (in the plane through you, or level round or over you) or face (standing, facing you). Each orb hangs still for hold_ms, plus stagger_ms for each orb after the first, then flies by launch: out, in, aim (at you then), lead (at where you will be, from how you move), down, along (the line from the enemy to you), spin (round the centre), keep. Any orb may stop after stop_ms of flight, wait rehold_ms and fly again by relaunch at relaunch_cms. Colour blue (and zone one's cyan) is broken by the Injunction. Zone three's patterns add: bounce (walls the orb glances off before one stops it), fall_cms2 (gravity: a lobbed aimed orb arcs to land at your feet, or round them by its spread) and plant (the pattern a lobbed or shell orb fires where it lands on a solid), sweep_deg (an aimed volley's repeats sweep across this angle, one end to the other), and form lane (two walls of count orbs, length_cm long, radius_cm either side of the line to you; launch close sends them straight across, toward its middle). remix: on the last mission (new game plus) an enemy fires the named pattern in this one's place; a remix is not itself remixed. Form curtain (the Water Gap): a grid standing across the line to you (plane face) or lying level over you (above, flat), with a hole gap orbs across and up that moves left, middle, right as the volley repeats. The river's orbs are colour river, a ward nothing breaks.",
   "patterns": [
     {
       "id": "spiral_quad",
@@ -4193,6 +4193,254 @@
           "repeat": 3,
           "every_ms": 260,
           "spin_deg": 22
+        }
+      ]
+    },
+    {
+      "id": "weir_curtain",
+      "volleys": [
+        {
+          "shape": "form",
+          "form": "curtain",
+          "count": 9,
+          "rows": 4,
+          "gap": 2,
+          "radius_cm": 110,
+          "at": "front",
+          "at_cm": 500,
+          "hold_ms": 600,
+          "launch": "along",
+          "speed_cms": 800,
+          "size_cm": 30,
+          "colour": "river",
+          "repeat": 3,
+          "every_ms": 1800,
+          "damage": 8
+        }
+      ]
+    },
+    {
+      "id": "root_lattice",
+      "volleys": [
+        {
+          "shape": "form",
+          "form": "curtain",
+          "count": 11,
+          "rows": 6,
+          "gap": 2,
+          "radius_cm": 120,
+          "at": "front",
+          "at_cm": 500,
+          "hold_ms": 700,
+          "launch": "along",
+          "speed_cms": 750,
+          "size_cm": 30,
+          "colour": "river",
+          "repeat": 3,
+          "every_ms": 1500,
+          "damage": 10
+        }
+      ]
+    },
+    {
+      "id": "eye_fan",
+      "volleys": [
+        {
+          "shape": "aimed",
+          "count": 5,
+          "spread_deg": 40,
+          "speed_cms": 1100,
+          "size_cm": 28,
+          "colour": "river",
+          "repeat": 2,
+          "every_ms": 350,
+          "damage": 8
+        }
+      ]
+    },
+    {
+      "id": "spray_curtain",
+      "volleys": [
+        {
+          "shape": "form",
+          "form": "curtain",
+          "plane": "flat",
+          "count": 9,
+          "rows": 9,
+          "gap": 3,
+          "radius_cm": 120,
+          "at": "above",
+          "at_cm": 1100,
+          "hold_ms": 600,
+          "launch": "down",
+          "speed_cms": 700,
+          "size_cm": 30,
+          "colour": "river",
+          "repeat": 3,
+          "every_ms": 1700,
+          "damage": 8
+        }
+      ]
+    },
+    {
+      "id": "root_spiral",
+      "volleys": [
+        {
+          "shape": "ring",
+          "count": 10,
+          "speed_cms": 800,
+          "size_cm": 30,
+          "colour": "river",
+          "repeat": 6,
+          "every_ms": 260,
+          "spin_deg": 12,
+          "damage": 8
+        }
+      ]
+    },
+    {
+      "id": "oak_stare",
+      "volleys": [
+        {
+          "shape": "aimed",
+          "count": 7,
+          "spread_deg": 50,
+          "speed_cms": 1000,
+          "size_cm": 32,
+          "colour": "river",
+          "repeat": 3,
+          "every_ms": 300,
+          "damage": 9
+        }
+      ]
+    },
+    {
+      "id": "oak_rings",
+      "volleys": [
+        {
+          "shape": "ring",
+          "count": 18,
+          "speed_cms": 700,
+          "size_cm": 32,
+          "colour": "river",
+          "repeat": 3,
+          "every_ms": 500,
+          "spin_deg": 10,
+          "aim": true,
+          "damage": 9
+        }
+      ]
+    },
+    {
+      "id": "oak_bough",
+      "volleys": [
+        {
+          "shape": "form",
+          "form": "curtain",
+          "count": 11,
+          "rows": 3,
+          "gap": 2,
+          "radius_cm": 120,
+          "at": "front",
+          "at_cm": 400,
+          "hold_ms": 600,
+          "launch": "along",
+          "speed_cms": 800,
+          "size_cm": 32,
+          "colour": "river",
+          "repeat": 2,
+          "every_ms": 1400,
+          "damage": 10
+        }
+      ]
+    },
+    {
+      "id": "seed_volley",
+      "volleys": [
+        {
+          "shape": "form",
+          "form": "ring",
+          "count": 16,
+          "radius_cm": 1000,
+          "at": "target",
+          "hold_ms": 700,
+          "stagger_ms": 20,
+          "launch": "in",
+          "speed_cms": 1300,
+          "size_cm": 28,
+          "colour": "lime",
+          "damage": 10
+        },
+        {
+          "shape": "form",
+          "form": "ring",
+          "count": 16,
+          "radius_cm": 1000,
+          "at": "above",
+          "at_cm": 300,
+          "hold_ms": 900,
+          "stagger_ms": 20,
+          "launch": "in",
+          "speed_cms": 1300,
+          "size_cm": 28,
+          "colour": "lime",
+          "delay_ms": 300,
+          "spin_deg": 11,
+          "damage": 10
+        }
+      ]
+    },
+    {
+      "id": "thorn_guns",
+      "volleys": [
+        {
+          "shape": "aimed",
+          "count": 2,
+          "spread_deg": 8,
+          "speed_cms": 2600,
+          "size_cm": 20,
+          "colour": "ember",
+          "repeat": 16,
+          "every_ms": 70,
+          "sweep_deg": 80,
+          "damage": 6
+        }
+      ]
+    },
+    {
+      "id": "vine_blades",
+      "volleys": [
+        {
+          "shape": "form",
+          "form": "lane",
+          "count": 12,
+          "length_cm": 1400,
+          "radius_cm": 700,
+          "at": "target",
+          "hold_ms": 350,
+          "launch": "close",
+          "speed_cms": 1600,
+          "size_cm": 30,
+          "colour": "lime",
+          "damage": 14
+        }
+      ]
+    },
+    {
+      "id": "pollen_cone",
+      "volleys": [
+        {
+          "shape": "aimed",
+          "count": 9,
+          "spread_deg": 50,
+          "speed_cms": 900,
+          "size_cm": 30,
+          "colour": "ember",
+          "repeat": 6,
+          "every_ms": 140,
+          "curl_degs": 30,
+          "alternate": true,
+          "damage": 7
         }
       ]
     }

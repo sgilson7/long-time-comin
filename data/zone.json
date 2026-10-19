@@ -1,5 +1,5 @@
 {
-  "_about": "The zones of the route, in order. A built zone has a scene (palette names for its sky, fog, light, unlit windows and ink, and where its fog starts and is full), a route, archetypes, names and encounters; a sealed zone only its name, year and boss. A run's graph is made from a zone's route by a seeded roll (crates/core/src/route.rs): the main path is arrival, main_fights fights, the rest and the boss; between main fights, detours of 1 to detour_max nodes rejoin the next main node, and a detour's last node holds a reward rolled from rewards, a table in which a name listed twice comes up twice as often: no name twice in a zone, and nothing the body could not use (a Pulse or Mending Parry it has, a fourth Contempt, a fifth jump, a gun when its gun is at level 5); a two-node detour holds a choice of two, and one in sealed_pct (in a hundred) is sealed: unseen until cleared, it holds a gun a level higher, or two rewards that are both yours. purse is Clemency, three times clemency_detour. Encounters are listed by tier; a main fight's tier is in main_tiers, a detour's is one higher. clemency is what the court grants per node cleared. rest_rewards: the rest node offers one of these beside its fountain, and you take one or the other. cache_rewards: the arrival offers two of these, and you take one (none when empty). weapon_steps: how many levels above the gun in hand a gun on a near and on a deep side path stands, when it is taken (1 and 1 unless given; never past level 5). minibosses: enemies each fought alone, in its arena, on main fight at (counted from 0). mission: a zone reached only on the last mission (new game plus, opened by putting the Idiot God to sleep), after the fourth zone's boss; it is not one of the zones a run is counted through, and it is listed last.",
+  "_about": "The zones of the route, in order. A built zone has a scene (palette names for its sky, fog, light, unlit windows and ink, and where its fog starts and is full), a route, archetypes, names and encounters; a sealed zone only its name, year and boss. A run's graph is made from a zone's route by a seeded roll (crates/core/src/route.rs): the main path is arrival, main_fights fights, the rest and the boss; between main fights, detours of 1 to detour_max nodes rejoin the next main node, and a detour's last node holds a reward rolled from rewards, a table in which a name listed twice comes up twice as often: no name twice in a zone, and nothing the body could not use (a Pulse or Mending Parry it has, a fourth Contempt, a fifth jump, a gun when its gun is at level 5); a two-node detour holds a choice of two, and one in sealed_pct (in a hundred) is sealed: unseen until cleared, it holds a gun a level higher, or two rewards that are both yours. purse is Clemency, three times clemency_detour. Encounters are listed by tier; a main fight's tier is in main_tiers, a detour's is one higher. clemency is what the court grants per node cleared. rest_rewards: the rest node offers one of these beside its fountain, and you take one or the other. cache_rewards: the arrival offers two of these, and you take one (none when empty). weapon_steps: how many levels above the gun in hand a gun on a near and on a deep side path stands, when it is taken (1 and 1 unless given; never past level 5). minibosses: enemies each fought alone, in its arena, on main fight at (counted from 0). mission: a zone reached only on the last mission (new game plus, opened by putting the Idiot God to sleep), after the fourth zone's boss; it is not one of the zones a run is counted through, and it is listed last. course: a zone of courses, crossed and not fought (the Water Gap): its main path is its archetypes in order, the first the arrival, each with a strand off its line holding a reward rolled from rewards; then the rest and the boss; no side paths or encounters. branch_from: a zone off the main line, which follows that zone's boss on its own timeline (the river's, chosen on the Holding's timeline), listed after the last mission's zone; a sealed one is listed for what comes after it.",
   "zones": [
     {
       "id": "waiting_city",
@@ -2081,6 +2081,80 @@
         "landing": "The Landing"
       },
       "encounters": []
+    },
+    {
+      "id": "water_gap",
+      "name": "The Water Gap",
+      "year": "2066",
+      "built": true,
+      "branch_from": "glass_house",
+      "boss": "gallows_oak",
+      "scene": {
+        "sky": "river_sky",
+        "fog": "river_fog",
+        "light": "river_light",
+        "window_dark": "river_window_dark",
+        "ink": "river_ink",
+        "fog_near_m": 160,
+        "fog_far_m": 900
+      },
+      "route": {
+        "course": true,
+        "main_fights": 0,
+        "main_tiers": [],
+        "detours_min": 0,
+        "detours_max": 0,
+        "detour_max": 0,
+        "rewards": [
+          "weapon",
+          "weapon",
+          "trigger",
+          "plating",
+          "health",
+          "pierce",
+          "contempt",
+          "speed",
+          "jump",
+          "purse"
+        ],
+        "clemency_main": 8,
+        "clemency_detour": 10,
+        "clemency_boss": 90,
+        "rest_rewards": [
+          "trigger",
+          "plating",
+          "pierce",
+          "health"
+        ],
+        "weapon_steps": [
+          1,
+          2
+        ]
+      },
+      "archetypes": [
+        "spillway",
+        "narrows",
+        "falls",
+        "shallows"
+      ],
+      "names": {
+        "arrival": "The Spillway",
+        "spillway": "The Spillway",
+        "narrows": "The Narrows",
+        "falls": "The Falls",
+        "shallows": "The Shallows",
+        "rest": "The Boathouse",
+        "boss": "The Gallows Oak"
+      },
+      "encounters": []
+    },
+    {
+      "id": "far_shore",
+      "name": "The Far Shore",
+      "year": "?",
+      "built": false,
+      "branch_from": "water_gap",
+      "boss": "far_shore"
     }
   ]
 }

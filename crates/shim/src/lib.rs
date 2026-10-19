@@ -129,6 +129,17 @@ impl Game {
         self.inner.start_run_at(zone as usize)
     }
 
+    /// A run on a timeline (`peak` or `river`) from a zone, from the
+    /// Holding's timeline.
+    pub fn start_on(&mut self, line: &str, zone: u32) {
+        self.inner.start_on(line, zone as usize)
+    }
+
+    /// Chooses the timeline runs follow past the house.
+    pub fn choose_timeline(&mut self, line: &str) -> bool {
+        self.inner.choose_timeline(line)
+    }
+
     /// A boss rush, once the game has been beaten.
     pub fn start_rush(&mut self) {
         self.inner.start_rush()
@@ -151,6 +162,11 @@ impl Game {
     }
 
     /// The test save: a record with everything.
+    /// Straight to node `to` of the run's map, for tools that drive the game.
+    pub fn go_to(&mut self, to: u32) {
+        self.inner.go_to(to as usize)
+    }
+
     pub fn test_save(&mut self) {
         self.inner.test_save()
     }

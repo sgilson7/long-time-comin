@@ -91,9 +91,9 @@ async function start() {
       save();
       showMode(JSON.parse(game.hud()).mode, true);
     },
-    (zone) =>
+    (line, zone) =>
       act(() => {
-        game.start_run_at(zone);
+        game.start_on(line, zone);
         engage();
       })(),
     (bar) =>
