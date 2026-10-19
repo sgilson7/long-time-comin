@@ -255,6 +255,7 @@ BREAKS = [
  ("far: later river starts wait for their boss", "crates/core/src/meta.rs", "        self.river_shut(c).is_none() && (first || before.is_some_and(|p| self.beaten.contains(&p.boss)))", "        self.river_shut(c).is_none()", "the_far_shore_starts_once"),
 
  ("far: a rising deck lands you", "crates/core/src/course.rs", "                if over && b.pos.y >= top - ONE / 4 && b.pos.y < d.solid.max.y {", "                if false {", "a_deck_rising_into_a_body"),
+ ("far: the last overspeed bleeds off", "crates/core/src/player.rs", "        let next = if speed - decel > top {", "        let next = if speed > top {", "let_go_at_full_speed"),
 ]
 
 

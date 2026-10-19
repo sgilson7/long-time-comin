@@ -603,12 +603,14 @@ impl Player {
     fn run(&mut self, wish: V3, top: i32, flat: V3) {
         let accel = if self.grounded { GROUND_ACCEL } else { AIR_ACCEL };
         let speed = flat.len();
-        let next = if speed > top {
-            let decel = if self.grounded {
-                OVERSPEED_DECEL
-            } else {
-                OVERSPEED_DECEL_AIR
-            };
+        let decel = if self.grounded {
+            OVERSPEED_DECEL
+        } else {
+            OVERSPEED_DECEL_AIR
+        };
+        // the last of the overspeed is the run's to steer: clamped to the
+        // top, a length can round back a unit over it and never bleed off
+        let next = if speed - decel > top {
             let turned = flat.add(wish.scale(accel));
             turned.clamp_len((speed - decel).max(top))
         } else {
@@ -760,6 +762,26 @@ mod tests {
     fn settle(p: &mut Player, l: &Level) {
         for _ in 0..10 {
             p.step(&idle(), l);
+        }
+    }
+
+    #[test]
+    fn let_go_at_full_speed_on_any_heading_and_you_stop() {
+        // a speed a unit over the top, from rounding, once kept you sliding
+        let l = flat_floor();
+        for k in 0..64 {
+            let mut p = Player::new(V3::ZERO, 0, Build::default());
+            settle(&mut p, &l);
+            let top = p.top_speed();
+            let turn = crate::fx::TURN / 64 * k;
+            let d = crate::geom::rotate_y(v3(0, 0, top + 1), turn);
+            p.vel.x = d.x;
+            p.vel.z = d.z;
+            for _ in 0..120 {
+                p.step(&idle(), &l);
+            }
+            let left = v3(p.vel.x, 0, p.vel.z).len();
+            assert!(left < ONE / 10, "heading {k}: still sliding at {left}");
         }
     }
 
