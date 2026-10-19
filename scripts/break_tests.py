@@ -278,6 +278,8 @@ BREAKS = [
  ("far: the sea lets you swim", "crates/core/src/course.rs", "            p.y < k.water - k.depth || k.wet > SEA_BREATH", "            p.y < k.water || k.wet > SEA_BREATH", "overboard_in_the_open_sea"),
  ("far: the sea slows your fall", "crates/core/src/player.rs", "(GRAVITY * SWIM_GRAVITY_PCT / 100, SEA_SINK)", "(GRAVITY, MAX_FALL)", "overboard_in_the_open_sea"),
  ("far: the sea's breath", "crates/core/src/course.rs", "            p.y < k.water - k.depth || k.wet > SEA_BREATH", "            p.y < k.water - k.depth", "the_sea_takes_you"),
+ ("river: the Oak's leaves hang under its crown", "crates/core/src/arena/river/oak.rs", "v3(at.x, top - m(4), at.z), v3(w + m(2), m(4), w + m(2)), leaf);", "v3(at.x, top + m(4), at.z), v3(w, m(5), w), leaf);", "nothing_leafy_stands_over"),
+ ("river: the drum-cap is broad", "crates/core/src/arena/river/falls.rs", "        self.drum_cap(0, S3 + m(1), -m(94), m(4));", "        self.drum_cap(0, S3 + m(1), -m(96), m(2));", "a_pound_thrown_early"),
 ]
 
 

@@ -78,7 +78,9 @@ impl B<'_> {
         self.hanging_rock(v3(-W, S3 + m(6), -m(88)), v3(W, S3 + m(11), -m(78)));
         self.hanging_rock(v3(-W, S3 + m(6), -m(90)), v3(W, TOP, -m(88)));
         self.mooring(0, S3, -m(74));
-        self.drum_cap(0, S3 + m(1), -m(96), m(2));
+        // broad, and reaching back toward where you hook from, so a pound
+        // thrown early in the pull still lands on it
+        self.drum_cap(0, S3 + m(1), -m(94), m(4));
         self.hung_ring(S3 + m(5), -m(97), S3 + HANG);
         self.rock_shelf(-W, -m(99), W, -m(101), S3 + m(5));
         self.line(Step::To(at(S3, -m(86))));

@@ -1607,6 +1607,22 @@ pub(crate) mod tests {
     }
 
     #[test]
+    fn nothing_leafy_stands_over_the_oaks_crown_to_hide_the_summons() {
+        let (c, w) = course_world_in("water_gap", "boss");
+        let site = w.course.as_ref().unwrap().oak.unwrap();
+        let leaf = c.pal.c("oak_leaf");
+        let crown = site.axis.y + site.crown_y;
+        for s in w.arena.shapes.iter().filter(|s| s.rgb == leaf) {
+            let at = s.at.t;
+            let near = v3(at.x - site.axis.x, 0, at.z - site.axis.z).len_xz() < site.crown_r + int(10);
+            assert!(
+                !near || at.y < crown,
+                "leaves over the crown at {at:?} (its floor at {crown})"
+            );
+        }
+    }
+
+    #[test]
     fn overboard_in_the_open_sea_you_sink_slowly_and_can_hook_yourself_back_aboard() {
         let (c, mut w) = course_world_in("far_shore", "fleet");
         for e in w.enemies.iter_mut() {
@@ -1951,5 +1967,60 @@ pub(crate) mod tests {
             }
         }
         assert!(landed);
+    }
+}
+
+#[cfg(test)]
+mod drum_cap {
+    use super::tests::*;
+    use super::*;
+
+    /// Hooked toward the Falls' drum-cap, a pound thrown from a third of a
+    /// second into the pull onward lands on the cap and bounces twice as
+    /// high.
+    #[test]
+    fn a_pound_thrown_early_in_the_pull_still_lands_on_the_drum_cap() {
+        let mut report = Vec::new();
+        for delay in [20, 25, 30, 40, 50, 60] {
+            let (c, mut w) = course_world_in("water_gap", "falls");
+            let k = w.course.clone().unwrap();
+            let drum = k.drums[0];
+            // stand where the line hooks from
+            w.player.pos = v3(0, drum.max.y - ONE, drum.centre().z + int(11));
+            w.player.prev_pos = w.player.pos;
+            for _ in 0..10 {
+                let eye = w.player.chest();
+                w.tick(
+                    &c,
+                    &crate::player::Controls::default(),
+                    eye,
+                    crate::geom::facing(w.player.yaw, 0),
+                );
+            }
+            let ring = v3(0, drum.max.y + int(4), drum.centre().z - ONE);
+            let line = [Step::Hook(ring)];
+            let mut pilot = Pilot::default();
+            let mut bounced = false;
+            let mut t0 = None;
+            for t in 0..200 {
+                let mut d = pilot.drive(&line, &w.player);
+                if w.player.grapple.is_some() && t0.is_none() {
+                    t0 = Some(t);
+                }
+                let mut ctl = d.map(|d| d.controls).unwrap_or_default();
+                if let Some(d) = d.as_mut() {
+                    w.player.yaw = d.yaw;
+                }
+                if t0.is_some_and(|s| t == s + delay) {
+                    ctl.pound_pressed = true;
+                }
+                let eye = w.player.chest();
+                let aim = d.map(|d| d.aim).unwrap_or(crate::geom::facing(w.player.yaw, 0));
+                w.tick(&c, &ctl, eye, aim);
+                bounced |= w.notes.iter().any(|n| n.sound == "drum_cap");
+            }
+            report.push((delay, bounced));
+        }
+        assert!(report.iter().all(|r| r.1), "missed the cap: {report:?}");
     }
 }

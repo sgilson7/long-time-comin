@@ -189,7 +189,13 @@ impl B<'_> {
                     v3(at.x + w / 2, top, at.z + w / 2),
                 ));
                 self.deco(Mesh::Cube, v3(at.x, top - m(1), at.z), v3(w, m(2), w), bough);
-                self.deco(Mesh::Blob, v3(at.x, top + m(4), at.z), v3(w, m(5), w), leaf);
+                // the leaves hang under the boughs, clear of the fight above
+                self.deco(
+                    Mesh::Blob,
+                    v3(at.x, top - m(4), at.z),
+                    v3(w + m(2), m(4), w + m(2)),
+                    leaf,
+                );
             }
         }
         // the spokes joining trunk and ring
