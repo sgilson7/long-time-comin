@@ -172,6 +172,10 @@ pub struct Enemy {
     pub shielded: bool,
     /// held within this far of a point (the Captured Dragon on its chain)
     pub leash: Option<(V3, i32)>,
+    /// how much bigger than its definition it has grown, Q16: the
+    /// Archivist grows at each phase, and its body with it (ONE for
+    /// everything else); see `radius`
+    pub scale: i32,
 }
 
 /// What an enemy did this tick that the world must act on.
@@ -263,7 +267,14 @@ impl Enemy {
             stagger_len: d.stagger.max(1),
             shielded: d.kind == Kind::Oak,
             leash: None,
+            scale: ONE,
         }
+    }
+
+    /// Its body's radius as it is now: its definition's, grown by its
+    /// scale. Every hit, touch and draw of its body uses this.
+    pub fn radius(&self, d: &EnemyDef) -> i32 {
+        fx::mul(d.radius, self.scale)
     }
 
     pub fn alive(&self) -> bool {
@@ -400,6 +411,15 @@ impl Enemy {
             return deeds;
         }
         if let State::Changing(t) = self.state {
+            if d.kind == Kind::Alien {
+                // it grows through the change, hanging where it is
+                let want = d.phases[self.phase.min(d.phases.len() - 1)].scale;
+                let step = (want - self.scale).abs() / t.max(1);
+                self.scale = fx::approach(self.scale, want, step.max(1));
+                if t <= 1 {
+                    self.scale = want;
+                }
+            }
             self.state = if t > 1 {
                 State::Changing(t - 1)
             } else {
@@ -442,14 +462,18 @@ impl Enemy {
         // a boss changes phase the moment its health crosses the line
         if matches!(
             d.kind,
-            Kind::Boss | Kind::Double | Kind::God | Kind::Cat | Kind::Oak
+            Kind::Boss | Kind::Double | Kind::God | Kind::Cat | Kind::Oak | Kind::Alien
         ) || d.phases.len() > 1
         {
             let next = self.phase + 1;
             if next < d.phases.len() && self.health_pct() <= d.phases[next].from_pct {
                 self.phase = next;
                 self.attack = 0;
-                self.state = State::Changing(PHASE_TICKS);
+                self.state = State::Changing(if d.kind == Kind::Alien {
+                    ALIEN_GROW
+                } else {
+                    PHASE_TICKS
+                });
                 deeds.summons = d.phases[next].summons.clone();
                 deeds.phase_changed = true;
                 return deeds;
@@ -1202,6 +1226,87 @@ impl Enemy {
         self.pos.y = fx::approach(self.pos.y, ground + d.hover + self.lift, ONE / 4);
     }
 
+    /// The Archivist on its jet pack: boosts between points round its home
+    /// (the chamber's middle), high and low by turns; hovers, strafing round
+    /// and bobbing; every third move dives at where you stood. Its body,
+    /// as big as it has grown, is kept out of solids and in the chamber.
+    fn jet(&mut self, d: &EnemyDef, level: &Level, target: V3) {
+        let r = self.radius(d);
+        let home = self.home;
+        let point = |k: usize| -> V3 {
+            let up = match k % 4 {
+                0 => JET_HIGH,
+                2 => (JET_HIGH + JET_LOW) / 2,
+                _ => JET_LOW,
+            };
+            home.add(facing(fx::TURN / 8 * k as i32, 0).scale(JET_RING))
+                .add(v3(0, up, 0))
+        };
+        let pace = d.speed * (100 + JET_PHASE_PCT * self.phase as i32) / 100;
+        if self.flying > 0 {
+            self.flying -= 1;
+            let (want, pace) = if self.diving {
+                (self.anchor, pace * JET_DIVE_PCT / 100)
+            } else {
+                (point(self.perch), pace)
+            };
+            let to = want.sub(self.pos);
+            self.vel = to.clamp_len(pace);
+            if to.len() <= pace || self.flying == 0 {
+                self.flying = 0;
+                self.perched = 0;
+                self.diving = false;
+            }
+        } else {
+            // hovering: round the middle, bobbing
+            self.perched += 1;
+            let off = v3(self.pos.x - home.x, 0, self.pos.z - home.z);
+            let round = v3(-off.z, 0, off.x).norm().scale(JET_STRAFE * self.orbit);
+            let bob = fx::sin(self.age * fx::TURN / secs(3, 2)) / 40;
+            self.vel = round.add(v3(0, bob, 0));
+            let hover = (JET_HOVER - JET_HOVER_LESS * self.phase as i32).max(JET_HOVER_LESS);
+            if self.perched >= hover {
+                self.moves += 1;
+                if self.moves % 3 == 0 {
+                    // a dive, to pass just over your head
+                    self.diving = true;
+                    self.anchor = target.add(v3(0, r + ONE, 0));
+                } else {
+                    // across the chamber, high to low and low to high
+                    self.perch = (self.perch + 3 + self.moves as usize % 2) % 8;
+                }
+                self.flying = JET_BOOST_MAX;
+                self.orbit = -self.orbit;
+            }
+        }
+        // kept out of solids: blocked, it climbs over
+        let next = self.pos.add(self.vel);
+        let climb = self.pos.add(v3(0, self.vel.len().max(ONE / 10), 0));
+        if !level.sphere_hits(next, r) {
+            self.pos = next;
+        } else if !level.sphere_hits(climb, r) {
+            self.pos = climb;
+        } else {
+            self.flying = 0;
+            self.diving = false;
+        }
+        // and in the chamber, its whole body
+        let off = v3(self.pos.x - home.x, 0, self.pos.z - home.z);
+        let most = (JET_BOUND - r).max(ONE);
+        if off.len_xz() > most {
+            let back = off.norm().scale(most);
+            self.pos.x = home.x + back.x;
+            self.pos.z = home.z + back.z;
+        }
+        let low = level
+            .floor_below(self.pos.x, self.pos.y, self.pos.z)
+            .unwrap_or(home.y)
+            + r
+            + ONE / 2;
+        let high = (home.y + JET_CEILING - r).max(low);
+        self.pos.y = self.pos.y.clamp(low, high);
+    }
+
     /// A burrower goes under the floor where it stands.
     fn dive(&mut self, level: &Level, target: V3) {
         self.buried = true;
@@ -1359,6 +1464,7 @@ impl Enemy {
                 let _ = (dist, side);
             }
             Kind::Mech | Kind::Double => self.skirmish(d, level, target),
+            Kind::Alien => self.jet(d, level, target),
             Kind::Cat => {
                 // a pounce carries it over you; otherwise its phase's gait
                 if !self.lunge_step(d, level) {
@@ -1534,7 +1640,7 @@ pub fn perches(home: V3, level: &Level) -> Vec<V3> {
 /// The damage a body takes from touching an enemy, if it does.
 pub fn contact(e: &Enemy, d: &EnemyDef, feet: V3) -> bool {
     let chest = feet.add(v3(0, PLAYER_CHEST, 0));
-    let reach = d.radius + PLAYER_RADIUS + ONE / 4;
+    let reach = e.radius(d) + PLAYER_RADIUS + ONE / 4;
     e.hurtable()
         && (orbs::within(e.pos, chest, reach) || (e.reach > 0 && orbs::within(e.head(), chest, reach)))
 }

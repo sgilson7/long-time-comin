@@ -40,6 +40,7 @@ pub fn draw(
         "custodian" => custodian(b, c, e, &o.feet(d), paint),
         "ward" => ward(b, c, e, &o, paint),
         "excisor" => excisor(b, c, e, &o, paint),
+        "archivist" => archivist(b, c, e, &o, paint),
         _ => return false,
     }
     true
@@ -1404,6 +1405,130 @@ fn ward(b: &mut Batch, c: &Content, e: &Enemy, o: &Body, paint: &dyn Fn(Rgb) -> 
     );
 }
 
+/// The Archivist, the Vault's keeper: a grey-violet alien, a great head
+/// with five black eyes, a thin body and long limbs hanging, on a chrome
+/// jet pack whose two cyan flames flare when it boosts (and burn brighter
+/// as it grows); it leans into a boost and its legs trail. Drawn as big as
+/// it has grown (`o` is scaled by the world).
+fn archivist(b: &mut Batch, c: &Content, e: &Enemy, o: &Body, paint: &dyn Fn(Rgb) -> Rgb) {
+    let g = e.glow(c);
+    let skin = paint(c.pal.c("alien_skin"));
+    let dark = paint(c.pal.c("alien_dark"));
+    let chrome = paint(c.pal.c("chrome"));
+    let eye = c.pal.c("alien_eye");
+    let cyan = c.pal.c("vault_cyan");
+    let violet = c.pal.c("vault_violet");
+    let boosting = e.flying > 0;
+    let lean = if boosting { -deg(28) } else { -deg(6) };
+    let o = &Body {
+        f: o.f.then(&Affine::rot_x(lean)),
+        ..o.clone()
+    };
+    let sway = fx::sin(e.age * fx::TURN / 70);
+    let trail = if boosting { 40 } else { 0 };
+    // the body, thin, and its belly
+    b.inked(Mesh::Sphere, &o.at([0, -10, 0], [70, 100, 50]), skin, 0);
+    b.inked(Mesh::Sphere, &o.at([0, -40, -8], [50, 50, 36]), dark, 0);
+    bar(b, o, [0, 30, 0], [0, 60, -6], 18, skin, true);
+    // the head: great, a cranium swelling back, a small chin
+    b.inked(Mesh::Sphere, &o.at([0, 100, -6], [120, 100, 110]), skin, 0);
+    b.inked(Mesh::Sphere, &o.at([0, 120, 30], [100, 80, 90]), skin, 0);
+    b.inked(Mesh::Sphere, &o.at([0, 56, -40], [34, 26, 28]), dark, 0);
+    // five eyes, black, lit cyan as it winds up
+    for (x, y, w) in [
+        (-30, 104, 30),
+        (30, 104, 30),
+        (0, 128, 24),
+        (-16, 80, 18),
+        (16, 80, 18),
+    ] {
+        b.inked(Mesh::Sphere, &o.at([x, y, -54], [w, w * 3 / 4, 12]), eye, 0);
+        b.push(
+            Mesh::Sphere,
+            &o.at([x + w / 6, y + w / 6, -60], [w / 3, w / 3, 4]),
+            cyan,
+            ONE / 3 + g,
+            PASS_SOLID,
+        );
+    }
+    // the arms, long, three fingers to a hand
+    for side in [-1, 1] {
+        let reach = fx::mul(sway, 20) * side;
+        let shoulder = [side * 34, 26, 0];
+        let elbow = [side * 74, -20 + reach / 2, -16];
+        let hand = [side * 84, -86 + reach, -40 - trail / 2];
+        bar(b, o, shoulder, elbow, 16, skin, true);
+        bar(b, o, elbow, hand, 13, skin, true);
+        for f in [-1, 0, 1] {
+            let tip = [hand[0] + side * 6 + f * 8, hand[1] - 30, hand[2] - 6 + f * 6];
+            bar(b, o, hand, tip, 6, dark, false);
+        }
+    }
+    // the legs, long, hanging, trailing in a boost
+    for side in [-1, 1] {
+        let swing = fx::mul(sway, 16) * side;
+        let hip = [side * 18, -54, 0];
+        let knee = [side * 26, -112, -14 + swing + trail];
+        let foot = [side * 22, -172, 4 + swing + trail * 2];
+        bar(b, o, hip, knee, 18, skin, true);
+        bar(b, o, knee, foot, 14, skin, true);
+        b.inked(
+            Mesh::Sphere,
+            &o.at([foot[0], foot[1], foot[2] - 10], [18, 10, 30]),
+            dark,
+            0,
+        );
+    }
+    // the jet pack: a chrome case on its back, two tanks, two nozzles
+    b.inked(Mesh::Cube, &o.at([0, 10, 40], [76, 84, 34]), chrome, 0);
+    b.push(
+        Mesh::Cube,
+        &o.at([0, 24, 58], [44, 10, 4]),
+        cyan,
+        ONE / 2,
+        PASS_SOLID,
+    );
+    // flames: short and flickering while it hovers, long when it boosts,
+    // brighter each phase
+    let flicker = fx::sin(e.age * fx::TURN / 6);
+    let long = if boosting { 150 } else { 50 } + fx::mul(flicker, 12) + 30 * e.phase as i32;
+    let bright = ONE / 2 + ONE / 4 * e.phase.min(2) as i32;
+    let down = Affine::rot_x(fx::HALF);
+    for side in [-1, 1] {
+        let x = side * 26;
+        b.inked(Mesh::Cyl, &o.at([x, 0, 60], [26, 96, 26]), chrome, 0);
+        b.inked(Mesh::Cone, &o.at([x, -56, 60], [30, 22, 30]), dark, 0);
+        b.push(
+            Mesh::Cone,
+            &o.place([x, -66 - long / 2, 60], &down, [28, long, 28]),
+            cyan,
+            bright,
+            PASS_SOLID,
+        );
+        b.push(
+            Mesh::Cone,
+            &o.place([x, -66 - long / 4, 60], &down, [14, long / 2, 14]),
+            c.pal.c("vault_white"),
+            ONE,
+            PASS_SOLID,
+        );
+    }
+    let h = o.w(80 + long);
+    b.glow(
+        Mesh::Sphere,
+        &boxed(o.p([0, -80 - long / 2, 60]), v3(h / 2, h, h / 2)),
+        cyan,
+        bright / 3,
+    );
+    let h = o.w(110 + fx::mul(g, 120));
+    b.glow(
+        Mesh::Sphere,
+        &boxed(o.p([0, 100, 0]), v3(h, h, h)),
+        violet,
+        ONE / 16 + g / 2,
+    );
+}
+
 /// An Excisor: a small chrome drone, four arms each spinning a blade of
 /// light.
 fn excisor(b: &mut Batch, c: &Content, e: &Enemy, o: &Body, paint: &dyn Fn(Rgb) -> Rgb) {
@@ -1589,6 +1714,87 @@ pub fn whirl(b: &mut Batch, c: &Content, wh: &crate::course::Whirl, tick: i32) {
     }
 }
 
+/// What fills the Eraser's ring: shut, an iris of chrome blades over black
+/// glass, dim violet behind; opening, the blades draw back into the ring,
+/// the pylons' beams reach it, and its heart turns cyan and violet, a ring
+/// on the dais pulsing where it will take you; taking you, its light goes
+/// grey.
+pub fn eraser(b: &mut Batch, c: &Content, er: &crate::course::Eraser, tick: i32) {
+    let chrome = c.pal.c("chrome");
+    let cyan = c.pal.c("vault_cyan");
+    let violet = c.pal.c("vault_violet");
+    let grey = c.pal.c("erased_grey");
+    let mid = er.at.add(v3(0, er.ring, 0));
+    // how far it has opened, 0 to ONE, over its first second and a half
+    let open = (er.opened * (ONE / crate::balance::ERASER_OPEN_TICKS)).clamp(0, ONE);
+    let inner = er.ring - dm(9);
+    let face = Affine::translate(mid).then(&Affine::rot_x(fx::QUARTER));
+    // the iris: six blades, drawn back as it opens
+    for k in 0..6 {
+        let a = fx::TURN / 6 * k + fx::mul(open, deg(40));
+        let out = inner / 2 + fx::mul(open, inner * 6 / 10);
+        let size = fx::mul(ONE - open * 3 / 4, inner);
+        let blade = Affine::translate(mid)
+            .then(&Affine::rot_z(a))
+            .then(&boxed(v3(0, out, 0), v3(size, size, dm(2))));
+        b.inked(Mesh::Wedge, &blade, chrome, 0);
+    }
+    if open == 0 {
+        b.push(
+            Mesh::Cyl,
+            &face.then(&Affine::scale(v3(inner * 2, dm(1), inner * 2))),
+            c.pal.c("black_glass"),
+            0,
+            PASS_SOLID,
+        );
+        b.glow(Mesh::Sphere, &boxed(mid, v3(m(4), m(4), m(4))), violet, ONE / 4);
+        return;
+    }
+    let taking = er.grey();
+    let tint = |x: Rgb| mix(x, grey, taking);
+    // its heart, swirling
+    let pulse = fx::sin(tick * fx::TURN / 50);
+    b.push(
+        Mesh::Cyl,
+        &face.then(&Affine::scale(v3(
+            fx::mul(inner * 2, open),
+            dm(1),
+            fx::mul(inner * 2, open),
+        ))),
+        tint(violet),
+        ONE / 2 + pulse / 8,
+        PASS_SOLID,
+    );
+    for k in 1..4 {
+        let r = fx::mul(inner * 2 * k / 4, open);
+        let spin = Affine::rot_y(tick * deg(3) * if k % 2 == 0 { 1 } else { -1 });
+        b.glow(
+            Mesh::Ring,
+            &face.then(&spin).then(&Affine::scale(v3(r, dm(3), r))),
+            tint(cyan),
+            ONE / 2,
+        );
+    }
+    // the pylons feed it
+    for &p in &er.pylons {
+        rod(b, p, mid, fx::mul(dm(3), open), tint(cyan), ONE, false);
+    }
+    // and on the dais, where it takes you
+    let r = er.radius * 2 + fx::mul(dm(3), pulse);
+    b.glow(
+        Mesh::Ring,
+        &boxed(er.at.add(v3(0, dm(1), 0)), v3(r, dm(2), r)),
+        tint(cyan),
+        ONE * 3 / 4,
+    );
+    let h = fx::mul(m(10), open);
+    b.glow(Mesh::Sphere, &boxed(mid, v3(h, h, h / 3)), tint(violet), ONE / 3);
+}
+
+fn m(n: i32) -> i32 {
+    n * ONE
+}
+
 fn dm(n: i32) -> i32 {
     n * ONE / 10
 }
@@ -1614,7 +1820,7 @@ mod tests {
         (mine, b.count())
     }
 
-    const BUDGETS: [(&str, usize); 16] = [
+    const BUDGETS: [(&str, usize); 17] = [
         ("deckhand", 50),
         ("gunner", 50),
         ("powder_monkey", 50),
@@ -1631,6 +1837,7 @@ mod tests {
         ("custodian", 50),
         ("ward", 50),
         ("excisor", 50),
+        ("archivist", 80),
     ];
 
     #[test]
@@ -1652,6 +1859,60 @@ mod tests {
             e.phase = 1;
         });
         assert!(n <= 120, "the dragon flying free drew {n}");
+    }
+
+    /// The Archivist as the world draws it, posed: how far its parts reach
+    /// from its middle, and the longest part (its flames, in a boost).
+    fn archivist_reach(pose: impl FnOnce(&mut Enemy)) -> (i32, i32) {
+        let c = content();
+        let def = c.enemy("archivist").unwrap();
+        let d = &c.enemies[def];
+        let mut e = Enemy::new(def, d, v3(0, ONE * 8, 0), 1);
+        e.state = State::Rest(10);
+        e.age = 40;
+        pose(&mut e);
+        let mut b = Batch::new([0; 3]);
+        crate::draw::enemy(&mut b, &c, &e, ONE, v3(0, ONE, ONE * 10));
+        let (values, _) = b.finish(0);
+        let at = |k: usize| v3(values[k + 3], values[k + 7], values[k + 11]);
+        let ks = (0..values.len()).step_by(16);
+        let far = ks.clone().map(|k| at(k).sub(e.pos).len()).max().unwrap();
+        let long = ks
+            .map(|k| v3(values[k + 4], values[k + 5], values[k + 6]).len())
+            .max()
+            .unwrap();
+        (far, long)
+    }
+
+    #[test]
+    fn the_archivist_is_drawn_as_big_as_it_has_grown_and_its_flames_flare_in_a_boost() {
+        let (small, _) = archivist_reach(|_| {});
+        let (big, _) = archivist_reach(|e| e.scale = ONE * 5 / 2);
+        assert!(big > small * 2, "grown {big}, small {small}");
+        let (_, hover) = archivist_reach(|_| {});
+        let (_, boost) = archivist_reach(|e| e.flying = 10);
+        assert!(
+            boost > hover + ONE / 4,
+            "its flames do not flare: {boost} vs {hover}"
+        );
+    }
+
+    #[test]
+    fn the_erasers_ring_is_shut_until_it_opens_and_then_lit() {
+        let c = content();
+        let a = crate::arena::build_at("vault", "boss", 1, &[], &c.pal, 0);
+        let mut er = a.course.unwrap().eraser.unwrap();
+        let count = |er: &crate::course::Eraser| {
+            let mut b = Batch::new([0; 3]);
+            eraser(&mut b, &c, er, 30);
+            b.count()
+        };
+        let shut = count(&er);
+        er.open = true;
+        er.opened = 200;
+        let open = count(&er);
+        assert!(open > shut, "open {open}, shut {shut}");
+        assert!(open <= 40, "the open Eraser drew {open}");
     }
 
     #[test]

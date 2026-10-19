@@ -512,6 +512,13 @@ impl World {
         (best, who)
     }
 
+    /// What a ray from `o` along `d` meets first within `max`, if it is an
+    /// enemy (for tests).
+    #[cfg(test)]
+    pub(crate) fn shot_hits_for_test(&self, c: &Content, o: V3, d: V3, max: i32) -> Option<usize> {
+        self.ray(c, o, d, 0, max).1
+    }
+
     fn spawn(&mut self, c: &Content, def: usize) {
         let d = &c.enemies[def];
         let feet = self.player.pos;
@@ -546,7 +553,7 @@ impl World {
             .course
             .as_ref()
             .and_then(|k| k.boss_at)
-            .filter(|_| matches!(d.kind, Kind::Boss | Kind::Double))
+            .filter(|_| matches!(d.kind, Kind::Boss | Kind::Double | Kind::Alien))
         {
             // where the course puts its boss
             at
@@ -568,7 +575,12 @@ impl World {
         } else {
             list[self.rng.range(0, list.len() as i32 - 1) as usize]
         };
-        if !air && !matches!(d.kind, Kind::Boss | Kind::God | Kind::Cat | Kind::Oak) {
+        if !air
+            && !matches!(
+                d.kind,
+                Kind::Boss | Kind::God | Kind::Cat | Kind::Oak | Kind::Alien
+            )
+        {
             at.y += standing_lift(d);
         }
         self.spawn_at(c, def, at);
@@ -586,8 +598,12 @@ impl World {
         }
         let orbit = if self.rng.chance(50) { 1 } else { -1 };
         let mut e = Enemy::new(def, d, at, orbit);
+        let eraser = self.arena.course.as_ref().and_then(|k| k.eraser.as_ref());
         e.home = if d.kind == Kind::God {
             at
+        } else if let Some(er) = eraser.filter(|_| d.kind == Kind::Alien) {
+            // the Archivist flies round the Eraser
+            er.at
         } else {
             self.arena.centre
         };
@@ -613,7 +629,7 @@ impl World {
         // felling it only clears its arena (SECOND-ORDER Q25)
         if matches!(
             d.kind,
-            Kind::Boss | Kind::Tank | Kind::Double | Kind::God | Kind::Cat | Kind::Oak
+            Kind::Boss | Kind::Tank | Kind::Double | Kind::God | Kind::Cat | Kind::Oak | Kind::Alien
         ) && !d.elite
         {
             self.boss = Some(self.enemies.len());
@@ -658,7 +674,7 @@ impl World {
         }
     }
 
-    fn sparks(&mut self, at: V3, rgb: [i32; 3], n: i32, speed: i32) {
+    pub(crate) fn sparks(&mut self, at: V3, rgb: [i32; 3], n: i32, speed: i32) {
         for _ in 0..n {
             let dir = facing(fx::deg(self.rng.range(0, 359)), fx::deg(self.rng.range(-30, 70)));
             let s = speed * self.rng.range(40, 100) / 100;
@@ -1030,6 +1046,12 @@ impl World {
             if deeds.grown {
                 self.note("hiss", c.say("callout_grown"));
             }
+            let e = &self.enemies[i];
+            if c.enemies[e.def].kind == Kind::Alien && e.flying == JET_BOOST_MAX {
+                // its jet pack fires, louder as it grows
+                let roar = ["jet", "jet_2", "jet_3"][e.phase.min(2)];
+                self.note(roar, String::new());
+            }
             if deeds.phase_changed {
                 // the court clears its orbs while the Bailiff changes
                 for o in std::mem::take(&mut self.orbs) {
@@ -1044,7 +1066,16 @@ impl World {
                     .get(&d.id)
                     .filter(|_| d.kind == Kind::Cat)
                     .and_then(|w| w.bars.get(self.enemies[i].phase).cloned());
-                self.note("boss_phase", bar.unwrap_or_else(|| c.say("callout_phase")));
+                if d.kind == Kind::Alien {
+                    // it grows: a roar, a flash, the room shakes
+                    let (at, r) = (self.enemies[i].pos, self.enemies[i].radius(d));
+                    self.effect(FxKind::Flash, at, V3::ZERO, 30, c.pal.c("vault_cyan"), r * 6);
+                    self.effect(FxKind::Ring, at, V3::ZERO, 40, c.pal.c("vault_violet"), r * 8);
+                    self.shake = SHAKE_TICKS * 2;
+                    self.note("alien_grow", c.say("callout_alien_grow"));
+                } else {
+                    self.note("boss_phase", bar.unwrap_or_else(|| c.say("callout_phase")));
+                }
             }
             let room = self.room();
             for s in deeds.summons.into_iter().take(room) {
@@ -1171,7 +1202,10 @@ impl World {
                     self.effect(FxKind::Burst, at, V3::ZERO, 24, c.pal.c("boss_trim"), int(4));
                     self.sparks(at, c.pal.c("spark"), 10, ONE / 4);
                 }
-                if self.win_timer > WIN_TICKS {
+                // in the Vault the fall opens the Eraser, and it is the
+                // Eraser that ends it (course.rs)
+                let erasing = self.course.as_ref().and_then(|k| k.eraser.as_ref());
+                if self.win_timer > WIN_TICKS && erasing.is_none_or(|er| er.erased > ERASE_TICKS) {
                     self.outcome = Outcome::Won;
                 }
             }
@@ -1569,7 +1603,7 @@ impl World {
                 if Some(i) == direct || !self.enemies[i].hurtable() {
                     continue;
                 }
-                let r = radius + c.enemies[self.enemies[i].def].radius;
+                let r = radius + self.enemies[i].radius(&c.enemies[self.enemies[i].def]);
                 if orbs::within(self.enemies[i].pos, at, r) && self.enemies[i].hurt(damage) {
                     killed.push(i);
                 }
@@ -1840,7 +1874,7 @@ impl World {
             if j == i || killed.contains(&j) || !self.enemies[j].hurtable() {
                 continue;
             }
-            let r = radius + c.enemies[self.enemies[j].def].radius;
+            let r = radius + self.enemies[j].radius(&c.enemies[self.enemies[j].def]);
             if orbs::within(self.enemies[j].pos, at, r) && self.enemies[j].hurt(damage) {
                 killed.push(j);
             }
@@ -1892,7 +1926,7 @@ impl World {
             }
             let d = &c.enemies[self.enemies[i].def];
             let parts = tank::weak_points(&self.enemies[i], d);
-            let body = inside(self.enemies[i].pos, d.radius);
+            let body = inside(self.enemies[i].pos, self.enemies[i].radius(d));
             let points: Vec<(usize, V3)> = parts
                 .iter()
                 .filter(|(wp, wr, _)| inside(*wp, *wr))
@@ -2040,7 +2074,7 @@ fn body_spheres(c: &Content, e: &Enemy) -> Vec<(V3, i32)> {
         v.extend(tank::weak_points(e, d).into_iter().map(|(p, r, _)| (p, r)));
         v
     } else {
-        vec![(e.pos, d.radius)]
+        vec![(e.pos, e.radius(d))]
     }
 }
 
@@ -2081,7 +2115,7 @@ impl World {
                 }
                 continue;
             }
-            if let Some(t) = ray_sphere(o, dir, e.pos, d.radius + radius) {
+            if let Some(t) = ray_sphere(o, dir, e.pos, e.radius(d) + radius) {
                 // a shield stops what comes at it from in front, unless
                 // it comes from well above
                 let from = dir.neg();
@@ -2277,7 +2311,7 @@ impl World {
                     && orbs::within(
                         self.enemies[j].pos,
                         at,
-                        a.splash_radius + c.enemies[self.enemies[j].def].radius,
+                        a.splash_radius + self.enemies[j].radius(&c.enemies[self.enemies[j].def]),
                     )
                     && self.enemies[j].hurt(a.splash)
                 {
@@ -2331,7 +2365,13 @@ impl World {
                     && !d.elite
                     && !matches!(
                         d.kind,
-                        Kind::Boss | Kind::Tank | Kind::Mech | Kind::Double | Kind::God | Kind::Cat
+                        Kind::Boss
+                            | Kind::Tank
+                            | Kind::Mech
+                            | Kind::Double
+                            | Kind::God
+                            | Kind::Cat
+                            | Kind::Alien
                     )
                     && to.len() <= GRAB_REACH + d.radius
                     && to.norm().dot(fwd) > ONE / 2
@@ -2673,7 +2713,7 @@ impl World {
                 continue;
             }
             let d = &c.enemies[e.def];
-            let near = e.pos.sub(feet).len_xz() < radius + d.radius && (e.pos.y - feet.y).abs() < int(4);
+            let near = e.pos.sub(feet).len_xz() < radius + e.radius(d) && (e.pos.y - feet.y).abs() < int(4);
             if near && self.enemies[i].hurt(damage) {
                 killed.push(i);
             }
@@ -2739,7 +2779,7 @@ impl World {
                 }
                 continue;
             }
-            if !cuts(e.pos, d.radius) {
+            if !cuts(e.pos, e.radius(d)) {
                 continue;
             }
             // a shield turns a blade that comes at it from in front, as it

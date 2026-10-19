@@ -429,6 +429,29 @@ fn movement(d: &EnemyDef, c: &Content) -> String {
             ),
             Gait::None => String::new(),
         },
+        Kind::Alien => {
+            let sizes: Vec<String> = d
+                .phases
+                .iter()
+                .map(|p| format!("{} m", m(fx::mul(d.radius * 2, p.scale))))
+                .collect();
+            format!(
+                "Flies its chamber on a jet pack: it boosts at {} m/s between points {} m out from the middle, from {} m up to {} m, hovers {} s at each strafing round you, and every third move dives at where you stood. Its {} phases begin at {}% health; at each new one it hangs still, cannot be hurt for {} s, and grows: {} across. Its body, and what touches you or is hit, grows with it.",
+                mps(d.speed),
+                m(JET_RING),
+                m(JET_LOW),
+                m(JET_HIGH),
+                s(JET_HOVER),
+                d.phases.len(),
+                d.phases
+                    .iter()
+                    .map(|p| p.from_pct.to_string())
+                    .collect::<Vec<_>>()
+                    .join("%, "),
+                s(ALIEN_GROW),
+                sizes.join(", then ")
+            )
+        }
         Kind::Oak => "Rooted on the shore and never hurt. Its first bar is your climb up its trunk; its eyes open just above you as you go. At its crown it calls the Summons out of the lake, and its bar follows the Summons' health.".to_string(),
         Kind::God => {
             let bars: Vec<String> = d

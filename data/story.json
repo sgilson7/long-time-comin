@@ -112,13 +112,13 @@
       "name": "THE CAPTURED DRAGON",
       "title": "Chained to the flagship's mast. Break the three locks and it fights free."
     },
-    "the_other": {
-      "name": "YOUR OLDER SELF",
-      "title": "They came through the anomaly to stop the Eraser. Hold its pylons until it fires.",
+    "archivist": {
+      "name": "THE ARCHIVIST",
+      "title": "It has kept the Vault since before the lake. It does not let anything out of the record.",
       "bars": [
-        "THE ERASER CHARGES",
-        "THE ERASER CHARGES",
-        "THE ERASER CHARGES"
+        "THE KEEPER",
+        "THE RECORD GROWS",
+        "ALL OF IT, REMEMBERED"
       ]
     }
   },
@@ -307,16 +307,17 @@
           "You come to rest on the bottom of Lake Stillwater. The anomaly was never the door. It was the doorstep.",
           "Under the lake bed there is a building that was here before the lake. White halls, black glass, light with nothing to cast it.",
           "At the bottom of it, a machine that takes a thing out of the world so cleanly that the world never notices the hole.",
-          "Your older self is the hole that would be left. So are you."
+          "Something keeps it. And you are the one thing in this timeline that should not be here."
         ]
       },
       "victory_title": "THE GREY ENDING",
       "victory": [
-        "The Eraser fires. Your older self is not killed. They were never born to this. The Long Door is never built.",
+        "The Archivist falls, and the Eraser opens for the only thing left in the Vault that does not belong to it.",
+        "You step into the ring. It does not kill you. It takes you out of the record, so cleanly that the world never notices the hole.",
         "March 14, 2081 is an ordinary evening in Meridian. At 21:14 the clocks show 21:15, and then 21:16.",
-        "Nobody is sentenced. Nobody is sent back. The court never sits.",
-        "You were only ever here because of them. You feel it begin at your hands: grey, then nothing, without pain.",
-        "Everything happens as it should. Neither of you was supposed to be here."
+        "Nobody is sentenced. Nobody is sent back. The court never sits. Your older self lives their one life, and it is theirs.",
+        "You feel it begin at your hands: grey, then nothing, without pain.",
+        "Everything happens as it should. You were never supposed to be here."
       ],
       "verdict_art": "grey_ending"
     }

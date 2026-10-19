@@ -386,10 +386,13 @@ pub fn player_with(
     spin: (i32, i32),
 ) {
     let feet = p.prev_pos.lerp(p.pos, alpha);
-    let coat = c.pal.c("player_coat");
-    let trim = c.pal.c("player_trim");
-    let skin = c.pal.c("player_skin");
-    let hair = c.pal.c("player_hair");
+    // the Eraser taking you: every colour of you going grey
+    let ash = c.pal.c("erased_grey");
+    let greyed = |x: Rgb| mix(x, ash, p.grey);
+    let coat = greyed(c.pal.c("player_coat"));
+    let trim = greyed(c.pal.c("player_trim"));
+    let skin = greyed(c.pal.c("player_skin"));
+    let hair = greyed(c.pal.c("player_hair"));
     let dark = shade(coat, 70);
     let hurt = p.hurt_age < 6;
     let tint = |x: Rgb| if hurt { mix(x, [ONE; 3], ONE / 2) } else { x };
@@ -1226,6 +1229,9 @@ fn course(b: &mut Batch, c: &Content, w: &World) {
         if let Some(wh) = &k.whirl {
             sea::whirl(b, c, wh, w.tick);
         }
+        if let Some(er) = &k.eraser {
+            sea::eraser(b, c, er, w.tick);
+        }
         // each ship's colours at her masthead, black on red, until her
         // crew is down: then struck, a white rag at the mast's foot
         let red = c.pal.c("pirate_red");
@@ -1458,7 +1464,7 @@ pub fn enemy(b: &mut Batch, c: &Content, e: &Enemy, alpha: i32, target: V3) {
         State::Spawning(t) => ONE - fx::div(t * ONE, SPAWN_TICKS * ONE),
         _ => ONE,
     };
-    let s = fx::mul(d.radius * 2, grow.max(ONE / 20));
+    let s = fx::mul(e.radius(d) * 2, grow.max(ONE / 20));
     let flash = e.flash < 4;
     let paint = |x: Rgb| if flash { mix(x, [ONE; 3], ONE * 7 / 10) } else { x };
     let shell = paint(c.pal.c("enemy_shell"));
@@ -1648,7 +1654,8 @@ pub fn enemy(b: &mut Batch, c: &Content, e: &Enemy, alpha: i32, target: V3) {
         | Kind::Beast
         | Kind::God
         | Kind::Cat
-        | Kind::Oak => {}
+        | Kind::Oak
+        | Kind::Alien => {}
     }
     // the windup: a halo that grows as the attack comes
     if charge > 0 && d.kind != Kind::Boss {

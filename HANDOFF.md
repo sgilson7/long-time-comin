@@ -206,3 +206,9 @@ The Holding's timeline is a map you open: a hologram, 2031 at the top, each zone
 Checked locally: `./scripts/check.sh` passed (BUILDER CHECK PASSED: fmt, clippy with warnings as errors, 336 core and 11 boundary tests, the release wasm build and the import audit, and the browser check in Chromium, Firefox and WebKit). Each new break fails its test (B20); a full run of every break was stopped part way for the deploy (Sam asked for it at once), and CI's break job runs them all.
 
 Live (2026-10-19): PR #19 passed its check on CI (run 39307336381) and merged as 10021dd; main's run 39308206963 passed check and deploy, and the live `data/copy.json` holds the map's words. CI's break job was still running at the merge.
+
+## Round 21 (2026-10-19): the Archivist
+
+The Vault's last boss is THE ARCHIVIST, a jet-packed alien that grows each bar; when it falls the Eraser opens and takes you, and THE GREY ENDING is read (SECOND-ORDER R21, K1 to K4; built by an agent). The flicker analysis follows as its own change.
+
+Checked locally: fmt, clippy with warnings as errors, 340 core and 11 boundary tests, the release wasm build and the import audit passed; the browser check timed out on a click while the flicker analysis held the processor (load average about 41), as it has before under load. The Archivist's agent ran the whole `./scripts/check.sh`, browser check in three engines included, and it passed; CI's check is the gate.

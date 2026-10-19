@@ -134,6 +134,16 @@ Done means, for this round: the Fleet's ships strike their colours as their crew
 
 Done means, for this round: the timeline as a map opened by a button, rooted at 2031 and flowing down, each zone a 3D diorama after Iron Vector's planets, and a walkthrough of a zone's arenas when it is clicked; the decks cut away round the camera; the open sea swum before it drowns; a melee slash on E (longer mid-dash) with upgrades in the Holding, and pickup on X; ???? for the Idiot God; Dagon's fight on wreckage falling down a whirlpool cone; the Oak's crown clear; the Falls' pound fixed; every edit in the design journal; deployed under the standing approval.
 
+## The twenty-second request, word for word (2026-10-19)
+
+> deploy asap, then go through every level and do a flicker analysis, getting screenshots of every surface / videos to see if its flickering during gameplay, as the new maps flicker a lot. also the new final boss is lame that its you again, it should be some space alien thats flying around with a jet pack and gets bigger and bigger per phase, and then you use this erase to erase yourself
+
+> add everything to the design log in a new tab please
+
+> go with the defaults, deploy when done
+
+Done means, for this round: Round 20 deployed at once; a flicker analysis of every level with the flicker fixed and a test against it; the Vault's last boss a jet-packed alien that grows each phase, and the Eraser used on yourself after it; all in the journal's Round 21 tab; deployed under the standing approval.
+
 ## The tool
 
 A third-person bullet-hell shooter that runs in a desktop browser with a keyboard and mouse. Roguelike runs across a graph of arenas; meta-progression between runs; a story told by an indictment that is revealed one count at a time, on each death.

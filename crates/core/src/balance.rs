@@ -625,3 +625,36 @@ pub const EYE_PIECES: i32 = 12;
 pub const EYE_WARN_TICKS: i32 = secs(2, 1);
 /// the whirlpool's water goes once round in this long (drawn only)
 pub const EYE_WHIRL_TICKS: i32 = secs(20, 1);
+
+// ---- the Archivist and the Eraser (round 21) --------------------------------
+
+/// The Archivist flies its chamber on a jet pack. It boosts at its speed
+/// (this much faster each phase) between eight points round the chamber's
+/// middle, this far out, high, low and between by turns; it hovers at each
+/// this long (this much less each phase, never less than that), strafing
+/// round the middle and bobbing; and every third move it dives at where you
+/// stood when it set off, this much faster, to pass just over your head.
+/// A boost that has not arrived in its time ends where it is.
+pub const JET_RING: i32 = int(13);
+pub const JET_HIGH: i32 = int(15);
+pub const JET_LOW: i32 = int(3);
+pub const JET_HOVER: i32 = secs(2, 1);
+pub const JET_HOVER_LESS: i32 = secs(1, 2);
+pub const JET_PHASE_PCT: i32 = 15;
+pub const JET_STRAFE: i32 = per_tick(3, 1);
+pub const JET_DIVE_PCT: i32 = 140;
+pub const JET_BOOST_MAX: i32 = secs(3, 1);
+/// its body is kept within this far of the chamber's middle and under this
+/// height over its floor
+pub const JET_BOUND: i32 = int(19);
+pub const JET_CEILING: i32 = int(22);
+/// at each new phase it hangs where it is this long, unhurt, and grows
+pub const ALIEN_GROW: i32 = secs(5, 2);
+
+/// The Eraser opens when the Archivist falls; stand in its ring, on the
+/// dais, this long and it takes you: this long of going grey, and then
+/// the Grey Ending.
+pub const ERASER_HOLD: i32 = secs(1, 1);
+pub const ERASE_TICKS: i32 = secs(4, 1);
+/// it opens over this long (drawn)
+pub const ERASER_OPEN_TICKS: i32 = secs(3, 2);

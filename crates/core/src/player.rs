@@ -232,6 +232,8 @@ pub struct Player {
     pub swimming: bool,
     /// in the open sea: you sink slowly
     pub afloat: bool,
+    /// how far you have gone grey, Q16 (the Eraser takes you; drawn only)
+    pub grey: i32,
     pub stroke_cooldown: i32,
     /// ticks it is slowed yet (a Cockatrice's gaze)
     pub slowed: i32,
@@ -311,6 +313,7 @@ impl Player {
             lunge_window: 0,
             swimming: false,
             afloat: false,
+            grey: 0,
             stroke_cooldown: 0,
             slowed: 0,
             shove: V3::ZERO,
