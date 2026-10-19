@@ -4824,6 +4824,172 @@
           "damage": 10
         }
       ]
+    },
+    {
+      "id": "archive_eyes",
+      "volleys": [
+        {
+          "shape": "aimed",
+          "count": 5,
+          "spread_deg": 30,
+          "speed_cms": 1500,
+          "size_cm": 26,
+          "colour": "violet",
+          "repeat": 3,
+          "every_ms": 220,
+          "damage": 9
+        }
+      ]
+    },
+    {
+      "id": "archive_halo",
+      "volleys": [
+        {
+          "shape": "ring",
+          "count": 12,
+          "speed_cms": 800,
+          "size_cm": 28,
+          "colour": "cyan",
+          "repeat": 4,
+          "every_ms": 260,
+          "spin_deg": 13,
+          "damage": 8
+        }
+      ]
+    },
+    {
+      "id": "archive_rain",
+      "volleys": [
+        {
+          "shape": "form",
+          "form": "grid",
+          "count": 4,
+          "rows": 4,
+          "radius_cm": 260,
+          "at": "above",
+          "at_cm": 800,
+          "hold_ms": 700,
+          "stagger_ms": 30,
+          "launch": "down",
+          "speed_cms": 1100,
+          "size_cm": 30,
+          "colour": "violet",
+          "damage": 9
+        }
+      ]
+    },
+    {
+      "id": "archive_eyes_2",
+      "volleys": [
+        {
+          "shape": "aimed",
+          "count": 9,
+          "spread_deg": 54,
+          "speed_cms": 1500,
+          "size_cm": 32,
+          "colour": "violet",
+          "repeat": 4,
+          "every_ms": 200,
+          "damage": 10
+        }
+      ]
+    },
+    {
+      "id": "archive_spiral",
+      "volleys": [
+        {
+          "shape": "ring",
+          "count": 8,
+          "speed_cms": 900,
+          "size_cm": 34,
+          "colour": "cyan",
+          "repeat": 18,
+          "every_ms": 110,
+          "spin_deg": 12,
+          "damage": 9
+        }
+      ]
+    },
+    {
+      "id": "archive_cage",
+      "volleys": [
+        {
+          "shape": "form",
+          "form": "ring",
+          "count": 16,
+          "radius_cm": 700,
+          "at": "target",
+          "hold_ms": 1300,
+          "stagger_ms": 20,
+          "launch": "in",
+          "speed_cms": 700,
+          "size_cm": 36,
+          "colour": "violet",
+          "damage": 10
+        }
+      ]
+    },
+    {
+      "id": "archive_sphere",
+      "volleys": [
+        {
+          "shape": "sphere",
+          "count": 16,
+          "rings": 6,
+          "speed_cms": 700,
+          "size_cm": 46,
+          "colour": "cyan",
+          "repeat": 2,
+          "every_ms": 700,
+          "damage": 12
+        }
+      ]
+    },
+    {
+      "id": "archive_flower",
+      "volleys": [
+        {
+          "shape": "ring",
+          "count": 18,
+          "speed_cms": 700,
+          "size_cm": 44,
+          "colour": "violet",
+          "curl_degs": 52,
+          "alternate": true,
+          "repeat": 5,
+          "every_ms": 300,
+          "damage": 11
+        }
+      ]
+    },
+    {
+      "id": "archive_landing",
+      "volleys": [
+        {
+          "shape": "wave",
+          "speed_cms": 1200,
+          "size_cm": 3000,
+          "colour": "cyan",
+          "damage": 14
+        },
+        {
+          "shape": "form",
+          "form": "grid",
+          "count": 6,
+          "rows": 6,
+          "radius_cm": 240,
+          "at": "above",
+          "at_cm": 900,
+          "hold_ms": 800,
+          "stagger_ms": 20,
+          "launch": "down",
+          "speed_cms": 1200,
+          "size_cm": 40,
+          "colour": "violet",
+          "delay_ms": 300,
+          "damage": 12
+        }
+      ]
     }
   ]
 }

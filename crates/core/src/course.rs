@@ -298,27 +298,35 @@ pub struct Underwater {
     pub pull: i32,
 }
 
-/// The Eraser's charge (the Vault): pylons held in turn, each `need`
-/// ticks within `radius` of it.
+/// The Eraser (the Vault): shut while the Archivist lives; when it falls
+/// the Eraser opens, its pylons light, and whoever stands in its ring on
+/// the dais `need` ticks is erased.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Charge {
-    pub pylons: Vec<V3>,
+pub struct Eraser {
+    /// the middle of its ring's floor, on the dais
+    pub at: V3,
+    /// how far from that middle its ring takes you
     pub radius: i32,
+    /// the ring's own radius: it stands on edge on the dais, its middle
+    /// this high over `at`
+    pub ring: i32,
     pub need: i32,
-    /// ticks each has been held so far
-    pub held: Vec<i32>,
+    /// the pylons round it, which feed it once it opens
+    pub pylons: Vec<V3>,
+    pub open: bool,
+    /// ticks since it opened (drawn: it opens over a second or two)
+    pub opened: i32,
+    /// ticks you have stood in it since it opened
+    pub held: i32,
+    /// ticks since it took you (0: it has not)
+    pub erased: i32,
 }
 
-impl Charge {
-    /// The charge so far, Q16 of whole.
-    pub fn level(&self) -> i32 {
-        let total = self.need * self.pylons.len() as i32;
-        fx::div(self.held.iter().sum::<i32>(), total.max(1))
-    }
-
-    /// The pylon being charged now, if any is left.
-    pub fn next(&self) -> Option<usize> {
-        (0..self.pylons.len()).find(|&k| self.held.get(k).copied().unwrap_or(0) < self.need)
+impl Eraser {
+    /// How far you have gone grey, Q16: nothing until it takes you, all of
+    /// you at the end.
+    pub fn grey(&self) -> i32 {
+        (self.erased * (ONE / ERASE_TICKS.max(1))).clamp(0, ONE)
     }
 }
 
@@ -372,7 +380,7 @@ pub struct Course {
     pub whirl: Option<Whirl>,
     /// where the boss comes up (Dagon, in the eye)
     pub boss_at: Option<V3>,
-    pub charge: Option<Charge>,
+    pub eraser: Option<Eraser>,
     /// a fleet's ships and their colours
     pub flags: Vec<Flag>,
     pub chain: Option<Chain>,
@@ -704,27 +712,35 @@ impl World {
         }
         self.player.shove = shove;
         self.sea_step(c, &mut k, &mut said);
-        // the Eraser: held pylon by pylon; the boss's bar is what is left
-        if let Some(ch) = k.charge.as_mut() {
-            if let Some(n) = ch.next() {
-                if p.sub(ch.pylons[n]).len_xz() <= ch.radius {
-                    ch.held[n] += 1;
-                    if ch.held[n] == ch.need {
-                        said.push(("switch", c.say("callout_pylon")));
-                    }
-                }
+        // the Eraser: it opens when the Archivist falls; stand in its ring
+        // and it takes you, and you go grey where you stand
+        let mut dust = None;
+        if let Some(er) = k.eraser.as_mut() {
+            let fallen = self.boss.is_some_and(|b| !self.enemies[b].alive());
+            if !er.open && fallen {
+                er.open = true;
+                said.push(("eraser_open", c.say("callout_eraser_open")));
             }
-            let level_now = ch.level();
-            if let Some(b) = self.boss {
-                // your older self cannot be hurt here: only the Eraser ends it
-                let e = &mut self.enemies[b];
-                e.shielded = true;
-                if e.alive() {
-                    e.hp = if ch.next().is_none() {
-                        0
-                    } else {
-                        (e.max_hp - fx::mul(e.max_hp, level_now)).max(1)
-                    };
+            if er.open {
+                er.opened += 1;
+            }
+            if er.erased > 0 {
+                er.erased += 1;
+                let pl = &mut self.player;
+                pl.pos = v3(er.at.x, pl.pos.y.max(er.at.y), er.at.z);
+                pl.prev_pos = pl.pos;
+                pl.vel = V3::ZERO;
+                pl.iframes = pl.iframes.max(HURT_IFRAMES);
+                pl.grey = er.grey();
+                if er.erased % 5 == 0 {
+                    dust = Some(pl.chest());
+                }
+            } else if er.open {
+                let inside = p.sub(er.at).len_xz() <= er.radius && (p.y - er.at.y).abs() < ONE;
+                er.held = if inside { er.held + 1 } else { 0 };
+                if er.held >= er.need {
+                    er.erased = 1;
+                    said.push(("erased", c.say("callout_erased")));
                 }
             }
         }
@@ -756,6 +772,10 @@ impl World {
         self.course = Some(k);
         for (sound, text) in said {
             self.note(sound, text);
+        }
+        if let Some(at) = dust {
+            // you crumble: grey dust falling off you
+            self.sparks(at, c.pal.c("erased_grey"), 6, ONE / 12);
         }
         if let Some(at) = burst {
             let rgb = c.pal.c("river_wood");
@@ -1908,20 +1928,10 @@ pub(crate) mod tests {
     }
 
     #[test]
-    fn dagon_and_your_older_self_come_where_their_course_puts_them_away_from_you() {
+    fn dagon_and_the_archivist_come_where_their_course_puts_them_away_from_you() {
         let c = content();
         for zone in ["far_shore", "vault"] {
-            let z = c.zones.iter().position(|q| q.id == zone).unwrap();
-            let r = Route::build_for(&c, z, 7, &Have::level(1));
-            let node = r.nodes.iter().find(|n| n.kind == NodeKind::Boss).unwrap().clone();
-            let mut w = World::new(
-                &c,
-                &node,
-                &[],
-                Player::new(V3::ZERO, 0, river_kit()),
-                Held::new(0, 1),
-                3,
-            );
+            let mut w = boss_world(&c, zone);
             let start = w.player.pos;
             let at = w.course.as_ref().unwrap().boss_at.expect("the boss's place");
             for _ in 0..90 {
@@ -1940,64 +1950,161 @@ pub(crate) mod tests {
                 "{zone}: the boss on top of you at {:?}",
                 e.pos
             );
+            if zone == "vault" {
+                assert_eq!(c.enemies[e.def].id, "archivist");
+                assert!(e.pos.y > int(4), "the Archivist comes in high: {:?}", e.pos);
+            }
         }
     }
 
-    #[test]
-    fn the_erasers_charge_fills_only_while_you_hold_its_lit_pylon_and_its_end_is_the_bosss() {
-        let c = content();
-        let zone = c.zones.iter().position(|z| z.id == "vault").unwrap();
-        let r = Route::build_for(&c, zone, 7, &Have::level(1));
+    /// The zone's boss node, with the river's kit.
+    fn boss_world(c: &Content, zone: &str) -> World {
+        let z = c.zones.iter().position(|q| q.id == zone).unwrap();
+        let r = Route::build_for(c, z, 7, &Have::level(1));
         let node = r.nodes.iter().find(|n| n.kind == NodeKind::Boss).unwrap().clone();
-        let mut w = World::new(
-            &c,
+        World::new(
+            c,
             &node,
             &[],
             Player::new(V3::ZERO, 0, river_kit()),
             Held::new(0, 1),
             3,
-        );
-        for _ in 0..90 {
-            tick(&c, &mut w, idle());
-        }
-        let b = w.boss.expect("your older self came");
-        let ch = w.course.as_ref().unwrap().charge.clone().unwrap();
-        assert_eq!(ch.next(), Some(0));
-        // away from the pylon, nothing
-        let away = ch.pylons[0].add(v3(ch.radius * 3, 0, 0));
-        for _ in 0..60 {
-            w.player.pos = away;
+        )
+    }
+
+    /// The Vault's boss node, the Archivist come in; you cannot be hurt.
+    fn archivist_world() -> (Content, World, usize) {
+        let c = content();
+        let mut w = boss_world(&c, "vault");
+        for _ in 0..secs(5, 1) {
             w.player.iframes = 1000;
             tick(&c, &mut w, idle());
-        }
-        assert_eq!(w.course.as_ref().unwrap().charge.as_ref().unwrap().held[0], 0);
-        // in its ring, it charges, and the bar falls with it
-        for _ in 0..ch.need / 2 {
-            w.player.pos = ch.pylons[0];
-            w.player.iframes = 1000;
-            tick(&c, &mut w, idle());
-        }
-        assert!(w.course.as_ref().unwrap().charge.as_ref().unwrap().held[0] > 0);
-        assert!(w.enemies[b].hp < w.enemies[b].max_hp, "the bar is the charge");
-        assert!(w.enemies[b].shielded, "your older self cannot be hurt here");
-        // all three held: the boss is gone
-        // (a pylon holds no charge while time is stopped, so a few ticks over)
-        for k in 0..3 {
-            for _ in 0..ch.need * 3 / 2 {
-                if w.course.as_ref().unwrap().charge.as_ref().unwrap().held[k] >= ch.need {
-                    break;
-                }
-                w.player.pos = ch.pylons[k];
-                w.player.iframes = 1000;
-                tick(&c, &mut w, idle());
+            if w.boss
+                .is_some_and(|b| matches!(w.enemies[b].state, crate::enemy::State::Rest(_)))
+            {
+                break;
             }
         }
+        let b = w.boss.expect("the Archivist came");
+        (c, w, b)
+    }
+
+    #[test]
+    fn the_archivist_flies_its_chamber_high_and_low_and_never_lands() {
+        let (c, mut w, b) = archivist_world();
+        let d = c.enemies[w.enemies[b].def].clone();
+        let mut seen = Vec::new();
+        for t in 0..60 * 30 {
+            w.player.iframes = 1000;
+            // keep it whole, so it stays in its first phase
+            w.enemies[b].hp = w.enemies[b].max_hp;
+            tick(&c, &mut w, idle());
+            if t % 10 == 0 {
+                seen.push(w.enemies[b].pos);
+            }
+        }
+        let low = seen.iter().map(|p| p.y).min().unwrap();
+        let high = seen.iter().map(|p| p.y).max().unwrap();
+        assert!(high - low > int(8), "it keeps one height: {low}..{high}");
+        let floor = 0;
         assert!(
-            !w.enemies[b].alive(),
-            "erased: {:?}",
-            w.course.as_ref().unwrap().charge.as_ref().unwrap().held
+            low - w.enemies[b].radius(&d) > floor + ONE / 2,
+            "it came down to the floor: {low}"
+        );
+        // it crosses the chamber
+        let wide = seen
+            .iter()
+            .flat_map(|p| seen.iter().map(move |q| p.sub(*q).len_xz()))
+            .max()
+            .unwrap();
+        assert!(wide > int(18), "it stays on one side: {wide}");
+        // and keeps inside its walls
+        assert!(
+            seen.iter().all(|p| p.len_xz() + d.radius < int(20)),
+            "out of the chamber"
+        );
+        // a third of its moves are dives at you: it comes within a few
+        // metres of where you stand
+        let near = seen.iter().map(|p| p.sub(w.player.chest()).len()).min().unwrap();
+        assert!(near < int(6), "it never dove at you: {near}");
+    }
+
+    #[test]
+    fn the_archivist_is_hurt_by_your_shots_and_grows_at_each_phase_and_its_body_with_it() {
+        let (c, mut w, b) = archivist_world();
+        let d = c.enemies[w.enemies[b].def].clone();
+        assert!(
+            !w.enemies[b].shielded && w.enemies[b].hurtable(),
+            "it can be hurt"
+        );
+        let before = w.enemies[b].hp;
+        assert!(!w.enemies[b].hurt(50) && w.enemies[b].hp == before - 50);
+        // a shot two metres to the side of its middle, out in the open
+        let aside = |w: &mut World| -> bool {
+            w.enemies[b].pos = v3(0, int(12), 0);
+            let o = v3(int(2), int(12), int(10));
+            w.shot_hits_for_test(&c, o, v3(0, 0, -ONE), int(20)) == Some(b)
+        };
+        let mut sizes = vec![(w.enemies[b].scale, w.enemies[b].radius(&d), aside(&mut w))];
+        for pct in [60, 30] {
+            w.enemies[b].hp = w.enemies[b].max_hp * pct / 100;
+            for _ in 0..secs(4, 1) {
+                w.player.iframes = 1000;
+                tick(&c, &mut w, idle());
+                w.enemies[b].hp = w.enemies[b].hp.max(w.enemies[b].max_hp * pct / 100);
+            }
+            sizes.push((w.enemies[b].scale, w.enemies[b].radius(&d), aside(&mut w)));
+        }
+        let want: Vec<i32> = d.phases.iter().map(|p| p.scale).collect();
+        assert_eq!(sizes.iter().map(|s| s.0).collect::<Vec<_>>(), want, "{sizes:?}");
+        assert!(sizes[0].1 < sizes[1].1 && sizes[1].1 < sizes[2].1, "{sizes:?}");
+        assert!(!sizes[0].2, "a shot two metres aside hit it small");
+        assert!(sizes[2].2, "a shot two metres aside missed it grown");
+        // and it touches you from further off
+        let e = &w.enemies[b];
+        let feet = e
+            .pos
+            .add(v3(e.radius(&d) + ONE / 2, -crate::balance::PLAYER_CHEST, 0));
+        assert!(
+            crate::enemy::contact(e, &d, feet),
+            "its grown body does not touch you"
         );
     }
+
+    #[test]
+    fn the_eraser_takes_no_one_while_the_archivist_lives_and_opens_when_it_falls() {
+        let (c, mut w, b) = archivist_world();
+        let er = w.course.as_ref().unwrap().eraser.clone().unwrap();
+        // standing in it while its keeper lives: nothing
+        for _ in 0..er.need * 3 {
+            w.player.pos = er.at;
+            w.player.iframes = 1000;
+            tick(&c, &mut w, idle());
+        }
+        let now = w.course.as_ref().unwrap().eraser.clone().unwrap();
+        assert!(!now.open && now.erased == 0, "{now:?}");
+        assert_eq!(w.outcome, Outcome::Playing);
+        // it falls: the Eraser opens, and does not end the run by itself
+        w.enemies[b].hp = 0;
+        for _ in 0..secs(3, 1) {
+            w.player.pos = er.at.add(v3(0, 0, int(8)));
+            tick(&c, &mut w, idle());
+        }
+        let now = w.course.as_ref().unwrap().eraser.clone().unwrap();
+        assert!(now.open && now.erased == 0, "{now:?}");
+        assert_eq!(w.outcome, Outcome::Playing, "the run waits for you");
+        // into its ring: it takes you, you go grey, and the river is won
+        for _ in 0..er.need + crate::balance::ERASE_TICKS + 10 {
+            w.player.pos = er.at;
+            tick(&c, &mut w, idle());
+            if w.outcome != Outcome::Playing {
+                break;
+            }
+        }
+        assert!(w.player.grey > ONE * 9 / 10, "grey {}", w.player.grey);
+        assert_eq!(w.outcome, Outcome::Won);
+    }
+
     #[test]
     fn a_cockatrices_gaze_slows_what_it_hits() {
         let (c, mut w) = course_world("spillway");

@@ -717,6 +717,9 @@ struct PhaseFile {
     /// a cat's phase: how it moves in it
     #[serde(default)]
     gait: String,
+    /// how big it is in this phase, percent of its size (an alien grows)
+    #[serde(default)]
+    scale_pct: i32,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -894,6 +897,10 @@ pub enum Kind {
     /// it, and at its crown it calls the Summons, whose health its bar
     /// then follows (the world drives it, `course.rs`)
     Oak,
+    /// the Archivist (the Vault's keeper): flies the chamber on a jet
+    /// pack, boosting between points high and low, hovering, strafing and
+    /// diving at you; each phase it grows (its phases' `scale`)
+    Alien,
 }
 
 /// How a beast moves.
@@ -1004,6 +1011,8 @@ pub struct Phase {
     pub survive: i32,
     /// how a cat moves in this phase (Gait::None for every other boss)
     pub gait: Gait,
+    /// how big it is in this phase, Q16 of its size (ONE but an alien's)
+    pub scale: i32,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -1926,6 +1935,7 @@ fn parse_enemies(text: &str, patterns: &[Pattern]) -> Result<Vec<EnemyDef>, Stri
             "god" => Kind::God,
             "cat" => Kind::Cat,
             "oak" => Kind::Oak,
+            "alien" => Kind::Alien,
             k => return Err(format!("enemies: {} has no kind {k}", e.id)),
         };
         let role = match e.role.as_str() {
@@ -1969,7 +1979,7 @@ fn parse_enemies(text: &str, patterns: &[Pattern]) -> Result<Vec<EnemyDef>, Stri
         }
         let phases = if matches!(
             kind,
-            Kind::Boss | Kind::Tank | Kind::Double | Kind::God | Kind::Cat | Kind::Oak
+            Kind::Boss | Kind::Tank | Kind::Double | Kind::God | Kind::Cat | Kind::Oak | Kind::Alien
         ) || !e.phases.is_empty()
         {
             if e.phases.is_empty() {
@@ -1998,7 +2008,18 @@ fn parse_enemies(text: &str, patterns: &[Pattern]) -> Result<Vec<EnemyDef>, Stri
                         .collect::<Result<_, _>>()?,
                     survive: ms(p.survive_ms),
                     gait: gait_of(&p.gait)?,
+                    scale: if p.scale_pct > 0 {
+                        ONE * p.scale_pct / 100
+                    } else {
+                        ONE
+                    },
                 });
+                if p.scale_pct != 0 && (kind != Kind::Alien || p.scale_pct < 100) {
+                    return Err(format!(
+                        "enemies: {}: only an alien's phases grow, and only bigger",
+                        e.id
+                    ));
+                }
                 if (kind == Kind::Cat) != !p.gait.is_empty() {
                     return Err(format!(
                         "enemies: {}: a cat's phases, and only a cat's, have a gait",
@@ -2040,6 +2061,7 @@ fn parse_enemies(text: &str, patterns: &[Pattern]) -> Result<Vec<EnemyDef>, Stri
                 cannons: Vec::new(),
                 survive: 0,
                 gait: Gait::None,
+                scale: ONE,
             }]
         };
         let list = |v: &[String]| v.iter().map(|s| find(s, &e.id)).collect::<Result<Vec<_>, _>>();

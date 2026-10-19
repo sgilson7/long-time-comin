@@ -1613,7 +1613,7 @@ impl Game {
         let hint = match node.kind {
             NodeKind::Arrival | NodeKind::Fight if rotten => c.say("hint_rotten"),
             NodeKind::Boss if learning => c.say("hint_song"),
-            NodeKind::Boss if course && fresh(0) && w.course.as_ref().is_some_and(|k| k.charge.is_some()) => {
+            NodeKind::Boss if course && fresh(0) && w.course.as_ref().is_some_and(|k| k.eraser.is_some()) => {
                 c.say("hint_eraser")
             }
             NodeKind::Boss if course && fresh(0) && w.course.as_ref().is_some_and(|k| k.oak.is_some()) => {
@@ -3389,24 +3389,31 @@ pub(crate) mod tests {
         assert_eq!(s["interlude"]["title"], "THE DESCENT");
         g.continue_run();
         assert_eq!(g.c.zones[g.run.as_ref().unwrap().zone].id, "vault");
-        // the Eraser fires: the grey ending
+        // the Archivist falls, the Eraser opens, and you step into it: the
+        // grey ending
         let boss = g.run.as_ref().unwrap().route.boss();
         g.go(boss);
         frames(&mut g, 120, 0);
+        g.run.as_mut().unwrap().world.player.iframes = 100_000;
+        g.fell_boss();
+        frames(&mut g, 400, 0);
+        assert_eq!(g.mode, Mode::Play, "the Archivist's fall does not end it");
         let run = g.run.as_mut().unwrap();
-        let ch = run
+        let er = run
             .world
             .course
-            .as_mut()
+            .as_ref()
             .unwrap()
-            .charge
-            .as_mut()
-            .expect("the Eraser's charge");
-        for h in ch.held.iter_mut() {
-            *h = ch.need;
+            .eraser
+            .clone()
+            .expect("the Eraser");
+        assert!(er.open);
+        for _ in 0..400 {
+            if let Some(run) = g.run.as_mut() {
+                run.world.player.pos = er.at;
+            }
+            frames(&mut g, 1, 0);
         }
-        run.world.player.iframes = 100_000;
-        frames(&mut g, 400, 0);
         assert_eq!(g.mode, Mode::Won);
         assert_eq!((g.meta.river_wins, g.meta.wins), (1, 0));
         let s: Value = serde_json::from_str(&g.screen_json()).unwrap();

@@ -5,12 +5,12 @@
 //! - the Shaft (`shaft`): down a vast shaft of rings and gantries
 //! - the Halls (`halls`): long halls, fought, against the Vault's machines
 //!
-//! and the Eraser (the boss): its chamber, three pylons round it held in
-//! turn while your older self, who cannot be hurt here, tries to stop it.
+//! and the Eraser (the boss): its chamber, where the Vault's keeper, the
+//! Archivist, flies on its jet pack; when it falls the Eraser opens, and
+//! you step into it.
 
 use super::{m, B};
-use crate::course::{Charge, Course};
-use crate::fx::ONE;
+use crate::course::Course;
 use crate::geom::v3;
 
 mod eraser;
@@ -59,19 +59,6 @@ impl B<'_> {
         );
         self.vault_door(0, 0, far + m(2));
         self.line(crate::course::Step::To(v3(0, 0, far + m(4))));
-    }
-
-    /// The Eraser's pylons, held in turn, each `need` ticks within `radius`.
-    pub(super) fn eraser_pylons(&mut self, at: Vec<crate::geom::V3>, radius: i32, need: i32) {
-        let n = at.len();
-        self.k().charge = Some(Charge {
-            pylons: at,
-            radius,
-            need,
-            held: vec![0; n],
-        });
-        let _ = ONE;
-        let _ = v3(0, 0, 0);
     }
 }
 

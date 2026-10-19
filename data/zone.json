@@ -2341,7 +2341,7 @@
       "year": "Under Stillwater",
       "built": true,
       "branch_from": "far_shore",
-      "boss": "the_other",
+      "boss": "archivist",
       "scene": {
         "sky": "vault_sky",
         "fog": "vault_fog",
@@ -2394,7 +2394,7 @@
         "shaft": "Down a shaft of black glass, gantry by gantry.",
         "halls": "Three hundred metres of white hall, and the machines that wake in it.",
         "rest": "The Lock: a still white room.",
-        "boss": "The Eraser. Hold its pylons while your older self tries to stop it."
+        "boss": "The Eraser, and the alien that keeps it, growing with every bar. When it falls, the Eraser is yours to step into."
       },
       "encounters": [
         {

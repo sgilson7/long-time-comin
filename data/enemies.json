@@ -1,5 +1,5 @@
 {
-  "_about": "Enemies. kind: turret (stands still), floater (hovers and circles at a range), walker (walks after you), moth (flies straight at you and bursts), boss. hp in health points, radius_cm the body, hover_cm the height it floats at, speed_cms, range_cm the distance it keeps, contact the damage of touching it. attacks are tried in order: pattern (patterns.json), windup_ms the glow before it fires, rest_ms after. A boss has phases instead, each starting when its health falls to from_pct. kind blinker: hovers, and as each rest ends reappears elsewhere in sight of you. kind burrower: under the floor between attacks, where it cannot be hurt. burst: a pattern fired once where it dies. zone: the zone whose Codex page lists it. kind agent (zone three): a person who walks the floors and stairs and works with its squad by role: rifle, flank, sniper, shield, grenadier, rush, command, chief (crates/core/src/squad.rs). armour_deg: shots from within this many degrees of its facing glance off. An attack's lock_ms stops its aim following you that long before it fires; indirect needs no line of sight. summon, summon_ms, summon_cap: what it calls, how often, how many of its own at most; rally_pct and rally: a larger call, once, at that health. elite: a bar of its own. kind tank (the Executor): phases list weak (the weak points to break, on the hull or the turret, at_cm in that part's frame: x right, y up, z forward; radius_cm, hp) and cannons (grown in that phase and kept, yaw_deg and pitch_deg off the part's facing); an attack with cannons: true fires from every cannon grown so far, else from the main gun. Its last phase has survive_ms instead of weak points: outlast it. hp is the weak points' total. kind mech (the Pioneer): glides round you, quick-boosts sideways, ascends and hovers. kind double (the Defendant): moves as you do; an attack's stop_ms stops time for that long, for everything but it, while it steps round you and lays its shots. A tank's last phase may have weak points instead of survive_ms: breaking them ends it (the Blaster). A tank's size scales with radius_cm (the Executor's is 320). kind beast (zone four's creatures) moves by its gait: bound (leaps far round you in a high arc), hop (short low hops), wheel (circles high over you and dives as it winds up), root (never moves), surge (rushes along the ground in sweeping curves past you); bite_cm: a rooted beast lunges this far at you to bite (its contact damage). Each is drawn more corrupted the higher up the mountain its arena is (balance.rs CORRUPT_*). gait perch (the Great Horned): sits on dead snags high round the arena, firing down, glides between them, and every other move swoops through where you stood (its contact is the talons' damage). kind cat (Chumbles, the last mission's boss): phases as a boss's, each its own bar, and each with a gait (charge, bound, perch, unseen, and the others a beast may have) that moves him in it; he screams first and grows to three times his size, and when his last bar empties he is fed instead of killed. An attack's move pound leaps over you and drops where you stood. The Water Gap's emitters are turrets set in the rock (hover_cm 0) that fire only while you are near (balance.rs EMITTER_WAKE): the weir-lamp, which can be shot out, the root-eye and the spray-eye, which take long to put out. kind oak (the Gallows Oak): rooted and never hurt; its first bar is your climb (balance.rs OAK_CLIMB_BAR_PCT), its eye opening on the trunk just above you; at its crown it calls the Summons, and its bar follows the Summons' health. The Summons is a mech after Armored Core 6's Balteus: aloft (it flies at its home's height over gaps as over floor), with a Husk (husk_hp) over its health that takes every blow first, grows back once it is unhit husk_regen_ms, and broken staggers it stagger_ms, firing nothing and taking double; at half health its second phase opens with THE BLOOM. The Far Shore's Drowned Fleet (pirates from every century the anomaly has taken, and their beasts) and Dagon, which calls tentacles; the Vault's machines; your older self (the_other), the Defendant again, who cannot be hurt at the Eraser: its bar is the Eraser's charge (course.rs Charge).",
+  "_about": "Enemies. kind: turret (stands still), floater (hovers and circles at a range), walker (walks after you), moth (flies straight at you and bursts), boss. hp in health points, radius_cm the body, hover_cm the height it floats at, speed_cms, range_cm the distance it keeps, contact the damage of touching it. attacks are tried in order: pattern (patterns.json), windup_ms the glow before it fires, rest_ms after. A boss has phases instead, each starting when its health falls to from_pct. kind blinker: hovers, and as each rest ends reappears elsewhere in sight of you. kind burrower: under the floor between attacks, where it cannot be hurt. burst: a pattern fired once where it dies. zone: the zone whose Codex page lists it. kind agent (zone three): a person who walks the floors and stairs and works with its squad by role: rifle, flank, sniper, shield, grenadier, rush, command, chief (crates/core/src/squad.rs). armour_deg: shots from within this many degrees of its facing glance off. An attack's lock_ms stops its aim following you that long before it fires; indirect needs no line of sight. summon, summon_ms, summon_cap: what it calls, how often, how many of its own at most; rally_pct and rally: a larger call, once, at that health. elite: a bar of its own. kind tank (the Executor): phases list weak (the weak points to break, on the hull or the turret, at_cm in that part's frame: x right, y up, z forward; radius_cm, hp) and cannons (grown in that phase and kept, yaw_deg and pitch_deg off the part's facing); an attack with cannons: true fires from every cannon grown so far, else from the main gun. Its last phase has survive_ms instead of weak points: outlast it. hp is the weak points' total. kind mech (the Pioneer): glides round you, quick-boosts sideways, ascends and hovers. kind double (the Defendant): moves as you do; an attack's stop_ms stops time for that long, for everything but it, while it steps round you and lays its shots. A tank's last phase may have weak points instead of survive_ms: breaking them ends it (the Blaster). A tank's size scales with radius_cm (the Executor's is 320). kind beast (zone four's creatures) moves by its gait: bound (leaps far round you in a high arc), hop (short low hops), wheel (circles high over you and dives as it winds up), root (never moves), surge (rushes along the ground in sweeping curves past you); bite_cm: a rooted beast lunges this far at you to bite (its contact damage). Each is drawn more corrupted the higher up the mountain its arena is (balance.rs CORRUPT_*). gait perch (the Great Horned): sits on dead snags high round the arena, firing down, glides between them, and every other move swoops through where you stood (its contact is the talons' damage). kind cat (Chumbles, the last mission's boss): phases as a boss's, each its own bar, and each with a gait (charge, bound, perch, unseen, and the others a beast may have) that moves him in it; he screams first and grows to three times his size, and when his last bar empties he is fed instead of killed. An attack's move pound leaps over you and drops where you stood. The Water Gap's emitters are turrets set in the rock (hover_cm 0) that fire only while you are near (balance.rs EMITTER_WAKE): the weir-lamp, which can be shot out, the root-eye and the spray-eye, which take long to put out. kind oak (the Gallows Oak): rooted and never hurt; its first bar is your climb (balance.rs OAK_CLIMB_BAR_PCT), its eye opening on the trunk just above you; at its crown it calls the Summons, and its bar follows the Summons' health. The Summons is a mech after Armored Core 6's Balteus: aloft (it flies at its home's height over gaps as over floor), with a Husk (husk_hp) over its health that takes every blow first, grows back once it is unhit husk_regen_ms, and broken staggers it stagger_ms, firing nothing and taking double; at half health its second phase opens with THE BLOOM. The Far Shore's Drowned Fleet (pirates from every century the anomaly has taken, and their beasts) and Dagon, which calls tentacles; the Vault's machines; and the Archivist, the Vault's keeper: kind alien flies on a jet pack (boosts between points high and low round its chamber, hovers strafing, dives at you every third move; balance.rs JET_*), and grows at each phase to its phase's scale_pct (percent of its size: its body, what it touches and what hits it grow with it). When it falls the Eraser opens (course.rs Eraser).",
   "enemies": [
     {
       "id": "sentinel",
@@ -3317,176 +3317,98 @@
       "attacks": []
     },
     {
-      "id": "the_other",
-      "name": "Your Older Self",
-      "kind": "double",
-      "hp": 4000,
-      "radius_cm": 55,
-      "hover_cm": 95,
-      "speed_cms": 760,
-      "range_cm": 1200,
-      "contact": 15,
-      "clemency": 0,
-      "attacks": [],
+      "id": "archivist",
+      "name": "The Archivist",
+      "kind": "alien",
+      "hp": 6000,
+      "radius_cm": 120,
+      "hover_cm": 0,
+      "speed_cms": 1400,
+      "range_cm": 0,
+      "contact": 20,
+      "clemency": 30,
       "zone": "vault",
+      "attacks": [],
       "phases": [
         {
           "from_pct": 100,
+          "scale_pct": 100,
           "summons": [],
           "attacks": [
             {
-              "pattern": "carbine_echo",
-              "windup_ms": 500,
-              "rest_ms": 800
-            },
-            {
-              "pattern": "hook_echo",
+              "pattern": "archive_eyes",
               "windup_ms": 600,
-              "rest_ms": 900,
-              "move": "hook"
-            },
-            {
-              "pattern": "scatter_echo",
-              "windup_ms": 450,
               "rest_ms": 900
             },
             {
-              "pattern": "the_world",
-              "windup_ms": 700,
-              "rest_ms": 900,
-              "stop_ms": 2000,
-              "once_in": 4
-            },
-            {
-              "pattern": "pound_echo",
-              "windup_ms": 700,
-              "rest_ms": 1000,
-              "move": "pound"
-            },
-            {
-              "pattern": "injunction_echo",
+              "pattern": "archive_halo",
               "windup_ms": 500,
               "rest_ms": 900
             },
             {
-              "pattern": "launcher_echo",
-              "windup_ms": 500,
-              "rest_ms": 900
-            },
-            {
-              "pattern": "dash_ring",
-              "windup_ms": 450,
-              "rest_ms": 800
+              "pattern": "archive_rain",
+              "windup_ms": 700,
+              "rest_ms": 1000
             }
           ]
         },
         {
           "from_pct": 66,
+          "scale_pct": 170,
           "summons": [
-            "proxy",
-            "shade"
+            "excisor",
+            "excisor"
           ],
           "attacks": [
             {
-              "pattern": "saw_echo",
-              "windup_ms": 450,
-              "rest_ms": 800
-            },
-            {
-              "pattern": "hook_echo",
-              "windup_ms": 550,
-              "rest_ms": 800,
-              "move": "hook"
-            },
-            {
-              "pattern": "dash_ring",
-              "windup_ms": 450,
-              "rest_ms": 800
-            },
-            {
-              "pattern": "queued_knives",
-              "windup_ms": 650,
-              "rest_ms": 900,
-              "stop_ms": 2200,
-              "once_in": 4
-            },
-            {
-              "pattern": "injunction_echo",
-              "windup_ms": 500,
-              "rest_ms": 800
-            },
-            {
-              "pattern": "pound_echo",
-              "windup_ms": 650,
-              "rest_ms": 900,
-              "move": "pound"
-            },
-            {
-              "pattern": "launcher_echo",
-              "windup_ms": 500,
+              "pattern": "archive_spiral",
+              "windup_ms": 600,
               "rest_ms": 900
             },
             {
-              "pattern": "carbine_echo",
-              "windup_ms": 400,
+              "pattern": "archive_eyes_2",
+              "windup_ms": 500,
+              "rest_ms": 800
+            },
+            {
+              "pattern": "archive_cage",
+              "windup_ms": 700,
+              "rest_ms": 900
+            },
+            {
+              "pattern": "archive_rain",
+              "windup_ms": 500,
               "rest_ms": 800
             }
           ]
         },
         {
           "from_pct": 33,
+          "scale_pct": 250,
           "summons": [
-            "knife"
+            "ward",
+            "ward"
           ],
           "attacks": [
             {
-              "pattern": "carbine_echo",
-              "windup_ms": 400,
-              "rest_ms": 1000
-            },
-            {
-              "pattern": "pound_echo",
-              "windup_ms": 600,
-              "rest_ms": 900,
-              "move": "pound"
-            },
-            {
-              "pattern": "scatter_echo",
-              "windup_ms": 400,
-              "rest_ms": 1000
-            },
-            {
-              "pattern": "the_world_2",
+              "pattern": "archive_sphere",
               "windup_ms": 700,
-              "rest_ms": 1200,
-              "stop_ms": 2600,
-              "once_in": 4
-            },
-            {
-              "pattern": "hook_echo",
-              "windup_ms": 500,
-              "rest_ms": 900,
-              "move": "hook"
-            },
-            {
-              "pattern": "saw_echo",
-              "windup_ms": 450,
-              "rest_ms": 1000
-            },
-            {
-              "pattern": "injunction_echo",
-              "windup_ms": 450,
               "rest_ms": 900
             },
             {
-              "pattern": "parry_bait",
-              "windup_ms": 400,
-              "rest_ms": 1000
+              "pattern": "archive_landing",
+              "windup_ms": 800,
+              "rest_ms": 900
             },
             {
-              "pattern": "dash_ring",
-              "windup_ms": 450,
-              "rest_ms": 1000
+              "pattern": "archive_flower",
+              "windup_ms": 600,
+              "rest_ms": 800
+            },
+            {
+              "pattern": "archive_eyes_2",
+              "windup_ms": 400,
+              "rest_ms": 700
             }
           ]
         }
