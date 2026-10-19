@@ -198,3 +198,9 @@ The Enslaved Dragon is the Captured Dragon. The Fleet's ships strike their colou
 Checked locally: `./scripts/check.sh` passed (BUILDER CHECK PASSED: fmt, clippy with warnings as errors, 303 core and 11 boundary tests, the release wasm build and the import audit, and the browser check in Chromium, Firefox and WebKit); each of the 14 new `far:` breaks fails its test (B19).
 
 Live (2026-10-19): PR #18 passed its check on CI (run 39283789948, after a long queue on GitHub's side) and merged as fc6b115; main's run 39286120140 passed its check, and the live `data/enemies.json` holds the Chain Lock. GitHub reported the deploy job's conclusion blank while the run itself succeeded; the live site is the evidence that it published. The break tests on CI were still running at the merge.
+
+## Round 20 (2026-10-19): the map, the walkthroughs, the slash, and the fixes from playing
+
+The Holding's timeline is a map you open: a hologram, 2031 at the top, each zone a turning diorama; a zone clicked shows its walkthrough, the camera flying through its arenas beside a card of what's met there. The boats are cut away round the camera; the open sea is swum; Summary Judgment is a blade on E (taking things on X); the Idiot God is ????; Dagon fights in a whirlpool cone of falling wreckage; the Oak's crown is clear; the Falls' drum-cap is broad. `PLAN.md` Round 20; SECOND-ORDER R20, H1 to H13, B20, T20; the journal's Round 20 tab. The dioramas, the slash and the cone were built by agents in worktrees and merged.
+
+Checked locally: `./scripts/check.sh` passed (BUILDER CHECK PASSED: fmt, clippy with warnings as errors, 336 core and 11 boundary tests, the release wasm build and the import audit, and the browser check in Chromium, Firefox and WebKit). Each new break fails its test (B20); a full run of every break was stopped part way for the deploy (Sam asked for it at once), and CI's break job runs them all.

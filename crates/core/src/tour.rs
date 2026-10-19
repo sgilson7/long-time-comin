@@ -199,17 +199,44 @@ impl Tour {
         } else {
             let total = length(&self.path);
             let s = fx::mul(total, f);
-            let here = along(&self.path, s);
-            let ahead = along(&self.path, s + TOUR_AHEAD);
+            // the line smoothed over a stretch either side, so a step aside
+            // to a lever does not swing the camera over the canyon's wall
+            let smooth = |at: i32| {
+                let n = TOUR_SMOOTH_STEPS;
+                let sum = (-n..=n).fold(V3::ZERO, |acc, k| {
+                    acc.add(along(&self.path, (at + k * TOUR_SMOOTH / n).clamp(0, total)))
+                });
+                v3(sum.x / (2 * n + 1), sum.y / (2 * n + 1), sum.z / (2 * n + 1))
+            };
+            let here = smooth(s);
+            let ahead = smooth(s + TOUR_AHEAD);
             let way = v3(ahead.x - here.x, 0, ahead.z - here.z);
             let back = if way.len() > ONE / 10 {
                 way.norm()
             } else {
                 v3(0, 0, -ONE)
             };
-            let eye = here.sub(back.scale(TOUR_BEHIND)).add(v3(0, TOUR_ABOVE, 0));
+            let mut eye = here.sub(back.scale(TOUR_BEHIND)).add(v3(0, TOUR_ABOVE, 0));
+            // over whatever stands under it (a canyon's rock, an overhang),
+            // never inside it
+            let level = &self.world.arena.level;
+            if let Some(top) = level.floor_below(eye.x, TOUR_SKY, eye.z) {
+                eye.y = eye.y.max(top + TOUR_CLEAR);
+            }
             (eye, ahead.sub(eye).norm())
         }
+    }
+
+    /// What the camera watches: on a course the point of the line it is
+    /// over, cut clear of whatever stands between (the see-through bubble
+    /// play has round your head), with the floor under it; elsewhere none.
+    pub fn focus(&self) -> Option<(V3, i32)> {
+        if self.path.is_empty() {
+            return None;
+        }
+        let f = fx::div(self.t, self.len.max(1));
+        let here = along(&self.path, fx::mul(length(&self.path), f));
+        Some((here.add(v3(0, int(1), 0)), here.y))
     }
 
     /// The camera, between the last tick and this one.
@@ -264,6 +291,37 @@ mod tests {
         t.step(&c);
         assert_eq!(t.world.player.pos, t.world.arena.start);
         assert_eq!(t.world.player.health, t.world.player.build.max_health);
+    }
+
+    #[test]
+    fn over_the_water_gaps_courses_the_camera_sees_what_it_watches() {
+        let c = content();
+        let z = c.zones.iter().position(|z| z.id == "water_gap").unwrap();
+        let mut t = Tour::new(&c, z, "river");
+        // the Falls' overhangs and the Shallows' drowned trees stand in the
+        // way more often: there the see-through cut (`focus`) clears them,
+        // as play's does
+        for stop in [0, 1] {
+            t.enter(&c, stop);
+            let (mut seen, mut ticks) = (0, 0);
+            for _ in 0..t.len - 1 {
+                t.step(&c);
+                let (eye, _) = t.eye;
+                let f = t.focus().unwrap().0;
+                let level = &t.world.arena.level;
+                ticks += 1;
+                let r = v3(ONE / 4, ONE / 4, ONE / 4);
+                let inside = level.blocked(eye.sub(r), eye.add(r));
+                if !inside && level.ray(eye, f.sub(eye).norm(), f.sub(eye).len()).is_none() {
+                    seen += 1;
+                }
+            }
+            assert!(
+                seen * 100 >= ticks * 97,
+                "{}: in sight {seen} of {ticks} ticks",
+                t.archetype(&c)
+            );
+        }
     }
 
     #[test]

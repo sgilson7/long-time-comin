@@ -261,3 +261,11 @@ The request is in `BRIEF.md`; SECOND-ORDER R19, G1 to G6, B19, T19.
 - **Struck colours** (`Course::flags`, `B::fly_colours`): each crewed ship of the Fleet flies red colours, struck when her crew is down, with a count; the hint says the way on opens when all seven have struck.
 - **The dragon's chain** (`Course::chain`, `B::chain_dragon`, `Enemy::leash`, `CHAIN_LEASH`): three Chain Locks at the flagship's mainmast foot; while any holds, the dragon is unhurt, keeps to the flagship's mast tops and swoops within the chain's reach; shot off, it is free and fights in its second phase.
 - **The Hurricane's waves** (`course/waves.rs`, `draw/waves.rs`, `ROGUE_*`, `WASH_*`): a rogue wave lifting each ship in turn as it rolls through, and green washes over the decks to jump; the boat you start on rides them too.
+
+## Round 20: the map, the walkthroughs, the slash, and the fixes from playing (2026-10-19)
+
+The request is in `BRIEF.md` (eight messages); SECOND-ORDER R20, H1 to H12, B20, T20; the journal's Round 20 tab keeps each item's state.
+
+- **The map** (`atlas.rs`, `draw/atlas.rs`, `Mode::Atlas`; `Game::open_map`, `close_map`, `point_at`): the timeline as a hologram over the crater, 2031 at the top, each zone a turning diorama; the page labels them where the core projects them.
+- **A zone's walkthrough** (`tour.rs`, `Mode::Tour`; `show_zone`, `tour_to`, `tour_back`, `tour_start`): the camera through the zone's main path, a card of its year, words (`zone.json` `tour`), stops, creatures (`EnemyDef::zone` as a fallback for where an enemy is met) and boss.
+- **Moving scenery cut away** (`Batch::scenery`); **the open sea** (`Course::depth`, `SEA_*`); **Summary Judgment** (E; `SLASH_*`, three upgrades; taking things on X); **????**; **the Oak's crown** cleared; **the Falls' drum-cap** broadened; **Dagon's cone** (`Mover::spiral`, `EYE_*`).

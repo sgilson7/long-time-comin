@@ -1325,6 +1325,7 @@ impl Game {
                 let t = self.tour.as_ref().unwrap();
                 let cam = t.camera(self.alpha);
                 self.camera = cam;
+                focus = t.focus();
                 draw::world(&mut b, &self.c, &t.world, self.alpha, clock, false, &cam);
             }
             _ if self.mode == Mode::Atlas => {

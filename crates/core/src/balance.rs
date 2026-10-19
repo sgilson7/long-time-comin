@@ -569,10 +569,18 @@ pub const TOUR_ORBIT_SWEEP: i32 = deg(110);
 pub const TOUR_ORBIT_MIN: i32 = int(14);
 pub const TOUR_ORBIT_MAX: i32 = int(34);
 pub const TOUR_ORBIT_UP: i32 = int(10);
-pub const TOUR_BEHIND: i32 = int(10);
-pub const TOUR_ABOVE: i32 = int(7);
-pub const TOUR_AHEAD: i32 = int(18);
+pub const TOUR_BEHIND: i32 = int(16);
+pub const TOUR_ABOVE: i32 = int(18);
+pub const TOUR_AHEAD: i32 = int(14);
 pub const TOUR_SHIELD: i32 = 60 * 60;
+/// the camera keeps this far over whatever stands under it, looked for from
+/// this high
+pub const TOUR_CLEAR: i32 = int(4);
+pub const TOUR_SKY: i32 = int(400);
+/// a course's line, for the camera, smoothed over this far either side, in
+/// this many steps a side
+pub const TOUR_SMOOTH: i32 = int(20);
+pub const TOUR_SMOOTH_STEPS: i32 = 4;
 
 /// the open sea (the Far Shore): you may sink this far under the surface,
 /// at no more than this speed, and stay in it this long, before it takes
