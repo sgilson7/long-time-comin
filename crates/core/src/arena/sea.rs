@@ -10,8 +10,8 @@
 //! - the Maelstrom (`maelstrom`): under the water, the wreckage turning down
 //!   and in toward the eye
 //!
-//! and the Eye (the boss): a ring of wreckage turning round the whirlpool,
-//! Dagon rising in the middle.
+//! and the Eye (the boss): the whirlpool a cone of water round you, the
+//! wreckage falling in down its arms, Dagon rising in the eye.
 
 use super::{dm, m, B};
 use crate::course::{Chain, Course, Flag, Gust, Look, Mover, Storm, Underwater};

@@ -307,6 +307,12 @@ BREAKS = [
  ("edge: what cannot be hurt is not cut", "crates/core/src/enemy.rs", "            && !self.shielded\n", "", "a_shield_turns_the_blade"),
  ("edge: a diver is cut down over your head", "crates/core/src/world.rs", "        let (lo, hi) = (feet.y - SLASH_BELOW, feet.y + SLASH_ABOVE);", "        let (lo, hi) = (feet.y - SLASH_BELOW, feet.y + PLAYER_HEIGHT);", "a_diving_storm_harpy_or_cockatrice"),
  ("edge: a diver is cut down by the lunge", "crates/core/src/player.rs", "        base + if lunge { SLASH_LUNGE_REACH } else { 0 }", "        base", "a_diving_storm_harpy_or_cockatrice"),
+ # the Eye as a cone: wreckage falling in down its arms
+ ("far: the Eye's wreckage falls down the cone", "crates/core/src/course.rs", "        let mut y = self.from.1 + fx::mul(self.to.1 - self.from.1, s);", "        let mut y = self.from.1;", "the_eye_is_a_cone"),
+ ("far: falling wreckage carries you", "crates/core/src/course.rs", "            if riding {\n                self.player.pos = self.player.pos.add(delta);", "            if riding && m.spiral.is_none() {\n                self.player.pos = self.player.pos.add(delta);", "standing_on_falling_wreckage"),
+ ("far: a sinking piece bears no one", "crates/core/src/course.rs", "                d.on = m.on(self.tick);", "                d.on = true;", "a_piece_sinks_out_from_under_you"),
+ ("far: Dagon in the eye", "crates/core/src/arena/sea/eye.rs", "        self.k().boss_at = Some(spout.add(v3(0, m(5), 0)));", "        self.k().boss_at = Some(spout.add(v3(m(20), m(5), 0)));", "dagon_rises_in_the_eye"),
+ ("far: the Eye's arms are hopped down", "crates/core/src/balance.rs", "pub const EYE_PIECES: i32 = 12;", "pub const EYE_PIECES: i32 = 8;", "you_can_hop_down_the_falling_wreckage"),
 ]
 
 

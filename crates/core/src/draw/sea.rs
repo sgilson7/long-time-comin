@@ -1454,6 +1454,145 @@ fn excisor(b: &mut Batch, c: &Content, e: &Enemy, o: &Body, paint: &dyn Fn(Rgb) 
     );
 }
 
+/// A piece of wreckage, drawn by its shape: a long one a mast lying on its
+/// raft of planks, a wide one a hull's side, a deep one a hatch heaped with
+/// crates, a square one a deck on its broken hull. Falling into a
+/// whirlpool, foam boils round it as it is about to sink; once under the
+/// eye's water it is not drawn.
+pub fn wreck(
+    b: &mut Batch,
+    c: &Content,
+    m: &crate::course::Mover,
+    s: &crate::level::Solid,
+    tick: i32,
+    water: i32,
+) {
+    if s.max.y < water - ONE {
+        return;
+    }
+    let (mid, size) = (s.centre(), s.size());
+    let plank = c.pal.c("river_wood");
+    let hull = c.pal.c("hull");
+    let dark = c.pal.c("hull_dark");
+    let top = v3(mid.x, s.max.y, mid.z);
+    let (w, d) = (size.x, size.z);
+    b.inked(Mesh::Cube, &boxed(mid, size), plank, 0);
+    if w * 3 > d * 4 || d * 3 > w * 4 {
+        // a raft of planks, the mast lying along it and over its ends, its
+        // yard across
+        let along = if w > d {
+            v3(w * 13 / 10, 0, 0)
+        } else {
+            v3(0, 0, d * 13 / 10)
+        };
+        let a = top.add(v3(0, dm(4), 0)).sub(along.scale(ONE / 2));
+        rod(b, a, a.add(along), dm(8), dark, 0, true);
+        let across = if w > d { v3(0, 0, d) } else { v3(w, 0, 0) };
+        let y = top.add(v3(0, dm(3), 0)).add(along.scale(ONE / 5));
+        rod(
+            b,
+            y.sub(across.scale(ONE / 2)),
+            y.add(across.scale(ONE / 2)),
+            dm(3),
+            dark,
+            0,
+            true,
+        );
+    } else if w != d {
+        // a hull's side or a hatch: its belly, its ribs, crates on a hatch
+        b.inked(
+            Mesh::Blob,
+            &boxed(v3(mid.x, s.min.y - dm(4), mid.z), v3(w, dm(14), d)),
+            hull,
+            0,
+        );
+        for k in [-1, 1] {
+            let (off, rib) = if w > d {
+                (v3(w * k / 3, dm(1), 0), v3(dm(3), dm(3), d))
+            } else {
+                (v3(0, dm(1), d * k / 3), v3(w, dm(3), dm(3)))
+            };
+            b.inked(Mesh::Cube, &boxed(top.add(off), rib), dark, 0);
+        }
+        if d > w {
+            for (dx, dz, e) in [(-1, -1, 9), (1, -1, 7), (-1, 1, 6)] {
+                let at = top.add(v3(w * dx / 3, ONE * e / 20, d * dz / 3));
+                b.inked(Mesh::Cube, &boxed(at, v3(dm(e), dm(e), dm(e))), hull, 0);
+            }
+        }
+    } else {
+        b.inked(
+            Mesh::Cube,
+            &boxed(v3(mid.x, s.min.y - dm(3), mid.z), v3(w * 3 / 4, dm(6), d * 3 / 4)),
+            hull,
+            0,
+        );
+    }
+    // about to sink: foam boiling up round it
+    if let Some(sp) = m.spiral {
+        let left = sp.live - sp.along(tick);
+        if left > 0 && left < crate::balance::EYE_WARN_TICKS {
+            let r = w.max(d) + ONE;
+            let swell = fx::sin(tick * fx::TURN / 20);
+            b.glow(
+                Mesh::Ring,
+                &Affine::translate(v3(mid.x, s.min.y, mid.z))
+                    .then(&Affine::rot_y(tick * fx::TURN / 90))
+                    .then(&Affine::scale(v3(r, dm(6) + fx::mul(dm(2), swell), r))),
+                c.pal.c("river_foam"),
+                ONE / 2,
+            );
+        }
+    }
+}
+
+/// A whirlpool's water turning: foam streaming down the cone's wall in
+/// arms, faster nearer the eye.
+pub fn whirl(b: &mut Batch, c: &Content, wh: &crate::course::Whirl, tick: i32) {
+    let foam = c.pal.c("river_foam");
+    let spin = (tick as i64 * fx::TURN as i64 / crate::balance::EYE_WHIRL_TICKS as i64) as i32;
+    const ARMS: i32 = 6;
+    let bands = wh.wall.len() as i32 - 1;
+    for band in 0..bands {
+        let (inner, outer) = (wh.wall[band as usize], wh.wall[band as usize + 1]);
+        // the inner bands go round faster
+        let turned = spin * (bands + 2 - band) / bands;
+        for arm in 0..ARMS {
+            let a = fx::TURN / ARMS * arm - deg(14) * band + turned;
+            let (s, co) = (fx::sin(a), fx::cos(a));
+            let across = v3(co, 0, -s);
+            let slant = v3(
+                fx::mul(s, outer.0 - inner.0),
+                outer.1 - inner.1,
+                fx::mul(co, outer.0 - inner.0),
+            );
+            let normal = slant.norm().cross(across).norm();
+            let r = (inner.0 + outer.0) / 2;
+            let mid = v3(
+                wh.eye.x + fx::mul(s, r),
+                (inner.1 + outer.1) / 2,
+                wh.eye.z + fx::mul(co, r),
+            )
+            .add(normal.scale(dm(2)));
+            b.glow(
+                Mesh::Panel,
+                &Affine {
+                    c0: across.scale(r / 3),
+                    c1: normal,
+                    c2: slant.scale(ONE * 3 / 10),
+                    t: mid,
+                },
+                foam,
+                ONE / 3,
+            );
+        }
+    }
+}
+
+fn dm(n: i32) -> i32 {
+    n * ONE / 10
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

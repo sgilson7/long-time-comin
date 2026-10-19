@@ -72,6 +72,74 @@ pub struct Mover {
     pub round: V3,
     /// how it is drawn
     pub look: Look,
+    /// wreckage falling into a whirlpool: down and in along its track, and
+    /// again from the top (the Eye)
+    pub spiral: Option<Spiral>,
+}
+
+/// A whirlpool's cone of water: its eye, and its wall ring by ring from
+/// the throat out and up (how far out, how high).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Whirl {
+    pub eye: V3,
+    pub wall: Vec<(i32, i32)>,
+}
+
+/// A piece of wreckage's way down a whirlpool's cone: from the rim to the
+/// eye along a track that winds in faster as it narrows, then under, then
+/// again from the rim. It bears weight only on its way down: in its last
+/// stretch it sinks out from under whoever stands on it, and it comes back
+/// to the rim empty.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Spiral {
+    /// the eye it falls toward
+    pub eye: V3,
+    /// ticks from the rim to the eye, and how far along it is at tick 0
+    pub ticks: i32,
+    pub start: i32,
+    /// ticks of each descent it bears weight; after them it sinks
+    pub live: i32,
+    /// how far out from the eye, and how high its top, at the rim and at
+    /// the eye's end of its track
+    pub from: (i32, i32),
+    pub to: (i32, i32),
+    /// its bearing at the rim, how far round it goes evenly on the way
+    /// down, and how much further it is whirled as it nears the eye
+    pub bearing: i32,
+    pub sweep: i32,
+    pub whirl: i32,
+    /// how much further it drops while it sinks
+    pub sink: i32,
+}
+
+impl Spiral {
+    /// Ticks into its present descent.
+    pub fn along(&self, tick: i32) -> i32 {
+        (tick as i64 + self.start as i64).rem_euclid(self.ticks.max(1) as i64) as i32
+    }
+
+    /// Does it bear weight at `tick`?
+    pub fn on(&self, tick: i32) -> bool {
+        self.along(tick) < self.live
+    }
+
+    /// The middle of its top at `tick`.
+    pub fn place(&self, tick: i32) -> V3 {
+        let n = self.along(tick);
+        let s = (n as i64 * ONE as i64 / self.ticks.max(1) as i64) as i32;
+        let r = self.from.0 + fx::mul(self.to.0 - self.from.0, s);
+        let mut y = self.from.1 + fx::mul(self.to.1 - self.from.1, s);
+        if n >= self.live {
+            let gone = self.ticks - self.live;
+            y -= (self.sink as i64 * (n - self.live) as i64 / gone.max(1) as i64) as i32;
+        }
+        let a = self.bearing + fx::mul(self.sweep, s) + fx::mul(self.whirl, fx::mul(s, s));
+        v3(
+            self.eye.x + fx::mul(fx::sin(a), r),
+            y,
+            self.eye.z + fx::mul(fx::cos(a), r),
+        )
+    }
 }
 
 /// How moving ground is drawn.
@@ -101,11 +169,21 @@ impl Mover {
             orbit: 0,
             round: V3::ZERO,
             look: Look::Root,
+            spiral: None,
         }
+    }
+
+    /// Does it bear weight at `tick`? (Only falling wreckage ever stops.)
+    pub fn on(&self, tick: i32) -> bool {
+        self.spiral.is_none_or(|sp| sp.on(tick))
     }
 
     /// Where its lowest corner is at tick `tick`.
     pub fn corner(&self, tick: i32) -> V3 {
+        if let Some(sp) = self.spiral {
+            // laid where its track has it at tick 0
+            return self.base.min.add(sp.place(tick).sub(sp.place(0)));
+        }
         let t = (fx::TURN as i64 * tick as i64 / self.period.max(1) as i64) as i32 + self.phase;
         let up = self.rise / 2 - fx::mul(self.rise / 2, fx::cos(t));
         let sway = self.swing.scale(fx::sin(t));
@@ -290,6 +368,8 @@ pub struct Course {
     /// lightning marked and coming: where, and ticks left
     pub strikes: Vec<(V3, i32)>,
     pub underwater: Option<Underwater>,
+    /// a whirlpool's cone, its water drawn turning (the Eye)
+    pub whirl: Option<Whirl>,
     /// where the boss comes up (Dagon, in the eye)
     pub boss_at: Option<V3>,
     pub charge: Option<Charge>,
@@ -430,9 +510,20 @@ impl World {
         for (i, m) in k.movers.iter().enumerate() {
             let d = &mut level.dynamic[m.dynamic];
             let delta = k.waves.corner(i, m, self.tick).sub(d.solid.min);
+            // falling wreckage sinks from under you and comes back to the
+            // rim empty: only what bore weight last tick and still does
+            // carries anyone
+            let bears = if m.spiral.is_some() {
+                let was = d.on;
+                d.on = m.on(self.tick);
+                was && d.on
+            } else {
+                true
+            };
             // what stands on it goes with it, down as well as up, and so
             // keeps its footing (a fall would leave it hanging each tick)
-            let riding = self.player.grounded
+            let riding = bears
+                && self.player.grounded
                 && (feet.y - d.solid.max.y).abs() <= ONE / 20
                 && feet.x >= d.solid.min.x - PLAYER_RADIUS
                 && feet.x <= d.solid.max.x + PLAYER_RADIUS
@@ -444,7 +535,7 @@ impl World {
             d.solid.max = d.solid.max.add(delta);
             if riding {
                 self.player.pos = self.player.pos.add(delta);
-            } else if delta.y > 0 {
+            } else if delta.y > 0 && bears {
                 // rising into a body coming down on it: the body lands on
                 // its top, not thrown out of its side
                 let b = &self.player;
@@ -459,7 +550,7 @@ impl World {
                     self.player.grounded = true;
                 }
             }
-            if delta != V3::ZERO {
+            if delta != V3::ZERO && bears {
                 for e in self.enemies.iter_mut().filter(|e| e.alive()) {
                     let p = e.pos;
                     if p.x >= lo.x

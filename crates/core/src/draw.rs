@@ -1220,19 +1220,11 @@ fn course(b: &mut Batch, c: &Content, w: &World) {
                         0,
                     );
                 }
-                crate::course::Look::Wreck => {
-                    b.inked(Mesh::Cube, &boxed(mid, size), plank, 0);
-                    b.inked(
-                        Mesh::Cube,
-                        &boxed(
-                            v3(mid.x, s.min.y - dm(3), mid.z),
-                            v3(size.x * 3 / 4, dm(6), size.z * 3 / 4),
-                        ),
-                        hull,
-                        0,
-                    );
-                }
+                crate::course::Look::Wreck => sea::wreck(b, c, m, &s, w.tick, k.water),
             }
+        }
+        if let Some(wh) = &k.whirl {
+            sea::whirl(b, c, wh, w.tick);
         }
         // each ship's colours at her masthead, black on red, until her
         // crew is down: then struck, a white rag at the mast's foot

@@ -605,3 +605,15 @@ pub const SLASH_LUNGE_PCT: i32 = 150;
 pub const SLASH_LUNGE_GRACE: i32 = secs(1, 10);
 /// the swept blade is drawn this long
 pub const SLASH_SHOW: i32 = secs(1, 5);
+
+/// the Eye (Dagon's whirlpool): a piece of wreckage takes this long to
+/// fall from the cone's rim to the eye, and for this long at the end of it
+/// it is sinking (it bears no weight); this many pieces fall down each of
+/// the cone's arms, evenly, so one comes over each arm's rim this often
+pub const EYE_FALL_TICKS: i32 = secs(35, 1);
+pub const EYE_SINK_TICKS: i32 = secs(5, 2);
+pub const EYE_PIECES: i32 = 12;
+/// foam boils round a piece for this long before it sinks
+pub const EYE_WARN_TICKS: i32 = secs(2, 1);
+/// the whirlpool's water goes once round in this long (drawn only)
+pub const EYE_WHIRL_TICKS: i32 = secs(20, 1);
