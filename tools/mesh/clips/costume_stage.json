@@ -1,0 +1,14 @@
+{
+ "_about": "The costume stills' stage: the lab's stage (stage.json) with a lighter warm-grey backdrop so dark cloth reads against it, and a stronger rim. Values only; colours here are the stage's, not any costume's. The world is a gradient from ground to sky with one bright strip, so polished steel and gilt have something to reflect.",
+ "world": "#8C8579",
+ "world_strength": 0.55,
+ "ground": "#7A7264",
+ "ground_dark": "#5E574B",
+ "exposure": 0.1,
+ "rim_energy": 520,
+ "sky_top": "#9AA6AE",
+ "sky_horizon": "#D8D2C6",
+ "sky_ground": "#4A443C",
+ "strip": "#FFF6E8",
+ "strip_strength": 6.0
+}

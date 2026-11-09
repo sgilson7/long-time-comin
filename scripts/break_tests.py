@@ -350,6 +350,17 @@ BREAKS = [
  ("flicker: the house's window arch behind the window", "crates/core/src/arena/house.rs", "Affine::translate(at(mid, m(11) + dm(5), -dm(1) + dm(1) / 5))", "Affine::translate(at(mid, m(11) + dm(5), -dm(1)))", "no_section_of_any_zone"),
  ("flicker: the bedroom's boards a centimetre in", "crates/core/src/arena/home.rs", "                    self.h_flat([a + 1, 0, r[1] + 1], [b - 1, 1, r[3] - 1], alt);", "                    self.h_flat([a, 0, r[1]], [b, 1, r[3]], alt);", "no_section_of_any_zone"),
  ("flicker: the Eraser's cover walls' caps overhang", "crates/core/src/arena/vault/eraser.rs", "        let over = along.scale(ONE * 3 / 100);", "        let over = V3::ZERO;", "no_section_of_any_zone_draws_two_surfaces"),
+ # the diver (LTC-GUIDE.md): the core picks the clip; the diver is drawn only
+ ("diver: death first", "crates/core/src/diver.rs", "        if !p.alive() {\n            return both(on(\"death\"));", "        if !p.alive() && false {\n            return both(on(\"death\"));", "dead_picks_death"),
+ ("diver: rising is a jump", "crates/core/src/diver.rs", "            if p.vel.y > DIVER_APEX {\n                return on(\"jump\", self.jumped);", "            if p.vel.y > DIVER_APEX {\n                return on(\"fall\", self.jumped);", "airborne_and_rising"),
+ ("diver: an air jump is held", "crates/core/src/diver.rs", "                        self.held.air_jump = self.hold_for(clips, \"air_jump\");", "                        self.held.air_jump = 0;", "airborne_and_rising"),
+ ("diver: the gait's frame from the stride", "crates/core/src/diver.rs", "let f = stride.rem_euclid(TURN) as i64 * ground / c.stride as i64 * cycle / TURN as i64;", "let f = stride.rem_euclid(TURN) as i64 * cycle / TURN as i64;", "a_gait_frame_comes_from_the_stride"),
+ ("diver: the gun's own hold", "crates/core/src/diver.rs", "        if matches!(id, \"carbine\" | \"redactor\" | \"filibuster\") || !clips.has(&fire) {", "        if true {", "the_upper_body_follows_the_held_gun"),
+ ("diver: a shot plays the fire clip", "crates/core/src/diver.rs", "                s if s.starts_with(\"fire_\") || s == \"saw_throw\" => {", "                s if s.starts_with(\"never_\") => {", "a_shot_plays_the_held_guns_fire_clip"),
+ ("diver: a change of clip fades", "crates/core/src/diver.rs", "            Some((old, at)) if fading < DIVER_FADE_TICKS * ONE => (", "            Some((old, at)) if fading < 0 => (", "a_record_is_the_right_length_and_fades"),
+ ("diver: the bend turns up", "crates/core/src/diver.rs", "        let a = pitch * DIVER_AIM_BEND_PCT / 100;", "        let a = -pitch * DIVER_AIM_BEND_PCT / 100;", "the_bend_turns_the_upper_body_up"),
+ ("diver: drawn only", "crates/core/src/game.rs", "        self.diver.observe(&self.clips, &self.c, &run.world);", "        self.diver.observe(&self.clips, &self.c, &run.world);\n        run.world.player.stride += 1;", "the_diver_is_drawn_only"),
+ ("diver: the hand's gap", "crates/core/src/diver.rs", "        let hand = v3(ONE * 4 / 10, PLAYER_CHEST + ONE / 10, -ONE * 6 / 10);", "        let hand = v3(ONE * 14 / 10, PLAYER_CHEST + ONE / 10, -ONE * 6 / 10);", "the_hand_holding_the_gun_is_within"),
 ]
 
 

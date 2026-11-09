@@ -658,3 +658,25 @@ pub const ERASER_HOLD: i32 = secs(1, 1);
 pub const ERASE_TICKS: i32 = secs(4, 1);
 /// it opens over this long (drawn)
 pub const ERASER_OPEN_TICKS: i32 = secs(3, 2);
+
+// ---- the diver (the Defendant drawn as Style Lab's skinned mesh) ----------
+
+/// Draw the Defendant as the diver once the page has its mesh; false draws
+/// the old figure of shapes (kept until Sam has seen the diver in play).
+pub const DIVER_DRAWN: bool = true;
+/// A turn of `Player::stride` is this many metres of ground.
+pub const STRIDE_METRES: i32 = 3;
+/// The share of the aim's pitch the diver's upper body bends by (the old
+/// figure tilted its head by a third).
+pub const DIVER_AIM_BEND_PCT: i32 = 50;
+/// Ticks a change of clip fades over.
+pub const DIVER_FADE_TICKS: i32 = 6;
+/// Slower than this across the ground, the diver stands (m/tick, Q16).
+pub const DIVER_STILL: i32 = RUN_SPEED / 5;
+/// Rising or falling slower than this near the top of a jump, the diver
+/// hangs in the air clip (m/tick, Q16).
+pub const DIVER_APEX: i32 = ONE / 60;
+/// Going down faster than this under the water, the diver sinks.
+pub const DIVER_SINKING: i32 = ONE / 300;
+/// How far toward white a hit flashes the diver (the old figure's half).
+pub const DIVER_HURT_MIX: i32 = ONE / 2;

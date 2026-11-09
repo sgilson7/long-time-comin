@@ -90,6 +90,7 @@ export function makeRenderer(canvas, N, shaders, meshData) {
 
   return {
     software,
+    gl,
     // The arena never moves: uploaded once a scene, with its light and fog.
     setScene(values, uniformValues, clearColor) {
       gl.bindBuffer(gl.ARRAY_BUFFER, instanceBuffers[staticSlot]);
@@ -107,7 +108,9 @@ export function makeRenderer(canvas, N, shaders, meshData) {
       canvas.height = height;
       gl.viewport(0, 0, width, height);
     },
-    frame(view, values, draws) {
+    // between: drawn once after the solids and before the ink and the glow
+    // (the diver's skinned draw)
+    frame(view, values, draws, between) {
       gl.bindBuffer(gl.ARRAY_BUFFER, instanceBuffers[dynamicSlot]);
       gl.bufferData(gl.ARRAY_BUFFER, values, gl.STREAM_DRAW);
       gl.depthMask(true);
@@ -119,8 +122,14 @@ export function makeRenderer(canvas, N, shaders, meshData) {
       gl.uniform4fv(uBubble, view.subarray(...V.bubble));
       let current = -1;
       let cut = -1;
+      let betweenDone = false;
       for (let i = 0; i < draws.length; i += N.draw_values) {
         const [buffer, meshId, byteOffset, count, pass, seeThrough] = draws.subarray(i, i + N.draw_values);
+        if (!betweenDone && (pass === P.ink || pass === P.glow)) {
+          between();
+          betweenDone = true;
+          current = -1;
+        }
         if (pass !== current) {
           enterPass(pass);
           current = pass;
@@ -140,6 +149,7 @@ export function makeRenderer(canvas, N, shaders, meshData) {
         }
         gl.drawArraysInstanced(gl.TRIANGLES, 0, mesh.vertices, count);
       }
+      if (!betweenDone) between();
       enterPass(P.solid);
     },
   };

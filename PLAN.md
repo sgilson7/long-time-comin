@@ -269,3 +269,13 @@ The request is in `BRIEF.md` (eight messages); SECOND-ORDER R20, H1 to H12, B20,
 - **The map** (`atlas.rs`, `draw/atlas.rs`, `Mode::Atlas`; `Game::open_map`, `close_map`, `point_at`): the timeline as a hologram over the crater, 2031 at the top, each zone a turning diorama; the page labels them where the core projects them.
 - **A zone's walkthrough** (`tour.rs`, `Mode::Tour`; `show_zone`, `tour_to`, `tour_back`, `tour_start`): the camera through the zone's main path, a card of its year, words (`zone.json` `tour`), stops, creatures (`EnemyDef::zone` as a fallback for where an enemy is met) and boss.
 - **Moving scenery cut away** (`Batch::scenery`); **the open sea** (`Course::depth`, `SEA_*`); **Summary Judgment** (E; `SLASH_*`, three upgrades; taking things on X); **????**; **the Oak's crown** cleared; **the Falls' drum-cap** broadened; **Dagon's cone** (`Mover::spiral`, `EYE_*`).
+
+## Round 22: the diver (2026-11-08)
+
+The request is in `BRIEF.md`; the guide is Style Lab's `notes/costumes/LTC-GUIDE.md` (branch `ltc-diver`, commit d30f1ab). SECOND-ORDER R22, D1 to D10, B22, T22. On branch `diver`, not deployed.
+
+- **Sources** (`tools/mesh/src/`): Style Lab's `diver.blend` and its clips (`ltc.blend`, `ltc_clips.json`), rebuilt by the game's copy of the clip script (`tools/mesh/clips/`, airborne clips at standing height, D4) with `tools/mesh/make_clips.sh`.
+- **The bake** (`tools/mesh/bake_diver.py`, after Style Lab's `bake_game.py`): what the suit and helmet hide cut; parts joined by material and decimated to about 26,000 triangles (the suit's creases kept more); 56 bones; colour baked per material; 50 clips as bone matrices (`web/mesh/diver_anim.bin`), each frame's grip and bounds; `data/mesh/diver.json` (the page's manifest), `data/clips.json` (the core's table), `data/mesh/diver_bounds.json` (the volume check's).
+- **The core** (`crates/core/src/diver.rs`): `Diver::observe` reads each tick (events, sounds, the player, the held gun) into its own countdowns and picks a lower and an upper clip by the guide's table (D7); `Diver::shown` gives the page's record and where the gun is held. `Game` keeps the diver beside the world and never lets it touch it; `draw.rs` draws the gun in the diver's hand (D5) and the moves' light round it.
+- **The page** (`web/skin.js`, `data/shaders/skin.vert`, `skin.frag`): loads the mesh after the title; draws the record after the scene's solids, before its ink and glow; two layers set at the seam (D6); lifelike light (D2).
+- **Checks**: ten diver tests in the core, each broken once (B22); `scripts/check_diver.py` in `check.sh` (the volume, and Style Lab's clip check where Blender is), each part proven on planted defects.

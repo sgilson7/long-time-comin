@@ -13,6 +13,7 @@
 use crate::arena::{self, Arena};
 use crate::balance::*;
 use crate::content::{hex, Content, Files};
+use crate::diver;
 use crate::draw;
 use crate::fx::{self, int, ONE};
 use crate::geom::{facing, right_of, v3, V3};
@@ -143,6 +144,15 @@ pub struct Game {
     values: Vec<i32>,
     draws: Vec<u32>,
     view: Vec<i32>,
+    /// the diver's clips, its animation (drawn only, never read by the
+    /// world), whether the page has its mesh, the clock when play last
+    /// stopped (the death clip plays on over the court's reading), and this
+    /// frame's records
+    clips: diver::Clips,
+    diver: diver::Diver,
+    diver_ready: bool,
+    diver_stopped: Option<i32>,
+    actors: Vec<i32>,
 }
 
 impl Game {
@@ -171,6 +181,8 @@ impl Game {
         let meta = Meta::load(saved, &c);
         let hub_seed = 2031;
         let hub = arena::build(&c.zones[0].id, "arrival", hub_seed, &[], &c.pal);
+        let clips = diver::Clips::load();
+        let diver = diver::Diver::new(&clips);
         let mut g = Game {
             c,
             meta,
@@ -205,6 +217,11 @@ impl Game {
             values: Vec::new(),
             draws: Vec::new(),
             view: Vec::new(),
+            clips,
+            diver,
+            diver_ready: false,
+            diver_stopped: None,
+            actors: Vec::new(),
         };
         g.build_scene();
         g.draw();
@@ -1045,6 +1062,8 @@ impl Game {
         let practice = run.practice;
         let cam = play_camera(&run.world, ONE);
         run.world.tick(&self.c, ctl, cam.eye, cam.fwd);
+        // the diver reads the tick; nothing it keeps goes back to the world
+        self.diver.observe(&self.clips, &self.c, &run.world);
         if practice {
             match run.world.outcome {
                 Outcome::Playing => self.lull(),
@@ -1320,13 +1339,14 @@ impl Game {
         );
         // the head the scenery is cut away in front of, and the floor under it
         let mut focus = None;
+        let mut actors = Vec::new();
         match (&self.run, in_run) {
             _ if self.mode == Mode::Tour && self.tour.is_some() => {
                 let t = self.tour.as_ref().unwrap();
                 let cam = t.camera(self.alpha);
                 self.camera = cam;
                 focus = t.focus();
-                draw::world(&mut b, &self.c, &t.world, self.alpha, clock, false, &cam);
+                draw::world(&mut b, &self.c, &t.world, self.alpha, clock, false, None, &cam);
             }
             _ if self.mode == Mode::Atlas => {
                 self.camera = crate::atlas::camera();
@@ -1342,7 +1362,28 @@ impl Game {
                     focus = Some((feet.add(v3(0, PLAYER_HEIGHT * 9 / 10, 0)), feet.y));
                 }
                 let cam = self.camera;
-                draw::world(&mut b, &self.c, &run.world, self.alpha, clock, body, &cam);
+                // play's ticks, then the clock running on once play stops
+                // (the death clip plays out over the court's reading)
+                let now = if matches!(self.mode, Mode::Play | Mode::Paused | Mode::Map) {
+                    self.diver_stopped = None;
+                    self.diver.ticks * ONE + self.alpha
+                } else {
+                    let since = clock - *self.diver_stopped.get_or_insert(clock);
+                    (self.diver.ticks + since) * ONE
+                };
+                let shown = (DIVER_DRAWN && self.diver_ready && body)
+                    .then(|| self.diver.shown(&self.clips, &self.c, p, feet, now));
+                draw::world(
+                    &mut b,
+                    &self.c,
+                    &run.world,
+                    self.alpha,
+                    clock,
+                    body,
+                    shown.as_ref(),
+                    &cam,
+                );
+                actors = shown.map(|s| s.record).unwrap_or_default();
                 if matches!(self.mode, Mode::Dead | Mode::Won | Mode::Interlude) {
                     // the camera drifts up and away while the court reads
                     let up = fx::mul(int(1), (clock % 600) * ONE / 120);
@@ -1354,13 +1395,11 @@ impl Game {
                 // the camera circling slowly
                 let a = clock * fx::TURN / (60 * 70);
                 let centre = v3(0, int(1), int(8));
-                draw::standing(
-                    &mut b,
-                    &self.c,
-                    v3(0, 0, int(8)),
-                    a + fx::HALF,
-                    self.c.gun("carbine"),
-                );
+                let (at, yaw) = (v3(0, 0, int(8)), a + fx::HALF);
+                let shown = (DIVER_DRAWN && self.diver_ready)
+                    .then(|| diver::Diver::standing(&self.clips, &self.c, at, yaw, clock));
+                draw::standing(&mut b, &self.c, at, yaw, self.c.gun("carbine"), shown.as_ref());
+                actors = shown.map(|s| s.record).unwrap_or_default();
                 let eye = centre.add(v3(
                     fx::mul(fx::sin(a), int(9)),
                     int(3),
@@ -1382,6 +1421,7 @@ impl Game {
         }
         self.values = values;
         self.draws = draws;
+        self.actors = actors;
         self.view = self.camera.values(self.aspect());
         // the see-through focus: the head and the floor; at the eye itself
         // (nothing is cut) in the menus
@@ -1411,6 +1451,19 @@ impl Game {
 
     pub fn instances(&self) -> Vec<i32> {
         self.values.clone()
+    }
+
+    /// The diver's records this frame (`numbers().diver` lays one out):
+    /// none when it is not drawn.
+    pub fn actors(&self) -> Vec<i32> {
+        self.actors.clone()
+    }
+
+    /// The page has the diver's mesh: from now it is drawn in place of the
+    /// old figure.
+    pub fn diver_ready(&mut self) {
+        self.diver_ready = true;
+        self.draw();
     }
 
     pub fn static_instances(&self) -> Vec<i32> {
@@ -2408,6 +2461,21 @@ pub fn numbers() -> String {
         // (the head, and the floor under it)
         "view": { "matrix": [0, 16], "eye": [16, 19], "focus": [19, 23], "fx": [23, 27], "bubble": [27, 31] },
         "percent": 100,
+        // the diver's record: where each part starts and how long it is
+        "diver": {
+            "values": diver::VALUES,
+            "shown": diver::SHOWN,
+            "lower": diver::LOWER,
+            "upper": diver::UPPER,
+            "rows": 3,
+            "matrix": [diver::MATRIX, diver::MATRIX + 12],
+            "bend": [diver::BEND, diver::BEND + 12],
+            "grey": diver::GREY,
+            "hurt": diver::HURT,
+            "grey_rgb": [diver::GREY_RGB, diver::GREY_RGB + 3],
+            "model": "data/mesh/diver.json",
+            "shaders": ["data/shaders/skin.vert", "data/shaders/skin.frag"],
+        },
     })
     .to_string()
 }
@@ -2447,6 +2515,43 @@ pub(crate) mod tests {
             let now = g.last_us.unwrap_or(0) + FRAME_US;
             g.advance(now, bits | bit("focus"), 0, 0);
         }
+    }
+
+    #[test]
+    fn the_diver_is_drawn_only_and_the_world_goes_the_same_with_it_or_without() {
+        // a fight in a run, played twice over the same inputs: once through
+        // the game (the diver reads every tick and is drawn every frame),
+        // once ticking a copy of the world alone
+        let mut g = game_with(r#"{"seen_intro": true}"#);
+        g.begin();
+        g.start_run();
+        g.diver_ready();
+        let mut bare = g.run.as_ref().unwrap().world.clone();
+        let names = ["forward", "jump", "fire", "dash", "right", "alt"];
+        for t in 0..900u32 {
+            // a different hand of keys every quarter second
+            let held = names
+                .iter()
+                .enumerate()
+                .filter(|(k, _)| (t / 15 + *k as u32).is_multiple_of(3))
+                .fold(0, |b, (_, n)| b | bit(n));
+            let ctl = controls(held, held);
+            let cam = play_camera(&bare, ONE);
+            g.tick(&ctl);
+            g.draw();
+            if g.run.is_none() || g.mode != Mode::Play {
+                break;
+            }
+            bare.tick(&g.c, &ctl, cam.eye, cam.fwd);
+            let w = &g.run.as_ref().unwrap().world;
+            assert_eq!(
+                format!("{w:?}"),
+                format!("{bare:?}"),
+                "the worlds part at tick {t}"
+            );
+        }
+        assert!(g.diver.ticks > 0, "the diver read the ticks");
+        assert!(!g.actors().is_empty(), "and was drawn");
     }
 
     #[test]

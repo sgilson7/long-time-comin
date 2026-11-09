@@ -1,0 +1,23 @@
+{
+ "_about": "What scripts/check_diver.py holds the diver's clips to, in millimetres, against PLAYER_HEIGHT and PLAYER_RADIUS read from balance.rs. allow_mm: top, how far over PLAYER_HEIGHT the figure may reach (the helmet is 13 mm over at rest, raised arms in the air); core, how far past PLAYER_RADIUS the hips, torso, head and helmet may lean; ground, how far under the feet anything may go; measured, how far an exempt clip may grow past what was measured. arm_reach_mm: the arms' reach from the upright axis (the old figure's hand was 720 mm out, with the gun past it). leg_reach_mm: a stride's reach. exempt: clips that leave the volume by design, each with why and its reach measured on 2026-11-08 from the bake of tools/mesh/src/ltc.blend.",
+ "allow_mm": {"top": 100, "core": 160, "ground": 20, "measured": 20},
+ "arm_reach_mm": 800,
+ "leg_reach_mm": 800,
+ "exempt": {
+  "jump": {"why": "the take-off's arms rise past the helmet", "top_mm": 1902},
+  "time_stop": {"why": "the left hand raised over the helmet to stop the moment", "top_mm": 1929},
+  "bounce": {"why": "arms flung up off the shockwave", "top_mm": 2013},
+  "air_jump": {"why": "a somersault about the hips: the body turns through the horizontal", "top_mm": 2044, "core_mm": 924},
+  "land": {"why": "a deep crouch, the torso pitched forward", "core_mm": 622},
+  "dash": {"why": "a long low lunge ahead", "core_mm": 646},
+  "hook_pull": {"why": "hung from the hook's line, the body swung forward", "core_mm": 628},
+  "pound_drop": {"why": "knees to the chest, the body tipped into the fall", "core_mm": 707},
+  "pound_land": {"why": "the slam: the torso folded over the knees", "core_mm": 766},
+  "slash": {"why": "the torso turned into the swing", "core_mm": 633},
+  "lunge_slash": {"why": "a lunge into the swing", "core_mm": 720},
+  "throw": {"why": "the torso follows the throw through", "core_mm": 629},
+  "swim": {"why": "laid forward in the stroke, arms and legs reaching", "core_mm": 771, "arms_mm": 969, "legs_mm": 963},
+  "death": {"why": "lies on the floor: the body is out of play", "core_mm": 2606, "arms_mm": 2586, "legs_mm": 1762},
+  "wake": {"why": "not drawn: the bedroom's waking is the painting waking.png", "core_mm": 1393, "arms_mm": 1291, "legs_mm": 1759}
+ }
+}

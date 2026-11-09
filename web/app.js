@@ -4,6 +4,7 @@
 // out. The core says which mode the game is in; the page shows that screen.
 import init, { Game, numbers, mesh } from "./pkg/ltc_shim.js";
 import { makeRenderer } from "./gl.js";
+import { makeSkin } from "./skin.js";
 import { makeInput } from "./input.js";
 import { makeHud } from "./hud.js";
 import { makeScreens } from "./screens.js";
@@ -311,18 +312,42 @@ async function start() {
     if (renderer) {
       if (game.scene_version() !== sceneVersion) {
         sceneVersion = game.scene_version();
-        renderer.setScene(game.static_instances(), game.uniforms(), game.clear_color());
+        const uniforms = game.uniforms();
+        renderer.setScene(game.static_instances(), uniforms, game.clear_color());
+        if (skin) skin.setUniforms(uniforms);
       }
-      renderer.frame(game.view(), game.instances(), game.draws());
+      const view = game.view();
+      renderer.frame(view, game.instances(), game.draws(), () => {
+        if (skin) skin.draw(view, game.actors());
+      });
     }
     requestAnimationFrame(frame);
   }
   let sceneVersion = null;
   let shownStop = null;
 
+  // The diver's mesh loads once the title has drawn, so the game starts as
+  // fast as it did; until it comes (or if it cannot), the core draws the old
+  // figure.
+  let skin = null;
+  const asset = (path) => fetch(`${path}?v=${BUILD}`);
+  const assets = {
+    json: (path) => asset(path).then((r) => r.json()),
+    binary: (path) => asset(path).then((r) => r.arrayBuffer()),
+    image: (path) => asset(path).then((r) => r.blob()).then((b) => createImageBitmap(b)),
+  };
+  async function loadDiver() {
+    const [vertex, fragment] = await Promise.all(N.diver.shaders.map(file));
+    const made = await makeSkin(renderer.gl, N, { vertex, fragment }, assets);
+    made.setUniforms(game.uniforms());
+    skin = made;
+    game.diver_ready();
+  }
+
   hud.reset(JSON.parse(game.hud()));
   document.body.dataset.ready = "true";
   requestAnimationFrame(frame);
+  if (renderer) requestAnimationFrame(() => loadDiver().catch((e) => console.warn(e)));
 }
 
 start();

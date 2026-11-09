@@ -4,3 +4,6 @@
 __pycache__/
 /mutants.out*/
 /.venv
+
+# Blender's backups (the diver's tools save .blend files)
+*.blend1

@@ -1,0 +1,8 @@
+{
+ "_about": "What ltc_clip_check.py holds the diver's clips to. Millimetres and shares. self_mm: how much deeper than at rest an arm or leg capsule may pass into a torso capsule (capsules are rough at the joints, so rest is the baseline, as in Espiochum's clip check). ground_mm: how far the soles or any capsule may dip under the floor. capsule_floor_allowance_mm: a capsule's rounded end is rougher than the skin, so a lying body's capsules may reach this much under the floor before it counts. prop_share and prop_inset: a held prop fails when more than prop_share of its points lie inside a torso capsule shrunk to prop_inset of its radius.",
+ "self_mm": 40,
+ "ground_mm": 20,
+ "capsule_floor_allowance_mm": 15,
+ "prop_share": 0.02,
+ "prop_inset": 0.9
+}

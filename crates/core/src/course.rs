@@ -1824,7 +1824,7 @@ pub(crate) mod tests {
             fov: FOV,
         };
         let mut b = Batch::new([0; 3]);
-        crate::draw::world(&mut b, &c, &w, ONE, 0, true, &cam);
+        crate::draw::world(&mut b, &c, &w, ONE, 0, true, None, &cam);
         let (_, draws) = b.finish(DYNAMIC_BUFFER);
         let cut: u32 = draws
             .iter()
@@ -1846,7 +1846,7 @@ pub(crate) mod tests {
     /// Is a batch still marking scenery once the world is drawn?
     fn b_is_scenery_after(c: &Content, w: &World, cam: &crate::render::Camera) -> bool {
         let mut b = crate::render::Batch::new([0; 3]);
-        crate::draw::world(&mut b, c, w, ONE, 0, true, cam);
+        crate::draw::world(&mut b, c, w, ONE, 0, true, None, cam);
         b.scenery
     }
 

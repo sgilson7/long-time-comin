@@ -644,7 +644,7 @@ impl Player {
         }
         let moved = self.pos.sub(self.prev_pos).len_xz();
         if self.grounded {
-            self.stride = (self.stride + fx::mul(moved, fx::TURN / 3)) & (fx::TURN - 1);
+            self.stride = (self.stride + fx::mul(moved, fx::TURN / STRIDE_METRES)) & (fx::TURN - 1);
         }
         if self.pos.y < KILL_FLOOR {
             self.pounding = false;
