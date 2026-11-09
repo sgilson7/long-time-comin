@@ -14,6 +14,7 @@ pub mod balance;
 pub mod codex;
 pub mod content;
 pub mod course;
+pub mod diver;
 pub mod draw;
 pub mod enemy;
 #[cfg(test)]

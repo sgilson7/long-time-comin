@@ -68,6 +68,14 @@ impl Game {
         floats(self.inner.instances())
     }
 
+    pub fn actors(&self) -> Vec<f32> {
+        floats(self.inner.actors())
+    }
+
+    pub fn diver_ready(&mut self) {
+        self.inner.diver_ready()
+    }
+
     pub fn static_instances(&self) -> Vec<f32> {
         floats(self.inner.static_instances())
     }

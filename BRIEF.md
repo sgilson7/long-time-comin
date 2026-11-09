@@ -144,6 +144,14 @@ Done means, for this round: the timeline as a map opened by a button, rooted at 
 
 Done means, for this round: Round 20 deployed at once; a flicker analysis of every level with the flicker fixed and a test against it; the Vault's last boss a jet-packed alien that grows each phase, and the Eraser used on yourself after it; all in the journal's Round 21 tab; deployed under the standing approval.
 
+## The twenty-third request, word for word (2026-11-08)
+
+> Read ~/Documents/BuilderRefinedArtstyle/style-lab/notes/costumes/LTC-GUIDE.md. Then replace the Defendant with the diver Style Lab built, drawn as a lifelike skinned mesh with its baked clips, as it describes. Work on a branch, not main.
+
+The guide quotes Sam's words to Style Lab: "ok, can you rebuild the character for long time coming in a realistic rendering, alongside the animations they need for the game long time coming? I want the character to look like a bottom of the ocean diver in full gear", and, for the handoff, "ok now write a guide to get an agent working and familiar with long time coming to replace the main character with this diver".
+
+Done means, for this round: the diver drawn wherever the Defendant was drawn as a body (in play, on the menus, on the end cameras), lit lifelike against the unchanged world; every state of the guide's table playing its clip, the upper body following the gun and the aim while the legs run; nothing in play changed, with a test that the diver is drawn only; every clip held to Style Lab's clip check and the player volume, each check failing on its planted defect; on branch `diver`, with the shots in front of Sam before anything reaches `main`. The standing deploy approval does not cover this round: the guide asks that Sam see it first.
+
 ## The tool
 
 A third-person bullet-hell shooter that runs in a desktop browser with a keyboard and mouse. Roguelike runs across a graph of arenas; meta-progression between runs; a story told by an indictment that is revealed one count at a time, on each death.

@@ -60,6 +60,7 @@ fn part(b: &mut Batch, f: &Affine, mesh: Mesh, at: V3, size: V3, rgb: Rgb) {
     b.inked(mesh, &f.then(&boxed(at, size)), rgb, 0);
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn world(
     b: &mut Batch,
     c: &Content,
@@ -67,13 +68,24 @@ pub fn world(
     alpha: i32,
     clock: i32,
     body: bool,
+    diver: Option<&crate::diver::Shown>,
     cam: &crate::render::Camera,
 ) {
     if body {
         // a spin gun's barrels turn as fast as it is spun up
         let heat = w.held.spin;
         let turn = fx::wrap(w.tick * fx::mul(heat, deg(47)));
-        player_with(b, c, &w.player, w.held.gun, alpha, w.song.is_some(), (turn, heat));
+        match diver {
+            // the diver's body is the page's skinned draw; the core draws
+            // the gun in its hand, and the moves' light as before
+            Some(s) => {
+                let p = &w.player;
+                held_by_diver(b, c, p, s, w.held.gun, w.song.is_some(), (turn, heat));
+                let feet = p.prev_pos.lerp(p.pos, alpha);
+                moves(b, c, p, feet, alpha);
+            }
+            None => player_with(b, c, &w.player, w.held.gun, alpha, w.song.is_some(), (turn, heat)),
+        }
     }
     // enemies in a heavy black line, so their shapes stand out from the
     // warm city behind them
@@ -486,6 +498,53 @@ pub fn player_with(
     if !trumpet {
         gun_model_spun(b, c, gun, hand, p.yaw, p.pitch, ONE, spin);
     }
+    moves(b, c, p, feet, alpha);
+}
+
+/// The gun (or the trumpet) in the diver's right hand: at the clip's grip,
+/// along the aim while the gun is aimed, turned as the hand holds it when it
+/// leaves the aim (a reload, the fan, a throw, a swim). Shots, aim and hits
+/// keep coming from `hand_of` and the aim; only the drawn gun moves.
+fn held_by_diver(
+    b: &mut Batch,
+    c: &Content,
+    p: &Player,
+    s: &crate::diver::Shown,
+    gun: usize,
+    trumpet: bool,
+    spin: (i32, i32),
+) {
+    let Some(g) = s.grip else {
+        return;
+    };
+    if trumpet {
+        // the mouthpiece a hand's breadth behind the grip, a little up
+        // (ltc_props.json's trumpet 'mouth')
+        let mouth = g.at.sub(g.muzzle.scale(dm(1))).add(g.up.scale(cm(5)));
+        god::trumpet(b, c, mouth, facing(p.yaw, p.pitch));
+        return;
+    }
+    let f = if s.free {
+        let back = g.muzzle.neg().norm();
+        let right = g.up.cross(back).norm();
+        Affine {
+            c0: right,
+            c1: back.cross(right),
+            c2: back,
+            t: g.at,
+        }
+    } else {
+        Affine::translate(g.at)
+            .then(&Affine::rot_y(p.yaw))
+            .then(&Affine::rot_x(p.pitch))
+    };
+    gun_model_at(b, c, gun, &f, spin);
+}
+
+/// What the Defendant's moves leave in the air round the body, whatever
+/// draws the body: the dash's ghosts, the pound's column, the parry's gold,
+/// the slash's arc.
+fn moves(b: &mut Batch, c: &Content, p: &Player, feet: V3, alpha: i32) {
     // a dash leaves ghosts
     if p.dashing() {
         for k in 1..4 {
@@ -597,6 +656,13 @@ fn gun_model_spun(
         .then(&Affine::rot_y(yaw))
         .then(&Affine::rot_x(pitch))
         .then(&Affine::scale(v3(scale, scale, scale)));
+    gun_model_at(b, c, gun, &f, spin);
+}
+
+/// A gun's model in the frame `f` (its grip at the origin, the muzzle
+/// along −z, up along y).
+fn gun_model_at(b: &mut Batch, c: &Content, gun: usize, f: &Affine, spin: (i32, i32)) {
+    let f = *f;
     let body = c.pal.c("player_gun");
     let glow = c.pal.c(&c.guns[gun].colour);
     match c.guns[gun].id.as_str() {
@@ -1774,8 +1840,18 @@ fn bailiff(b: &mut Batch, c: &Content, e: &Enemy, at: V3, s: i32, paint: impl Fn
 }
 
 /// The Holding's figure: the Defendant standing at rest, for the menus.
-pub fn standing(b: &mut Batch, c: &Content, at: V3, yaw: i32, gun: usize) {
+pub fn standing(
+    b: &mut Batch,
+    c: &Content,
+    at: V3,
+    yaw: i32,
+    gun: usize,
+    diver: Option<&crate::diver::Shown>,
+) {
     let mut p = Player::new(at, yaw, crate::player::Build::default());
     p.pitch = -deg(10);
-    player(b, c, &p, gun, ONE);
+    match diver {
+        Some(s) => held_by_diver(b, c, &p, s, gun, false, (0, 0)),
+        None => player(b, c, &p, gun, ONE),
+    }
 }

@@ -645,7 +645,7 @@ fn mech(b: &mut Batch, c: &Content, e: &Enemy, d: &EnemyDef, at: V3, target: V3,
 fn double(b: &mut Batch, c: &Content, e: &Enemy, d: &EnemyDef, at: V3, target: V3) {
     let feet = at.sub(v3(0, d.hover + e.lift, 0)).add(v3(0, e.lift, 0));
     let (yaw, _) = crate::geom::yaw_pitch_of(target.sub(at));
-    super::standing(b, c, feet, yaw, c.gun("big_iron").min(c.guns.len() - 1));
+    super::standing(b, c, feet, yaw, c.gun("big_iron").min(c.guns.len() - 1), None);
     let gold = c.pal.c("gold");
     let head = feet.add(v3(0, cm(178), 0));
     b.push(

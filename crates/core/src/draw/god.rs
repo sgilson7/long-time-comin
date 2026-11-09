@@ -439,7 +439,7 @@ fn toon(b: &mut Batch, c: &Content, e: &Enemy, at: V3, s: i32, paint: &dyn Fn(Rg
 fn reprise(b: &mut Batch, c: &Content, e: &Enemy, at: V3) {
     b.style = PASS_NEGATIVE;
     let feet = at.sub(v3(0, PLAYER_CHEST, 0));
-    super::standing(b, c, feet, e.yaw, c.gun("carbine"));
+    super::standing(b, c, feet, e.yaw, c.gun("carbine"), None);
 }
 
 // ---- the Recursion ----------------------------------------------------------

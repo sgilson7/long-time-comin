@@ -218,3 +218,11 @@ Live (2026-10-19): PR #20 passed its check on CI (run 39312525003, the browser c
 Round 21's flicker analysis (SECOND-ORDER L1 to L3; by an agent): z-fighting found by a detector over every section of every zone and by frame sequences of every walkthrough in the browser, fixed at the source, and held by a test with no section left out. Its agent's `./scripts/check.sh` passed in three engines.
 
 Live (2026-10-19): PR #21 passed its check on CI (run 39320323802) and merged as f4d2eff; main's run 39321069279 passed check and deploy, and the live `data/shaders/scene.vert` carries the outline and glow biases.
+
+## Round 22 (2026-11-08): the diver
+
+The Defendant is Style Lab's diver: a copper-helmeted, slate-suited, lead-weighted diver drawn as a lit, textured skinned mesh, animated by Style Lab's 50 baked clips, wherever the Defendant was drawn as a body (play, the menus, the end cameras). The world and its enemies are drawn as before; nothing in play changed. The core picks a lower-body and an upper-body clip each tick from state it already keeps (`crates/core/src/diver.rs`); the page draws the record (`web/skin.js`, `data/shaders/skin.*`). Style Lab's airborne clips floated the figure over its body, so the game's copy of the clip script keeps them at standing height and the clips were rebuilt (`tools/mesh/make_clips.sh`). The gun is drawn in the diver's hand; shots still leave from where they always did, about 0.45 m to its right. `PLAN.md` Round 22; SECOND-ORDER R22, D1 to D10, B22, T22.
+
+Checked locally: `./scripts/check.sh` passed (BUILDER CHECK PASSED: fmt, clippy with warnings as errors, 355 core and 11 boundary tests, the diver's check (six volume plants and Style Lab's three clip plants each caught, then the volume and the clip check pass), the release wasm build, the import audit, and the browser check in Chromium, Firefox and WebKit). `python3 scripts/break_tests.py diver`: each of the ten breaks fails its test (B22). Look test: the five places (running, hooking, the pound, the Big Iron firing, fanning and reloading, swimming) shot before and after, in the journal; the world without the player, before and after, differs in no pixel in play.
+
+Not deployed: on branch `diver`, waiting for Sam (T22). The old figure is kept behind `DIVER_DRAWN` until Sam has seen the diver in play.

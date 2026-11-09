@@ -1,0 +1,63 @@
+{
+ "_about": "The stage for veteran renders, from the proposed pack's light: overcast key upper left, warm low fill, cool rim behind right. Energies in watts for area lights.",
+ "world": "#5E6F7A",
+ "world_strength": 0.35,
+ "ground": "#6E6553",
+ "ground_size": 40,
+ "samples": 96,
+ "eevee_samples": 48,
+ "lights": {
+  "key": {
+   "kind": "AREA",
+   "energy": 380,
+   "colour": "#FFF1DC",
+   "loc": [
+    -2.2,
+    -2.6,
+    2.9
+   ],
+   "aim": [
+    0,
+    0,
+    1.4
+   ],
+   "size": 2.0
+  },
+  "fill": {
+   "kind": "AREA",
+   "energy": 120,
+   "colour": "#E3C9A4",
+   "loc": [
+    2.4,
+    -2.0,
+    1.0
+   ],
+   "aim": [
+    0,
+    0,
+    1.3
+   ],
+   "size": 2.5
+  },
+  "rim": {
+   "kind": "AREA",
+   "energy": 320,
+   "colour": "#C9D7E0",
+   "loc": [
+    1.8,
+    2.4,
+    2.6
+   ],
+   "aim": [
+    0,
+    0,
+    1.5
+   ],
+   "size": 1.2
+  }
+ },
+ "ground_dark": "#4E473A",
+ "ground_noise_scale": 3.0,
+ "ground_joint_scale": 2.0,
+ "exposure": -0.25
+}

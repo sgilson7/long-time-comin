@@ -549,7 +549,7 @@ pub fn section(c: &Content, w: &World, ticks: &[i32]) -> Vec<Vec<Inst>> {
             fwd,
             fov: crate::fx::deg(70),
         };
-        crate::draw::world(&mut b, c, &v, ONE, at, false, &cam);
+        crate::draw::world(&mut b, c, &v, ONE, at, false, None, &cam);
         let (values, draws) = b.finish(render::DYNAMIC_BUFFER);
         let mut all = fixed.clone();
         all.extend(instances(&values, &draws, false, &format!("tick {at}")));
