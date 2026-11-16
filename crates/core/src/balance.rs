@@ -662,8 +662,9 @@ pub const ERASER_OPEN_TICKS: i32 = secs(3, 2);
 // ---- the diver (the Defendant drawn as Style Lab's skinned mesh) ----------
 
 /// Draw the Defendant as the diver once the page has its mesh; false draws
-/// the old figure of shapes (kept until Sam has seen the diver in play).
-pub const DIVER_DRAWN: bool = true;
+/// the old figure of shapes, and the page does not fetch the mesh. Off since
+/// 2026-11-16: Sam played it and found the diver out of place (T23).
+pub const DIVER_DRAWN: bool = false;
 /// A turn of `Player::stride` is this many metres of ground.
 pub const STRIDE_METRES: i32 = 3;
 /// The share of the aim's pitch the diver's upper body bends by (the old
