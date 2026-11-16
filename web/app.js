@@ -327,8 +327,8 @@ async function start() {
   let shownStop = null;
 
   // The diver's mesh loads once the title has drawn, so the game starts as
-  // fast as it did; until it comes (or if it cannot), the core draws the old
-  // figure.
+  // fast as it did; until it comes (or if it cannot, or the core does not
+  // draw the diver), the core draws the old figure.
   let skin = null;
   const asset = (path) => fetch(`${path}?v=${BUILD}`);
   const assets = {
@@ -347,7 +347,7 @@ async function start() {
   hud.reset(JSON.parse(game.hud()));
   document.body.dataset.ready = "true";
   requestAnimationFrame(frame);
-  if (renderer) requestAnimationFrame(() => loadDiver().catch((e) => console.warn(e)));
+  if (renderer && N.diver.drawn) requestAnimationFrame(() => loadDiver().catch((e) => console.warn(e)));
 }
 
 start();

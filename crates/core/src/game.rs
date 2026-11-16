@@ -2463,6 +2463,7 @@ pub fn numbers() -> String {
         "percent": 100,
         // the diver's record: where each part starts and how long it is
         "diver": {
+            "drawn": DIVER_DRAWN,
             "values": diver::VALUES,
             "shown": diver::SHOWN,
             "lower": diver::LOWER,
@@ -2551,7 +2552,9 @@ pub(crate) mod tests {
             );
         }
         assert!(g.diver.ticks > 0, "the diver read the ticks");
-        assert!(!g.actors().is_empty(), "and was drawn");
+        // drawn only while DIVER_DRAWN: off, the old figure stays even with
+        // the mesh in hand
+        assert_eq!(!g.actors().is_empty(), DIVER_DRAWN, "drawn as DIVER_DRAWN says");
     }
 
     #[test]
